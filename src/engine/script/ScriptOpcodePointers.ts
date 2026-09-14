@@ -965,6 +965,9 @@ const ScriptOpcodePointers: {
         require: ['active_player'],
         require2: ['active_player2']
     },
+    [ScriptOpcode.INV_PLACEHOLDER]: {
+        require: ['active_player']
+    },
     [ScriptOpcode.INV_MOVETOSLOT]: {
         require: ['active_player'],
         require2: ['active_player2']

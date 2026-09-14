@@ -365,6 +365,7 @@ export const enum ScriptOpcode {
     INV_MOVEITEM_UNCERT, // official
     INV_MOVEITEM, // official
     INV_MOVETOSLOT, // official
+    INV_PLACEHOLDER,
     INV_SETSLOT, // official
     INV_SIZE, // official
     INV_STOCKBASE,
@@ -831,6 +832,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['INV_MOVEITEM_UNCERT', ScriptOpcode.INV_MOVEITEM_UNCERT],
     ['INV_MOVEITEM', ScriptOpcode.INV_MOVEITEM],
     ['INV_MOVETOSLOT', ScriptOpcode.INV_MOVETOSLOT],
+    ['INV_PLACEHOLDER', ScriptOpcode.INV_PLACEHOLDER],
     ['INV_SETSLOT', ScriptOpcode.INV_SETSLOT],
     ['INV_SIZE', ScriptOpcode.INV_SIZE],
     ['INV_STOCKBASE', ScriptOpcode.INV_STOCKBASE],

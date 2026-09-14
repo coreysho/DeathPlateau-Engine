@@ -1664,12 +1664,44 @@ export default class Player extends PathingEntity {
         }
         if (objType.stackable || uncert != obj || container.stackType == Inventory.ALWAYS_STACK) {
             const stockObj = InvType.get(inv).stockobj?.includes(obj) === true;
-            if (this.invTotal(inv, obj) == 0 && this.invFreeSpace(inv) == 0 && !stockObj) {
+            // "is there already a slot for this obj", not "do I have any of it". The two are the
+            // same everywhere except a bank placeholder, which is a slot holding the obj with a
+            // count of zero: invTotal reads 0 for it, so a full bank used to refuse a deposit back
+            // into the player's own stub even though Inventory.add would have stacked straight
+            // into it - getItemIndex is what add itself uses to find the stack.
+            if (container.getItemIndex(obj) === -1 && this.invFreeSpace(inv) == 0 && !stockObj) {
                 return count;
             }
             return Math.max(0, count - (Inventory.STACK_LIMIT - this.invTotal(inv, obj)));
         }
         return Math.max(0, count - (this.invFreeSpace(inv) - (this.invSize(inv) - size)));
+    }
+
+    // Write a zero-count entry - a "placeholder" - into a slot, or clear the slot when obj is -1.
+    //
+    // Inventory has exactly one way to say "nothing here", items[slot] = null, and remove() goes
+    // out of its way to produce it: `if (curItem.count == 0 && !stockObj) this.items[i] = null`.
+    // A placeholder is the other kind of empty - the slot is spoken for, it draws its obj, but it
+    // holds none of it - and nothing in the engine creates one on its own. This is the only way
+    // in, so an inv has placeholders exactly if its content scripts put them there, and every
+    // other inv in the game is untouched.
+    //
+    // The accessors already agree on what a zero-count entry means, which is why this needs no
+    // flag: nextFreeSlot and freeSlotCount test for null, so a placeholder occupies its slot;
+    // getItemCount sums counts, so you have none of it; and getItemIndex finds it, so add() of
+    // the same obj stacks straight back into it - which is what makes a deposit land in its own
+    // placeholder rather than on the end of the list.
+    invPlaceholder(inv: number, slot: number, obj: number) {
+        const container = this.getInventory(inv);
+        if (!container) {
+            throw new Error('invPlaceholder: Invalid inventory type: ' + inv);
+        }
+
+        if (!container.validSlot(slot)) {
+            throw new Error('invPlaceholder: Invalid slot: ' + slot);
+        }
+
+        container.set(slot, obj === -1 ? null : { id: obj, count: 0 });
     }
 
     invMoveToSlot(fromInv: number, toInv: number, fromSlot: number, toSlot: number) {

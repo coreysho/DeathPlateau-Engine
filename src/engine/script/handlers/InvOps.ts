@@ -350,6 +350,24 @@ const InvOps: CommandHandlers = {
 
     // https://x.com/JagexAsh/status/1706983568805704126
     // inv write
+    // inv write
+    [ScriptOpcode.INV_PLACEHOLDER]: state => {
+        const [inv, slot, obj] = state.popInts(3);
+
+        const invType: InvType = check(inv, InvTypeValid);
+
+        if (!state.pointerGet(ProtectedActivePlayer[state.intOperand]) && invType.protect && invType.scope !== InvType.SCOPE_SHARED) {
+            throw new Error(`$inv requires protected access: ${invType.debugname}`);
+        }
+
+        // -1 is null in RuneScript's obj type, and means "clear the slot" here
+        if (obj !== -1) {
+            check(obj, ObjTypeValid);
+        }
+
+        state.activePlayer.invPlaceholder(invType.id, slot, obj);
+    },
+
     [ScriptOpcode.INV_MOVETOSLOT]: state => {
         const [fromInv, toInv, fromSlot, toSlot] = state.popInts(4);
 
