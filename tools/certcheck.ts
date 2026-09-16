@@ -8,11 +8,32 @@
  *
  * content/tools/certcheck.py checks the configs the packer reads. This checks what it wrote.
  *
- *   npx tsx tools/certcheck.ts
+ * It reads the BUILT data, so it has to run after a build, and it needs this repo's node_modules.
+ * On a machine that only ever edits the engine - no npm install, no local build - there is nothing
+ * for it to read: run it where the server runs, or after npm install && npm run build.
+ * content/tools/certcheck.py checks the configs the packer reads and needs neither.
+ *
+ *   npx tsx tools/certcheck.ts [data/pack]
  */
+import fs from 'fs';
+
 import ObjType from '#/cache/config/ObjType.js';
 
-ObjType.load('data/pack');
+const dir = process.argv[2] ?? 'data/pack';
+
+// ObjType.load returns quietly when there is no obj.dat, which would leave every check below
+// looking at an empty table and passing. A check that cannot fail is worse than no check.
+if (!fs.existsSync(`${dir}/server/obj.dat`)) {
+    console.log(`no packed obj data at ${dir}/server/obj.dat - build first, or pass the path`);
+    process.exit(2);
+}
+
+ObjType.load(dir);
+
+if (ObjType.configs.length === 0) {
+    console.log(`${dir} decoded to no objs at all`);
+    process.exit(2);
+}
 
 // The engine's own two rules, from ObjConfigOps: OC_CERT and OC_UNCERT.
 const cert = (o: ObjType) => (o.certtemplate === -1 && o.certlink >= 0) ? ObjType.configs[o.certlink] : o;
