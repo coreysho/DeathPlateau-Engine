@@ -403,9 +403,21 @@ export function packObjConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
                 }
             }
 
-            // reverse-lookup the certificate (so the server can find it quicker)
+            // Reverse-lookup the certificate, so the server can find it quicker: the cache only
+            // carries the backward link (a note names its base in certlink and its template in
+            // certtemplate), while OC_CERT and INV_MOVEITEM_CERT ask the BASE for its note.
+            //
+            // The lookup is by NAME, and a name is not evidence. 132 objs in the 377 data are
+            // called cert_<something> without being certificates at all - the unpacker named them
+            // after whatever sits at the previous id - so this linked a law talisman to "Rotten
+            // net", a plain wig to "Blue partyhat" and fourteen items to "Whoopsie". Withdrawing
+            // any of them as a note handed over that unrelated item.
+            //
+            // So the link is only written when the thing on the other end really is a note, which
+            // is what certtemplate says. An obj named cert_* that is not one is now simply not a
+            // note, which is the truth about it.
             const cert = ObjPack.getByName('cert_' + debugname);
-            if (cert !== -1) {
+            if (cert !== -1 && (configs.get('cert_' + debugname) ?? []).some(line => line.key === 'certtemplate')) {
                 server.p1(97);
                 server.p2(cert);
             }
