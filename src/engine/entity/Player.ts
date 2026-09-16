@@ -296,6 +296,10 @@ export default class Player extends PathingEntity {
     runenergy: number = 10000;
     lastRunEnergy: number = -1;
     runweight: number = 0;
+    // Whole-percent bonus to NATURAL run energy recovery, summed from the energy_restore param
+    // over worn equipment. Derived, never saved: calculateRunWeight() recomputes it from the
+    // actual worn inv, so it cannot go stale the way a varp maintained by content would.
+    runrestore: number = 0;
     playtime: number = 0;
     stats: Int32Array = new Int32Array(PLAYER_STAT_COUNT);
     levels: Uint8Array = new Uint8Array(PLAYER_STAT_COUNT);
@@ -620,6 +624,13 @@ export default class Player extends PathingEntity {
 
     calculateRunWeight() {
         this.runweight = 0;
+        // Recomputed in the same pass as the weight, because it changes at exactly the same
+        // moments and over exactly the same data. The param is looked up by name every time
+        // rather than cached: this runs on an inventory change, not on a tick, and a cache
+        // would be one more thing to invalidate. -1 means no content tree defines it, in which
+        // case every player's bonus is 0 and the engine behaves as it did before.
+        this.runrestore = 0;
+        const restoreParam = ParamType.getId('energy_restore');
 
         const invs = this.invs.values();
         for (let i = 0; i < this.invs.size; i++) {
@@ -640,7 +651,19 @@ export default class Player extends PathingEntity {
                 }
 
                 const type = ObjType.get(item.id);
-                if (!type || type.stackable) {
+                if (!type) {
+                    continue;
+                }
+
+                // WORN ONLY, which is the one way this differs from the weight below: a Graceful
+                // hood in your backpack does not help you catch your breath. Note this rides on
+                // the outer loop's runweight filter - an inv marked runweight=no is not visited
+                // at all, and worn is marked runweight=yes in player.inv.
+                if (inv.type === InvType.WORN && restoreParam !== -1) {
+                    this.runrestore += ParamHelper.getIntParam(restoreParam, type, 0);
+                }
+
+                if (type.stackable) {
                     continue;
                 }
 
@@ -707,7 +730,12 @@ export default class Player extends PathingEntity {
             return;
         }
         if (this.stepsTaken < 2) {
-            const recovered = ((this.baseLevels[PlayerStat.AGILITY] / 6) | 0) + 8;
+            const natural = ((this.baseLevels[PlayerStat.AGILITY] / 6) | 0) + 8;
+            // The energy_restore bonus applies to NATURAL recovery and nowhere else, which is why
+            // it is here rather than in HEALENERGY: an energy potion is not you catching your
+            // breath, and OSRS does not scale it either. runrestore is 0 unless worn equipment
+            // carries the param, so this is the old line for everybody else.
+            const recovered = natural + (((natural * this.runrestore) / 100) | 0);
             this.runenergy = Math.min(this.runenergy + recovered, 10000);
         } else if (this.staffModLevel < 3) {
             // Admins (staffModLevel >= 3) and above never deplete run energy - left off the regen
