@@ -22,9 +22,22 @@ export async function packClientTexture(cache: FileStream) {
     if (rebuild) {
         const index = Packet.alloc(3);
 
+        // Jagex shipped 50 and this loop said 50. It reads texture.pack's own count now, because
+        // this fork adds textures the 2006 cache never had: a modern OSRS model names its texture
+        // by id in the face colour field, and an id the client has no slot for cannot be imported
+        // at all. Pix3D.TEXTURE_COUNT in the Java client is the matching ceiling - raise that one
+        // too before adding a texture past it, or the client will index off the end of its arrays.
+        // PackFile.max is already highest-id-plus-one (refreshNames does the +1), which a probe
+        // said before this shipped: with ids 0-50 in the file it reads 51, not 50.
+        const count = TexturePack.max;
+
         const all = [];
-        for (let id = 0; id < 50; id++) {
-            all.push(await convertImage(index, `${Environment.BUILD_SRC_DIR}/textures`, TexturePack.getById(id)));
+        for (let id = 0; id < count; id++) {
+            const name = TexturePack.getById(id);
+            if (!name) {
+                throw new Error(`textures: id ${id} has no name in pack/texture.pack - ids must be contiguous`);
+            }
+            all.push(await convertImage(index, `${Environment.BUILD_SRC_DIR}/textures`, name));
         }
 
         const textures = Jagfile.new();
@@ -36,7 +49,10 @@ export async function packClientTexture(cache: FileStream) {
     }
 
     const packed = fs.readFileSync('data/pack/client/textures');
-    if (Environment.BUILD_VERIFY && !Packet.checkcrc(packed, 0, packed.length, -1741782021)) {
+    // The checksum is of the STOCK 50-texture archive, so it can only be checked while the archive
+    // is still the stock one. Past that there is nothing to compare against - the archive is this
+    // fork's own - and the guard above (every id from 0 to max must be named) is what replaces it.
+    if (Environment.BUILD_VERIFY && TexturePack.max === 50 && !Packet.checkcrc(packed, 0, packed.length, -1741782021)) {
         throw new Error('textures checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false');
     }
 
