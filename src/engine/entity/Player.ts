@@ -1938,6 +1938,50 @@ export default class Player extends PathingEntity {
         return Math.min(rate, 100);
     }
 
+    // -2 = not looked up yet, -1 = the content has no such varp. Same lazy resolve as xp_rate.
+    private static xpLockedVarp: number = -2;
+
+    // The tick each stat last told the player it was locked. NOT saved and deliberately not a
+    // varp: it is throttling, not state, and it should start clean every login.
+    private xpLockWarned: Int32Array = new Int32Array(PLAYER_STAT_COUNT);
+
+    /**
+     * Whether this skill refuses experience, from the content varp `xp_locked` - a bitmask with
+     * one bit per stat AT THE STAT'S OWN ID, so this needs no table and the content side's
+     * ^xplock_* constants are the only place the layout is written down.
+     *
+     * Same reasoning as xpRate for living here: there is no wrapper proc the 290 stat_advance
+     * call sites pass through, and a lock that has to be added to each of them is a lock the next
+     * skill written will not have.
+     *
+     * A missing varp reads as "nothing is locked". The wrong answer here is the one that stops a
+     * player gaining any experience at all.
+     */
+    xpLocked(stat: number): boolean {
+        if (Player.xpLockedVarp === -2) {
+            Player.xpLockedVarp = VarPlayerType.getId('xp_locked');
+        }
+        if (Player.xpLockedVarp < 0 || stat < 0 || stat >= PLAYER_STAT_COUNT) {
+            return false;
+        }
+        return ((this.vars[Player.xpLockedVarp] >>> stat) & 1) === 1;
+    }
+
+    /**
+     * Say so, at most once a minute per skill. Training a locked skill is a normal thing to do on
+     * purpose - a message per log cut would be unusable - but a quest handing over ten thousand
+     * experience that silently goes nowhere is exactly the case this exists for.
+     */
+    private warnXpLocked(stat: number): void {
+        const last = this.xpLockWarned[stat];
+        if (last !== 0 && World.currentTick - last < 100) {
+            return;
+        }
+        this.xpLockWarned[stat] = World.currentTick;
+        const name = PlayerStatNameMap.get(stat) ?? 'that';
+        this.messageGame(`Your ${name.charAt(0)}${name.slice(1).toLowerCase()} experience is locked.`);
+    }
+
     addXp(stat: number, xp: number, allowMulti: boolean = true) {
         // require xp is >= 0. there is no reason for a requested addXp to be negative.
         if (xp < 0) {
@@ -1946,6 +1990,17 @@ export default class Player extends PathingEntity {
 
         // if the xp arg is 0, then we do not have to change anything or send an unnecessary stat packet.
         if (xp == 0) {
+            return;
+        }
+
+        // A locked skill refuses EARNED experience and nothing else. allowMulti is false only for
+        // ::setlevel, which is not the player earning anything - it sets a level, and it should
+        // keep working on a locked skill. The action that earned this still happened: the caller
+        // has already handed over the log, the ore or the quest's reward, and the quest has
+        // already completed. A lock never touches a level, so every requirement that reads
+        // stat(...) still reads the same number it did before.
+        if (allowMulti && this.xpLocked(stat)) {
+            this.warnXpLocked(stat);
             return;
         }
 
