@@ -604,10 +604,23 @@ const InvOps: CommandHandlers = {
             return;
         }
 
-        if (objType.certtemplate >= 0 && objType.certlink >= 0) {
-            player.invAdd(toInvType.id, objType.certlink, completed);
-        } else {
-            player.invAdd(toInvType.id, objType.id, completed);
+        // The obj to actually put in: a note unpacks to what it is a note for.
+        const finalObj = objType.certtemplate >= 0 && objType.certlink >= 0 ? objType.certlink : objType.id;
+
+        // invDel has ALREADY taken them out of the source, so anything invAdd cannot fit has to go
+        // somewhere. It used to go nowhere: the return of invAdd was dropped and the difference
+        // simply stopped existing. INV_MOVEITEM and INV_MOVEITEM_CERT both drop their overflow at
+        // the player's feet, so this does the same rather than inventing a third answer.
+        const overflow = count - player.invAdd(toInvType.id, finalObj, completed);
+        if (overflow > 0) {
+            const finalType = ObjType.get(finalObj);
+            if (!finalType.stackable || overflow === 1) {
+                for (let i = 0; i < overflow; i++) {
+                    World.addObj(new Obj(player.level, player.x, player.z, EntityLifeCycle.DESPAWN, finalObj, 1), player.hash64, 200);
+                }
+            } else {
+                World.addObj(new Obj(player.level, player.x, player.z, EntityLifeCycle.DESPAWN, finalObj, overflow), player.hash64, 200);
+            }
         }
     },
 

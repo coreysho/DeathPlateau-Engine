@@ -17,7 +17,12 @@ export default abstract class ClientSocket {
     decryptor: Isaac | null = null;
 
     in = Packet.alloc(65535); // node won't let us read from the socket as a stream so we buffer it ourselves
-    out = Packet.alloc(1);
+    // alloc(2) is 30000 bytes, not alloc(1)'s 5000. One server message is encoded into this
+    // buffer and sent, and Packet's writes go through DataView, which THROWS past the end instead
+    // of wrapping - so the largest single message the server can ever send has to fit. That used
+    // to be an inv update, at up to 7 bytes a slot: 5000 bytes held 713 slots and the 1410-slot
+    // bank needs 9873 in the worst case. The client's inbound buffer was raised to match.
+    out = Packet.alloc(2);
 
     opcode = -1; // current opcode being read
     waiting = 0; // bytes to wait for (if any)
