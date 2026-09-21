@@ -1,6 +1,6 @@
 // stdlib
 import fs from 'fs';
-import { Worker } from 'worker_threads';
+import { isMainThread, Worker } from 'worker_threads';
 
 // deps
 import * as rsbuf from '#/network/rsbuf/index.js';
@@ -113,8 +113,11 @@ class World {
     private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
     private loggerThread = new Worker(new URL('../server/logger/LoggerThread.ts', import.meta.url));
     private devThread: Worker | null = null;
-    // custom (2026-09-21) - only when Discord is configured; see server/discord/DiscordThread.ts
-    private discordThread: Worker | null = Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? new Worker(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
+    // custom (2026-09-21) - only when Discord is configured; see server/discord/DiscordThread.ts.
+    // AND ONLY ON THE MAIN THREAD. LoginServer imports Player and web.ts, both of which import this
+    // file, so with EASY_STARTUP the login worker builds a World of its own - and without this check
+    // it started a second bot, which answered every /link a second time against the same codes.
+    private discordThread: Worker | null = isMainThread && Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? new Worker(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
 
     private static readonly PLAYERS: number = Environment.NODE_MAX_PLAYERS;
     private static readonly NPCS: number = Environment.NODE_MAX_NPCS;
