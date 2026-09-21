@@ -48,7 +48,7 @@ export function tradingPost(): TradingPost {
                 if (!player) {
                     return false;
                 }
-                player.messageGame(text);
+                player.wrappedMessageGame(text);
                 return true;
             },
             changed: username => {
@@ -347,7 +347,7 @@ const TradingPostOps: CommandHandlers = {
         views.delete(player.username);
         const tp = tradingPost();
         for (const line of tp.takeNotices(player.username)) {
-            player.messageGame(line);
+            player.wrappedMessageGame(line);
         }
         state.pushInt(tp.box(player.username).length);
     }

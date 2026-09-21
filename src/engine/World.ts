@@ -239,9 +239,9 @@ class World {
             return;
         }
         if (msg.type === 'linked') {
-            player.messageGame(`Your account is now linked to Discord (${msg.discord}). Trading post alerts will be sent there too.`);
+            player.wrappedMessageGame(`Linked to Discord as @dre@${msg.discord}@bla@. Trading post alerts will be sent there too.`);
         } else if (msg.type === 'unlinked') {
-            player.messageGame(msg.had ? 'Your account is no longer linked to Discord.' : 'Your account was not linked to Discord.');
+            player.wrappedMessageGame(msg.had ? 'Your account is no longer linked to Discord.' : 'Your account was not linked to Discord.');
         }
     }
 

@@ -111,7 +111,8 @@ async function notify(username: string, text: string) {
     }
     try {
         const user = await client.users.fetch(row.discord_id);
-        await user.send(`**${toDisplayName(username)}** - ${text}`);
+        // any @col@ tag is for the game chatbox, and would show in Discord as text
+        await user.send(`**${toDisplayName(username)}** - ${text.replace(/@[a-z0-9]{3}@/g, '')}`);
     } catch (err) {
         // DMs closed, or the user left the server. Not worth more than a line.
         console.log(`Discord relay: could not DM ${username}: ${(err as Error).message}`);

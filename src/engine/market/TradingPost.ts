@@ -586,9 +586,11 @@ export default class TradingPost {
         }
     }
 
+    // In game the "Trading post:" is dark blue, so the news stands out among the other game messages;
+    // Discord gets the same words without the colour tags.
     private notify(username: string, text: string) {
-        const line = `Trading post: ${text}`;
-        this.hooks.notice?.(username, line);
+        const line = `@dbl@Trading post:@bla@ ${text}`;
+        this.hooks.notice?.(username, `Trading post: ${text}`);
         if (!this.hooks.tell(username, line)) {
             this.db.prepare('INSERT INTO notice (player, text, created) VALUES (?, ?, ?)').run(username, line, this.hooks.now());
         }

@@ -72,7 +72,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // custom (2026-09-21) - link this account to Discord for trading post DMs. Available to all
             // players. See server/discord/DiscordThread.ts.
             if (!World.discordEnabled) {
-                player.messageGame('Discord alerts are not set up on this server.');
+                player.wrappedMessageGame('Discord alerts are not set up on this server.');
                 return true;
             }
 
@@ -81,10 +81,12 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 return true;
             }
 
+            // Two short lines, the code in dark red so it stands out on the chatbox's parchment.
+            // (@col@ tags in game messages need the client from 2026-09-21 on; an older client prints
+            // them as text.)
             const code = World.discordCode(player);
-            player.messageGame(`Your Discord link code is: @yel@${code}`);
-            player.messageGame(`In the server Discord, type /link ${code} - it works once, for ten minutes.`);
-            player.messageGame('To stop Discord alerts later, type ::discord unlink here or /unlink in Discord.');
+            player.wrappedMessageGame(`Your Discord link code is @dre@${code}@bla@ - it works once, for 10 minutes.`);
+            player.wrappedMessageGame(`In our Discord, type @dre@/link ${code}@bla@. To stop alerts later: ::discord unlink`);
             return true;
         }
 
