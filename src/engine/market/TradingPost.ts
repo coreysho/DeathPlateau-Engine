@@ -101,6 +101,11 @@ export function tpFormat(n: number): string {
     return n.toLocaleString('en-US');
 }
 
+// "1 coin", "1,500 coins"
+export function tpCoins(n: number): string {
+    return n === 1 ? '1 coin' : `${tpFormat(n)} coins`;
+}
+
 export default class TradingPost {
     readonly db: DatabaseSync;
     readonly coins: number;
@@ -230,7 +235,7 @@ export default class TradingPost {
         const items = this.offerItems(o.id);
         const parts: string[] = [];
         if (o.coins > 0) {
-            parts.push(`${tpFormat(o.coins)} coins`);
+            parts.push(`${tpCoins(o.coins)}`);
         }
         if (items.length === 1) {
             const i = items[0];
@@ -293,7 +298,7 @@ export default class TradingPost {
             return 'That item has no buyout price - make an offer instead.';
         }
         if (buyer.total(this.coins) < l.buyout) {
-            return `You need ${tpFormat(l.buyout)} coins to buy that.`;
+            return `You need ${tpCoins(l.buyout)} to buy that.`;
         }
 
         const others = this.offersOn(l.id);
@@ -312,7 +317,7 @@ export default class TradingPost {
         });
 
         this.hooks.changed(buyer.username);
-        this.notify(l.seller, `${this.name(buyer.username)} bought your ${this.describe(l)} for ${tpFormat(l.buyout)} coins.`);
+        this.notify(l.seller, `${this.name(buyer.username)} bought your ${this.describe(l)} for ${tpCoins(l.buyout)}.`);
         for (const o of others) {
             this.notify(o.buyer, `The ${this.describe(l)} you made an offer on has been sold. Your offer is in your collection box.`);
         }
@@ -339,7 +344,7 @@ export default class TradingPost {
             return `An offer can hold at most ${TP_MAX_OFFER_ITEMS} different items.`;
         }
         if (l.buyout > 0 && coins >= l.buyout && offered.length === 0) {
-            return `That is the buyout price or more - use Buy now for ${tpFormat(l.buyout)} coins.`;
+            return `That is the buyout price or more - use Buy now for ${tpCoins(l.buyout)}.`;
         }
         if (buyer.total(this.coins) < coins) {
             return "You don't have that many coins.";
