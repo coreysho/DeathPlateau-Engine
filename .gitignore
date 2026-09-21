@@ -35,3 +35,6 @@ Thumbs.db
 ### macOS ###
 .DS_Store
 ._*
+
+# The Discord bot's link store - live data, one per server, never committed (src/discord)
+data/discord/
