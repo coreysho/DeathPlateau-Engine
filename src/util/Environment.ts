@@ -106,5 +106,10 @@ export default {
     // used for unpacking/custom development
     BUILD_VERIFY_PACK: tryParseBoolean(process.env.BUILD_VERIFY_PACK, true),
     // used for unpacking/custom development
-    BUILD_SRC_DIR: tryParseString(process.env.BUILD_SRC_DIR, '../content')
+    BUILD_SRC_DIR: tryParseString(process.env.BUILD_SRC_DIR, '../content'),
+
+    // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
+    // their trading post notices. Both must be set or it does not start. Keep the token in .env only.
+    DISCORD_TOKEN: tryParseString(process.env.DISCORD_TOKEN, ''),
+    DISCORD_GUILD_ID: tryParseString(process.env.DISCORD_GUILD_ID, '')
 };

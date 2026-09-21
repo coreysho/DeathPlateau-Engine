@@ -68,6 +68,26 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             return true;
         }
 
+        if (cmd === 'discord') {
+            // custom (2026-09-21) - link this account to Discord for trading post DMs. Available to all
+            // players. See server/discord/DiscordThread.ts.
+            if (!World.discordEnabled) {
+                player.messageGame('Discord alerts are not set up on this server.');
+                return true;
+            }
+
+            if (args[0] === 'unlink') {
+                World.discordUnlink(player);
+                return true;
+            }
+
+            const code = World.discordCode(player);
+            player.messageGame(`Your Discord link code is: @yel@${code}`);
+            player.messageGame(`In the server Discord, type /link ${code} - it works once, for ten minutes.`);
+            player.messageGame('To stop Discord alerts later, type ::discord unlink here or /unlink in Discord.');
+            return true;
+        }
+
         if (cmd === 'yell') {
             // custom (Corey, 2026-09-04) - global broadcast chat, available to all players (like
             // ::home, not staff-gated). Staff yells carry the real rank crown sprite, not the word

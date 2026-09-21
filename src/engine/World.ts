@@ -113,6 +113,8 @@ class World {
     private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
     private loggerThread = new Worker(new URL('../server/logger/LoggerThread.ts', import.meta.url));
     private devThread: Worker | null = null;
+    // custom (2026-09-21) - only when Discord is configured; see server/discord/DiscordThread.ts
+    private discordThread: Worker | null = Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? new Worker(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
 
     private static readonly PLAYERS: number = Environment.NODE_MAX_PLAYERS;
     private static readonly NPCS: number = Environment.NODE_MAX_NPCS;
@@ -192,6 +194,52 @@ class World {
                 console.error(err);
             }
         });
+
+        this.discordThread?.on('message', msg => {
+            try {
+                this.onDiscordMessage(msg);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+
+    // ---- the Discord relay (custom, 2026-09-21) ----
+
+    get discordEnabled(): boolean {
+        return this.discordThread !== null;
+    }
+
+    // A one-time code for /link. Unambiguous characters only - no 0/O, 1/I/L - because it is read off
+    // the game screen and typed into Discord.
+    discordCode(player: Player): string {
+        const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += alphabet[Math.floor(Math.random() * alphabet.length)];
+        }
+        this.discordThread?.postMessage({ type: 'code', username: player.username, code });
+        return code;
+    }
+
+    discordUnlink(player: Player): void {
+        this.discordThread?.postMessage({ type: 'unlink', username: player.username });
+    }
+
+    discordNotify(username: string, text: string): void {
+        this.discordThread?.postMessage({ type: 'notify', username, text });
+    }
+
+    private onDiscordMessage(msg: { type: string; username: string; discord?: string; had?: boolean }): void {
+        const player = this.getPlayerByUsername(msg.username);
+        if (!player) {
+            return;
+        }
+        if (msg.type === 'linked') {
+            player.messageGame(`Your account is now linked to Discord (${msg.discord}). Trading post alerts will be sent there too.`);
+        } else if (msg.type === 'unlinked') {
+            player.messageGame(msg.had ? 'Your account is no longer linked to Discord.' : 'Your account was not linked to Discord.');
+        }
     }
 
     get shutdown() {

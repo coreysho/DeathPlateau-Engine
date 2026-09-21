@@ -57,6 +57,8 @@ export function tradingPost(): TradingPost {
                     World.autosavePlayer(player);
                 }
             },
+            // every notice, online or not, also goes to the player's Discord if they have linked one
+            notice: (username, text) => World.discordNotify(username, text),
             now: () => Date.now()
         });
         printInfo(`Trading post open: ${file}`);
