@@ -233,6 +233,25 @@ management.get('/prometheus', async (_req, reply) => {
     return register.metrics();
 });
 
+// custom (2026-09-21) - a timed restart from the server's own shell (content/tools/restart.sh):
+// the "System update in" countdown every client draws, a line in chat, and a clean shutdown when it
+// runs out - the same as ::slowreboot, without needing to be logged in. Loopback only: anyone who
+// can reach this port from outside must not be able to take the world down.
+management.post<{ Querystring: { seconds?: string } }>('/reboot', async (req, reply) => {
+    if (req.ip !== '127.0.0.1' && req.ip !== '::1' && req.ip !== '::ffff:127.0.0.1') {
+        return reply.code(403).send('loopback only\n');
+    }
+    const seconds = Math.max(5, Math.min(3600, parseInt(req.query.seconds ?? '60', 10) || 60));
+    if (World.isPendingShutdown) {
+        return reply.code(409).send(`a restart is already under way: ${Math.round((World.shutdownTicksRemaining * 600) / 1000)}s left\n`);
+    }
+    const ticks = Math.ceil((seconds * 1000) / 600);
+    World.rebootTimer(ticks);
+    const when = seconds % 60 === 0 ? `${seconds / 60} minute${seconds === 60 ? '' : 's'}` : `${seconds} seconds`;
+    World.broadcastMes(`@red@The server will restart in ${when}. Please find a safe place to log out.`);
+    return reply.send(`restart in ${seconds}s (${ticks} ticks)\n`);
+});
+
 export async function startManagementWeb() {
     await management.listen({ port: Environment.WEB_MANAGEMENT_PORT, host: '0.0.0.0' });
 }
