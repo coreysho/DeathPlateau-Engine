@@ -52,7 +52,27 @@ export default class OpHeldHandler extends ClientGameMessageHandler<OpHeld> {
         player.lastSlot = slot;
 
         if (com.rootLayer != player.modalMain) {
-            player.clearPendingAction();
+            // AN INVENTORY OPTION NO LONGER DROPS YOUR TARGET. This was clearPendingAction(),
+            // which is closeModal() PLUS clearInteraction(), and clearInteraction() sets
+            // this.target = null - so eating, drinking, burying or equipping anything stopped you
+            // attacking. Reported from play 2026-09-21 as "actions get cancelled for doing
+            // anything - you should be able to do multiple things" and "pvp is way off".
+            //
+            // Upstream LostCityRS does the same, so this is a DELIBERATE DIVERGENCE decided by
+            // Corey on 2026-09-21: Old School feel over 2004 authenticity. It is the first of two
+            // mechanisms behind that report and it is deliberately alone on this branch, so the
+            // difference it makes can be felt on its own. The second is the `if (player.delayed)
+            // return false` at the top of this file and its fifteen siblings, which DISCARDS a
+            // click made during a delay rather than deferring it; that one is not touched here.
+            //
+            // The modal still closes, because clicking an item while a dialogue is open should
+            // dismiss the dialogue. Only the interaction survives.
+            //
+            // Not changed in OpHeldU or OpHeldT: using one item on another, or casting on an item,
+            // is its own action rather than something you do while fighting.
+            //
+            // See Content/claude/combat-delays-investigation.md.
+            player.closeModal();
         }
 
         player.moveClickRequest = false; // uses the dueling ring op to move whilst busy & queue pending: https://youtu.be/GPfN3Isl2rM
