@@ -1244,6 +1244,17 @@ class World {
         }
     }
 
+    // One player, now, outside the 15-minute cycle. For anything that has moved their holdings somewhere
+    // their save file cannot follow - the trading post above all - so a crash cannot roll the inventory
+    // back to before a trade that has already been recorded elsewhere.
+    autosavePlayer(player: Player): void {
+        this.loginThread.postMessage({
+            type: 'player_autosave',
+            username: player.username,
+            save: player.save()
+        });
+    }
+
     enqueueScript(script: ScriptState, delay: number = 0): void {
         this.queue.addTail(new EntityQueueState(script, delay + 1));
     }

@@ -133,6 +133,7 @@ export const enum ScriptOpcode {
     IF_SETTEXT, // official
     LAST_COM,
     LAST_INT, // official
+    LAST_STRING, // custom (2026-09-21) - what the player typed into p_namedialog
     LAST_ITEM,
     LAST_LOGIN_INFO,
     LAST_SLOT, // official
@@ -153,6 +154,7 @@ export const enum ScriptOpcode {
     P_ARRIVEDELAY, // official
     P_CLEARPENDINGACTION, // official
     P_COUNTDIALOG, // official
+    P_NAMEDIALOG, // custom (2026-09-21) - the chatbox "Enter name:" prompt the client has always had; the trading post searches with it
     P_DELAY, // official
     P_EXACTMOVE, // official
     P_FINDUID, // official
@@ -463,6 +465,38 @@ export const enum ScriptOpcode {
     DB_FIND_REFINE,
     DB_LISTALL,
 
+    // Trading post ops (7600-7699) - custom (2026-09-21), see engine/market/TradingPost.ts
+    TP_BROWSE = 7600,
+    TP_BROWSE_OBJ,
+    TP_REPAGE,
+    TP_QUERY,
+    TP_MINE,
+    TP_MYOFFERS,
+    TP_SLOT,
+    TP_LISTING_OBJ,
+    TP_LISTING_COUNT,
+    TP_LISTING_BUYOUT,
+    TP_LISTING_SELLER,
+    TP_LISTING_OPEN,
+    TP_LISTING_MINE,
+    TP_LISTING_OFFERS,
+    TP_LISTING_MYOFFER,
+    TP_OFFER,
+    TP_OFFER_BUYER,
+    TP_OFFER_COINS,
+    TP_OFFER_TEXT,
+    TP_OFFER_SHOW,
+    TP_LIST,
+    TP_BUYNOW,
+    TP_MAKEOFFER,
+    TP_ACCEPT,
+    TP_DECLINE,
+    TP_WITHDRAW,
+    TP_CANCEL,
+    TP_BOX,
+    TP_COLLECT,
+    TP_LOGIN,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -602,6 +636,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['IF_SETTEXT', ScriptOpcode.IF_SETTEXT],
     ['LAST_COM', ScriptOpcode.LAST_COM],
     ['LAST_INT', ScriptOpcode.LAST_INT],
+    ['LAST_STRING', ScriptOpcode.LAST_STRING],
     ['LAST_ITEM', ScriptOpcode.LAST_ITEM],
     ['LAST_LOGIN_INFO', ScriptOpcode.LAST_LOGIN_INFO],
     ['LAST_SLOT', ScriptOpcode.LAST_SLOT],
@@ -622,6 +657,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['P_ARRIVEDELAY', ScriptOpcode.P_ARRIVEDELAY],
     ['P_CLEARPENDINGACTION', ScriptOpcode.P_CLEARPENDINGACTION],
     ['P_COUNTDIALOG', ScriptOpcode.P_COUNTDIALOG],
+    ['P_NAMEDIALOG', ScriptOpcode.P_NAMEDIALOG],
     ['P_DELAY', ScriptOpcode.P_DELAY],
     ['P_EXACTMOVE', ScriptOpcode.P_EXACTMOVE],
     ['P_FINDUID', ScriptOpcode.P_FINDUID],
@@ -905,6 +941,36 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['DB_FIND', ScriptOpcode.DB_FIND],
     ['DB_FIND_REFINE', ScriptOpcode.DB_FIND_REFINE],
     ['DB_LISTALL', ScriptOpcode.DB_LISTALL],
+    ['TP_BROWSE', ScriptOpcode.TP_BROWSE],
+    ['TP_BROWSE_OBJ', ScriptOpcode.TP_BROWSE_OBJ],
+    ['TP_REPAGE', ScriptOpcode.TP_REPAGE],
+    ['TP_QUERY', ScriptOpcode.TP_QUERY],
+    ['TP_MINE', ScriptOpcode.TP_MINE],
+    ['TP_MYOFFERS', ScriptOpcode.TP_MYOFFERS],
+    ['TP_SLOT', ScriptOpcode.TP_SLOT],
+    ['TP_LISTING_OBJ', ScriptOpcode.TP_LISTING_OBJ],
+    ['TP_LISTING_COUNT', ScriptOpcode.TP_LISTING_COUNT],
+    ['TP_LISTING_BUYOUT', ScriptOpcode.TP_LISTING_BUYOUT],
+    ['TP_LISTING_SELLER', ScriptOpcode.TP_LISTING_SELLER],
+    ['TP_LISTING_OPEN', ScriptOpcode.TP_LISTING_OPEN],
+    ['TP_LISTING_MINE', ScriptOpcode.TP_LISTING_MINE],
+    ['TP_LISTING_OFFERS', ScriptOpcode.TP_LISTING_OFFERS],
+    ['TP_LISTING_MYOFFER', ScriptOpcode.TP_LISTING_MYOFFER],
+    ['TP_OFFER', ScriptOpcode.TP_OFFER],
+    ['TP_OFFER_BUYER', ScriptOpcode.TP_OFFER_BUYER],
+    ['TP_OFFER_COINS', ScriptOpcode.TP_OFFER_COINS],
+    ['TP_OFFER_TEXT', ScriptOpcode.TP_OFFER_TEXT],
+    ['TP_OFFER_SHOW', ScriptOpcode.TP_OFFER_SHOW],
+    ['TP_LIST', ScriptOpcode.TP_LIST],
+    ['TP_BUYNOW', ScriptOpcode.TP_BUYNOW],
+    ['TP_MAKEOFFER', ScriptOpcode.TP_MAKEOFFER],
+    ['TP_ACCEPT', ScriptOpcode.TP_ACCEPT],
+    ['TP_DECLINE', ScriptOpcode.TP_DECLINE],
+    ['TP_WITHDRAW', ScriptOpcode.TP_WITHDRAW],
+    ['TP_CANCEL', ScriptOpcode.TP_CANCEL],
+    ['TP_BOX', ScriptOpcode.TP_BOX],
+    ['TP_COLLECT', ScriptOpcode.TP_COLLECT],
+    ['TP_LOGIN', ScriptOpcode.TP_LOGIN],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],

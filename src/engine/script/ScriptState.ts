@@ -31,6 +31,7 @@ export default class ScriptState {
     static readonly COUNTDIALOG = 4;
     static readonly NPC_SUSPENDED = 5; // suspended to move to npc
     static readonly WORLD_SUSPENDED = 6; // suspended to move to world
+    static readonly NAMEDIALOG = 7; // custom (2026-09-21) - waiting on p_namedialog
 
     // interpreter
     script: ScriptFile;
@@ -127,6 +128,7 @@ export default class ScriptState {
     objIterator: IterableIterator<Obj> | null = null;
 
     lastInt: number = 0;
+    lastString: string = ''; // custom (2026-09-21) - the answer to p_namedialog
 
     constructor(script: ScriptFile, args: ScriptArgument[] | null = []) {
         this.script = script;

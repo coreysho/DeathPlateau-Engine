@@ -807,7 +807,7 @@ export default class Player extends PathingEntity {
         this.modalState = ModalState.NONE;
 
         // close any input dialogue suspended scripts.
-        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
+        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.NAMEDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
             this.activeScript = null;
             this.resumeButtons = [];
         }
@@ -2191,7 +2191,7 @@ export default class Player extends PathingEntity {
         this.refreshModal = true;
 
         // clear old suspended scripts
-        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
+        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.NAMEDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
             this.activeScript = null;
             this.resumeButtons = [];
         }
@@ -2227,7 +2227,7 @@ export default class Player extends PathingEntity {
         this.refreshModal = true;
 
         // clear old suspended scripts
-        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
+        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.NAMEDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
             this.activeScript = null;
             this.resumeButtons = [];
         }
@@ -2251,7 +2251,7 @@ export default class Player extends PathingEntity {
         this.refreshModal = true;
 
         // clear old suspended scripts
-        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
+        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.NAMEDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
             this.activeScript = null;
             this.resumeButtons = [];
         }
@@ -2277,7 +2277,7 @@ export default class Player extends PathingEntity {
         this.refreshModal = true;
 
         // clear old suspended scripts
-        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
+        if (this.activeScript?.execution === ScriptState.COUNTDIALOG || this.activeScript?.execution === ScriptState.NAMEDIALOG || this.activeScript?.execution === ScriptState.PAUSEBUTTON) {
             this.activeScript = null;
             this.resumeButtons = [];
         }

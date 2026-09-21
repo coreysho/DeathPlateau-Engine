@@ -30,3 +30,8 @@ jobs:
 
     - name: Compile
       run: npx tsc --noEmit
+
+    # The trading post's escrow rules against a real in-memory SQLite: every scenario adds up every
+    # coin and item before and after, so a dupe or a void fails it whatever the code path.
+    - name: Trading post
+      run: npx tsx tools/tradingpostcheck.ts

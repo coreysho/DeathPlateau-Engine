@@ -326,6 +326,12 @@ const ScriptOpcodePointers: {
             'last_useslot'
         ]
     },
+    // The same as p_countdialog, except that the compiler has no last_string pointer to set, so
+    // last_string is read unguarded: before an answer it is ''.
+    [ScriptOpcode.P_NAMEDIALOG]: {
+        require: ['p_active_player'],
+        corrupt: [...POINTER_GROUP_FIND, 'last_com', 'last_int', 'last_item', 'last_slot', 'last_targetslot', 'last_useitem', 'last_useslot']
+    },
     [ScriptOpcode.P_DELAY]: {
         require: ['p_active_player'],
         corrupt: [
@@ -1050,6 +1056,68 @@ const ScriptOpcodePointers: {
     },
     [ScriptOpcode.DB_LISTALL_WITH_COUNT]: {
         set: ['find_db']
+    },
+
+    // Trading post ops - the ones that read or fill the active player's own invs or views
+    [ScriptOpcode.TP_BROWSE]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_BROWSE_OBJ]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_REPAGE]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_QUERY]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_MINE]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_MYOFFERS]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_SLOT]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_LISTING_MINE]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_LISTING_MYOFFER]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_OFFER_SHOW]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_LIST]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_BUYNOW]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_MAKEOFFER]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_ACCEPT]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_DECLINE]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_WITHDRAW]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_CANCEL]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_BOX]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_COLLECT]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.TP_LOGIN]: {
+        require: ['active_player']
     }
 };
 
