@@ -328,6 +328,9 @@ const ScriptOpcodePointers: {
     },
     // The same as p_countdialog, except that the compiler has no last_string pointer to set, so
     // last_string is read unguarded: before an answer it is ''.
+    [ScriptOpcode.P_DIALOGPROMPT]: {
+        require: ['active_player']
+    },
     [ScriptOpcode.P_NAMEDIALOG]: {
         require: ['p_active_player'],
         corrupt: [...POINTER_GROUP_FIND, 'last_com', 'last_int', 'last_item', 'last_slot', 'last_targetslot', 'last_useitem', 'last_useslot']

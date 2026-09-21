@@ -154,6 +154,7 @@ export const enum ScriptOpcode {
     P_ARRIVEDELAY, // official
     P_CLEARPENDINGACTION, // official
     P_COUNTDIALOG, // official
+    P_DIALOGPROMPT, // custom (2026-09-21) - p_dialogprompt(string): what the next count or name dialog asks, in place of "Enter amount:" / "Enter name:"
     P_NAMEDIALOG, // custom (2026-09-21) - the chatbox "Enter name:" prompt the client has always had; the trading post searches with it
     P_DELAY, // official
     P_EXACTMOVE, // official
@@ -658,6 +659,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['P_CLEARPENDINGACTION', ScriptOpcode.P_CLEARPENDINGACTION],
     ['P_COUNTDIALOG', ScriptOpcode.P_COUNTDIALOG],
     ['P_NAMEDIALOG', ScriptOpcode.P_NAMEDIALOG],
+    ['P_DIALOGPROMPT', ScriptOpcode.P_DIALOGPROMPT],
     ['P_DELAY', ScriptOpcode.P_DELAY],
     ['P_EXACTMOVE', ScriptOpcode.P_EXACTMOVE],
     ['P_FINDUID', ScriptOpcode.P_FINDUID],

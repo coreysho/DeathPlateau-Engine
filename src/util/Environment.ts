@@ -21,9 +21,11 @@ export default {
     // away at the door instead of crashing someone mid-fight.
     //   378 = the walk-merge skeleton guard (Model.method368). An unpatched client throws
     //         ArrayIndexOutOfBounds on eat-while-walking with a godsword.
+    //   379 = P_DIALOGPROMPT (server prot 9, 2026-09-21). An older client has no length for it and
+    //         would read its text as the next packets.
     // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
     // without a rebuild, if a cutover has to be rolled back in a hurry.
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 378),
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 379),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),

@@ -34,6 +34,7 @@ export default class ServerGameProt {
     // text. The bank uses it so the left click reads "Withdraw 10" when 10 is the chosen default
     // quantity. Not an official 377 opcode - 8 was free in this table.
     static readonly IF_SETINVOP = new ServerGameProt(8, -1);
+    static readonly P_DIALOGPROMPT = new ServerGameProt(9, -1); // custom (2026-09-21) - the next count/name dialog's prompt text
 
     // tutorial area
     static readonly TUT_FLASH = new ServerGameProt(238, 1);

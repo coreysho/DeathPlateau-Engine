@@ -59,6 +59,7 @@ import IfSetText from '#/network/game/server/model/IfSetText.js';
 import MinimapToggle from '#/network/game/server/model/MinimapToggle.js';
 import PCountDialog from '#/network/game/server/model/PCountDialog.js';
 import PNameDialog from '#/network/game/server/model/PNameDialog.js';
+import PDialogPrompt from '#/network/game/server/model/PDialogPrompt.js';
 import SetPlayerOp from '#/network/game/server/model/SetPlayerOp.js';
 import SynthSound from '#/network/game/server/model/SynthSound.js';
 import TutFlash from '#/network/game/server/model/TutFlash.js';
@@ -380,6 +381,12 @@ const PlayerOps: CommandHandlers = {
     [ScriptOpcode.P_COUNTDIALOG]: state => {
         state.activePlayer.write(new PCountDialog());
         state.execution = ScriptState.COUNTDIALOG;
+    },
+
+    // p_dialogprompt(string): the question the next p_countdialog / p_namedialog puts in the chatbox.
+    // The client shows it for that one dialog and then goes back to its own wording.
+    [ScriptOpcode.P_DIALOGPROMPT]: state => {
+        state.activePlayer.write(new PDialogPrompt(state.popString()));
     },
 
     [ScriptOpcode.P_NAMEDIALOG]: state => {
