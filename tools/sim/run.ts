@@ -283,6 +283,48 @@ if (which === 'stack4') {
     console.log('  stacked ticks:', [...byTick.values()].filter(n => n > 1).length, 'of', byTick.size);
 }
 
+if (which === 'hitdelay') {
+    // How many ticks pass between the cast and the hitsplat, at every range the trident reaches.
+    // The cast tick is read off the attacker's own animation rather than assumed, so the attack
+    // cooldown between casts cannot skew it, and a splash simply contributes no pair.
+    console.log('HIT DELAY  ticks from cast animation to hitsplat, trident of the seas');
+    for (let range = 1; range <= 7; range++) {
+        const a = H.makePlayer('a' + range, MULTI[0], MULTI[1] + range, 1);
+        const b = H.makePlayer('b' + range, MULTI[0] + range, MULTI[1] + range, 2);
+        H.tick(1);
+        kit(a, 'trident_of_the_seas');
+        kit(b);
+        H.setVar(a, 'trident_charges', 2500);
+        H.setVar(b, 'option_nodef', 1); // hold still, do not close the gap
+        H.runProc(a, '[proc,player_combat_stat]');
+        // Make every cast connect. What is being measured is the flight, not the accuracy roll, and
+        // a splash contributes no cast/splat pair - without this a row can come back blank.
+        H.setVar(a, 'com_magicattack', 100000);
+        H.setVar(b, 'com_magicdef', 0);
+        H.clearLogs();
+        H.attack(a, b);
+        // keep the attack going - a one-sided fight ends the interaction, and a single cast that
+        // splashes would leave the row blank.
+        for (let i = 0; i < 80; i++) {
+            H.tick(1);
+            b.setLevel(3, 99);
+            if (!(a as unknown as { target: unknown }).target) H.attack(a, b);
+        }
+        const casts = H.anims.filter(x => x.who === a.username).map(x => x.tick);
+        const splats = H.hitsFor(b.username).map(h => h.tick);
+        // pair each splat with the most recent cast before it
+        const deltas = new Set<number>();
+        for (const s of splats) {
+            const cast = casts.filter(c => c <= s).pop();
+            if (cast !== undefined) deltas.add(s - cast);
+        }
+        const moved = a.x !== MULTI[0];
+        console.log(`   ${range} tile${range === 1 ? ' ' : 's'} apart  ->  ${[...deltas].sort((x, y) => x - y).join(' or ') || '(no hits)'} ticks` + `   [${casts.length} casts, ${splats.length} hits${moved ? ', attacker moved - ignore' : ''}]`);
+        H.despawn(a, b);
+        H.tick(1);
+    }
+}
+
 if (which === 'tridentsound') {
     const a = H.makePlayer('trid', SINGLE[0], SINGLE[1], 1);
     const b = H.makePlayer('tvic', SINGLE[0] + 6, SINGLE[1], 2);
