@@ -13,10 +13,18 @@ if [ ! -d "$CONTENT/scripts" ]; then
   exit 1
 fi
 
+# This script checks the content tree back and forth with `git checkout HEAD -- .`, which throws
+# away anything uncommitted. Refuse rather than eat someone's work.
+if [ -n "$(git -C "$CONTENT" status --porcelain)" ]; then
+  echo "content tree at $CONTENT has uncommitted changes - commit or stash them first," >&2
+  echo "this script checks it back and forth and would discard them." >&2
+  exit 1
+fi
+
 build() { (cd "$ENGINE" && BUILD_VERIFY=false BUILD_SRC_DIR="$CONTENT" npx tsx tools/pack/Build.ts > /dev/null 2>&1); }
 run() {
   for s in $SCENARIOS; do
-    timeout 900 npx tsx "$ENGINE/tools/sim/run.ts" "$s" 2>&1 \
+    BUILD_SRC_DIR="$CONTENT" timeout 900 npx tsx "$ENGINE/tools/sim/run.ts" "$s" 2>&1 \
       | grep -v "INFO\|DEBUG\|Experimental\|trace-warnings\|^$" || true
   done
 }

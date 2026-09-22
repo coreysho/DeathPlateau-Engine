@@ -283,6 +283,43 @@ if (which === 'stack4') {
     console.log('  stacked ticks:', [...byTick.values()].filter(n => n > 1).length, 'of', byTick.size);
 }
 
+if (which === 'tridentsound') {
+    const a = H.makePlayer('trid', SINGLE[0], SINGLE[1], 1);
+    const b = H.makePlayer('tvic', SINGLE[0] + 6, SINGLE[1], 2);
+    H.tick(1);
+    kit(a, 'trident_of_the_seas');
+    kit(b);
+    H.setVar(a, 'trident_charges', 2500);
+    H.runProc(a, '[proc,player_combat_stat]');
+    H.clearLogs();
+    const t0 = World.currentTick;
+    H.attack(a, b);
+    H.tick(20);
+    // Sample lengths measured by running the client's own jagex2.sound.Wave decoder over the
+    // .synth files, at the loop count the content passes to sound_synth.
+    const LEN: Record<string, number> = { waterwave_cast_and_fire: 1320, waterwave_hit: 1349, spellfail: 1100 };
+    console.log('TRIDENT AUDIO  5 casts at 6 tiles - the sounds the TRIDENT itself asks for');
+    // Only the trident's own three; the rest are the defender punching back.
+    const mine = H.soundsFor('trid').filter(s => s.synth in LEN);
+    const spans = mine
+        .map(s => {
+            const start = (s.tick - t0) * 600 + s.delay * 20; // world ms; delay is in 20ms client frames
+            return { name: s.synth, start, end: start + LEN[s.synth] };
+        })
+        .sort((x, y) => x.start - y.start);
+    let overlaps = 0;
+    for (let i = 1; i < spans.length; i++) {
+        const clash = spans[i].start < spans[i - 1].end;
+        if (clash) overlaps++;
+        console.log(`   ${String(spans[i - 1].start).padStart(5)}-${String(spans[i - 1].end).padStart(5)}ms  ${spans[i - 1].name}${clash ? `   <-- overlapped by the next (${spans[i].start}ms)` : ''}`);
+    }
+    if (spans.length) {
+        const l = spans[spans.length - 1];
+        console.log(`   ${String(l.start).padStart(5)}-${String(l.end).padStart(5)}ms  ${l.name}`);
+    }
+    console.log('  casts:', 2500 - H.getVar(a, 'trident_charges'), ' trident sounds:', mine.length, ' OVERLAPPING PAIRS:', overlaps);
+}
+
 if (which === 'trident') {
     const a = H.makePlayer('trid', SINGLE[0], SINGLE[1], 1);
     const b = H.makePlayer('tvic', SINGLE[0] + 6, SINGLE[1], 2);

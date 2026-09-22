@@ -12,6 +12,10 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import VarNpcType from '#/cache/config/VarNpcType.js';
 import Component from '#/cache/config/Component.js';
+import SynthSound from '#/network/game/server/model/SynthSound.js';
+import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
+import fs from 'fs';
+import Environment from '#/util/Environment.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
 import { PlayerStatMap } from '#/engine/entity/PlayerStat.js';
 import { toBase37 } from '#/util/JString.js';
@@ -21,12 +25,31 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 
 export type Hit = { tick: number; who: string; damage: number; type: number };
 export type Say = { tick: number; who: string; text: string };
+export type Sound = { tick: number; who: string; synth: string; loops: number; delay: number };
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
+export const sounds: Sound[] = [];
 
 let booted = false;
+
+// id -> name straight out of the content's pack file, so sounds print as names rather than numbers.
+let synthNames: Map<number, string> | null = null;
+function synthName(id: number): string {
+    if (!synthNames) {
+        synthNames = new Map();
+        try {
+            for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/pack/synth.pack`, 'ascii').split(/\r?\n/)) {
+                const eq = line.indexOf('=');
+                if (eq > 0) synthNames.set(parseInt(line.slice(0, eq)), line.slice(eq + 1));
+            }
+        } catch {
+            // no pack file reachable - ids will do
+        }
+    }
+    return synthNames.get(id) ?? String(id);
+}
 
 export async function boot() {
     if (booted) return;
@@ -52,6 +75,22 @@ export async function boot() {
     // engage them. Real worlds are never in that state; a warm-up puts the clock where it belongs.
     for (let i = 0; i < 30; i++) World.cycle();
 
+    // Every sound the server asks a client to play. Player.write is called before its
+    // not-connected early return, so this catches them even with no socket on the other end.
+    const origWrite = (Player.prototype as any).write;
+    (Player.prototype as any).write = function (message: ServerGameMessage) {
+        if (message instanceof SynthSound) {
+            sounds.push({
+                tick: World.currentTick,
+                who: this.username,
+                synth: synthName(message.synth),
+                loops: message.loops,
+                delay: message.delay
+            });
+        }
+        return origWrite.call(this, message);
+    };
+
     const origMes = (Player.prototype as any).messageGame;
     (Player.prototype as any).messageGame = function (msg: string) {
         mesgs.push({ tick: World.currentTick, who: this.username, text: msg });
@@ -60,6 +99,7 @@ export async function boot() {
 }
 
 export function clearLogs() {
+    sounds.length = 0;
     hits.length = 0;
     anims.length = 0;
     mesgs.length = 0;
@@ -278,6 +318,10 @@ export function despawn(...players: Player[]) {
 
 export function tick(n = 1) {
     for (let i = 0; i < n; i++) World.cycle();
+}
+
+export function soundsFor(name: string) {
+    return sounds.filter(s => s.who === name);
 }
 
 export function hitsFor(name: string) {
