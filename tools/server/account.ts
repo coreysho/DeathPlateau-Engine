@@ -142,7 +142,30 @@ function loadCache() {
     // Not World.start: that boots the map, the login and friend worker threads and the dev
     // watcher, none of which a file edit needs, and all of which would keep the process alive.
     // reload() is the part that fills ObjType, InvType, VarPlayerType and the rest.
-    World.reload();
+    // NO CACHE IS A NORMAL STATE, not a broken install: data/pack is exactly what you delete
+    // after pulling new content, and the server rebuilds it on its next start. Without it some
+    // loaders throw on a missing .dat and others return QUIETLY, which would leave the tables
+    // empty and this tool cheerfully reporting a bank full of obj_0 - and, far worse, writing
+    // one. All three shapes of that end up as the same sentence.
+    const noCache = 'data/pack is empty or missing - there is no cache here to read item, inventory and varp names from.\nBuild it first (npm run build), or start the server once, then run this again.';
+
+    if (!fs.existsSync('data/pack')) {
+        fail(noCache);
+    }
+
+    try {
+        World.reload();
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            fail(noCache);
+        }
+        throw err;
+    }
+
+    if (ObjType.count === 0 || InvType.count === 0) {
+        fail(noCache);
+    }
+
     cacheLoaded = true;
 }
 
