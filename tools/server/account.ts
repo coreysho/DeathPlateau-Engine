@@ -38,7 +38,7 @@
  *   npx tsx tools/server/account.ts list
  *   npx tsx tools/server/account.ts show bob
  *   npx tsx tools/server/account.ts export bob --out bob.json
- *   npx tsx tools/server/account.ts import bob --in bob.json
+ *   npx tsx tools/server/account.ts import bob --in bob.json      (--in - reads stdin)
  *   npx tsx tools/server/account.ts set bob save.stats.ATTACK 99
  *   npx tsx tools/server/account.ts set bob 'save.stats.*' 99
  *   npx tsx tools/server/account.ts set bob account.members true
@@ -690,8 +690,12 @@ async function main() {
         }
 
         case 'import': {
-            if (!username || typeof args.in !== 'string') fail('usage: import <user> --in file.json');
-            const data = JSON.parse(fs.readFileSync(args.in, 'utf8')) as Export;
+            if (!username || typeof args.in !== 'string') fail('usage: import <user> --in file.json   (--in - reads stdin)');
+            // --in - is how edit-account.bat gets a file from the machine you are sitting at onto
+            // a server you are only ssh'd into, without leaving a copy of somebody's account in
+            // /tmp on the way.
+            const raw = args.in === '-' ? fs.readFileSync(0, 'utf8') : fs.readFileSync(args.in, 'utf8');
+            const data = JSON.parse(raw) as Export;
             await fullImport(username, data, args.force === true);
             break;
         }
