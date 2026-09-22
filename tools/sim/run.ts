@@ -499,6 +499,69 @@ if (which.startsWith('barrows')) {
     console.log('   npc ended in mode', (npc as any).targetOp, '(8=opplayer2, 13=applayer2, 1=wander)');
 }
 
+if (which === 'platinum') {
+    const p = H.makePlayer('rich', SINGLE[0], SINGLE[1], 1);
+    H.tick(1);
+
+    const show = (label: string) => console.log(`  ${label.padEnd(34)} coins=${H.invCount(p, 'coins')} tokens=${H.invCount(p, 'platinum_token')}`);
+
+    const buy = (n: number) => H.runProc(p, '[proc,platinum_buy_amount]', [n]);
+    const sell = (n: number) => H.runProc(p, '[proc,platinum_sell_amount]', [n]);
+
+    console.log('PLATINUM TOKENS  coins <-> tokens at the trading post');
+    console.log('  oploc4 on the post exists:', H.hasScript('[oploc4,trading_post]'));
+
+    H.clearInv(p);
+    H.give(p, 'coins', 5500);
+    buy(3);
+    show('5,500 coins, asked for 3');
+
+    H.clearInv(p);
+    H.give(p, 'coins', 5500);
+    buy(99);
+    show('5,500 coins, asked for 99 (clamps)');
+
+    H.clearInv(p);
+    H.give(p, 'coins', 999);
+    buy(1);
+    show('999 coins, asked for 1 (too poor)');
+
+    H.clearInv(p);
+    H.give(p, 'coins', 5500);
+    H.fillInv(p);
+    buy(3);
+    show('full inv, part of the coins');
+
+    H.clearInv(p);
+    H.give(p, 'coins', 5000);
+    H.fillInv(p);
+    buy(5);
+    show('full inv, ALL of the coins');
+
+    H.clearInv(p);
+    H.give(p, 'platinum_token', 4);
+    sell(3);
+    show('4 tokens, cashed 3');
+
+    H.clearInv(p);
+    H.give(p, 'platinum_token', 4);
+    sell(99);
+    show('4 tokens, asked for 99 (clamps)');
+
+    // The ceiling the tokens exist for: 2,147,483,647 is the largest coin stack there is.
+    H.clearInv(p);
+    H.give(p, 'coins', 2147000000);
+    H.give(p, 'platinum_token', 5000);
+    sell(5000);
+    show('2.147b coins + 5,000 tokens');
+    console.log('  (a coin stack can never exceed 2147483647; anything over stays a token)');
+
+    H.clearInv(p);
+    H.give(p, 'platinum_token', 4);
+    sell(0);
+    show('asked for 0 (no-op)');
+}
+
 function gaps(ticks: number[]) {
     const out: number[] = [];
     for (let i = 1; i < ticks.length; i++) out.push(ticks[i] - ticks[i - 1]);

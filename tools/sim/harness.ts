@@ -216,6 +216,27 @@ export function give(p: Player, objName: string, count = 1) {
     p.invAdd(InvType.INV, obj, count);
 }
 
+/** How many of an obj the player is carrying, counting every slot. */
+export function invCount(p: Player, objName: string) {
+    const obj = ObjType.getId(objName);
+    if (obj === -1) throw new Error('no such obj: ' + objName);
+    const inv = p.getInventory(InvType.INV)!;
+    let n = 0;
+    for (let i = 0; i < inv.capacity; i++) {
+        const slot = inv.get(i);
+        if (slot && slot.id === obj) n += slot.count;
+    }
+    return n;
+}
+
+/** Pack every remaining slot with a distinct unstackable, so inv_freespace reads 0. */
+export function fillInv(p: Player) {
+    const inv = p.getInventory(InvType.INV)!;
+    for (let i = 0; i < inv.capacity; i++) {
+        if (!inv.get(i)) p.invSet(InvType.INV, ObjType.getId('bronze_arrow'), 1, i);
+    }
+}
+
 export function runProc(p: Player, name: string, args: any[] = [], secondary?: Player): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
