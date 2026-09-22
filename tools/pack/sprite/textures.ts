@@ -52,8 +52,8 @@ export async function packClientTexture(cache: FileStream) {
     // The checksum is of the STOCK 50-texture archive, so it can only be checked while the archive
     // is still the stock one. Past that there is nothing to compare against - the archive is this
     // fork's own - and the guard above (every id from 0 to max must be named) is what replaces it.
-    if (Environment.BUILD_VERIFY && TexturePack.max === 50 && !Packet.checkcrc(packed, 0, packed.length, -1741782021)) {
-        throw new Error('textures checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false');
+    if (Environment.BUILD_VERIFY_CACHE && TexturePack.max === 50 && !Packet.checkcrc(packed, 0, packed.length, -1741782021)) {
+        throw new Error('textures does not match the original 377 cache.\nThat is expected on a repo with custom content; this check only runs with BUILD_VERIFY_CACHE=true.');
     }
 
     cache.write(0, 6, packed);

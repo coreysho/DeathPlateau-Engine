@@ -42,8 +42,8 @@ export function packClientInterface(cache: FileStream, modelFlags: number[]) {
     }
 
     const packed = fs.readFileSync('data/pack/client/interface');
-    if (Environment.BUILD_VERIFY && !Packet.checkcrc(packed, 0, packed.length, 1433713710)) {
-        throw new Error('interface checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false');
+    if (Environment.BUILD_VERIFY_CACHE && !Packet.checkcrc(packed, 0, packed.length, 1433713710)) {
+        throw new Error('interface does not match the original 377 cache.\nThat is expected on a repo with custom content; this check only runs with BUILD_VERIFY_CACHE=true.');
     }
 
     cache.write(0, 3, packed);

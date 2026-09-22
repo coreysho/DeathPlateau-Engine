@@ -310,8 +310,8 @@ export async function readConfigs(
 
     const { client, server } = pack(configs, modelFlags);
 
-    if (Environment.BUILD_VERIFY && validate && !validate(client.dat, server.dat)) {
-        throw new Error(`${extension} checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false`);
+    if (Environment.BUILD_VERIFY_CACHE && validate && !validate(client.dat, server.dat)) {
+        throw new Error(`${extension} does not match the original 377 cache.\nThat is expected on a repo with custom content; this check only runs with BUILD_VERIFY_CACHE=true.`);
     }
 
     saveClient(client.dat, client.idx);

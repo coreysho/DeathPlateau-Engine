@@ -130,7 +130,13 @@ function validateImagePack(pack: PackFile, path: string, ext: string): void {
 
 function validateConfigPack(pack: PackFile, ext: string, transmitted: boolean = false): void {
     const packFile = getPackFilePath(pack.type);
-    if (!shouldRevalidatePackFile(pack, [{ path: `${Environment.BUILD_SRC_DIR}/scripts`, ext }])) {
+    // A TRANSMITTED PACK IS ALWAYS RECHECKED. The mtime shortcut below asks "is any .<ext> source
+    // newer than the pack file", which answers the wrong question for the checks further down: an
+    // id line added or left behind by hand makes the PACK file the newer one, so the very edit most
+    // likely to introduce a dangling name is the one that skips the check that would catch it. That
+    // is how skillcape_construction_graphic sat in seq.pack and spotanim.pack with no definition in
+    // either. Rechecking costs one directory walk per transmitted extension.
+    if (!transmitted && !shouldRevalidatePackFile(pack, [{ path: `${Environment.BUILD_SRC_DIR}/scripts`, ext }])) {
         pack.load(packFile);
         return;
     }

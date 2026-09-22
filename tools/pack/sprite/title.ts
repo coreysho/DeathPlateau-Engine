@@ -45,8 +45,8 @@ export async function packClientTitle(cache: FileStream) {
     }
 
     const packed = fs.readFileSync('data/pack/client/title');
-    if (Environment.BUILD_VERIFY && !Packet.checkcrc(packed, 0, packed.length, -1794511643)) {
-        throw new Error('title checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false');
+    if (Environment.BUILD_VERIFY_CACHE && !Packet.checkcrc(packed, 0, packed.length, -1794511643)) {
+        throw new Error('title does not match the original 377 cache.\nThat is expected on a repo with custom content; this check only runs with BUILD_VERIFY_CACHE=true.');
     }
 
     cache.write(0, 1, packed);

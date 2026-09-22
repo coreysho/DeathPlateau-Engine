@@ -101,8 +101,17 @@ export default {
     BUILD_VERBOSE: tryParseBoolean(process.env.BUILD_VERBOSE, false),
     // auto-build on startup
     BUILD_STARTUP: tryParseBoolean(process.env.BUILD_STARTUP, false),
-    // used to check if we're producing the original cache without edits
+    // BUILD_VERIFY covers the pack files: every config has an id line, and every id line has a
+    // config. Those catch real mistakes in a content repo and cost nothing, so they stay on.
     BUILD_VERIFY: tryParseBoolean(process.env.BUILD_VERIFY, true),
+    // BUILD_VERIFY_CACHE is the other thing BUILD_VERIFY used to gate: a CRC of each packed archive
+    // against the ORIGINAL 377 cache, to prove the build reproduces it byte for byte. That is a
+    // guarantee an unmodified repo can give and a content repo cannot - this one has added locs,
+    // npcs, objs, seqs, spotanims, varbits, varps and interfaces, and eight of the ten archives no
+    // longer match (.flo and .idk still do). One flag covering both meant the only way to build was
+    // BUILD_VERIFY=false, which ALSO turned off the pack-file checks - and that is how a dangling
+    // seq id sat in the repo unnoticed. Set it to true on a repo that is meant to reproduce stock.
+    BUILD_VERIFY_CACHE: tryParseBoolean(process.env.BUILD_VERIFY_CACHE, false),
     // used to keep some semblance of sanity in our folder structure
     BUILD_VERIFY_FOLDER: tryParseBoolean(process.env.BUILD_VERIFY_FOLDER, true),
     // used for unpacking/custom development
