@@ -6,6 +6,9 @@ import Npc from '#/engine/entity/Npc.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ObjType from '#/cache/config/ObjType.js';
+import ParamType from '#/cache/config/ParamType.js';
+import LocType from '#/cache/config/LocType.js';
+import CategoryType from '#/cache/config/CategoryType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import InvType from '#/cache/config/InvType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
@@ -13,6 +16,8 @@ import VarBitType from '#/cache/config/VarBitType.js';
 import VarNpcType from '#/cache/config/VarNpcType.js';
 import Component from '#/cache/config/Component.js';
 import SynthSound from '#/network/game/server/model/SynthSound.js';
+import IfOpenMain from '#/network/game/server/model/IfOpenMain.js';
+import IfSetText from '#/network/game/server/model/IfSetText.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import fs from 'fs';
 import Environment from '#/util/Environment.js';
@@ -26,11 +31,13 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 export type Hit = { tick: number; who: string; damage: number; type: number };
 export type Say = { tick: number; who: string; text: string };
 export type Sound = { tick: number; who: string; synth: string; loops: number; delay: number };
+export type Iface = { tick: number; who: string; kind: 'open' | 'text'; com: number; text?: string };
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
 export const sounds: Sound[] = [];
+export const ifaces: Iface[] = [];
 
 let booted = false;
 
@@ -79,6 +86,12 @@ export async function boot() {
     // not-connected early return, so this catches them even with no socket on the other end.
     const origWrite = (Player.prototype as any).write;
     (Player.prototype as any).write = function (message: ServerGameMessage) {
+        if (message instanceof IfOpenMain) {
+            ifaces.push({ tick: World.currentTick, who: this.username, kind: 'open', com: message.component });
+        }
+        if (message instanceof IfSetText) {
+            ifaces.push({ tick: World.currentTick, who: this.username, kind: 'text', com: message.component, text: message.text });
+        }
         if (message instanceof SynthSound) {
             sounds.push({
                 tick: World.currentTick,
@@ -99,6 +112,7 @@ export async function boot() {
 }
 
 export function clearLogs() {
+    ifaces.length = 0;
     sounds.length = 0;
     hits.length = 0;
     anims.length = 0;
@@ -153,6 +167,46 @@ export function equip(p: Player, slots: Record<string, string>) {
         const obj = ObjType.getId(objName);
         if (obj === -1) throw new Error('no such obj: ' + objName);
         p.invSet(InvType.WORN, obj, 1, wearpos[slot]);
+    }
+}
+
+/** Every obj debugname that carries the named param - for sweeping a whole content family. */
+export function objNamesByParam(paramName: string): string[] {
+    const param = ParamType.getId(paramName);
+    if (param === -1) throw new Error('no such param: ' + paramName);
+    const out: string[] = [];
+    for (const [name, id] of ObjType.configNames) {
+        if (ObjType.get(id).params?.has(param)) out.push(name);
+    }
+    return out.sort();
+}
+
+/** Is this loc wired for cooking - by category, or by a trigger of its own? */
+export function locCookInfo(locName: string): { category: string | null; cooks: boolean; ownHandler: boolean } {
+    const id = LocType.getId(locName);
+    if (id === -1) throw new Error('no such loc: ' + locName);
+    const type = LocType.get(id);
+    const category = type.category === -1 ? null : (CategoryType.get(type.category)?.debugname ?? String(type.category));
+    const own = ScriptProvider.getByTriggerSpecific(ServerTriggerType.APLOCU, id, -1) !== undefined || ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPLOCU, id, -1) !== undefined;
+    const byCategory = ScriptProvider.getByTrigger(ServerTriggerType.OPLOCU, id, type.category) !== undefined;
+    return { category, cooks: own || byCategory, ownHandler: own };
+}
+
+/** The npc currently in this player's follower slot, if any. */
+export function followerOf(p: Player): Npc | null {
+    const v = VarPlayerType.getByName('follower_uid');
+    if (!v) throw new Error('no follower_uid varp');
+    const uid = p.getVar(v.id) as number;
+    for (const npc of World.npcs) {
+        if (npc && npc.uid === uid && npc.isActive) return npc;
+    }
+    return null;
+}
+
+export function clearInv(p: Player) {
+    const inv = p.getInventory(InvType.INV)!;
+    for (let i = 0; i < inv.capacity; i++) {
+        if (inv.get(i)) p.invDelSlot(InvType.INV, i);
     }
 }
 

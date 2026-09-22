@@ -283,6 +283,91 @@ if (which === 'stack4') {
     console.log('  stacked ticks:', [...byTick.values()].filter(n => n > 1).length, 'of', byTick.size);
 }
 
+if (which.startsWith('pets')) {
+    // Drop a pet, change floor, then walk - does it come with you and keep following?
+    // One pet per process: the follower slot and the npc list carry over between drops otherwise.
+    // Lumbridge castle, ground floor and the floor above it.
+    const item = which.includes(':') ? which.split(':')[1] : 'bosspet_kbd_item';
+    const GROUND: [number, number] = [3208, 3218];
+    const p = H.makePlayer('owner', GROUND[0], GROUND[1], 1);
+    H.tick(1);
+    kit(p);
+    H.clearLogs();
+    H.give(p, item, 1);
+    H.opheld(p, item, 5); // Drop puts the pet down
+    H.tick(2);
+    const pet = H.followerOf(p);
+    console.log(`PETS  ${item}`);
+    if (!pet) {
+        console.log('   no follower after the drop. messages:', H.mesgs.map(m => m.text).join(' | ') || '(none)');
+    } else {
+        console.log(`   put down on L${pet.level} at ${Math.max(Math.abs(pet.x - p.x), Math.abs(pet.z - p.z))} tiles`);
+        p.teleport(GROUND[0], GROUND[1], 1); // up the stairs
+        H.tick(6);
+        const mode = (pet as unknown as { targetOp: number }).targetOp;
+        console.log(`   after changing floor: pet on L${pet.level}, player on L${p.level}, mode=${mode}${mode === 4 ? ' (playerfollow)' : ' (NOT following)'}`);
+        for (let i = 0; i < 8; i++) {
+            H.walkTo(p, p.x + 1, p.z);
+            H.tick(1);
+        }
+        console.log(`   after walking 8 tiles: gap = ${Math.max(Math.abs(pet.x - p.x), Math.abs(pet.z - p.z))} tiles`);
+        p.teleport(3290, 3180, 0); // and a long teleport on the same floor
+        H.tick(4);
+        console.log(`   after teleporting away: gap = ${Math.max(Math.abs(pet.x - p.x), Math.abs(pet.z - p.z))} tiles, pet on L${pet.level}`);
+    }
+}
+
+if (which === 'ranges') {
+    // Can you actually cook on every loc in the game that calls itself a range?
+    const p = H.makePlayer('cook', SINGLE[0], SINGLE[1], 1);
+    H.tick(1);
+    kit(p);
+    const names = ['range', 'loc_2729', 'loc_2730', 'loc_2731', 'rimmington_poor_range', 'ahoy_range', 'elf_village_range', 'fairy_range', 'loc_14919', 'carnilleanrange', 'newbierange', 'viking_seer_range'];
+    console.log('RANGES  category and whether a cooking trigger would fire');
+    for (const name of names) {
+        const info = H.locCookInfo(name);
+        console.log(`   ${name.padEnd(24)} category=${(info.category ?? 'NONE').padEnd(13)} cooks=${info.cooks}${info.ownHandler ? '  (own [oplocu] handler)' : ''}`);
+    }
+}
+
+if (which === 'clues') {
+    // Read every clue scroll in the game and report any that do not put readable text on screen.
+    // if_openmain does not write a packet - it sets Player.modalMain and lets processClientsOut
+    // send it - so the check is the modal id plus the text lines the script actually set.
+    const p = H.makePlayer('clue', SINGLE[0], SINGLE[1], 1);
+    H.tick(1);
+    kit(p);
+    const names = H.objNamesByParam('trail_desc');
+    console.log(`CLUE SCROLLS  reading all ${names.length} objs that carry a trail_desc`);
+    const broken: string[] = [];
+    const modals = new Set<number>();
+    let widest = 0;
+    for (const name of names) {
+        H.clearLogs();
+        p.closeModal();
+        try {
+            H.give(p, name, 1);
+            H.opheld(p, name, 1);
+        } catch (e) {
+            broken.push(`${name}: ${(e as Error).message}`);
+            continue;
+        }
+        const modal = (p as unknown as { modalMain: number }).modalMain;
+        const lines = H.ifaces.filter(i => i.kind === 'text' && (i.text ?? '').length > 0);
+        const debug = H.mesgs.filter(m => m.text.includes('TRAIL DEBUG')).map(m => m.text);
+        if (modal === -1 || lines.length === 0 || debug.length) {
+            broken.push(`${name}: modal=${modal} lines=${lines.length} ${debug.join(' ')}`);
+        }
+        modals.add(modal);
+        for (const l of lines) widest = Math.max(widest, l.text!.length);
+        H.clearInv(p);
+    }
+    console.log(`  clues that fail to display: ${broken.length} of ${names.length}`);
+    for (const b of broken) console.log('   ' + b);
+    console.log('  interfaces used:', [...modals].join(', '), '(6965 = trail_cluelong, 6988 = trail_clue)');
+    console.log('  longest line:', widest, 'characters');
+}
+
 if (which === 'hitdelay') {
     // How many ticks pass between the cast and the hitsplat, at every range the trident reaches.
     // The cast tick is read off the attacker's own animation rather than assumed, so the attack

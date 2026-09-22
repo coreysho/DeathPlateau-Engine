@@ -17,8 +17,13 @@ npx tsx tools/sim/run.ts <scenario>
 ```
 
 Scenarios: `baseline`, `style`, `eat`, `eatmove`, `drink`, `drinkmove`, `stack2`, `stack3`,
-`stack4`, `trident`, `tridentsound`, `hitdelay`, `barrows:<npc>`, and `tools/sim/soak.ts` for a
-400-tick soak with the full npc population.
+`stack4`, `trident`, `tridentsound`, `hitdelay`, `barrows:<npc>`, `pets:<item>`, `clues`, `ranges`,
+and `tools/sim/soak.ts` for a 400-tick soak with the full npc population.
+
+`pets:<item>` puts a pet down, walks the owner up a staircase, then across the map, and reports the
+pet's floor, its npc mode and how far behind it ended up. `clues` reads every obj in the game that
+carries a trail_desc and reports any that fail to put text on screen. `ranges` asks, for every loc
+that calls itself a range, whether a cooking trigger would actually fire on it.
 
 `hitdelay` prints the ticks between the cast animation and the hitsplat at every range the trident
 reaches, which is the number to compare against Old School when deciding whether a projectile is
