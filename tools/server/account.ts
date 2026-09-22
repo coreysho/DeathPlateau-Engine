@@ -1,0 +1,712 @@
+/**
+ * Read and write everything an account is, from outside the running server.
+ *
+ * PRISMA STUDIO SHOWS ONLY HALF OF ONE. An account is TWO things kept in two places: a row in the
+ * database (username, password hash, members, mod level, bans, mutes, friends, ignores, hiscores)
+ * and a SAVE FILE at data/players/<profile>/<username>.sav holding the character - position,
+ * appearance, every stat, every varp, and every permanent inventory including the bank. Studio can
+ * edit the first and cannot see the second at all, which is why the levels and items you go
+ * looking for in it are never there.
+ *
+ * IT NEVER RE-IMPLEMENTS THE SAVE FORMAT. The file is read with PlayerLoading.load and written
+ * with Player.save - the same two functions the server itself uses - so a save this tool writes is
+ * a save the server wrote, checksum, version byte and all. There is no second decoder here to
+ * drift out of step the next time SAV_VERSION moves.
+ *
+ * THREE THINGS STAND BETWEEN AN EDIT AND A LOST CHARACTER:
+ *   * it refuses to write while that account is logged in, because the server holds the character
+ *     in memory and rewrites the file at logout - your edit would be overwritten and you would
+ *     have no way of knowing. --force is there for a save the server left marked online after a
+ *     crash, and for nothing else;
+ *   * the new bytes are loaded back through PlayerLoading before anything is replaced, so a save
+ *     that would not load is never the one on disk;
+ *   * the old file is copied to <username>.sav.bak-<timestamp> first.
+ *
+ * WHAT IS NOT EDITABLE, ON PURPOSE. The chat, report, session and wealth log tables are a record
+ * of what happened; `show` summarises them and nothing here writes them. Neither is the password
+ * hash exported - a hash in a JSON file on disk is a liability, and `password` sets a new one
+ * properly instead.
+ *
+ * EXPERIENCE IS SHOWN AND TAKEN AS THE REAL NUMBER. Internally the engine keeps it in tenths -
+ * a 99 is 130,344,310 in the file - and this converts at the edges, so `set bob save.stats.ATTACK
+ * 99` and a JSON that says 13034431 both mean the same thing and both mean what they look like.
+ *
+ * HISCORES ARE DERIVED, not stored: LoginServer recomputes every row from the save each time the
+ * player saves. Editing them is pointless, so this does not - change the stat and the hiscore
+ * follows on the player's next logout.
+ *
+ *   npx tsx tools/server/account.ts list
+ *   npx tsx tools/server/account.ts show bob
+ *   npx tsx tools/server/account.ts export bob --out bob.json
+ *   npx tsx tools/server/account.ts import bob --in bob.json
+ *   npx tsx tools/server/account.ts set bob save.stats.ATTACK 99
+ *   npx tsx tools/server/account.ts set bob 'save.stats.*' 99
+ *   npx tsx tools/server/account.ts set bob account.members true
+ *   npx tsx tools/server/account.ts give bob abyssal_whip 1 --inv bank
+ *   npx tsx tools/server/account.ts password bob hunter2
+ *
+ * --profile <name> picks the world profile (default: NODE_PROFILE, or "main").
+ */
+import fs from 'fs';
+import path from 'path';
+
+import * as bcrypt from 'bcrypt-ts';
+
+// World FIRST, and not alphabetically. Player and NetworkPlayer are a cycle - NetworkPlayer
+// extends Player and Player names it back - and only World's module graph pulls them in the order
+// that resolves. Importing Player first is a "Cannot access 'Player' before initialization" at
+// startup. tools/sim/harness.ts has the same line at the top for the same reason.
+import World from '#/engine/World.js';
+
+import InvType from '#/cache/config/InvType.js';
+import ObjType from '#/cache/config/ObjType.js';
+import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import { db, toDbDate } from '#/db/query.js';
+import Player, { getExpByLevel, getLevelByExp } from '#/engine/entity/Player.js';
+import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
+import { PLAYER_STAT_COUNT, PlayerStatMap, PlayerStatNameMap } from '#/engine/entity/PlayerStat.js';
+import Packet from '#/io/Packet.js';
+import Environment from '#/util/Environment.js';
+
+// ChatModePublic and friends are const enums, so they are erased at build time and cannot be
+// indexed at runtime. The four names in save order, which is what the packed byte holds.
+const PUBLIC_MODES = ['ON', 'FRIENDS', 'OFF', 'HIDE'];
+const PRIVATE_MODES = ['ON', 'FRIENDS', 'OFF'];
+const TRADE_MODES = ['ON', 'FRIENDS', 'OFF'];
+
+type Args = { _: string[]; [flag: string]: string | boolean | string[] };
+
+function parseArgs(argv: string[]): Args {
+    const out: Args = { _: [] };
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (a.startsWith('--')) {
+            const next = argv[i + 1];
+            if (next === undefined || next.startsWith('--')) {
+                out[a.slice(2)] = true;
+            } else {
+                out[a.slice(2)] = next;
+                i++;
+            }
+        } else {
+            out._.push(a);
+        }
+    }
+    return out;
+}
+
+const args = parseArgs(process.argv.slice(2));
+const command = args._[0];
+const profile = typeof args.profile === 'string' ? args.profile : Environment.NODE_PROFILE;
+
+function fail(msg: string): never {
+    console.error(msg);
+    process.exit(1);
+}
+
+function savePath(username: string) {
+    return path.join('data/players', profile, `${username.toLowerCase()}.sav`);
+}
+
+// ---------------------------------------------------------------- the database half
+
+/**
+ * Every DB read goes through this. A missing db.sqlite, an unmigrated one, or a MySQL that is not
+ * up are all the same situation for this tool: the save file is still readable and still editable,
+ * and reporting "no account row" beats a stack trace that makes it look like the save is broken.
+ */
+async function tryDb<T>(what: string, fn: () => Promise<T>): Promise<T | null> {
+    try {
+        return await fn();
+    } catch (err) {
+        console.error(`  (database unavailable for ${what}: ${(err as Error).message})`);
+        return null;
+    }
+}
+
+async function getAccount(username: string) {
+    return await tryDb('the account row', () => db.selectFrom('account').selectAll().where('username', '=', username.toLowerCase()).executeTakeFirst());
+}
+
+/** 0 or null means nobody has it. Anything else is the node id of the world it is logged into. */
+async function isOnline(accountId: number) {
+    const row = await tryDb('the login state', () => db.selectFrom('account_login').select('logged_in').where('account_id', '=', accountId).where('profile', '=', profile).executeTakeFirst());
+    return row != null && row.logged_in !== 0;
+}
+
+// ---------------------------------------------------------------- the save-file half
+
+let cacheLoaded = false;
+function loadCache() {
+    if (cacheLoaded) return;
+    // Not World.start: that boots the map, the login and friend worker threads and the dev
+    // watcher, none of which a file edit needs, and all of which would keep the process alive.
+    // reload() is the part that fills ObjType, InvType, VarPlayerType and the rest.
+    World.reload();
+    cacheLoaded = true;
+}
+
+function readSave(username: string): Player {
+    loadCache();
+    const file = savePath(username);
+    const raw = fs.existsSync(file) ? new Uint8Array(fs.readFileSync(file)) : new Uint8Array(0);
+    return PlayerLoading.load(username.toLowerCase(), new Packet(raw), null);
+}
+
+/**
+ * Write the character back, but only after proving the bytes load. A save that fails its own
+ * checksum or overruns is indistinguishable from a deleted character to the login server, and by
+ * then the original is gone.
+ */
+function writeSave(username: string, player: Player) {
+    const file = savePath(username);
+    const bytes = player.save();
+
+    PlayerLoading.load(username.toLowerCase(), new Packet(new Uint8Array(bytes)), null);
+
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (fs.existsSync(file)) {
+        const backup = `${file}.bak-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+        fs.copyFileSync(file, backup);
+        console.log(`  backed up ${path.basename(file)} -> ${path.basename(backup)}`);
+    }
+    fs.writeFileSync(file, bytes);
+    console.log(`  wrote ${file} (${bytes.length} bytes)`);
+}
+
+// ---------------------------------------------------------------- one account, as JSON
+
+type SaveJson = {
+    position: { x: number; z: number; level: number };
+    appearance: { body: number[]; colors: number[]; gender: number };
+    runenergy: number;
+    playtime: number;
+    lastLoginTime: string;
+    chat: { public: string; private: string; tradeDuel: string };
+    afkZones: number[];
+    lastAfkZone: number;
+    stats: Record<string, { level: number; xp: number }>;
+    vars: Record<string, number>;
+    invs: Record<string, { slot: number; obj: string; count: number }[]>;
+};
+
+/**
+ * THE ENGINE STORES EXPERIENCE IN TENTHS. levelExperience is the real table times ten, so a 99 is
+ * 130,344,310 in a save file and 13,034,431 in the game - and Slayer and Smithing really do pay
+ * fractions, which is what the tenth is for. Everything this tool prints or reads is the REAL
+ * number, converted at this boundary only, so nobody has to know that. The round trip is exact:
+ * stored/10 back through Math.round(x * 10) recovers the integer for any value a save can hold.
+ */
+function toRealXp(stored: number) {
+    return stored / 10;
+}
+
+function toStoredXp(real: number) {
+    return Math.round(real * 10);
+}
+
+function objName(id: number) {
+    const type = ObjType.get(id);
+    return type?.debugname ?? `obj_${id}`;
+}
+
+function objId(name: string) {
+    const id = ObjType.getId(name);
+    if (id === -1) fail(`no such obj: ${name}`);
+    return id;
+}
+
+function saveToJson(player: Player): SaveJson {
+    const stats: SaveJson['stats'] = {};
+    for (let i = 0; i < PLAYER_STAT_COUNT; i++) {
+        stats[PlayerStatNameMap.get(i) ?? `STAT_${i}`] = { level: player.levels[i], xp: toRealXp(player.stats[i]) };
+    }
+
+    // Only the varps that are actually held: a save writes the non-zero permanent ones and
+    // nothing else, so a dump of all 4000 would be 4000 lines of zero.
+    const vars: SaveJson['vars'] = {};
+    for (let id = 0; id < player.vars.length; id++) {
+        const varp = VarPlayerType.get(id);
+        if (!varp || varp.scope !== VarPlayerType.SCOPE_PERM || player.vars[id] === 0) continue;
+        vars[varp.debugname ?? `varp_${id}`] = player.vars[id];
+    }
+
+    const invs: SaveJson['invs'] = {};
+    for (const [typeId, inventory] of player.invs) {
+        const invType = InvType.get(typeId);
+        if (!invType || invType.scope !== InvType.SCOPE_PERM) continue;
+        const contents = [];
+        for (let slot = 0; slot < inventory.capacity; slot++) {
+            const obj = inventory.get(slot);
+            if (obj) contents.push({ slot, obj: objName(obj.id), count: obj.count });
+        }
+        invs[invType.debugname ?? `inv_${typeId}`] = contents;
+    }
+
+    return {
+        position: { x: player.x, z: player.z, level: player.level },
+        appearance: { body: Array.from(player.body), colors: Array.from(player.colors), gender: player.gender },
+        runenergy: player.runenergy,
+        playtime: player.playtime,
+        // A bigint is not JSON, and this one is a millisecond timestamp that would lose precision
+        // as a double. It goes out and comes back as a string.
+        lastLoginTime: player.lastLoginTime.toString(),
+        chat: {
+            public: PUBLIC_MODES[player.publicChat] ?? String(player.publicChat),
+            private: PRIVATE_MODES[player.privateChat] ?? String(player.privateChat),
+            tradeDuel: TRADE_MODES[player.tradeDuel] ?? String(player.tradeDuel)
+        },
+        afkZones: Array.from(player.afkZones),
+        lastAfkZone: player.lastAfkZone,
+        stats,
+        vars,
+        invs
+    };
+}
+
+function jsonToSave(player: Player, json: SaveJson) {
+    if (json.position) {
+        player.x = json.position.x;
+        player.z = json.position.z;
+        player.level = json.position.level;
+    }
+    if (json.appearance) {
+        for (let i = 0; i < 7; i++) player.body[i] = json.appearance.body[i];
+        for (let i = 0; i < 5; i++) player.colors[i] = json.appearance.colors[i];
+        player.gender = json.appearance.gender;
+    }
+    if (json.runenergy !== undefined) player.runenergy = json.runenergy;
+    if (json.playtime !== undefined) player.playtime = json.playtime;
+    if (json.lastLoginTime !== undefined) player.lastLoginTime = BigInt(json.lastLoginTime);
+    if (json.chat) {
+        player.publicChat = modeIndex(PUBLIC_MODES, json.chat.public, 'public chat');
+        player.privateChat = modeIndex(PRIVATE_MODES, json.chat.private, 'private chat');
+        player.tradeDuel = modeIndex(TRADE_MODES, json.chat.tradeDuel, 'trade/duel');
+    }
+    if (json.afkZones) {
+        for (let i = 0; i < player.afkZones.length; i++) player.afkZones[i] = json.afkZones[i] ?? 0;
+    }
+    if (json.lastAfkZone !== undefined) player.lastAfkZone = json.lastAfkZone;
+
+    if (json.stats) {
+        for (const [name, value] of Object.entries(json.stats)) {
+            const id = PlayerStatMap.get(name.toUpperCase());
+            if (id === undefined) fail(`no such stat: ${name}`);
+            setStat(player, id, value.level, toStoredXp(value.xp));
+        }
+    }
+
+    if (json.vars) {
+        // A varp absent from the JSON is back to ITS DEFAULT, not left alone - that is the only
+        // way to clear one from a dump. The default is not always zero: Player's constructor
+        // starts every non-int varp at -1, so this takes the defaults from a fresh character
+        // rather than restating the rule and drifting from it.
+        const fresh = PlayerLoading.load(player.username, new Packet(new Uint8Array(0)), null);
+        player.vars.set(fresh.vars);
+        for (const [name, value] of Object.entries(json.vars)) {
+            const id = VarPlayerType.getId(name);
+            if (id === -1) fail(`no such varp: ${name}`);
+            player.vars[id] = value;
+        }
+    }
+
+    if (json.invs) {
+        for (const [name, contents] of Object.entries(json.invs)) {
+            const typeId = InvType.getId(name);
+            if (typeId === -1) fail(`no such inv: ${name}`);
+            const inventory = player.getInventory(typeId);
+            if (!inventory) fail(`inv ${name} is not one this player holds`);
+            for (let slot = 0; slot < inventory.capacity; slot++) inventory.set(slot, null);
+            for (const item of contents) {
+                if (item.slot >= inventory.capacity) fail(`${name} slot ${item.slot} is past its ${inventory.capacity} slots`);
+                inventory.set(item.slot, { id: objId(item.obj), count: item.count });
+            }
+        }
+    }
+}
+
+function modeIndex(modes: string[], value: string, what: string) {
+    const i = modes.indexOf(String(value).toUpperCase());
+    if (i === -1) fail(`${what} must be one of ${modes.join(', ')} - got ${value}`);
+    return i;
+}
+
+/**
+ * Levels and experience are two numbers that have to agree: baseLevels is what the experience
+ * says, and levels is the current (possibly boosted or drained) one. Setting a level alone would
+ * leave the player's real level to be recomputed from unchanged experience at the next login.
+ */
+function setStat(player: Player, id: number, level: number, xp?: number) {
+    const exp = xp ?? getExpByLevel(level);
+    player.stats[id] = exp;
+    player.baseLevels[id] = getLevelByExp(exp);
+    player.levels[id] = level;
+}
+
+type AccountRow = NonNullable<Awaited<ReturnType<typeof getAccount>>>;
+
+/** Dates come out of sqlite as strings and out of MySQL as Dates; ISO is the one both read back. */
+function accountToJson(account: AccountRow | null | undefined) {
+    if (!account) {
+        return null;
+    }
+    return {
+        id: account.id,
+        username: account.username,
+        members: !!account.members,
+        staffmodlevel: account.staffmodlevel,
+        muted_until: account.muted_until ? new Date(account.muted_until).toISOString() : null,
+        banned_until: account.banned_until ? new Date(account.banned_until).toISOString() : null,
+        registration_ip: account.registration_ip,
+        registration_date: account.registration_date ? new Date(account.registration_date).toISOString() : null
+    };
+}
+
+async function fullExport(username: string) {
+    const player = readSave(username);
+    const account = await getAccount(username);
+    const friends = account ? await tryDb('friends', () => db.selectFrom('friendlist').select('friend_username').where('account_id', '=', account.id).where('profile', '=', profile).execute()) : null;
+    const ignores = account ? await tryDb('ignores', () => db.selectFrom('ignorelist').select('value').where('account_id', '=', account.id).where('profile', '=', profile).execute()) : null;
+
+    return {
+        username: username.toLowerCase(),
+        profile,
+        account: accountToJson(account),
+        friends: friends ? friends.map(f => f.friend_username) : [],
+        ignores: ignores ? ignores.map(i => i.value) : [],
+        save: saveToJson(player)
+    };
+}
+
+type Export = Awaited<ReturnType<typeof fullExport>>;
+
+async function fullImport(username: string, data: Export, force: boolean) {
+    const account = await getAccount(username);
+    if (account && (await isOnline(account.id)) && !force) {
+        fail(`${username} is logged in. The server holds the character in memory and rewrites the save at logout, so this edit would be thrown away.\nLog them out first, or pass --force if the server crashed and left them marked online.`);
+    }
+
+    if (data.save) {
+        const player = readSave(username);
+        jsonToSave(player, data.save);
+        writeSave(username, player);
+    }
+
+    if (!account) {
+        console.log('  no account row in the database - the save file is all that changed');
+        return;
+    }
+
+    if (data.account) {
+        await tryDb('the account row', async () => {
+            await db
+                .updateTable('account')
+                .set({
+                    // sqlite has no boolean: the column is an integer and Kysely types it as one.
+                    members: data.account!.members ? 1 : 0,
+                    staffmodlevel: data.account!.staffmodlevel,
+                    muted_until: data.account!.muted_until ? toDbDate(data.account!.muted_until) : null,
+                    banned_until: data.account!.banned_until ? toDbDate(data.account!.banned_until) : null
+                })
+                .where('id', '=', account.id)
+                .execute();
+            console.log('  updated the account row');
+            return true;
+        });
+    }
+
+    // Friends and ignores are the whole list, replaced: an entry dropped from the JSON is an
+    // entry the player no longer has, which is the only way to remove one from here.
+    if (data.friends) {
+        await tryDb('friends', async () => {
+            await db.deleteFrom('friendlist').where('account_id', '=', account.id).where('profile', '=', profile).execute();
+            if (data.friends.length) {
+                await db
+                    .insertInto('friendlist')
+                    .values(data.friends.map(name => ({ account_id: account.id, profile, friend_username: name })))
+                    .execute();
+            }
+            console.log(`  friends: ${data.friends.length}`);
+            return true;
+        });
+    }
+
+    if (data.ignores) {
+        await tryDb('ignores', async () => {
+            await db.deleteFrom('ignorelist').where('account_id', '=', account.id).where('profile', '=', profile).execute();
+            if (data.ignores.length) {
+                await db
+                    .insertInto('ignorelist')
+                    .values(data.ignores.map(value => ({ account_id: account.id, profile, value })))
+                    .execute();
+            }
+            console.log(`  ignores: ${data.ignores.length}`);
+            return true;
+        });
+    }
+}
+
+// ---------------------------------------------------------------- dotted-path edits
+
+/** `save.stats.ATTACK`, `account.members`, `save.vars.<name>`, and `save.stats.*` for all of them. */
+function applyPath(data: Export, dotted: string, raw: string) {
+    const parts = dotted.split('.');
+
+    if (parts[0] === 'save' && parts[1] === 'stats') {
+        const level = parseInt(raw, 10);
+        if (!Number.isInteger(level) || level < 1 || level > 99) fail('a stat level is 1-99');
+        const which = parts[2];
+        const field = parts[3]; // optional: level | xp
+        const names = which === '*' ? Object.keys(data.save.stats) : [which.toUpperCase()];
+        for (const name of names) {
+            if (!(name in data.save.stats)) fail(`no such stat: ${name}`);
+            if (field === 'xp') {
+                data.save.stats[name].xp = Number(raw);
+                data.save.stats[name].level = getLevelByExp(toStoredXp(Number(raw)));
+            } else {
+                data.save.stats[name] = { level, xp: toRealXp(getExpByLevel(level)) };
+            }
+        }
+        return;
+    }
+
+    // Everything else is an ordinary field: walk to its parent and coerce to the type already
+    // sitting there, so `true` lands as a boolean and `3222` as a number without being told.
+    let node: Record<string, unknown> = data as unknown as Record<string, unknown>;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const next = node[parts[i]];
+        if (next === null || typeof next !== 'object') fail(`${parts.slice(0, i + 1).join('.')} is not something with fields`);
+        node = next as Record<string, unknown>;
+    }
+    const leaf = parts[parts.length - 1];
+    const existing = node[leaf];
+    if (existing === undefined && !(leaf in node)) fail(`no such field: ${dotted}`);
+
+    if (raw === 'null') node[leaf] = null;
+    else if (typeof existing === 'boolean') node[leaf] = raw === 'true' || raw === '1' || raw === 'yes';
+    else if (typeof existing === 'number') node[leaf] = Number(raw);
+    else node[leaf] = raw;
+}
+
+// ---------------------------------------------------------------- commands
+
+function listSaves() {
+    const dir = path.join('data/players', profile);
+    if (!fs.existsSync(dir)) return [];
+    return fs
+        .readdirSync(dir)
+        .filter(f => f.endsWith('.sav'))
+        .map(f => f.slice(0, -4))
+        .sort();
+}
+
+async function cmdList() {
+    const saves = listSaves();
+    const accounts = (await tryDb('the account table', () => db.selectFrom('account').selectAll().execute())) ?? [];
+    const byName = new Map(accounts.map(a => [a.username, a]));
+
+    console.log(`profile ${profile}: ${saves.length} save${saves.length === 1 ? '' : 's'}, ${accounts.length} account row${accounts.length === 1 ? '' : 's'}`);
+    const names = [...new Set([...saves, ...accounts.map(a => a.username)])].sort();
+    for (const name of names) {
+        const account = byName.get(name);
+        const flags = [];
+        if (!saves.includes(name)) flags.push('no save');
+        if (!account) flags.push('no account row');
+        if (account?.members) flags.push('members');
+        if (account?.staffmodlevel) flags.push(`modlevel ${account.staffmodlevel}`);
+        if (account?.banned_until && new Date(account.banned_until) > new Date()) flags.push('BANNED');
+        if (account?.muted_until && new Date(account.muted_until) > new Date()) flags.push('MUTED');
+        console.log(`  ${name.padEnd(14)} ${flags.join(', ')}`);
+    }
+}
+
+async function cmdShow(username: string) {
+    const data = await fullExport(username);
+    const s = data.save;
+
+    console.log(`${data.username}  (profile ${data.profile})`);
+    if (!fs.existsSync(savePath(username))) console.log('  NO SAVE FILE - everything below is a fresh character');
+
+    if (data.account) {
+        const a = data.account;
+        console.log(`  account #${a.id}  members=${a.members}  modlevel=${a.staffmodlevel}`);
+        console.log(`    registered ${a.registration_date ?? '?'} from ${a.registration_ip ?? '?'}`);
+        console.log(`    banned_until=${a.banned_until ?? 'never'}  muted_until=${a.muted_until ?? 'never'}`);
+        console.log(`    online=${await isOnline(a.id)}`);
+    } else {
+        console.log('  no account row in the database');
+    }
+
+    console.log(`  at ${s.position.x}, ${s.position.z}, level ${s.position.level}   runenergy ${s.runenergy}   playtime ${s.playtime} ticks`);
+    console.log(`  chat: public=${s.chat.public} private=${s.chat.private} trade=${s.chat.tradeDuel}`);
+
+    const baseLevel = (xp: number) => getLevelByExp(toStoredXp(xp));
+    const total = Object.values(s.stats).reduce((n, v) => n + baseLevel(v.xp), 0);
+    console.log(`  stats (total level ${total}):`);
+    for (const [name, v] of Object.entries(s.stats)) {
+        const base = baseLevel(v.xp);
+        console.log(`    ${name.toLowerCase().padEnd(13)} ${String(base).padStart(2)}  ${String(v.xp).padStart(10)} xp${v.level !== base ? `  (currently ${v.level})` : ''}`);
+    }
+
+    for (const [name, contents] of Object.entries(s.invs)) {
+        if (!contents.length) continue;
+        console.log(`  ${name} (${contents.length} slot${contents.length === 1 ? '' : 's'} used):`);
+        for (const item of contents) console.log(`    ${String(item.slot).padStart(3)}  ${item.obj} x${item.count}`);
+    }
+
+    const vars = Object.entries(s.vars);
+    console.log(`  varps held: ${vars.length}`);
+    for (const [name, value] of vars) console.log(`    ${name} = ${value}`);
+
+    console.log(`  friends (${data.friends.length}): ${data.friends.join(', ') || '-'}`);
+    console.log(`  ignores (${data.ignores.length}): ${data.ignores.join(', ') || '-'}`);
+
+    if (data.account) await showLogs(data.account.id);
+}
+
+/** The record tables. Read-only here - this is what happened, not what the account is. */
+async function showLogs(accountId: number) {
+    const sessions = await tryDb('sessions', () => db.selectFrom('session').select(['uuid', 'timestamp', 'world', 'ip']).where('account_id', '=', accountId).where('profile', '=', profile).orderBy('timestamp', 'desc').limit(5).execute());
+    if (sessions?.length) {
+        console.log(`  last ${sessions.length} session${sessions.length === 1 ? '' : 's'}:`);
+        for (const s of sessions) console.log(`    ${new Date(s.timestamp).toISOString()}  world ${s.world}  ${s.ip ?? '?'}`);
+
+        const uuids = sessions.map(s => s.uuid);
+        const wealth = await tryDb('wealth events', () => db.selectFrom('session_wealth').select(['timestamp', 'event_type', 'account_items', 'account_value']).where('session_uuid', 'in', uuids).orderBy('timestamp', 'desc').limit(10).execute());
+        if (wealth?.length) {
+            console.log(`  last ${wealth.length} wealth event${wealth.length === 1 ? '' : 's'}:`);
+            for (const w of wealth) console.log(`    ${new Date(w.timestamp).toISOString()}  type ${w.event_type}  ${w.account_value}gp  ${w.account_items}`);
+        }
+
+        const reports = await tryDb('reports', () => db.selectFrom('report').select(['timestamp', 'offender', 'reason']).where('session_uuid', 'in', uuids).orderBy('timestamp', 'desc').limit(5).execute());
+        if (reports?.length) {
+            console.log(`  reports made (${reports.length}):`);
+            for (const r of reports) console.log(`    ${new Date(r.timestamp).toISOString()}  ${r.offender}  reason ${r.reason}`);
+        }
+    }
+}
+
+async function cmdGive(username: string) {
+    const obj = args._[2];
+    const count = args._[3] ? parseInt(args._[3], 10) : 1;
+    const invName = typeof args.inv === 'string' ? args.inv : 'inv';
+    if (!obj) fail('usage: give <user> <obj> [count] [--inv inv|bank]');
+
+    const data = await fullExport(username);
+    loadCache();
+    const id = objId(obj);
+    const stackable = ObjType.get(id).stackable;
+    const contents = (data.save.invs[invName] ??= []);
+
+    const typeId = InvType.getId(invName);
+    if (typeId === -1) fail(`no such inv: ${invName}`);
+    const capacity = InvType.get(typeId).size;
+
+    const existing = stackable ? contents.find(i => i.obj === obj) : undefined;
+    if (existing) {
+        existing.count += count;
+    } else {
+        const used = new Set(contents.map(i => i.slot));
+        // Unstackables take a slot each, which is the difference between "give 28 sharks" working
+        // and it silently becoming one slot holding 28.
+        const needed = stackable ? 1 : count;
+        for (let n = 0; n < needed; n++) {
+            let slot = 0;
+            while (used.has(slot)) slot++;
+            if (slot >= capacity) fail(`${invName} has only ${capacity} slots and they are full`);
+            used.add(slot);
+            contents.push({ slot, obj, count: stackable ? count : 1 });
+        }
+    }
+
+    contents.sort((a, b) => a.slot - b.slot);
+    await fullImport(username, data, args.force === true);
+    console.log(`  gave ${count} x ${obj} to ${invName}`);
+}
+
+async function cmdPassword(username: string) {
+    const plain = args._[2];
+    if (!plain) fail('usage: password <user> <newpassword>');
+    const account = await getAccount(username);
+    if (!account) fail(`no account row for ${username} - a password lives in the database, not the save file`);
+
+    // toLowerCase mirrors LoginServer, which hashes and compares the lowercased password. A hash
+    // made from the original casing would never match a login.
+    const hash = bcrypt.hashSync(plain.toLowerCase(), 10);
+    const ok = await tryDb('the password', async () => {
+        await db.updateTable('account').set({ password: hash }).where('id', '=', account.id).execute();
+        return true;
+    });
+    if (ok) console.log(`  password set for ${username}`);
+}
+
+async function main() {
+    const username = args._[1];
+
+    switch (command) {
+        case 'list':
+            await cmdList();
+            break;
+
+        case 'show':
+            if (!username) fail('usage: show <user>');
+            await cmdShow(username);
+            break;
+
+        case 'export': {
+            if (!username) fail('usage: export <user> [--out file.json]');
+            const data = await fullExport(username);
+            const json = JSON.stringify(data, null, 4);
+            if (typeof args.out === 'string') {
+                fs.writeFileSync(args.out, json);
+                console.log(`  wrote ${args.out}`);
+            } else {
+                console.log(json);
+            }
+            break;
+        }
+
+        case 'import': {
+            if (!username || typeof args.in !== 'string') fail('usage: import <user> --in file.json');
+            const data = JSON.parse(fs.readFileSync(args.in, 'utf8')) as Export;
+            await fullImport(username, data, args.force === true);
+            break;
+        }
+
+        case 'set': {
+            const dotted = args._[2];
+            const value = args._[3];
+            if (!username || !dotted || value === undefined) fail('usage: set <user> <path> <value>   e.g. set bob save.stats.ATTACK 99');
+            const data = await fullExport(username);
+            applyPath(data, dotted, value);
+            await fullImport(username, data, args.force === true);
+            console.log(`  ${dotted} = ${value}`);
+            break;
+        }
+
+        case 'give':
+            if (!username) fail('usage: give <user> <obj> [count] [--inv inv|bank]');
+            await cmdGive(username);
+            break;
+
+        case 'password':
+            if (!username) fail('usage: password <user> <newpassword>');
+            await cmdPassword(username);
+            break;
+
+        default:
+            console.log(
+                fs
+                    .readFileSync(new URL(import.meta.url), 'utf8')
+                    .split('*/')[0]
+                    .replace(/^\/\*\*?/, '')
+                    .replace(/^ \* ?/gm, '')
+            );
+            process.exit(command ? 1 : 0);
+    }
+
+    await db.destroy().catch(() => {});
+    process.exit(0);
+}
+
+await main();
