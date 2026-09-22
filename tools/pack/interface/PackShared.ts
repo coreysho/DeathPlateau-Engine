@@ -155,6 +155,8 @@ function nameToStat(name: string) {
             return 20;
         case 'construction':
             return 21;
+        case 'hunter':
+            return 22;
     }
 
     return -1;

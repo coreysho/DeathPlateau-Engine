@@ -42,8 +42,8 @@ const enum ComponentType {
     TYPE_TEXT = 4,
     TYPE_GRAPHIC = 5,
     TYPE_MODEL = 6,
-    TYPE_INV_TEXT = 7,
-};
+    TYPE_INV_TEXT = 7
+}
 
 const enum ButtonType {
     BUTTON_OK = 1,
@@ -51,8 +51,8 @@ const enum ButtonType {
     BUTTON_CLOSE = 3,
     BUTTON_TOGGLE = 4,
     BUTTON_SELECT = 5,
-    BUTTON_CONTINUE = 6,
-};
+    BUTTON_CONTINUE = 6
+}
 
 const STATS = [
     'attack',
@@ -76,7 +76,8 @@ const STATS = [
     'slayer',
     'farming',
     'runecraft',
-    'construction'
+    'construction',
+    'hunter'
 ];
 
 class IfType {
@@ -103,7 +104,7 @@ class IfType {
 
             IfType.order.push(id);
 
-            const com = IfType.instances[id] = new IfType();
+            const com = (IfType.instances[id] = new IfType());
             com.id = id;
             com.rootLayer = layer;
             com.comType = dat.g1();
@@ -345,7 +346,7 @@ class IfType {
         if (!fs.existsSync(`${Environment.BUILD_SRC_DIR}/scripts/interfaces`)) {
             fs.mkdirSync(`${Environment.BUILD_SRC_DIR}/scripts/interfaces`);
         }
-        
+
         const existingFiles = listFilesExt(`${Environment.BUILD_SRC_DIR}/scripts`, '.if');
 
         for (let id = 0; id < IfType.count; id++) {
