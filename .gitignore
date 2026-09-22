@@ -38,3 +38,6 @@ Thumbs.db
 
 # The Discord bot's link store - live data, one per server, never committed (src/discord)
 data/discord/
+
+# The trading post's database - live data, created on first boot, never committed (src/server)
+data/tradingpost/

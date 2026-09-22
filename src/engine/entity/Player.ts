@@ -935,6 +935,15 @@ export default class Player extends PathingEntity {
                 request.delay = 0;
             }
 
+            // One decrement per tick, however many passes see this request. World.processPlayers
+            // runs the queues twice - once in each player's own turn and once after every player's
+            // turn is over - so that a queue entry added during this tick still gets its chance in
+            // this tick. Without this guard the second pass would count every waiting entry down
+            // twice and fire it early.
+            if (request.lastTick === World.currentTick) {
+                continue;
+            }
+            request.lastTick = World.currentTick;
             const delay = request.delay--;
             if (this.canAccess() && delay <= 0) {
                 request.unlink();
@@ -950,6 +959,11 @@ export default class Player extends PathingEntity {
 
     processWeakQueue() {
         for (const request of this.weakQueue.all()) {
+            if (request.lastTick === World.currentTick) {
+                // see processQueue
+                continue;
+            }
+            request.lastTick = World.currentTick;
             const delay = request.delay--;
             if (this.canAccess() && delay <= 0) {
                 request.unlink();

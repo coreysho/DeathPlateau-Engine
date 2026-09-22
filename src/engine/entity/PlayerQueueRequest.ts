@@ -37,6 +37,14 @@ export class PlayerQueueRequest extends Linkable {
 
     lastInt: number = 0;
 
+    /**
+     * The last tick this request's delay was decremented.
+     *
+     * World.processPlayers makes two queue passes per tick (see the second one there), and a
+     * request must count down exactly once however many passes see it.
+     */
+    lastTick: number = -1;
+
     constructor(type: QueueType, script: ScriptFile, args: ScriptArgument[], delay: number) {
         super();
         this.type = type;

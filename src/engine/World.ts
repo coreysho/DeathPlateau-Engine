@@ -780,6 +780,32 @@ class World {
             }
         }
 
+        // ---- SECOND QUEUE PASS: WHY PVP HITS USED TO SPLIT ACROSS TWO TICKS ----
+        //
+        // A pvp hit is delivered as a queue entry on the VICTIM (~.pvp_damage in the content), and
+        // the loop above runs each player's queue BEFORE their own interaction. So a hit queued by
+        // an attacker who sits earlier in playerLoop than the victim waits a whole tick, and one
+        // queued by an attacker who sits later lands in the same tick. playerLoop buckets by IP
+        // address - so which of the two you get was decided by the attackers' IPs.
+        //
+        // Two players hitting one target on the same tick therefore split across two ticks
+        // whenever one of them was in front of the victim and the other behind: measured at 0 of
+        // 11 hits stacking in that arrangement, against 5 of 6 when both attackers were in front.
+        // That is the "magic spell + melee attack should stack, it currently delays" report.
+        //
+        // This pass gives every entry added during this tick its chance in this tick, whoever
+        // added it, so the arrangement stops mattering: all three orderings now stack, and the
+        // splat still lands on the tick the swing happened rather than a tick later.
+        // PlayerQueueRequest.lastTick keeps each request counting down exactly once per tick, so
+        // nothing that already ran or already counted down is touched twice.
+        for (const player of this.playerLoop.all()) {
+            try {
+                player.processQueues();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
         this.cycleStats[WorldStat.PLAYER] = Date.now() - start;
     }
 
