@@ -418,6 +418,10 @@ export default class Player extends PathingEntity {
     chatColour: number | null = null;
     chatEffect: number | null = null;
     chatRights: number | null = null;
+    // clan chat (engine/clan/ClanChat.ts): the owner of the channel this player is in, and their friend list
+    // as the friend server has sent it - the engine keeps no other copy
+    clanOwner: string | null = null;
+    friends37: Set<bigint> | null = null;
     npcId: number = -1;
 
     constructor(username: string, username37: bigint, hash64: bigint) {

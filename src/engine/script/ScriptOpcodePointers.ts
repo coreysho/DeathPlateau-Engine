@@ -1121,6 +1121,19 @@ const ScriptOpcodePointers: {
     },
     [ScriptOpcode.TP_LOGIN]: {
         require: ['active_player']
+    },
+
+    [ScriptOpcode.CLAN_SETNAME]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_SETRANK]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_NAME]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_RANK]: {
+        require: ['active_player']
     }
 };
 

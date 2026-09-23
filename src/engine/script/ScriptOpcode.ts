@@ -498,6 +498,12 @@ export const enum ScriptOpcode {
     TP_COLLECT,
     TP_LOGIN,
 
+    // Clan chat (custom, 2026-09-23) - Clan Setup; see engine/clan/ClanChat.ts
+    CLAN_SETNAME,
+    CLAN_SETRANK,
+    CLAN_NAME,
+    CLAN_RANK,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -973,6 +979,11 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['TP_BOX', ScriptOpcode.TP_BOX],
     ['TP_COLLECT', ScriptOpcode.TP_COLLECT],
     ['TP_LOGIN', ScriptOpcode.TP_LOGIN],
+
+    ['CLAN_SETNAME', ScriptOpcode.CLAN_SETNAME],
+    ['CLAN_SETRANK', ScriptOpcode.CLAN_SETRANK],
+    ['CLAN_NAME', ScriptOpcode.CLAN_NAME],
+    ['CLAN_RANK', ScriptOpcode.CLAN_RANK],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],
