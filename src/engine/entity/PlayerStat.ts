@@ -20,7 +20,8 @@ export const enum PlayerStat {
     SLAYER,
     FARMING,
     RUNECRAFT,
-    CONSTRUCTION
+    CONSTRUCTION,
+    HUNTER
 }
 
 export const PlayerStatMap: Map<string, number> = new Map([
@@ -46,21 +47,24 @@ export const PlayerStatMap: Map<string, number> = new Map([
     ['FARMING', PlayerStat.FARMING],
     ['RUNECRAFT', PlayerStat.RUNECRAFT],
     ['CONSTRUCTION', PlayerStat.CONSTRUCTION],
+    ['HUNTER', PlayerStat.HUNTER]
 ]);
 
-export const PlayerStatNameMap: Map<number, string> = new Map(
-    Array.from(PlayerStatMap.entries()).map(([key, value]) => [value, key])
-);
+export const PlayerStatNameMap: Map<number, string> = new Map(Array.from(PlayerStatMap.entries()).map(([key, value]) => [value, key]));
 
 // Slayer and Farming were false upstream (not implemented in base 377). Both are live in this build, and
 // the client's Stats.field1505 already counts them in the stat tab's total, so the server-side total
 // level (hiscores, the total-level adventure log) now agrees with what the player sees.
 // Construction added 2026-09-10 as stat 21 - the first of the client's four spare slots.
-export const PlayerStatEnabled = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+// Hunter added 2026-09-22 as stat 22, the second. Client.Stats.field1505[22] flipped to match, so the
+// stat tab's Total Lvl and this array agree; two client slots are left after it.
+export const PlayerStatEnabled = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 
-export const PlayerStatFree = [true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, false, false, false, false, false, true, false];
+// Members-only, like every skill added after the free game: Hunter is false here and ^true in
+// content's stat_members enum.
+export const PlayerStatFree = [true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, false, false, false, false, false, true, false, false];
 
 // Number of player stats. Everything that sizes a per-stat array, or walks the stats in a save file,
 // reads this instead of a hardcoded 21. Must stay <= 25: the 377 client allocates exactly 25 stat
 // slots (Stats.field1503) and indexes skillLevel/skillExperience by the id we send.
-export const PLAYER_STAT_COUNT = PlayerStat.CONSTRUCTION + 1;
+export const PLAYER_STAT_COUNT = PlayerStat.HUNTER + 1;
