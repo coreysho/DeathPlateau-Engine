@@ -2,6 +2,7 @@ import { PlayerInfoProt, Visibility } from '#/network/rsbuf/index.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 
 import Component from '#/cache/config/Component.js';
+import { chatCrown } from '#/engine/entity/ChatCrown.js';
 import FontType from '#/cache/config/FontType.js';
 import InvType from '#/cache/config/InvType.js';
 import LocType from '#/cache/config/LocType.js';
@@ -1496,6 +1497,7 @@ export default class Player extends PathingEntity {
         stream.p8(this.username37);
         stream.p1(this.combatLevel);
         stream.p2(this.skillLevel);
+        stream.p1(this.chatIcons());
 
         const appearance: Uint8Array = new Uint8Array(stream.pos);
         stream.pos = 0;
@@ -1878,7 +1880,31 @@ export default class Player extends PathingEntity {
             if (varp.transmit) {
                 this.writeVarp(id, value);
             }
+
+            // The XP-mode badge is part of the appearance everyone else is sent (chatIcons).
+            if (Player.xpRateVarp === -2) {
+                Player.xpRateVarp = VarPlayerType.getId('xp_rate');
+            }
+            if (varp.id === Player.xpRateVarp) {
+                this.buildAppearance(this.appearanceInv);
+            }
         }
+    }
+
+    /**
+     * The icons other players see beside this player's name, packed into one byte at the end of the
+     * appearance block: the rank crown in the low nibble (chatCrown's 0-5) and the XP-mode badge in
+     * the high one - 0 none, 1 Realism, 2 5x, 3 10x. The client puts them in front of the name on
+     * public chat lines and in the right-click menu; content's ~broadcast_name draws the same two
+     * from the same thresholds for broadcasts.
+     *
+     * It rides in the appearance rather than the chat mask so the menu has it before the player has
+     * said anything. A client from before it stops reading at the skill level and never sees it.
+     */
+    chatIcons(): number {
+        const rate = this.xpRate();
+        const badge = rate >= 10 ? 3 : rate >= 5 ? 2 : 1;
+        return chatCrown(this.staffModLevel) | (badge << 4);
     }
 
     getVarBit(id: number) {
