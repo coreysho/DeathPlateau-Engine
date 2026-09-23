@@ -76,6 +76,9 @@ export default class ClientGameProt {
     static readonly RESUME_P_COUNTDIALOG = new ClientGameProt(75, 4);
     static readonly TUT_CLICKSIDE = new ClientGameProt(119, 1);
     static readonly RESUME_P_NAMEDIALOG = new ClientGameProt(206, 8);
+    // custom (2026-09-23) - Examine on an npc, which 377 answered entirely inside the client. Sent to
+    // the server so content can say more than the description: the elemental weakness, for one.
+    static readonly EXAMINE_NPC = new ClientGameProt(150, 2);
 
     static readonly MAP_BUILD_COMPLETE = new ClientGameProt(6, 0);
     static readonly MOVE_OPCLICK = new ClientGameProt(247, -1);

@@ -6,6 +6,8 @@ import fs from 'fs';
 import ObjType from '#/cache/config/ObjType.js';
 import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
 import ClientCheat from '#/network/game/client/model/ClientCheat.js';
+import ExamineNpcHandler from '#/network/game/client/handler/ExamineNpcHandler.js';
+import ExamineNpc from '#/network/game/client/model/ExamineNpc.js';
 
 const MULTI: [number, number] = [3210, 3910];
 const SINGLE: [number, number] = [3100, 3700];
@@ -537,6 +539,27 @@ if (which === 'broadcast') {
     for (const l of lines) console.log('  ' + l);
     const out = process.argv[3];
     if (out) fs.writeFileSync(out, JSON.stringify(lines, null, 1));
+}
+
+if (which === 'examine') {
+    // Examine through the real packet handler: what the player's chatbox receives for monsters with
+    // and without an elemental weakness, and for one with no desc= of its own.
+    const p = H.makePlayer('looker', 3222, 3222, 1);
+    H.tick(2);
+    const names = ['graardor', 'king_dragon', 'chaoselemental', 'kreearra', 'man', 'cave_kraken'];
+    const npcs = names.map((n, i) => H.addNpcAt(n, 3223 + (i % 3) * 2, 3224 + Math.floor(i / 3) * 2, 0));
+    H.tick(1);
+    // ExamineNpcHandler.examine is everything past the visibility gate; the gate itself needs a
+    // connected client's npc view, which a sim player never builds - so here it always refuses,
+    // which is at least the right answer for an npc the player cannot see.
+    for (let i = 0; i < npcs.length; i++) {
+        H.mesgs.length = 0;
+        ExamineNpcHandler.examine(p, npcs[i]);
+        H.tick(1);
+        console.log(`  ${names[i].padEnd(15)} ${H.mesgs.map(m => m.text).join('  |  ')}`);
+    }
+    const unseen = new ExamineNpcHandler().handle(new ExamineNpc(npcs[0].nid), p);
+    console.log('  not in view    ' + (unseen ? 'ANSWERED - should not be' : 'refused'));
 }
 
 function gaps(ticks: number[]) {
