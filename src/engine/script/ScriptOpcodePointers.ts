@@ -1121,6 +1121,36 @@ const ScriptOpcodePointers: {
     },
     [ScriptOpcode.TP_LOGIN]: {
         require: ['active_player']
+    },
+
+    [ScriptOpcode.CLAN_SETNAME]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_SETRANK]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_NAME]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_RANK]: {
+        require: ['active_player']
+    },
+
+    [ScriptOpcode.INV_COPY]: {
+        require: ['active_player']
+    },
+
+    [ScriptOpcode.CLAN_FRIEND_COUNT]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_FRIEND]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_FRIEND_RANK]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_SETFRIENDRANK]: {
+        require: ['active_player']
     }
 };
 

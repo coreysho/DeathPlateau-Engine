@@ -62,6 +62,8 @@ export default class ServerGameProt {
     static readonly CHAT_FILTER_SETTINGS = new ServerGameProt(201, 3);
     static readonly MESSAGE_PRIVATE = new ServerGameProt(135, -1);
     static readonly UPDATE_FRIENDLIST = new ServerGameProt(78, 9);
+    static readonly MESSAGE_CLAN = new ServerGameProt(11, -1); // custom (clan chat) - Protocol.SERVERPROT_LENGTH[11] = -1 in the client
+    static readonly UPDATE_CLANCHANNEL = new ServerGameProt(12, -2); // custom (clan chat) - SERVERPROT_LENGTH[12] = -2
 
     // misc
     static readonly UNSET_MAP_FLAG = new ServerGameProt(61, 0);

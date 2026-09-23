@@ -511,6 +511,34 @@ const InvOps: CommandHandlers = {
 
     // https://x.com/TheCrazy0neTv/status/1681181722811957248
     // inv write
+    // inv_copy(inv $from, inv $to): add a copy of every item in $from to $to, which is what a preview
+    // needs - Items Kept on Death works the death rules out on copies of inv and worn. RuneScript has
+    // no way to turn the obj a slot holds into the namedobj inv_add takes, so this cannot be a loop
+    // in a script. Only $to is written, so only $to needs protected access. Anything $to has no room
+    // for is not copied.
+    [ScriptOpcode.INV_COPY]: state => {
+        const [fromInv, toInv] = state.popInts(2);
+
+        const fromInvType: InvType = check(fromInv, InvTypeValid);
+        const toInvType: InvType = check(toInv, InvTypeValid);
+
+        if (!state.pointerGet(ProtectedActivePlayer[state.intOperand]) && toInvType.protect && toInvType.scope !== InvType.SCOPE_SHARED) {
+            throw new Error(`$inv requires protected access: ${toInvType.debugname}`);
+        }
+
+        const player: Player = state.activePlayer;
+        const from = player.getInventory(fromInvType.id);
+        if (!from) {
+            return;
+        }
+        for (let slot = 0; slot < from.capacity; slot++) {
+            const item = from.get(slot);
+            if (item) {
+                player.invAdd(toInvType.id, item.id, item.count);
+            }
+        }
+    },
+
     [ScriptOpcode.INV_MOVEITEM]: state => {
         const [fromInv, toInv, obj, count] = state.popInts(4);
 

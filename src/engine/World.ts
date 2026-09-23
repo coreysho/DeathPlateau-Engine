@@ -64,6 +64,7 @@ import Isaac from '#/io/Isaac.js';
 import Packet from '#/io/Packet.js';
 import { ReportAbuseReason } from '#/network/game/client/model/ReportAbuse.js';
 import MessagePrivate from '#/network/game/server/model/MessagePrivate.js';
+import ClanChat from '#/engine/clan/ClanChat.js';
 import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
 import UpdateIgnoreList from '#/network/game/server/model/UpdateIgnoreList.js';
 import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
@@ -1019,6 +1020,7 @@ class World {
 
             this.gameMap.getZone(player.x, player.z, player.level).enter(player);
             player.onLogin();
+            ClanChat.onLogin(player);
 
             if (this.shutdownTick != -1) {
                 player.write(new UpdateRebootTimer(this.shutdownTick - this.currentTick));
@@ -1641,6 +1643,7 @@ class World {
             username: player.username,
             target: targetUsername37
         });
+        ClanChat.addFriends(player, [targetUsername37]);
     }
 
     removeFriend(player: Player, targetUsername37: bigint) {
@@ -1650,6 +1653,7 @@ class World {
             username: player.username,
             target: targetUsername37
         });
+        ClanChat.removeFriend(player, targetUsername37);
     }
 
     addIgnore(player: Player, targetUsername37: bigint) {
@@ -1691,6 +1695,8 @@ class World {
         if (player.slot === -1) {
             return;
         }
+
+        ClanChat.onLogout(player);
 
         if (isClientConnected(player)) {
             player.logout();
@@ -2076,6 +2082,10 @@ class World {
                     const [world, friendUsername37] = data.friends[i];
                     player.write(new UpdateFriendList(BigInt(friendUsername37), world));
                 }
+                ClanChat.addFriends(
+                    player,
+                    data.friends.map(([, friend]: [number, string]) => BigInt(friend))
+                );
 
                 player.write(new FriendlistLoaded(2));
             } else if (opcode === FriendsServerOpcodes.UPDATE_IGNORELIST) {

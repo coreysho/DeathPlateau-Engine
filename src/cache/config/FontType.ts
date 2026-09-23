@@ -106,10 +106,10 @@ export default class FontType {
     }
 
     // "@cr1@".."@cr9@" is an ICON in a chatbox line - a rank crown or an XP-mode badge, drawn by the
-    // client's ChatIcons as a 13-pixel sprite and a pixel of space. It is shaped like a colour tag so
+    // client's ChatIcons as a 13-pixel sprite and three pixels of space (ChatIcons.ICON_WIDTH - keep the two equal). It is shaped like a colour tag so
     // an old client skips it, but it is not zero-width the way a tag is, and measuring it as one let
-    // a broadcast with two icons run 28 pixels past the edge of the chatbox before wrapping.
-    static readonly ICON_WIDTH = 14;
+    // a broadcast with two icons run two icons' width past the edge of the chatbox before wrapping.
+    static readonly ICON_WIDTH = 16;
 
     static isIconTag(tag: string) {
         return tag.length === 3 && tag.startsWith('cr') && tag.charAt(2) >= '1' && tag.charAt(2) <= '9';

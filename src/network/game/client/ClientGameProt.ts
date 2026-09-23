@@ -94,6 +94,11 @@ export default class ClientGameProt {
     static readonly FRIENDLIST_ADD = new ClientGameProt(120, 8);
     static readonly CLIENT_CHEAT = new ClientGameProt(56, -1);
     static readonly MESSAGE_PUBLIC = new ClientGameProt(49, -1);
+
+    // custom (clan chat) - ids no client has ever sent
+    static readonly CLAN_JOINCHAT = new ClientGameProt(7, 8);
+    static readonly CLAN_MESSAGE = new ClientGameProt(9, -1);
+    static readonly CLAN_KICK = new ClientGameProt(11, 8);
     static readonly MOVE_GAMECLICK = new ClientGameProt(28, -1);
 
     constructor(
