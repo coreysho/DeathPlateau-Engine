@@ -930,8 +930,11 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
     const RUNES = ['astralrune', 'earthrune', 'waterrune', 'firerune', 'airrune', 'lawrune', 'cosmicrune', 'naturerune', 'deathrune', 'bodyrune', 'mindrune', 'bloodrune'];
     let x = 3200;
     const Z = 3200; // Lumbridge's field, well clear of anything
+    // Each player its own login bucket: loginOrder keys the player loop by the bucket, so two players
+    // in one bucket are one entry and the first is never processed (Monster Examine's caster was).
+    let bucket = 1;
     const mage = (name: string, dx = 0) => {
-        const p = H.makePlayer(name, x + dx, Z, 1);
+        const p = H.makePlayer(name, x + dx, Z, bucket++);
         return p;
     };
     const ready = (...ps: any[]) => {
@@ -1080,13 +1083,16 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             const c = mage('insc');
             const t = mage('inst', 1);
             ready(c, t);
-            const demon = H.addNpcAt('black_demon', x, Z + 2, 0);
+            const demon = H.addNpcAt('black_demon', x, Z + 3, 0);
             H.tick(1);
             H.mesgs.length = 0;
+            H.ifaces.length = 0;
             H.castOnNpc(c, demon, 'lunar_magic:monster_examine');
             H.tick(4);
-            console.log('       ' + said(c).join('  |  '));
-            check('Monster Examine: said something about it', said(c).length > 2, true);
+            // the monster_examine side panel, filled in with if_settext - nothing in the chatbox
+            const lines = H.ifaces.filter(i => i.who === 'insc' && i.kind === 'text').map(i => i.text ?? '');
+            console.log('       ' + lines.join('  |  '));
+            check('Monster Examine: a panel with its level, and no chat', [(c as any).modalSide !== -1, lines.some(s => s.startsWith('Combat level')), said(c).length], [true, true, 0]);
             H.mesgs.length = 0;
             H.castOnPlayer(c, t, 'lunar_magic:stat_spy');
             H.tick(4);
@@ -1100,8 +1106,9 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             ready(p);
             const a0 = H.invCount(p, 'astralrune');
             H.ifButton(p, 'lunar_magic:npc_contact');
-            H.choose(p, 'multi5:com_1'); // a Slayer Master
-            H.choose(p, 'multi5:com_1'); // Turael
+            H.tick(1);
+            check('NPC Contact: the Choose a character window, and no astral yet', [(p as any).containsModalInterface(), a0 - H.invCount(p, 'astralrune')], [true, 0]);
+            H.ifButton(p, 'npc_contact:turael');
             H.tick(2);
             const heard = H.ifaces.filter(i => i.who === 'cont' && i.kind === 'text').map(i => i.text).filter(s => s && s.length > 8);
             console.log('       Turael: ' + heard.slice(-2).join(' / '));
