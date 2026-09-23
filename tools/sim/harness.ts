@@ -5,6 +5,7 @@ import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
+import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import LocType from '#/cache/config/LocType.js';
@@ -27,6 +28,7 @@ import { toBase37 } from '#/util/JString.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
 
 export type Hit = { tick: number; who: string; damage: number; type: number };
 export type Say = { tick: number; who: string; text: string };
@@ -38,6 +40,10 @@ export const anims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
 export const sounds: Sound[] = [];
 export const ifaces: Iface[] = [];
+/** Overhead text, player or npc ("Taste vengeance!"), with the tick it was said on. */
+export const says: Say[] = [];
+/** Every hitsplat an npc takes, as `hits` is for players; `who` is the npc's debugname. */
+export const npcHits: Hit[] = [];
 
 let booted = false;
 
@@ -67,9 +73,20 @@ export async function boot() {
     // player damage in the engine (Player.applyDamage), so this catches melee, ranged, magic,
     // specials, poison and burns alike, with the tick it actually landed on.
     const origApply = (Player.prototype as any).applyDamage;
+    // What the splat shows: applyDamage clamps a hit to the hitpoints it lands on, so a 20 on 5 is a 5.
     (Player.prototype as any).applyDamage = function (damage: number, type: number) {
-        hits.push({ tick: World.currentTick, who: this.username, damage, type });
+        hits.push({ tick: World.currentTick, who: this.username, damage: Math.min(damage, this.levels[3]), type });
         return origApply.call(this, damage, type);
+    };
+    const origNpcApply = (Npc.prototype as any).applyDamage;
+    (Npc.prototype as any).applyDamage = function (damage: number, type: number) {
+        npcHits.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), damage: Math.min(damage, this.levels[3]), type });
+        return origNpcApply.call(this, damage, type);
+    };
+    const origSay = (Player.prototype as any).say;
+    (Player.prototype as any).say = function (text: string) {
+        says.push({ tick: World.currentTick, who: this.username, text });
+        return origSay.call(this, text);
     };
     const origAnim = (Player.prototype as any).playAnimation;
     (Player.prototype as any).playAnimation = function (seq: number, delay: number) {
@@ -115,6 +132,8 @@ export function clearLogs() {
     ifaces.length = 0;
     sounds.length = 0;
     hits.length = 0;
+    npcHits.length = 0;
+    says.length = 0;
     anims.length = 0;
     mesgs.length = 0;
 }
@@ -338,6 +357,125 @@ export function ifButton(p: Player, comName: string) {
     return true;
 }
 
+/**
+ * What "Cast on" a player does: OpPlayerTHandler, minus the visibility checks - the spell's
+ * component rides with the interaction and the engine fires [applayert,<com>] / [opplayert,<com>].
+ */
+export function castOnPlayer(p: Player, target: Player, comName: string) {
+    if (p.delayed) return false;
+    const comId = Component.getId(comName);
+    if (comId === -1) throw new Error('no such component: ' + comName);
+    p.clearPendingAction();
+    p.setInteraction(Interaction.ENGINE, target, ServerTriggerType.APPLAYERT, comId);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/** The queue entries of one script waiting on a player, with the ticks each has left. */
+export function queued(p: Player, scriptName: string): { delay: number; args: unknown[] }[] {
+    const out: { delay: number; args: unknown[] }[] = [];
+    for (const r of (p as any).queue.all()) {
+        if (r.script.name === scriptName) out.push({ delay: r.delay, args: r.args });
+    }
+    return out;
+}
+
+/** What clicking an op on a loc does: OpLocHandler, minus the visibility checks. */
+export function opLoc(p: Player, x: number, z: number, locName: string, op: number) {
+    if (p.delayed) return false;
+    const id = LocType.getId(locName);
+    if (id === -1) throw new Error('no such loc: ' + locName);
+    const loc = World.getLoc(x, z, p.level, id);
+    if (!loc) throw new Error(`no ${locName} at ${x},${z}`);
+    p.clearPendingAction();
+    // the route: a real client sends one with the click, and a player with none goes nowhere
+    p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach));
+    p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOC1 + (op - 1));
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/** What clicking an op on an npc does: OpNpcHandler, minus the visibility checks. */
+export function opNpc(p: Player, npc: Npc, op: number) {
+    if (p.delayed) return false;
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
+    p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPC1 + (op - 1));
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/** The nearest live npc of a type to (x, z) on this level, or null. */
+export function npcNear(npcName: string, x: number, z: number, level = 0): Npc | null {
+    const id = NpcType.getId(npcName);
+    let best: Npc | null = null;
+    let bestD = Infinity;
+    for (const npc of World.npcs) {
+        if (!npc || !npc.isActive || npc.type !== id || npc.level !== level) continue;
+        const d = Math.max(Math.abs(npc.x - x), Math.abs(npc.z - z));
+        if (d < bestD) {
+            bestD = d;
+            best = npc;
+        }
+    }
+    return best;
+}
+
+/** Pick an option in an open chat menu (p_choiceN): IfButtonHandler's resume branch. */
+export function choose(p: Player, comName: string) {
+    const comId = Component.getId(comName);
+    if (comId === -1) throw new Error('no such component: ' + comName);
+    p.lastCom = comId;
+    if (p.resumeButtons.indexOf(comId) === -1 || !p.activeScript || p.activeScript.execution !== ScriptState.PAUSEBUTTON) return false;
+    p.executeScript(p.activeScript, true, true);
+    return true;
+}
+
+/** "Cast on" an inventory item: OpHeldTHandler, minus the client validation. */
+export function castOnHeld(p: Player, objName: string, comName: string) {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    const comId = Component.getId(comName);
+    if (id === -1 || comId === -1) throw new Error(`no ${objName} / ${comName}`);
+    const inv = p.getInventory(InvType.INV)!;
+    let slot = -1;
+    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === id) { slot = i; break; }
+    if (slot === -1) throw new Error('not carrying ' + objName);
+    p.lastItem = id;
+    p.lastSlot = slot;
+    p.clearPendingAction();
+    const script = ScriptProvider.getByTrigger(ServerTriggerType.OPHELDT, comId, -1);
+    if (!script) throw new Error('no opheldt trigger for ' + comName);
+    p.executeScript(ScriptRunner.init(script, p), true);
+    return true;
+}
+
+/** "Cast on" a loc: OpLocTHandler, with the route a client would send. */
+export function castOnLoc(p: Player, x: number, z: number, locName: string, comName: string) {
+    if (p.delayed) return false;
+    const id = LocType.getId(locName);
+    const comId = Component.getId(comName);
+    const loc = World.getLoc(x, z, p.level, id);
+    if (!loc || comId === -1) throw new Error(`no ${locName} at ${x},${z} / ${comName}`);
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach));
+    p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCT, comId);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/** "Cast on" an npc: OpNpcTHandler, with the route a client would send. */
+export function castOnNpc(p: Player, npc: Npc, comName: string) {
+    if (p.delayed) return false;
+    const comId = Component.getId(comName);
+    if (comId === -1) throw new Error('no such component: ' + comName);
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
+    p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPCT, comId);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
 export function hasScript(name: string) {
     return ScriptProvider.getByName(name) !== undefined;
 }
@@ -392,11 +530,29 @@ export function despawn(...players: Player[]) {
 }
 
 export function tick(n = 1) {
-    for (let i = 0; i < n; i++) World.cycle();
+    for (let i = 0; i < n; i++) {
+        // A sim player has no socket, so to the engine it has lost its connection since the tick it
+        // was made, and World.processLogouts asks it to idle-logout after TIMEOUT_NO_CONNECTION (50
+        // ticks). Anything longer than half a minute would quietly lose its players - clicks on a
+        // player with no slot just do nothing - so every tick counts as heard from.
+        for (const p of World.playerLoop.all()) {
+            p.lastConnected = World.currentTick;
+            p.lastResponse = World.currentTick;
+        }
+        World.cycle();
+    }
 }
 
 export function soundsFor(name: string) {
     return sounds.filter(s => s.who === name);
+}
+
+export function saysFor(name: string) {
+    return says.filter(s => s.who === name);
+}
+
+export function npcHitsFor(debugname: string) {
+    return npcHits.filter(h => h.who === debugname);
 }
 
 export function hitsFor(name: string) {
