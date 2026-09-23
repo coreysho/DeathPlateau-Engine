@@ -1092,7 +1092,7 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             // the monster_examine side panel, filled in with if_settext - nothing in the chatbox
             const lines = H.ifaces.filter(i => i.who === 'insc' && i.kind === 'text').map(i => i.text ?? '');
             console.log('       ' + lines.join('  |  '));
-            check('Monster Examine: a panel with its level, and no chat', [(c as any).modalSide !== -1, lines.some(s => s.startsWith('Combat level')), said(c).length], [true, true, 0]);
+            check('Monster Examine: a panel with its name and hitpoints, and no chat', [(c as any).modalSide !== -1, lines.includes('Black Demon'), lines.includes('157 / 157'), said(c).length], [true, true, true, 0]);
             H.mesgs.length = 0;
             H.castOnPlayer(c, t, 'lunar_magic:stat_spy');
             H.tick(4);
