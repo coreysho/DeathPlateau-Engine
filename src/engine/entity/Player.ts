@@ -1897,7 +1897,7 @@ export default class Player extends PathingEntity {
 
     /**
      * The icons other players see beside this player's name, packed into one byte at the end of the
-     * appearance block: the rank crown in the low nibble (chatCrown's 0-5) and the XP-mode badge in
+     * appearance block: the rank crown in the low nibble (chatCrown's 0-6) and the XP-mode badge in
      * the high one - 0 none, 1 Realism, 2 5x, 3 10x. The client puts them in front of the name on
      * public chat lines and in the right-click menu; content's ~broadcast_name draws the same two
      * from the same thresholds for broadcasts.
