@@ -1115,6 +1115,19 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             check('  ...one spell (Varrock Teleport) and back to Lunar', [near(p, 3213, 3424), H.getVar(p, 'spellbook')], [true, 2]);
             H.despawn(p);
         },
+        hunter: () => {
+            console.log('HUNTER KIT  the spell gives the box, and the box opens');
+            fresh();
+            const p = mage('hunt');
+            ready(p);
+            H.ifButton(p, 'lunar_magic:hunter_kit');
+            H.tick(4);
+            check('a hunter kit', H.invCount(p, 'hunter_kit'), 1);
+            H.opheld(p, 'hunter_kit', 1);
+            H.tick(1);
+            check('opened: the gear that exists so far', ['hunter_kit', 'noose_wand', 'hunter_bird_snare', 'teasing_stick', 'torch_unlit', 'hunter_box_trap'].map(o => H.invCount(p, o)), [0, 1, 1, 1, 1, 1]);
+            H.despawn(p);
+        },
         farming: () => {
             console.log('FARMING  Cure Plant and Fertile Soil cast on something that is not a patch');
             fresh();
