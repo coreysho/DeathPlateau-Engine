@@ -82,6 +82,21 @@ const PlayerOps: CommandHandlers = {
         state.pushInt(1);
     },
 
+    // custom: FINDUID by name, as the player would type it (case and spaces as usernames compare)
+    [ScriptOpcode.FINDNAME]: state => {
+        const name = state.popString();
+        const player = name.length > 0 && name.length <= 12 ? World.getPlayerByUsername(name) : undefined;
+
+        if (!player) {
+            state.pushInt(0);
+            return;
+        }
+
+        state.activePlayer = player;
+        state.pointerAdd(ActivePlayer[state.intOperand]);
+        state.pushInt(1);
+    },
+
     // https://x.com/JagexAsh/status/1652956821798223873
     [ScriptOpcode.P_FINDUID]: state => {
         const uid = state.popInt() >>> 0;
