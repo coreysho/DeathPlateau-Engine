@@ -335,6 +335,8 @@ export function runServerCompiler() {
     ]);
 
     CompileServerScript({
+        // the compiler's own default is ../content/scripts, which ignores BUILD_SRC_DIR
+        sourcePaths: [`${Environment.BUILD_SRC_DIR}/scripts`],
         symbols: {
             command: commandInfo,
 
