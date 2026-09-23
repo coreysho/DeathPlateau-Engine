@@ -504,6 +504,8 @@ export const enum ScriptOpcode {
     CLAN_NAME,
     CLAN_RANK,
 
+    INV_COPY, // custom (2026-09-23) - a copy of every item in one inv added to another; Items Kept on Death works on copies
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -984,6 +986,8 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['CLAN_SETRANK', ScriptOpcode.CLAN_SETRANK],
     ['CLAN_NAME', ScriptOpcode.CLAN_NAME],
     ['CLAN_RANK', ScriptOpcode.CLAN_RANK],
+
+    ['INV_COPY', ScriptOpcode.INV_COPY],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],
