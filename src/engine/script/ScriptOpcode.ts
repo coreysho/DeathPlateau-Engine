@@ -506,6 +506,12 @@ export const enum ScriptOpcode {
 
     INV_COPY, // custom (2026-09-23) - a copy of every item in one inv added to another; Items Kept on Death works on copies
 
+    // Clan ranks (custom, 2026-09-23) - the owner's friends and the rank each has; see engine/clan/ClanChat.ts
+    CLAN_FRIEND_COUNT,
+    CLAN_FRIEND,
+    CLAN_FRIEND_RANK,
+    CLAN_SETFRIENDRANK,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -988,6 +994,10 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['CLAN_RANK', ScriptOpcode.CLAN_RANK],
 
     ['INV_COPY', ScriptOpcode.INV_COPY],
+    ['CLAN_FRIEND_COUNT', ScriptOpcode.CLAN_FRIEND_COUNT],
+    ['CLAN_FRIEND', ScriptOpcode.CLAN_FRIEND],
+    ['CLAN_FRIEND_RANK', ScriptOpcode.CLAN_FRIEND_RANK],
+    ['CLAN_SETFRIENDRANK', ScriptOpcode.CLAN_SETFRIENDRANK],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],

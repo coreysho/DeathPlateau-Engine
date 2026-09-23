@@ -1138,6 +1138,19 @@ const ScriptOpcodePointers: {
 
     [ScriptOpcode.INV_COPY]: {
         require: ['active_player']
+    },
+
+    [ScriptOpcode.CLAN_FRIEND_COUNT]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_FRIEND]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_FRIEND_RANK]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.CLAN_SETFRIENDRANK]: {
+        require: ['active_player']
     }
 };
 

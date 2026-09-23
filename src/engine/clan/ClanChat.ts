@@ -7,7 +7,7 @@ import World from '#/engine/World.js';
 import MessageClan from '#/network/game/server/model/MessageClan.js';
 import UpdateClanChannel, { ClanMemberInfo } from '#/network/game/server/model/UpdateClanChannel.js';
 import Environment from '#/util/Environment.js';
-import { toBase37 } from '#/util/JString.js';
+import { fromBase37, toBase37 } from '#/util/JString.js';
 
 // CLAN CHAT (custom, 2026-09-23). The 2008 channel: a player sets up a channel under their own name,
 // others join it by typing that name, and anything said with "/" in front goes to everyone in it.
@@ -17,10 +17,12 @@ import { toBase37 } from '#/util/JString.js';
 // settings live here, not in anybody's save. Setting the name to "" closes it.
 //
 // RANKS are the numbers 2008 used, so the requirement settings compare with >=:
-//   -1 anyone   0 the owner's friends   7 the owner   127 staff (staffModLevel 2 and up)
-// Each of enter, talk and kick is one of -1, 0 or 7 ("Anyone", "Any friends", "Only me"). The 1-6
-// ranks between (Recruit to General, given to individual friends) are left for later; the numbers are
-// kept so they slot in without a data change.
+//   -1 anyone   0 the owner's friends   1 Recruit  2 Corporal  3 Sergeant  4 Lieutenant  5 Captain
+//   6 General   7 the owner   127 staff (staffModLevel 2 and up)
+// The owner gives a rank (1-6) to individual friends in Clan Setup; a friend without one is 0. Enter
+// and talk take any of -1..7 ("Anyone", "Any friends", "Recruit+" .. "General+", "Only me"), kick
+// 2..7 ("Corporal+" .. "Only me") - 474's own menus. A friend's rank is kept after they leave the
+// friend list, but only a friend is ever ranked by it.
 //
 // "ANY FRIENDS" NEEDS THE OWNER'S FRIEND LIST, which the engine does not hold - it lives with the
 // friend server. The list the friend server sends at login is kept on the Player (friends37) and
@@ -50,10 +52,26 @@ type Channel = {
     talk: number;
     kick: number;
     friends: Set<bigint>;
+    ranks: Map<bigint, number>;
     members: Player[];
 };
 
-type ChannelRow = { owner: string; name: string; enter: number; talk: number; kick: number; friends: string };
+type ChannelRow = { owner: string; name: string; enter: number; talk: number; kick: number; friends: string; ranks: string };
+
+function parseRanks(text: string): Map<bigint, number> {
+    const out = new Map<bigint, number>();
+    for (const entry of text.split(',')) {
+        const [name, rank] = entry.split(':');
+        if (name && rank) {
+            out.set(BigInt(name), parseInt(rank));
+        }
+    }
+    return out;
+}
+
+function formatRanks(ranks: Map<bigint, number>): string {
+    return [...ranks].map(([name, rank]) => `${name}:${rank}`).join(',');
+}
 
 class ClanChatService {
     private dbHandle: DatabaseSync | null = null;
@@ -81,6 +99,11 @@ class ClanChatService {
                     owner  TEXT NOT NULL
                 );
             `);
+            // ranks came after the table did: add the column to a database from before it
+            const columns = this.dbHandle.prepare('PRAGMA table_info(channel)').all() as { name: string }[];
+            if (!columns.some(c => c.name === 'ranks')) {
+                this.dbHandle.exec("ALTER TABLE channel ADD COLUMN ranks TEXT NOT NULL DEFAULT ''");
+            }
         }
         return this.dbHandle;
     }
@@ -88,7 +111,7 @@ class ClanChatService {
     // ---- the channel record
 
     private row(owner: string): ChannelRow | undefined {
-        return this.db.prepare('SELECT owner, name, enter, talk, kick, friends FROM channel WHERE owner = ?').get(owner) as ChannelRow | undefined;
+        return this.db.prepare('SELECT owner, name, enter, talk, kick, friends, ranks FROM channel WHERE owner = ?').get(owner) as ChannelRow | undefined;
     }
 
     /** The channel, loaded if nobody is in it yet; null if the owner has none (or has closed it). */
@@ -108,6 +131,7 @@ class ClanChatService {
             talk: row.talk,
             kick: row.kick,
             friends: new Set(row.friends.length ? row.friends.split(',').map(x => BigInt(x)) : []),
+            ranks: parseRanks(row.ranks),
             members: []
         };
         const online = World.getPlayerByUsername(owner);
@@ -126,7 +150,7 @@ class ClanChatService {
             return ClanRank.STAFF;
         }
         if (channel.friends.has(player.username37)) {
-            return ClanRank.FRIEND;
+            return channel.ranks.get(player.username37) ?? ClanRank.FRIEND;
         }
         return ClanRank.ANYONE;
     }
@@ -330,7 +354,9 @@ class ClanChatService {
     }
 
     setRank(owner: Player, which: number, rank: number): void {
-        if (which < 0 || which > 2 || ![ClanRank.ANYONE, ClanRank.FRIEND, ClanRank.OWNER].includes(rank)) {
+        // 474's menus: enter and talk from Anyone (-1) to Only me (7), kick from Corporal+ (2)
+        const lowest = which === 2 ? 2 : ClanRank.ANYONE;
+        if (which < 0 || which > 2 || rank < lowest || rank > ClanRank.OWNER) {
             return;
         }
         if (!this.row(owner.username)) {
@@ -347,6 +373,48 @@ class ClanChatService {
             } else {
                 channel.kick = rank;
             }
+            this.refresh(channel);
+        }
+    }
+
+    // ---- friends' ranks (RuneScript: clan_friend_count, clan_friend, clan_friend_rank, clan_setfriendrank)
+
+    /** The owner's friends, in the order Clan Setup lists them: by name. */
+    friendsOf(owner: Player): bigint[] {
+        return [...(owner.friends37 ?? [])].sort((a, b) => {
+            const x = fromBase37(a);
+            const y = fromBase37(b);
+            return x < y ? -1 : x > y ? 1 : 0;
+        });
+    }
+
+    private ranksOf(owner: string): Map<bigint, number> {
+        return this.channels.get(owner)?.ranks ?? parseRanks(this.row(owner)?.ranks ?? '');
+    }
+
+    friendRank(owner: Player, index: number): number {
+        const friend = this.friendsOf(owner)[index];
+        return friend === undefined ? -1 : (this.ranksOf(owner.username).get(friend) ?? ClanRank.FRIEND);
+    }
+
+    setFriendRank(owner: Player, index: number, rank: number): void {
+        const friend = this.friendsOf(owner)[index];
+        if (friend === undefined || rank < ClanRank.FRIEND || rank > 6) {
+            return;
+        }
+        const ranks = new Map(this.ranksOf(owner.username));
+        if (rank === ClanRank.FRIEND) {
+            ranks.delete(friend);
+        } else {
+            ranks.set(friend, rank);
+        }
+        if (!this.row(owner.username)) {
+            this.db.prepare('INSERT INTO channel (owner, name) VALUES (?, ?)').run(owner.username, '');
+        }
+        this.db.prepare('UPDATE channel SET ranks = ? WHERE owner = ?').run(formatRanks(ranks), owner.username);
+        const channel = this.channels.get(owner.username);
+        if (channel) {
+            channel.ranks = ranks;
             this.refresh(channel);
         }
     }
