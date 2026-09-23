@@ -18,8 +18,15 @@ npx tsx tools/sim/run.ts <scenario>
 
 Scenarios: `baseline`, `style`, `eat`, `eatmove`, `drink`, `drinkmove`, `stack2`, `stack3`,
 `stack4`, `trident`, `tridentsound`, `hitdelay`, `barrows:<npc>`, `pets:<item>`, `clues`, `ranges`,
-`vengeance[:<case>]`, `lunar`, `lunarspells[:<case>]`, and `tools/sim/soak.ts` for a 400-tick soak
-with the full npc population.
+`vengeance[:<case>]`, `lunar`, `lunarspells[:<case>]`, `comborunes`, and `tools/sim/soak.ts` for a
+400-tick soak with the full npc population.
+
+`comborunes` holds the server to what the spellbook buttons count: a combination rune is one of each
+of its two elements. Falador, Lumbridge and High Alchemy are clicked; Wind Strike and Smoke Rush call
+the requirement and payment procs directly. The checks cover what each cast spends (plain runes
+first, and a combination rune spent for one element paying the other too), the rune pouch, a staff
+paying one half, the message when you are short, and alching a combination rune the cast would pay
+with.
 
 `vengeance` is the Lunar spell's rules against the real queues, as numbered checks that print `ok` or
 `FAIL` and a total: hits of chosen sizes (0, 1, 4, 80, 81), a real whip fight, two hits due on one

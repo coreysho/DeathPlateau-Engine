@@ -8,6 +8,8 @@ import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler
 import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 import ExamineNpcHandler from '#/network/game/client/handler/ExamineNpcHandler.js';
 import ExamineNpc from '#/network/game/client/model/ExamineNpc.js';
+import InvType from '#/cache/config/InvType.js';
+import DbRowType from '#/cache/config/DbRowType.js';
 
 const MULTI: [number, number] = [3210, 3910];
 const SINGLE: [number, number] = [3100, 3700];
@@ -1149,6 +1151,166 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
         H.tick(2);
     }
     console.log(`LUNAR SPELLS  ${R.ok} ok, ${R.bad} failed`);
+}
+
+if (which === 'comborunes') {
+    // Combination runes (content skill_magic/scripts/magic.rs2): a mist rune is an air rune AND a
+    // water rune, both at once, the way the spellbook buttons already count it. Teleports go
+    // through the real click (IfButtonHandler); combat spells and alchemy, which need a target,
+    // call the procs the cast calls. Every case is a fresh player with only the runes it lists.
+    let fails = 0;
+    let n = 0;
+    const check = (ok: boolean, what: string) => {
+        n++;
+        if (!ok) fails++;
+        console.log(`  ${String(n).padStart(2)} ${ok ? 'ok  ' : 'FAIL'} ${what}`);
+    };
+    const POUCH = InvType.getId('rune_pouch_store');
+    let ip = 1;
+    const caster = (name: string, inv: Record<string, number>, opts: { pouch?: Record<string, number>; staff?: string } = {}) => {
+        // Draynor: out of the wilderness, and far enough from Lumbridge and Falador to see the teleport
+        const p = H.makePlayer(name, 3093, 3244, ip++);
+        H.tick(1);
+        H.maxOut(p);
+        H.clearInv(p);
+        for (const [obj, count] of Object.entries(inv)) H.give(p, obj, count);
+        if (opts.pouch) {
+            H.give(p, 'rune_pouch', 1);
+            for (const [obj, count] of Object.entries(opts.pouch)) p.invAdd(POUCH, ObjType.getId(obj), count);
+        }
+        if (opts.staff) H.equip(p, { rhand: opts.staff });
+        return p;
+    };
+    const pouchCount = (p: any, obj: string) => p.invTotal(POUCH, ObjType.getId(obj));
+    const has = (p: any, want: Record<string, number>) =>
+        Object.entries(want).every(([obj, count]) => H.invCount(p, obj) === count);
+    const held = (p: any, objs: string[]) => objs.map(o => `${o}=${H.invCount(p, o)}`).join(' ');
+    const said = (p: any) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
+    const row = (name: string) => {
+        const id = DbRowType.getId(name);
+        if (id === -1) throw new Error('no such dbrow: ' + name);
+        return id;
+    };
+    const canCast = (p: any, spell: string) => H.runProc(p, '[proc,check_spell_requirements]', [row(spell)])[0] === 1;
+    const pay = (p: any, spell: string) => H.runProc(p, '[proc,delete_spell_runes]', [row(spell)]);
+    const teleport = (p: any, com: string) => {
+        const x0 = p.x;
+        const z0 = p.z;
+        H.ifButton(p, com);
+        H.tick(8);
+        return Math.abs(p.x - x0) + Math.abs(p.z - z0) > 20;
+    };
+
+    console.log('COMBINATION RUNES');
+    console.log('Wind Strike (1 air, 1 mind) with only a combination rune carrying air');
+    for (const combo of ['mistrune', 'dustrune', 'smokerune']) {
+        const p = caster('ws_' + combo.slice(0, 4), { [combo]: 1, mindrune: 1 });
+        check(canCast(p, 'magic_combat_wind_strike'), `one ${combo} is enough air`);
+        pay(p, 'magic_combat_wind_strike');
+        check(has(p, { [combo]: 0, mindrune: 0 }), `and it is what the cast spends`);
+    }
+    {
+        const p = caster('ws_mud', { mudrune: 5, mindrune: 1 });
+        check(!canCast(p, 'magic_combat_wind_strike'), 'a mud rune (water + earth) is no air at all');
+    }
+
+    console.log('Falador Teleport (3 air, 1 water, 1 law), clicked');
+    {
+        const p = caster('fal_mist', { mistrune: 3, lawrune: 1 });
+        const went = teleport(p, 'magic:falador_teleport');
+        check(went, 'three mist runes pay 3 air AND 1 water: the teleport goes');
+        check(has(p, { mistrune: 0, lawrune: 0 }), 'spending the three mist and the law: ' + held(p, ['mistrune', 'lawrune']));
+    }
+    {
+        const p = caster('fal_plain', { airrune: 3, waterrune: 1, mistrune: 5, lawrune: 1 });
+        check(teleport(p, 'magic:falador_teleport'), 'plain runes and mist runes: the teleport goes');
+        check(has(p, { airrune: 0, waterrune: 0, mistrune: 5 }), 'plain runes first, the mist untouched: ' + held(p, ['airrune', 'waterrune', 'mistrune']));
+    }
+    {
+        const p = caster('fal_half', { airrune: 3, mistrune: 5, lawrune: 1 });
+        check(teleport(p, 'magic:falador_teleport'), 'no water rune, but a mist rune is one: the teleport goes');
+        check(has(p, { airrune: 1, mistrune: 4 }), 'one mist for the water pays an air too, so one air is kept: ' + held(p, ['airrune', 'mistrune']));
+    }
+    {
+        const p = caster('fal_pair', { smokerune: 3, mistrune: 1, lawrune: 1 });
+        check(teleport(p, 'magic:falador_teleport'), 'smoke and mist runes only: the teleport goes');
+        check(has(p, { mistrune: 0, smokerune: 1 }), 'the mist pays air and water, two smoke the other air: ' + held(p, ['mistrune', 'smokerune']));
+    }
+    {
+        const p = caster('fal_short', { mistrune: 2, lawrune: 1 });
+        H.clearLogs();
+        check(!teleport(p, 'magic:falador_teleport'), 'two mist runes are 2 air, not 3: no teleport');
+        check(said(p).includes('You do not have enough Air Runes to cast this spell.'), 'and the message names air: ' + JSON.stringify(said(p)));
+        check(has(p, { mistrune: 2, lawrune: 1 }), 'and nothing is spent');
+    }
+    {
+        const p = caster('fal_pouch', { lawrune: 1 }, { pouch: { mistrune: 3 } });
+        check(teleport(p, 'magic:falador_teleport'), 'three mist runes in the rune pouch: the teleport goes');
+        check(pouchCount(p, 'mistrune') === 0 && H.invCount(p, 'rune_pouch') === 1, 'spent out of the pouch: ' + pouchCount(p, 'mistrune') + ' left');
+    }
+    {
+        const p = caster('fal_mix', { mistrune: 1, lawrune: 1 }, { pouch: { airrune: 2 } });
+        check(teleport(p, 'magic:falador_teleport'), 'one loose mist and two air in the pouch: the teleport goes');
+        check(H.invCount(p, 'mistrune') === 0 && pouchCount(p, 'airrune') === 0, 'both spent');
+    }
+    {
+        const p = caster('fal_staff', { mistrune: 1, lawrune: 1 }, { staff: 'staff_of_air' });
+        check(teleport(p, 'magic:falador_teleport'), 'staff of air and one mist rune: the teleport goes');
+        check(has(p, { mistrune: 0 }), 'the staff pays the air, the mist the water');
+    }
+    {
+        const p = caster('fal_steam', { steamrune: 1, airrune: 3, lawrune: 1 }, { staff: 'staff_of_air' });
+        check(teleport(p, 'magic:falador_teleport'), 'staff of air, three air and a steam rune: the teleport goes');
+        check(has(p, { airrune: 3, steamrune: 0 }), 'the air runes are kept, the steam pays the water: ' + held(p, ['airrune', 'steamrune']));
+    }
+
+    console.log('Lumbridge Teleport (3 air, 1 earth, 1 law), clicked');
+    {
+        const p = caster('lum_dust', { dustrune: 3, earthrune: 1, lawrune: 1 });
+        check(teleport(p, 'magic:lumbridge_teleport'), 'three dust runes and an earth rune: the teleport goes');
+        check(has(p, { dustrune: 0, earthrune: 1 }), 'the dust pays the earth as well, so the earth rune is kept: ' + held(p, ['dustrune', 'earthrune']));
+    }
+
+    console.log('Smoke Rush (1 air, 1 fire, 2 chaos, 2 death in the rune4 column)');
+    {
+        const p = caster('rush', { smokerune: 1, chaosrune: 2, deathrune: 2 });
+        check(canCast(p, 'magic_combat_smoke_rush'), 'one smoke rune is the air and the fire');
+        pay(p, 'magic_combat_smoke_rush');
+        check(has(p, { smokerune: 0, chaosrune: 0, deathrune: 0 }), 'and the cast spends one smoke, two chaos and two death');
+    }
+
+    console.log('High Level Alchemy (1 nature, 5 fire) on a rune the cast pays with');
+    const alchable = (p: any, obj: string) => H.runProc(p, '[proc,is_alchable]', [ObjType.getId(obj), row('magic_spell_high_alch')])[0] === 1;
+    {
+        const p = caster('alch_lava5', { naturerune: 1, lavarune: 5 });
+        check(canCast(p, 'magic_spell_high_alch'), 'five lava runes are the five fire');
+        check(!alchable(p, 'lavarune'), 'so alching one of them is refused: none would be left to alch');
+        const q = caster('alch_lava6', { naturerune: 1, lavarune: 6 });
+        check(alchable(q, 'lavarune'), 'with a sixth, it is allowed');
+        const r = caster('alch_fire', { naturerune: 1, firerune: 5, lavarune: 10 });
+        check(!alchable(r, 'firerune'), 'five fire runes pay the fire first, so alching a fire rune is refused');
+        check(alchable(r, 'lavarune'), '...and alching a lava rune the cast does not touch is allowed');
+        const s = caster('alch_nat', { naturerune: 2, firerune: 5 });
+        check(alchable(s, 'naturerune'), 'two nature runes: alch one, pay with the other');
+        const t = caster('alch_nat1', { naturerune: 1, firerune: 5 }, { pouch: { naturerune: 5 } });
+        check(!alchable(t, 'naturerune'), 'the last loose nature rune pays the cast before the pouch does, so it cannot be alched too');
+    }
+    {
+        // and the real click, on the spell and then the rune
+        const p = caster('alch_click6', { naturerune: 1, lavarune: 6 });
+        H.castOnHeld(p, 'lavarune', 'magic:highlvl_alchemy');
+        H.tick(6);
+        check(has(p, { naturerune: 0, lavarune: 0 }) && H.invCount(p, 'coins') > 0,
+            'cast on the sixth lava rune: five pay the fire, one is alched: ' + held(p, ['naturerune', 'lavarune', 'coins']));
+        const q = caster('alch_click5', { naturerune: 1, lavarune: 5 });
+        H.clearLogs();
+        H.castOnHeld(q, 'lavarune', 'magic:highlvl_alchemy');
+        H.tick(6);
+        check(has(q, { naturerune: 1, lavarune: 5, coins: 0 }), 'cast on one of five: refused, nothing spent and no coins: ' + held(q, ['naturerune', 'lavarune', 'coins']));
+        check(said(q).includes('You do not have enough Lava Runes to cast this spell.'), 'and the message says why: ' + JSON.stringify(said(q)));
+    }
+
+    console.log(`${n - fails}/${n} ok${fails ? `, ${fails} FAILED` : ''}`);
 }
 
 function gaps(ticks: number[]) {
