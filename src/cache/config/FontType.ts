@@ -105,6 +105,16 @@ export default class FontType {
         }
     }
 
+    // "@cr1@".."@cr9@" is an ICON in a chatbox line - a rank crown or an XP-mode badge, drawn by the
+    // client's ChatIcons as a 13-pixel sprite and a pixel of space. It is shaped like a colour tag so
+    // an old client skips it, but it is not zero-width the way a tag is, and measuring it as one let
+    // a broadcast with two icons run 28 pixels past the edge of the chatbox before wrapping.
+    static readonly ICON_WIDTH = 14;
+
+    static isIconTag(tag: string) {
+        return tag.length === 3 && tag.startsWith('cr') && tag.charAt(2) >= '1' && tag.charAt(2) <= '9';
+    }
+
     stringWidth(str: string) {
         if (str == null) {
             return 0;
@@ -113,6 +123,9 @@ export default class FontType {
         let size = 0;
         for (let c = 0; c < str.length; c++) {
             if (str.charAt(c) == '@' && c + 4 < str.length && str.charAt(c + 4) == '@') {
+                if (FontType.isIconTag(str.substring(c + 1, c + 4))) {
+                    size += FontType.ICON_WIDTH;
+                }
                 c += 4;
             } else {
                 size += this.charAdvance[str.charCodeAt(c)];
@@ -130,6 +143,7 @@ export default class FontType {
 
         const lines: string[] = [];
         let savedCol: string | null = null;
+        let savedShadow = false;
         while (str.length > 0) {
             // check if the string even needs to be broken up
             const width = this.stringWidth(str);
@@ -163,6 +177,18 @@ export default class FontType {
                 for (let i = 0; i + 4 < line.length; i++) {
                     if (line.charAt(i) === '@' && i + 4 < line.length && line.charAt(i + 4) === '@') {
                         const col = line.substring(i + 1, i + 4);
+                        // An icon is not a colour, and carrying it forward put a second crown at
+                        // the start of every continuation line. The shadow switch is carried, but
+                        // separately, so it cannot replace the colour it is shadowing.
+                        if (FontType.isIconTag(col)) {
+                            i += 4;
+                            continue;
+                        }
+                        if (col === 'sh1' || col === 'sh0') {
+                            savedShadow = col === 'sh1';
+                            i += 4;
+                            continue;
+                        }
                         if (col === 'str') {
                             savedCol = null;
                             if (line.substring(i + 5, i + 10) === '@bla@') {
@@ -190,6 +216,9 @@ export default class FontType {
                 } else {
                     str = savedCol + str;
                 }
+            }
+            if (savedShadow && str.length > 0 && str.charAt(0) !== '|') {
+                str = '@sh1@' + str;
             }
         }
         return lines;

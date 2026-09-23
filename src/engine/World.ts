@@ -100,6 +100,7 @@ import VarBitType from '#/cache/config/VarBitType.js';
 import FriendlistLoaded from '#/network/game/server/model/FriendlistLoaded.js';
 import HashTable from '#/datastruct/HashTable.js';
 import Midi from '#/cache/midi/Midi.js';
+import { chatCrown } from '#/engine/entity/ChatCrown.js';
 
 const priv = forge.pki.privateKeyFromPem(fs.readFileSync('data/config/private.pem', 'ascii'));
 
@@ -977,7 +978,8 @@ class World {
                 player.client.send(
                     Uint8Array.from([
                         2,
-                        Math.min(player.staffModLevel, 2),
+                        // the rank the client echoes its own lines with - see ChatCrown
+                        chatCrown(player.staffModLevel),
                         1 // mouse tracking can only be enabled on login
                     ])
                 );

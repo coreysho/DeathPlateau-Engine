@@ -92,30 +92,37 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
         if (cmd === 'yell') {
             // custom (Corey, 2026-09-04) - global broadcast chat, available to all players (like
-            // ::home, not staff-gated). Staff yells carry the real rank crown sprite, not the word
-            // "Admin"/"Mod": the client already resolves an "@cr1@"/"@cr2@" marker into
-            // imageModIcons[0]/[1] for public and private chat lines, and Client.java's plain
-            // game-message branch was taught to honour the same marker inline, so no new packet type
-            // was needed after all. See claude/home-yell-rare-drop.md.
+            // ::home, not staff-gated).
+            //
+            // (2026-09-23) THE ENGINE ONLY DECIDES WHETHER; CONTENT DECIDES HOW IT LOOKS. The line is
+            // built by [proc,yell] in content/scripts/general/scripts/broadcast.rs2, next to the rare
+            // drop broadcasts, so a yell and a drop share one ~broadcast_name - the rank crown, the
+            // XP-mode badge and the name - instead of this file and the drop tables each keeping a
+            // copy of the rules for which crown a mod level earns.
             if (player.muted_until !== null && player.muted_until > new Date()) {
                 return false;
             }
 
-            const text = cheat.substring(cmd.length + 1).trim();
+            // No markup from players. A chat line's colours and icons are all "@xxx@" tags, so what a
+            // player typed would otherwise be drawn: "@cr2@" in a yell put the administrator's gold
+            // crown in front of whatever followed it. Whole tags go first, so "@cr2@@red@hi" reads
+            // "hi" rather than "cr2redhi", then any '@' left over, so no tag can be put back together.
+            const text = cheat
+                .substring(cmd.length + 1)
+                .replace(/@[a-z0-9]{3}@/gi, '')
+                .replaceAll('@', '')
+                .trim();
             if (text.length <= 0 || text.length > 100) {
                 return false;
             }
 
-            // @cr2@ = the gold admin crown, @cr1@ = the silver mod crown; the client strips the
-            // marker and plots the sprite in its place, so it renders as "[Yell] <crown>Name: text".
-            let tag = player.displayName;
-            if (player.staffModLevel >= 3) {
-                tag = `@cr2@${tag}`;
-            } else if (player.staffModLevel >= 1) {
-                tag = `@cr1@${tag}`;
+            const script = ScriptProvider.getByName('[proc,yell]');
+            if (!script) {
+                // a content build from before broadcast.rs2 - still say it, just plainly
+                World.broadcastMes(`[Yell] ${player.displayName}: ${text}`);
+                return true;
             }
-
-            World.broadcastMes(`[Yell] ${tag}: ${text}`);
+            player.executeScript(ScriptRunner.init(script, player, null, [text]), false);
             return true;
         }
 

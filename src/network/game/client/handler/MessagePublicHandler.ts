@@ -6,6 +6,7 @@ import Packet from '#/io/Packet.js';
 import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHandler.js';
 import MessagePublic from '#/network/game/client/model/MessagePublic.js';
 import WordPack from '#/wordenc/WordPack.js';
+import { chatCrown } from '#/engine/entity/ChatCrown.js';
 
 export default class MessagePublicHandler extends ClientGameMessageHandler<MessagePublic> {
     handle(message: MessagePublic, player: Player): boolean {
@@ -28,7 +29,7 @@ export default class MessagePublicHandler extends ClientGameMessageHandler<Messa
 
         player.chatColour = colour;
         player.chatEffect = effect;
-        player.chatRights = Math.min(player.staffModLevel, 2);
+        player.chatRights = chatCrown(player.staffModLevel);
         player.logMessage = unpack;
 
         const out: Packet = Packet.alloc(0);

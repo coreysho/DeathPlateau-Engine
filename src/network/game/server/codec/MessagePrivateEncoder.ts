@@ -4,15 +4,13 @@ import ServerGameMessageEncoder from '#/network/game/server/ServerGameMessageEnc
 import ServerGameProt from '#/network/game/server/ServerGameProt.js';
 import MessagePrivate from '#/network/game/server/model/MessagePrivate.js';
 import WordPack from '#/wordenc/WordPack.js';
+import { chatCrown } from '#/engine/entity/ChatCrown.js';
 
 export default class MessagePrivateEncoder extends ServerGameMessageEncoder<MessagePrivate> {
     prot = ServerGameProt.MESSAGE_PRIVATE;
 
     encode(buf: Packet, message: MessagePrivate): void {
-        let staffLvl: number = message.staffModLevel;
-        if (staffLvl > 3) {
-            staffLvl = 3;
-        }
+        const staffLvl: number = chatCrown(message.staffModLevel);
 
         buf.p8(message.from);
         buf.p4(message.messageId);

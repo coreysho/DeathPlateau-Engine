@@ -2,6 +2,10 @@
 // across scenarios changes results. Usage: npx tsx tools/simtmp/run.ts <name>
 import World from '#/engine/World.js';
 import * as H from './harness.js';
+import fs from 'fs';
+import ObjType from '#/cache/config/ObjType.js';
+import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
+import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 
 const MULTI: [number, number] = [3210, 3910];
 const SINGLE: [number, number] = [3100, 3700];
@@ -497,6 +501,37 @@ if (which.startsWith('barrows')) {
             .join(' ') || '(NOTHING - he never attacked)'
     );
     console.log('   npc ended in mode', (npc as any).targetOp, '(8=opplayer2, 13=applayer2, 1=wander)');
+}
+
+if (which === 'broadcast') {
+    // What another player's chatbox actually receives: the real content procs, World.broadcastMes,
+    // and the server's own line wrapping - so the output is exactly the strings the client draws.
+    H.makePlayer('watcher', SINGLE[0], SINGLE[1], 1); // on the world only to receive the lines
+    const cast: [string, number, number][] = [
+        ['corey', 4, 1], // developer, Realism
+        ['zezima', 0, 10], // no rank, 10x
+        ['mod ash', 2, 5], // moderator, 5x
+        ['newbie', 1, 0] // player moderator, never chose a mode
+    ];
+    const ps = cast.map(([n], i) => H.makePlayer(n, SINGLE[0] + 2 + i, SINGLE[1], 2 + i));
+    H.tick(2);
+    cast.forEach(([, staff, rate], i) => {
+        ps[i].staffModLevel = staff;
+        H.setVar(ps[i], 'xp_rate', rate);
+    });
+    H.clearLogs();
+    H.runProc(ps[0], '[proc,broadcast_drop]', [ObjType.getId('abyssal_whip')]);
+    H.runProc(ps[1], '[proc,broadcast_drop]', [ObjType.getId('dragon_pickaxe')]);
+    H.runProc(ps[2], '[proc,broadcast_pet]', [ObjType.getId('bosspet_kraken_item')]);
+    H.runProc(ps[3], '[proc,broadcast_news]', ['Fire cape!', 'defeated TzTok-Jad and claimed a @dre@Fire cape@bla@.']);
+    const cheat = new ClientCheatHandler();
+    cheat.handle(new ClientCheat('yell anyone up for barrows?'), ps[0]);
+    cheat.handle(new ClientCheat('yell @cr2@@red@i am totally an admin'), ps[1]);
+    cheat.handle(new ClientCheat('yell selling full rune, dragon scimitar, 400 sharks - pm me or meet at edge bank'), ps[2]);
+    const lines = H.mesgs.filter(m => m.who === 'watcher').map(m => m.text);
+    for (const l of lines) console.log('  ' + l);
+    const out = process.argv[3];
+    if (out) fs.writeFileSync(out, JSON.stringify(lines, null, 1));
 }
 
 function gaps(ticks: number[]) {
