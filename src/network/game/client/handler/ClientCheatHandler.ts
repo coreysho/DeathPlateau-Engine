@@ -509,12 +509,22 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 player.invAdd(InvType.INV, obj, 1000);
             } else if (cmd === 'broadcast' && Environment.NODE_PRODUCTION) {
-                // custom
-                if (args.length < 0) {
+                // custom - a staff announcement to every player. (2026-09-23) Built by
+                // [proc,broadcast_staff] in content, beside the drops and ::yell, so it carries the
+                // sender's crown and the announcement styling. Staff text keeps its @col@ tags - the
+                // rank check above is the trust. The old guard, args.length < 0, could never be true,
+                // so an empty ::broadcast sent every player a blank line.
+                const text = cheat.substring(cmd.length + 1).trim();
+                if (text.length <= 0) {
                     return false;
                 }
 
-                World.broadcastMes(cheat.substring(cmd.length + 1));
+                const script = ScriptProvider.getByName('[proc,broadcast_staff]');
+                if (script) {
+                    player.executeScript(ScriptRunner.init(script, player, null, [text]), false);
+                } else {
+                    World.broadcastMes(text);
+                }
             } else if (cmd === 'reboot' && Environment.NODE_PRODUCTION) {
                 // semi-authentic - we actually just shut down for maintenance
 

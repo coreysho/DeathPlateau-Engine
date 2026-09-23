@@ -1,12 +1,14 @@
 /**
  * The rank icon a staff member's name carries in chat, as the number the client is sent.
  *
- *   0  no icon      1  silver crown      2  gold crown      4  purple crown (developer)
+ *   0  no icon      1  silver crown      2  gold crown
+ *   4  purple crown (developer)          5  red crown (owner)
  *
- * staffModLevel runs 0-4+ on the account: 1 player moderator, 2 moderator, 3 administrator, 4
- * developer. The client draws 2 and 3 alike as the gold crown, so 3 is folded into 2 here rather
- * than sent; 4 and above is the developer crown the client added with the XP-mode badges (it is
- * imageModIcons[5], "@cr6@" - see the client's ChatIcons).
+ * staffModLevel on the account: 1 player moderator, 2 moderator, 3 administrator, 4 developer,
+ * 5 owner. The client draws 2 and 3 alike as the gold crown, so 3 is folded into 2 here rather than
+ * sent. 4 is the developer crown the client added with the XP-mode badges (imageModIcons[5],
+ * "@cr6@"), 5 and above the owner's (imageModIcons[6], "@cr7@") - see the client's ChatIcons. An
+ * owner keeps every developer power: every rank check in the engine and content is "at least".
  *
  * This was three separate clamps - Math.min(level, 2) for public chat and for the login packet,
  * and min(level, 3) for private messages - which is why a developer showed the admin crown. All
@@ -16,6 +18,9 @@
  * ~broadcast_name) from the same thresholds.
  */
 export function chatCrown(staffModLevel: number): number {
+    if (staffModLevel >= 5) {
+        return 5;
+    }
     if (staffModLevel >= 4) {
         return 4;
     }

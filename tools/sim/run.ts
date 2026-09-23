@@ -508,26 +508,31 @@ if (which === 'broadcast') {
     // and the server's own line wrapping - so the output is exactly the strings the client draws.
     H.makePlayer('watcher', SINGLE[0], SINGLE[1], 1); // on the world only to receive the lines
     const cast: [string, number, number][] = [
-        ['corey', 4, 1], // developer, Realism
+        ['corey', 5, 1], // owner, Realism
+        ['dev', 4, 10], // developer, 10x
         ['zezima', 0, 10], // no rank, 10x
         ['mod ash', 2, 5], // moderator, 5x
         ['newbie', 1, 0] // player moderator, never chose a mode
     ];
     const ps = cast.map(([n], i) => H.makePlayer(n, SINGLE[0] + 2 + i, SINGLE[1], 2 + i));
+    const [corey, dev, zezima, modash, newbie] = ps;
     H.tick(2);
     cast.forEach(([, staff, rate], i) => {
         ps[i].staffModLevel = staff;
         H.setVar(ps[i], 'xp_rate', rate);
     });
     H.clearLogs();
-    H.runProc(ps[0], '[proc,broadcast_drop]', [ObjType.getId('abyssal_whip')]);
-    H.runProc(ps[1], '[proc,broadcast_drop]', [ObjType.getId('dragon_pickaxe')]);
-    H.runProc(ps[2], '[proc,broadcast_pet]', [ObjType.getId('bosspet_kraken_item')]);
-    H.runProc(ps[3], '[proc,broadcast_news]', ['Fire cape!', 'defeated TzTok-Jad and claimed a @dre@Fire cape@bla@.']);
+    // ::broadcast is production-only in the engine, so the announcement is driven through its proc
+    H.runProc(corey, '[proc,broadcast_staff]', ['Server update in 10 minutes - bank your items!']);
+    H.runProc(corey, '[proc,broadcast_drop]', [ObjType.getId('abyssal_whip')]);
+    H.runProc(dev, '[proc,broadcast_drop]', [ObjType.getId('trident_of_the_seas_full')]);
+    H.runProc(zezima, '[proc,broadcast_drop]', [ObjType.getId('dragon_pickaxe')]);
+    H.runProc(modash, '[proc,broadcast_pet]', [ObjType.getId('bosspet_kraken_item')]);
+    H.runProc(newbie, '[proc,broadcast_news]', ['Fire cape!', 'defeated TzTok-Jad and claimed a @dre@Fire cape@bla@.']);
     const cheat = new ClientCheatHandler();
-    cheat.handle(new ClientCheat('yell anyone up for barrows?'), ps[0]);
-    cheat.handle(new ClientCheat('yell @cr2@@red@i am totally an admin'), ps[1]);
-    cheat.handle(new ClientCheat('yell selling full rune, dragon scimitar, 400 sharks - pm me or meet at edge bank'), ps[2]);
+    cheat.handle(new ClientCheat('yell anyone up for barrows?'), corey);
+    cheat.handle(new ClientCheat('yell @cr2@@red@i am totally an admin'), zezima);
+    cheat.handle(new ClientCheat('yell selling full rune, dragon scimitar, 400 sharks - pm me or meet at edge bank'), modash);
     const lines = H.mesgs.filter(m => m.who === 'watcher').map(m => m.text);
     for (const l of lines) console.log('  ' + l);
     const out = process.argv[3];

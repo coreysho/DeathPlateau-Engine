@@ -49,7 +49,8 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave);
 
                 if (!Environment.NODE_PRODUCTION) {
-                    response.staffmodlevel = 4; // dev (destructive commands)
+                    // dev (destructive commands) - AT LEAST 4, so an owner (5) is not demoted
+                    response.staffmodlevel = Math.max(4, response.staffmodlevel ?? 0);
                 }
 
                 parentPort.postMessage({
@@ -78,11 +79,10 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                     account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
                 }
 
-                let staffmodlevel = 0;
+                let staffmodlevel = account ? account.staffmodlevel : 0;
                 if (!Environment.NODE_PRODUCTION) {
-                    staffmodlevel = 4; // dev (destructive commands)
-                } else if (account) {
-                    staffmodlevel = account.staffmodlevel;
+                    // dev (destructive commands) - AT LEAST 4, so an owner (5) is not demoted
+                    staffmodlevel = Math.max(4, staffmodlevel);
                 }
 
                 const accountId = account ? account.id : 1;
