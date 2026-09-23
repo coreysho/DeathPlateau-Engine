@@ -41,3 +41,6 @@ data/discord/
 
 # The trading post's database - live data, created on first boot, never committed (src/server)
 data/tradingpost/
+
+# Clan chat channels (ClanChat), written at runtime like the saves and the trading post above.
+data/clans/
