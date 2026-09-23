@@ -618,7 +618,7 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
     }
 
     if (rebuildClientLoc) {
-        const { packLocConfigs, parseLocConfig } = await importCached('#tools/pack/config/LocConfig.js');
+        const { packLocConfigs, parseLocConfig, packLocSounds } = await importCached('#tools/pack/config/LocConfig.js');
         await readConfigs(
             dirTree,
             '.loc',
@@ -629,6 +629,7 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
             (dat: Packet, idx: Packet) => {
                 jag?.write('loc.dat', dat);
                 jag?.write('loc.idx', idx);
+                jag?.write('locsound.dat', packLocSounds());
             },
             (dat: Packet, idx: Packet) => {
                 dat.save('data/pack/server/loc.dat');

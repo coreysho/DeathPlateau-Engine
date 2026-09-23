@@ -1,7 +1,8 @@
 import ParamType from '#/cache/config/ParamType.js';
 import ScriptVarType from '#/cache/config/ScriptVarType.js';
+import Packet from '#/io/Packet.js';
 import ColorConversion from '#/util/ColorConversion.js';
-import { CategoryPack, LocPack, ModelPack, SeqPack, TexturePack, VarbitPack, VarpPack } from '#tools/pack/PackFile.js';
+import { CategoryPack, LocPack, ModelPack, SeqPack, SynthPack, TexturePack, VarbitPack, VarpPack } from '#tools/pack/PackFile.js';
 import { LocModelShape, ConfigValue, ConfigLine, ParamValue, PackedData, isConfigBoolean, getConfigBoolean, packStepError } from '#tools/pack/config/PackShared.js';
 import { lookupParamValue } from '#tools/pack/config/ParamConfig.js';
 
@@ -147,6 +148,41 @@ export function parseLocConfig(key: string, value: string): ConfigValue | null |
             type: param.type,
             value: paramValue
         };
+    } else if (key === 'bgsound') {
+        // bgsound=synth,range - a sound the loc makes all the time, heard within range tiles (474)
+        const [synth, range] = value.split(',');
+        const id = SynthPack.getByName(synth);
+        const r = parseInt(range);
+        if (id === -1 || Number.isNaN(r) || r < 0 || r > 255) {
+            return null;
+        }
+
+        return [id, r];
+    } else if (key === 'randomsound') {
+        // randomsound=mindelay,maxdelay,range,synth1,synth2,... - one of the synths now and then, the
+        // delay in client cycles (20ms) picked between the two (474)
+        const parts = value.split(',');
+        if (parts.length < 4 || parts.length > 3 + 255) {
+            return null;
+        }
+
+        const out: number[] = [];
+        for (let i = 0; i < 3; i++) {
+            const n = parseInt(parts[i]);
+            if (Number.isNaN(n) || n < 0 || n > (i < 2 ? 65535 : 255)) {
+                return null;
+            }
+            out.push(n);
+        }
+        for (let i = 3; i < parts.length; i++) {
+            const id = SynthPack.getByName(parts[i]);
+            if (id === -1) {
+                return null;
+            }
+            out.push(id);
+        }
+
+        return out;
     } else if (key === 'forceapproach') {
         let flags = 0b1111;
         switch (value) {
@@ -169,7 +205,37 @@ export function parseLocConfig(key: string, value: string): ConfigValue | null |
     }
 }
 
+// Area sounds (474's loc opcodes 78 and 79) go to the client in a file of their own, locsound.dat in
+// the config archive, rather than as opcodes in loc.dat: a client that does not know them reads
+// loc.dat unchanged and never opens locsound.dat, so content and client can update apart.
+type LocSound = { id: number; bg: number; bgrange: number; random: number[] | null };
+let locSounds: LocSound[] = [];
+
+// locsound.dat: u16 count, then per loc u16 id, u16 bgsound (65535 none), u8 range, u8 random count
+// and, if any, u16 min delay, u16 max delay, u8 range and the u16 synths
+export function packLocSounds(): Packet {
+    const out = Packet.alloc(4); // 500 kB
+    out.p2(locSounds.length);
+    for (const s of locSounds) {
+        out.p2(s.id);
+        out.p2(s.bg === -1 ? 65535 : s.bg);
+        out.p1(s.bgrange);
+        const synths = s.random ? s.random.slice(3) : [];
+        out.p1(synths.length);
+        if (s.random) {
+            out.p2(s.random[0]);
+            out.p2(s.random[1]);
+            out.p1(s.random[2]);
+            for (const synth of synths) {
+                out.p2(synth);
+            }
+        }
+    }
+    return out;
+}
+
 export function packLocConfigs(configs: Map<string, ConfigLine[]>, modelFlags: number[]): { client: PackedData; server: PackedData } {
+    locSounds = [];
     const client: PackedData = new PackedData(LocPack.max);
     const server: PackedData = new PackedData(LocPack.max);
 
@@ -190,6 +256,7 @@ export function packLocConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
             let multivarp = -1;
             let multivarbit = -1;
             const multiloc: number[] = [];
+            const sound: LocSound = { id, bg: -1, bgrange: 0, random: null };
 
             for (let j = 0; j < config.length; j++) {
                 const { key, value } = config[j];
@@ -314,6 +381,12 @@ export function packLocConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
                 } else if (key === 'raiseobject') {
                     client.p1(75);
                     client.pbool(value as boolean);
+                } else if (key === 'bgsound') {
+                    const [synth, range] = value as number[];
+                    sound.bg = synth;
+                    sound.bgrange = range;
+                } else if (key === 'randomsound') {
+                    sound.random = value as number[];
                 } else if (key === 'multivar') {
                     const varpId = VarpPack.getByName(value as string);
                     if (varpId === -1) {
@@ -514,6 +587,10 @@ export function packLocConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
                         client.p2(65535);
                     }
                 }
+            }
+
+            if (sound.bg !== -1 || sound.random !== null) {
+                locSounds.push(sound);
             }
 
             if (params.length > 0) {

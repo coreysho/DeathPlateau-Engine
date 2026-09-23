@@ -512,6 +512,8 @@ export const enum ScriptOpcode {
     CLAN_FRIEND_RANK,
     CLAN_SETFRIENDRANK,
 
+    FINDNAME, // custom (2026-09-23) - finduid by display name; house guests find the owner by the name they type
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -998,6 +1000,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['CLAN_FRIEND', ScriptOpcode.CLAN_FRIEND],
     ['CLAN_FRIEND_RANK', ScriptOpcode.CLAN_FRIEND_RANK],
     ['CLAN_SETFRIENDRANK', ScriptOpcode.CLAN_SETFRIENDRANK],
+    ['FINDNAME', ScriptOpcode.FINDNAME],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],
