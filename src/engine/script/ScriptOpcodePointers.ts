@@ -589,6 +589,9 @@ const ScriptOpcodePointers: {
     [ScriptOpcode.STAT_TOTAL]: {
         require: ['active_player']
     },
+    [ScriptOpcode.STAT_XP]: {
+        require: ['active_player']
+    },
     [ScriptOpcode.SESSION_LOG]: {
         require: ['active_player']
     },
