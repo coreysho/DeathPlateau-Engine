@@ -84,6 +84,26 @@ console.log('COMBO EATING');
     check('two sharks in one tick: one', H.invCount(p, 'shark'), 1);
 }
 
+console.log('POT BLOCKING');
+{
+    const p = fresh();
+    p.levels[HP] = 40;
+    H.give(p, '4dosepotionofsaradomin'); H.give(p, 'shark'); H.give(p, 'tbwt_cooked_karambwan');
+    H.opheld(p, '4dosepotionofsaradomin', 1);
+    H.opheld(p, 'shark', 1);
+    check('brew then shark in one tick: the shark is blocked', H.invCount(p, 'shark'), 1);
+    H.opheld(p, 'tbwt_cooked_karambwan', 1);
+    check('  but a karambwan still goes after the brew', H.invCount(p, 'tbwt_cooked_karambwan'), 0);
+    H.tick(1);
+    const q = fresh();
+    H.give(q, '4dosepotionofsaradomin'); H.give(q, 'shark');
+    q.levels[HP] = 40;
+    H.opheld(q, '4dosepotionofsaradomin', 1);
+    H.tick(1);
+    H.opheld(q, 'shark', 1);
+    check('  brew, then a shark the next tick: it goes', H.invCount(q, 'shark'), 0);
+}
+
 console.log('SARADOMIN BREW at 99s');
 {
     const p = fresh();
