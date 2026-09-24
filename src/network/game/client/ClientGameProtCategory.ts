@@ -3,7 +3,10 @@ export default class ClientGameProtCategory {
     // osrs has this as 50/10 but we know that's not true in rs2
     // todo: determine which packets belong in which category for this era
     static readonly CLIENT_EVENT = new ClientGameProtCategory(0, 20);
-    static readonly USER_EVENT = new ClientGameProtCategory(1, 5);
+    // Old School's 10, not rs2's 5: a PvP switch is several equips, a prayer and an attack clicked
+    // inside one tick, and at 5 the rest of it spilled into the next tick, so a switch landed in
+    // two halves. Every click still runs in the order it was made.
+    static readonly USER_EVENT = new ClientGameProtCategory(1, 10);
     // flood restricted events
     static readonly RESTRICTED_EVENT = new ClientGameProtCategory(2, 2);
 
