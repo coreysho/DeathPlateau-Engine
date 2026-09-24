@@ -6,7 +6,7 @@
 //   collection   a row per collection log tab, its bar, and the latest item logged
 //   counters     a death, a player killed, a monster killed and a Slayer task each move their count
 //   bank         the bank's worth in obj cost, "1.0M" style, right-aligned like every value there
-//   server       players online, the UTC clock, uptime; the quick actions open what they say
+//   server       players online, the US Eastern clock, uptime; the quick actions open what they say
 //
 // QT_DUMP=<file> writes the last texts, positions and colours sent for every quest tab component, so
 // the pages can be drawn with the client's own code as they really came out.
@@ -17,6 +17,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import Component from '#/cache/config/Component.js';
 import FontType from '#/cache/config/FontType.js';
 import World from '#/engine/World.js';
+import NpcType from '#/cache/config/NpcType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import Player from '#/engine/entity/Player.js';
@@ -24,6 +25,8 @@ import IfSetTab from '#/network/game/server/model/IfSetTab.js';
 import IfSetPosition from '#/network/game/server/model/IfSetPosition.js';
 import IfSetColour from '#/network/game/server/model/IfSetColour.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
+import IfSetHide from '#/network/game/server/model/IfSetHide.js';
+import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 
 await H.boot();
@@ -32,7 +35,7 @@ H.loginOrder();
 // what the harness does not already record: the tab slot, positions and colours - and the last of
 // each per component, for QT_DUMP
 const tabs: { who: string; com: string; tab: number }[] = [];
-const last: Record<string, Record<string, { text?: string; pos?: [number, number]; colour?: number }>> = {};
+const last: Record<string, Record<string, { text?: string; pos?: [number, number]; colour?: number; hidden?: boolean; scroll?: number }>> = {};
 const at = (who: string, com: number) => {
     const name = Component.get(com).comName ?? String(com);
     return ((last[who] ??= {})[name] ??= {});
@@ -43,6 +46,8 @@ const origWrite = (Player.prototype as any).write;
     if (m instanceof IfSetText) at(this.username, m.component).text = m.text;
     if (m instanceof IfSetPosition) at(this.username, m.component).pos = [m.x, m.y];
     if (m instanceof IfSetColour) at(this.username, m.component).colour = m.colour;
+    if (m instanceof IfSetHide) at(this.username, m.component).hidden = m.hidden;
+    if (m instanceof IfSetScrollPos) at(this.username, m.component).scroll = m.y;
     return origWrite.call(this, m);
 };
 
@@ -56,6 +61,12 @@ const text = (p: Player, com: string) => last[p.username]?.[com]?.text;
 const pos = (p: Player, com: string) => last[p.username]?.[com]?.pos;
 const shown = (p: Player) => tabs.filter(t => t.who === p.username && t.tab === 2).at(-1)?.com;
 const p12 = FontType.get(1);
+// a proc's string results, which H.runProc (ints only) does not return
+const runStr = (p: Player, name: string, args: any[]): string[] => {
+    const state = ScriptRunner.init(ScriptProvider.getByName(name)!, p, null, args);
+    ScriptRunner.execute(state);
+    return (state as any).stringStack.slice(0, (state as any).ssp);
+};
 const commas = (n: number) => n.toLocaleString('en-US');
 
 const a: Player = H.makePlayer('qtab_a', 3222, 3218, 50);
@@ -134,6 +145,9 @@ check('a Slayer task completed', H.getVar(a, 'slayer_tasks_done'), 1);
 H.setVar(a, 'player_playtime', 1440 * 33 + 60 * 6 + 37);
 H.ifButton(a, 'questtab_summary:tab_pstats');
 check('the page shows them', ['deaths', 'pvp', 'npcs', 'slayer', 'playtime'].map(k => text(a, `questtab_pstats:${k}`)), ['0', '1', '1', '1', '33d 6h 37m']);
+H.setVar(a, 'slayer_points', 1234);
+H.ifButton(a, 'questtab_summary:tab_pstats');
+check('  and the Slayer points', text(a, 'questtab_pstats:slpoints'), '1,234');
 check('  a value is right-aligned in its 84px column', pos(a, 'questtab_pstats:playtime'), [84 - p12.stringWidth('33d 6h 37m'), 0]);
 check('  account age from first seen', text(a, 'questtab_pstats:age'), '0 days');
 const before = H.getVar(a, 'player_playtime');
@@ -157,10 +171,22 @@ check('  past what an int holds, in billions', text(a, 'questtab_pstats:bank'), 
 console.log('SERVER');
 H.ifButton(a, 'questtab_summary:tab_sstats');
 check('players online', text(a, 'questtab_sstats:online'), `Players online: @gre@${World.getTotalPlayers()}`);
-const now = new Date();
-const h = now.getUTCHours() % 12 || 12, ampm = now.getUTCHours() < 12 ? 'AM' : 'PM';
-const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][now.getUTCMonth()];
-check('the time in UTC', text(a, 'questtab_sstats:time'), `Server time: @gre@${h}:${String(now.getUTCMinutes()).padStart(2, '0')} ${ampm}, ${now.getUTCDate()} ${mon}`);
+// US Eastern, as the platform's own time zone data has it: "10:05 AM EDT"
+const eastern = (d: Date) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })
+    .format(d).replace(/\s/g, ' ');
+check('the time in US Eastern', text(a, 'questtab_sstats:time'), `Server time: @gre@${eastern(new Date())}`);
+// world_minute counts from 1 January 2025, UTC; around both of 2026's changes, and a year of hours
+const EPOCH = Date.UTC(2025, 0, 1);
+const clockAt = (utc: number) => runStr(a, '[proc,questtab_clock]', [Math.floor((utc - EPOCH) / 60000)])[0];
+check('  the minute before summer time', clockAt(Date.UTC(2026, 2, 8, 6, 59)), '1:59 AM EST');
+check('  and the minute it starts', clockAt(Date.UTC(2026, 2, 8, 7, 0)), '3:00 AM EDT');
+check('  the minute before it ends', clockAt(Date.UTC(2026, 10, 1, 5, 59)), '1:59 AM EDT');
+check('  and the minute after', clockAt(Date.UTC(2026, 10, 1, 6, 0)), '1:00 AM EST');
+let clockBad = 0;
+for (let t = Date.UTC(2025, 0, 2, 3, 7); t < Date.UTC(2031, 0, 1); t += 3 * 3600000 + 17 * 60000) {
+    if (clockAt(t) !== eastern(new Date(t))) clockBad++;
+}
+check('  every 3h17m from 2025 to 2030 agrees with the time zone database', clockBad, 0);
 check('uptime from map_clock', text(a, 'questtab_sstats:uptime'), `Uptime: @gre@${Math.floor(World.currentTick / 100)} mins`);
 // a sim player is not a NetworkPlayer, so the modal is read off the player rather than the wire
 const modal = () => { const m = (a as any).modalMain; return m === -1 ? null : Component.get(m).comName; };
@@ -171,13 +197,33 @@ check('Open collection log opens the log', modal(), 'collection_log');
 H.ifButton(a, 'questtab_summary:collog');
 check('  as do the Character Summary button', modal(), 'collection_log');
 H.ifButton(a, 'questtab_sstats:act_drops');
-check('View monster drop tables says how', H.mesgs.filter(m => m.who === a.username).at(-1)?.text, 'Examine any monster you can attack to see what it drops, and how often.');
+check('View monster drop tables opens the monster browser', modal(), 'npc_browser');
+H.ifButton(a, 'npc_browser:letter_g');
+check('  a letter scrolls the list to its heading', last[a.username]['npc_browser:list']?.scroll! > 0, true);
+H.ifButton(a, 'npc_browser:m0');
+check('  a monster opens its drop table', [modal(), text(a, 'npc_drops:title')], ['npc_drops', 'Aberrant specter']);
+check('    with Back to list showing', last[a.username]['npc_drops:back']?.hidden, false);
+H.ifButton(a, 'npc_drops:back_button');
+check('  Back to list goes back to the browser', modal(), 'npc_browser');
+H.runProc(a, '[proc,npc_drops_open]', [NpcType.getId('goblin')]);
+check('  a table opened by examining has no Back', [modal(), last[a.username]['npc_drops:back']?.hidden], ['npc_drops', true]);
 
 console.log('QUESTS');
 // a quest moving re-shows the page the player is on rather than jumping to the quest list
 H.ifButton(a, 'questtab_summary:tab_pstats');
 H.runProc(a, '[proc,send_quest_progress]', [Component.getId('questlist:cook'), 1, 2]);
 check('quest progress keeps the Player Statistics page up', shown(a), 'questtab_pstats');
+// The client reloads a tab's interface from the cache when it comes back, every row red, so the
+// quest list is recoloured every time it is shown - Cook's Assistant started, Doric's not.
+const qcol = () => [last[a.username]['questlist:cook']?.colour, last[a.username]['questlist:doric']?.colour];
+H.setVar(a, 'cookquest', 1);
+H.ifButton(a, 'questtab_pstats:tab_quests');
+delete last[a.username]['questlist:cook'];
+delete last[a.username]['questlist:doric'];
+H.ifButton(a, 'questlist:tab_summary');
+H.ifButton(a, 'questtab_summary:tab_quests');
+const [cook, doric] = qcol();
+check('back on the quest list, the rows are coloured again: started yellow, not started red', [cook, doric, shown(a)], [0x7fe0, 0x7c00, 'questlist']);
 
 // last: the message box pauses the player's script, and a paused player's clicks wait for it
 H.ifButton(a, 'questtab_sstats:act_mode');
