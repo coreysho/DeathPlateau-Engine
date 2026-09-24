@@ -179,6 +179,12 @@ H.ifButton(a, 'questtab_summary:tab_pstats');
 H.runProc(a, '[proc,send_quest_progress]', [Component.getId('questlist:cook'), 1, 2]);
 check('quest progress keeps the Player Statistics page up', shown(a), 'questtab_pstats');
 
+// last: the message box pauses the player's script, and a paused player's clicks wait for it
+H.ifButton(a, 'questtab_sstats:act_mode');
+const chat = (a as any).modalChat;
+check('Game mode & XP rate explains it in a message box', chat === -1 ? null : Component.get(chat).comName?.split(':')[0].replace(/\d$/, ''), 'message');
+check('  which names the mode and the rate', H.ifaces.filter(i => i.who === a.username && i.kind === 'text').slice(-3).map(i => i.text).join(' ').includes('Realism: 1x experience'), true);
+
 if (process.env.QT_DUMP) {
     fs.writeFileSync(process.env.QT_DUMP, JSON.stringify(last[a.username], null, 1));
     console.log('dumped to ' + process.env.QT_DUMP);
