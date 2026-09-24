@@ -299,7 +299,7 @@ const PlayerOps: CommandHandlers = {
             ServerTriggerType.INV_BUTTON4,
             ServerTriggerType.INV_BUTTON5
         ];
-        if (!allowedTriggers.includes(state.trigger)) {
+        if (!allowedTriggers.includes(state.trigger) && !state.wearop) {
             throw new Error('is not safe to use in this trigger');
         }
 
@@ -322,7 +322,7 @@ const PlayerOps: CommandHandlers = {
             ServerTriggerType.INV_BUTTON5,
             ServerTriggerType.INV_BUTTOND
         ];
-        if (!allowedTriggers.includes(state.trigger)) {
+        if (!allowedTriggers.includes(state.trigger) && !state.wearop) {
             throw new Error('is not safe to use in this trigger');
         }
 

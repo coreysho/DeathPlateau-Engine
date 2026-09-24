@@ -14,6 +14,9 @@ export default class ObjType extends ConfigType {
     static configNames: Map<string, number> = new Map();
     static configs: ObjType[] = [];
 
+    // OSRS's equipment slots carry up to eight worn options (params 451-458)
+    static readonly WEAROP_COUNT = 8;
+
     static load(dir: string) {
         if (!fs.existsSync(`${dir}/server/obj.dat`)) {
             return;
@@ -60,6 +63,7 @@ export default class ObjType extends ConfigType {
                 config.tradeable = false;
                 config.op = [null, null, 'Take', null, null];
                 config.iop = [null, null, null, null, 'Drop'];
+                config.wearop = new Array(ObjType.WEAROP_COUNT).fill(null);
 
                 // "Yeah, turns out some of the devs didn't realise that their 'category' triggers would be auto-ignored on F2P."
                 // be warned this means category-triggered opheld5 (drop) scripts are skipped on f2p...
@@ -148,6 +152,11 @@ export default class ObjType extends ConfigType {
     members = false;
     op: (string | null)[] = [null, null, 'Take', null, null];
     iop: (string | null)[] = [null, null, null, null, 'Drop'];
+    // Worn options: what the item offers when right-clicked in the Worn Equipment tab, after
+    // Remove - a glory's four teleports, a slayer helmet's Check. OSRS keeps these in obj params
+    // 451-458; the 377 client has no params, so they are an obj opcode of their own (120-127),
+    // shared by client and server like iop. See network/game/client/handler/WearOpHandler.ts.
+    wearop: (string | null)[] = new Array(ObjType.WEAROP_COUNT).fill(null);
     manwear = -1;
     manwear2 = -1;
     manwearOffset = 0;
@@ -281,6 +290,8 @@ export default class ObjType extends ConfigType {
             this.contrast = dat.g1b();
         } else if (code === 115) {
             this.team = dat.g1();
+        } else if (code >= 120 && code < 120 + ObjType.WEAROP_COUNT) {
+            this.wearop[code - 120] = dat.gjstr();
         } else if (code === 201) {
             this.respawnrate = dat.g2();
         } else if (code === 249) {

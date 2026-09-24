@@ -79,6 +79,10 @@ export default class ClientGameProt {
     // custom (2026-09-23) - Examine on an npc, which 377 answered entirely inside the client. Sent to
     // the server so content can say more than the description: the elemental weakness, for one.
     static readonly EXAMINE_NPC = new ClientGameProt(150, 2);
+    // custom (2026-09-24) - an item's own option in the Worn Equipment tab (ObjType.wearop): the
+    // glory's Edgeville, a slayer helmet's Check. op 1-8, obj, slot, com. The tab's Remove is still
+    // INV_BUTTON1; see handler/WearOpHandler.ts.
+    static readonly WEAROP = new ClientGameProt(153, 7);
 
     static readonly MAP_BUILD_COMPLETE = new ClientGameProt(6, 0);
     static readonly MOVE_OPCLICK = new ClientGameProt(247, -1);

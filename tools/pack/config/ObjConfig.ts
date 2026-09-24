@@ -12,7 +12,8 @@ export function parseObjConfig(key: string, value: string): ConfigValue | null |
     const stringKeys = [
         'name', 'desc',
         'op1', 'op2', 'op3', 'op4', 'op5',
-        'iop1', 'iop2', 'iop3', 'iop4', 'iop5'
+        'iop1', 'iop2', 'iop3', 'iop4', 'iop5',
+        'wearop1', 'wearop2', 'wearop3', 'wearop4', 'wearop5', 'wearop6', 'wearop7', 'wearop8'
     ];
     // prettier-ignore
     const numberKeys = [
@@ -311,6 +312,13 @@ export function packObjConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
                 } else if (key.startsWith('iop')) {
                     const index = parseInt(key.substring('iop'.length)) - 1;
                     client.p1(35 + index);
+                    client.pjstr(value as string);
+                } else if (key.startsWith('wearop')) {
+                    // The Worn Equipment tab's options for this item (ObjType.wearop). Client-side,
+                    // because the client builds the menu; the engine reads the same bytes to check a
+                    // WEAROP packet names an option the item really has.
+                    const index = parseInt(key.substring('wearop'.length)) - 1;
+                    client.p1(120 + index);
                     client.pjstr(value as string);
                 } else if (key === 'weight') {
                     server.p1(75);

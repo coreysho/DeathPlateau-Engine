@@ -54,6 +54,12 @@ tuned right:
    4 tiles apart  ->  3 ticks
 ```
 
+`npx tsx tools/sim/wearop.ts` holds the Worn Equipment tab's per-item options (obj `wearop1-8`, the
+WEAROP packet) to the real `WearOpHandler`: every item with a worn option has a
+`[label,wearop<n>_...]` handler, a worn glory's Edgeville teleports and leaves the next charge down
+worn, a ring or necklace uses its charge on the finger or neck, bad ops are refused, and the backpack
+Rub menus that now share the teleports still work.
+
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 

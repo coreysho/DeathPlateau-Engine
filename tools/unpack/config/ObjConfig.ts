@@ -223,6 +223,11 @@ export function unpackObjConfig(config: ConfigIdx, id: number): string[] {
         } else if (code === 115) {
             const team = dat.g1();
             def.push(`team=${team}`);
+        } else if (code >= 120 && code < 128) {
+            // custom: worn options (see tools/pack/config/ObjConfig.ts)
+            const index = (code - 120) + 1;
+            const op = dat.gjstr();
+            def.push(`wearop${index}=${op}`);
         } else {
             printWarning(`unknown obj code ${code}`);
         }

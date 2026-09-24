@@ -36,6 +36,10 @@ export default class ScriptState {
     // interpreter
     script: ScriptFile;
     trigger: ServerTriggerType;
+    // custom (2026-09-24) - run for a worn option ([label,wearop<n>_...], WearOpHandler). A label has
+    // no trigger of its own to vouch for last_item and last_slot, but the engine set both for this
+    // click exactly as it does for opheld, so LAST_ITEM and LAST_SLOT accept them here too.
+    wearop = false;
     execution = ScriptState.RUNNING;
     executionHistory: number[] = [];
 

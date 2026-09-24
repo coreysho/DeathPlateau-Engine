@@ -41,6 +41,7 @@ import ResumePauseButtonDecoder from '#/network/game/client/codec/ResumePauseBut
 import ResumePCountDialogDecoder from '#/network/game/client/codec/ResumePCountDialogDecoder.js';
 import ResumePNameDialogDecoder from '#/network/game/client/codec/ResumePNameDialogDecoder.js';
 import ExamineNpcDecoder from '#/network/game/client/codec/ExamineNpcDecoder.js';
+import WearOpDecoder from '#/network/game/client/codec/WearOpDecoder.js';
 import TutClickSideDecoder from '#/network/game/client/codec/TutClickSideDecoder.js';
 import ChatSetModeHandler from '#/network/game/client/handler/ChatSetModeHandler.js';
 import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
@@ -80,6 +81,7 @@ import ResumePauseButtonHandler from '#/network/game/client/handler/ResumePauseB
 import ResumePCountDialogHandler from '#/network/game/client/handler/ResumePCountDialogHandler.js';
 import ResumePNameDialogHandler from '#/network/game/client/handler/ResumePNameDialogHandler.js';
 import ExamineNpcHandler from '#/network/game/client/handler/ExamineNpcHandler.js';
+import WearOpHandler from '#/network/game/client/handler/WearOpHandler.js';
 import TutClickSideHandler from '#/network/game/client/handler/TutClickSideHandler.js';
 import EventCameraPositionDecoder from '#/network/game/client/codec/EventCameraPositionDecoder.js';
 import EventCameraPositionHandler from '#/network/game/client/handler/EventCameraPositionHandler.js';
@@ -177,6 +179,7 @@ class ClientGameProtRepository {
         this.bind(new ResumePCountDialogDecoder(), new ResumePCountDialogHandler());
         this.bind(new ResumePNameDialogDecoder(), new ResumePNameDialogHandler());
         this.bind(new ExamineNpcDecoder(), new ExamineNpcHandler());
+        this.bind(new WearOpDecoder(), new WearOpHandler());
         this.bind(new TutClickSideDecoder(), new TutClickSideHandler());
         this.bind(new ChatSetModeDecoder(), new ChatSetModeHandler());
         this.bind(new ReportAbuseDecoder(), new ReportAbuseHandler());
