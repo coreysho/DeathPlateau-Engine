@@ -167,6 +167,16 @@ console.log('TALK AND RULES');
     check('Crandor', texts().some(t => t.startsWith('Crandor? Are you crazy?')), true);
     cont(p);
     H.tick(2);
+    // a quest port's button pressed without the quest (the harness presses it even though the map
+    // hides it, as a modified client could): no fare offered, no coins taken, no voyage
+    openCharter(p, stan!, 4);
+    const before = [at(p), coins(p)];
+    H.clearLogs();
+    H.ifButton(p, 'charter:phasmatys');
+    H.tick(2);
+    check('Port Phasmatys without Priest in Peril: refused on the server too', [texts().some(t => t.includes('Port Phasmatys costs')), at(p), coins(p)], [false, ...before]);
+    p.closeModal();
+    H.tick(1);
     // the quest ports appear with their quests
     H.setVar(p, 'priestperil', 60);
     H.setVar(p, 'mm_main', 1);
