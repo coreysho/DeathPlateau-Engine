@@ -2492,15 +2492,25 @@ export default class Player extends PathingEntity {
         const lastDate: bigint = this.lastLoginTime === 0n ? BigInt(Date.now()) : this.lastLoginTime;
         const nextDate: bigint = BigInt(Date.now());
 
-        const lastIp = 2130706433; // 127.0.0.1
-        const daysSinceLogin: number = (Number(nextDate - lastDate) / (1000 * 60 * 60 * 24)) | 0;
-        const daysSincePasswordChanged = 201; // hide :)
-        const daysSinceRecoveriesChanged = 201; // hide :)
-        const currentDay: number = (Number(nextDate) / (1000 * 60 * 60 * 24)) | 0;
-        const unreadMessageCount = 0;
-        const membersCreditDays = 365;
+        // The client counts days from RuneScape's own day 0, 27 Feb 2002 - day 11745 since 1970
+        // (Client.getDateString) - and works out "last logged in N days ago" as currentDay minus the
+        // DAY the last login fell on. Sending days since 1970 and the gap itself read as "20720 days ago".
+        const MS_PER_DAY = 1000 * 60 * 60 * 24;
+        const RUNEDAY_ZERO = 11745;
+        const currentDay: number = ((Number(nextDate) / MS_PER_DAY) | 0) - RUNEDAY_ZERO;
+        const previousLoginDay: number = ((Number(lastDate) / MS_PER_DAY) | 0) - RUNEDAY_ZERO;
 
-        this.write(new LastLoginInfo(lastIp, currentDay, daysSinceLogin, daysSincePasswordChanged, daysSinceRecoveriesChanged, unreadMessageCount, membersCreditDays));
+        // No address is kept for the last login, so none is sent (0), and the client leaves "from" off
+        // rather than printing 127.0.0.1. The welcome screen's other panels (password, recovery
+        // questions, messages, member credit) were Jagex's website's; the client no longer draws them
+        // from these, so they are sent as nothing.
+        const lastIp = 0;
+        const daysSincePasswordChanged = 0;
+        const daysSinceRecoveriesChanged = 0;
+        const unreadMessageCount = 0;
+        const membersCreditDays = 0;
+
+        this.write(new LastLoginInfo(lastIp, currentDay, previousLoginDay, daysSincePasswordChanged, daysSinceRecoveriesChanged, unreadMessageCount, membersCreditDays));
         this.lastLoginTime = nextDate;
     }
 
