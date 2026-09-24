@@ -1345,6 +1345,14 @@ const PlayerOps: CommandHandlers = {
         state.pushInt(state.activePlayer.runweight);
     },
 
+    // Whole experience points, as the stats tab shows them. Player.stats holds tenths - the same
+    // fixed point UpdateStatEncoder divides out - so 200m is 2,000,000,000 there and 200,000,000 here.
+    [ScriptOpcode.STAT_XP]: state => {
+        const stat: PlayerStat = check(state.popInt(), PlayerStatValid);
+
+        state.pushInt((state.activePlayer.stats[stat] / 10) | 0);
+    },
+
     [ScriptOpcode.SESSION_LOG]: state => {
         const eventType = state.popInt() + 2;
         const event = state.popString();

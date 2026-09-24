@@ -222,6 +222,7 @@ export const enum ScriptOpcode {
     WEAKQUEUEVARARG,
     WEALTH_EVENT, // custom
     WEIGHT,
+    STAT_XP, // custom (2026-09-24) - a skill's experience in whole points, for the quest tab's Total XP
 
     // Npc ops (2500-2999)
     NPC_ADD = 2500, // official
@@ -410,12 +411,12 @@ export const enum ScriptOpcode {
     // CHAR_TOLOWERCASE, // official, see cs2
     // CHAR_TOUPPERCASE, // official, see cs2
     // TOSTRING_LOCALISED, // official, see cs2
-    // STRINGWIDTH, // official, see cs2
     SPLIT_GET,
     SPLIT_GETANIM,
     SPLIT_INIT, // official
     SPLIT_LINECOUNT,
     SPLIT_PAGECOUNT, // official
+    STRINGWIDTH, // official, see cs2 - implemented (2026-09-24) so an interface can right-align a value with if_setposition
 
     // Number ops (4600-4699)
     ADD = 4600, // official, see cs2
@@ -720,6 +721,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['SPLIT_INIT', ScriptOpcode.SPLIT_INIT],
     ['SPLIT_LINECOUNT', ScriptOpcode.SPLIT_LINECOUNT],
     ['SPLIT_PAGECOUNT', ScriptOpcode.SPLIT_PAGECOUNT],
+    ['STRINGWIDTH', ScriptOpcode.STRINGWIDTH],
     ['SPOTANIM_PL', ScriptOpcode.SPOTANIM_PL],
     ['STAFFMODLEVEL', ScriptOpcode.STAFFMODLEVEL],
     ['STAT_ADD', ScriptOpcode.STAT_ADD],
@@ -748,6 +750,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['WEAKQUEUE*', ScriptOpcode.WEAKQUEUEVARARG],
     ['WEALTH_EVENT', ScriptOpcode.WEALTH_EVENT],
     ['WEIGHT', ScriptOpcode.WEIGHT],
+    ['STAT_XP', ScriptOpcode.STAT_XP],
 
     ['NPC_ADD', ScriptOpcode.NPC_ADD],
     ['NPC_ANIM', ScriptOpcode.NPC_ANIM],

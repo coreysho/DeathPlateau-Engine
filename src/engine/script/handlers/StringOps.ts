@@ -105,6 +105,16 @@ const StringOps: CommandHandlers = {
         state.pushInt(state.splitPages.length);
     },
 
+    // The width in pixels a text component would draw, with the same @col@ and icon tags skipped that
+    // the client skips. 377 text is only ever left-aligned or centred, so a right-aligned number is a
+    // left-aligned one moved by if_setposition - which needs to know how wide it is.
+    [ScriptOpcode.STRINGWIDTH]: state => {
+        const font = check(state.popInt(), FontTypeValid);
+        const text = state.popString();
+
+        state.pushInt(font.stringWidth(text));
+    },
+
     [ScriptOpcode.SPLIT_LINECOUNT]: state => {
         const page = state.popInt();
 
