@@ -8,7 +8,8 @@
 // Each skilled obstacle rolls stat_random(skill, 0, 255) and gives 25 xp: the roll is forced so the
 // sim is exact - at a roll of 128/256, level 50 fails and level 51 gets through.
 // Law rift: weapons or armour, worn or carried, keep you in the Abyss; empty-handed you land at the
-// Law altar (not the Nature altar, where it used to send you).
+// Law altar (not the Nature altar, where it used to send you). Cosmic rift: Lost City first. Death
+// rift: Mourning's End Part II first, and it lands at the Death altar (not Lumbridge).
 import * as H from './harness.ts';
 import World from '#/engine/World.js';
 import SeqType from '#/cache/config/SeqType.js';
@@ -252,25 +253,37 @@ console.log('A LEVEL 99 NEVER FAILS');
 pinRoll(null);
 
 console.log('LAW RIFT');
-// the rift is at 0_47_75_41_39 (3049,4839); it is reached from the tiles east of it
-function law(items: (p: any) => void) {
-    const p: any = H.makePlayer('law' + n++, 3051, 4838, 60 + n);
-    H.tick(1);
-    H.maxOut(p);
-    H.clearInv(p);
-    items(p);
-    const m0 = H.mesgs.length;
-    H.opLoc(p, 3049, 4839, 'abyss_exit_to_law', 1);
-    for (let t = 0; t < 20; t++) H.tick(1);
-    const mes = H.mesgs.slice(m0).filter(m => m.who === p.username).map(m => m.text);
-    const at = [p.x, p.z, p.level];
-    H.despawn(p);
-    return { mes, at };
+// Click a rift from a tile it can be reached from; what the player saw and where they ended up.
+// A rift is wall decoration on the inner ring: the probe finds a tile on the ring side of it.
+const stands = new Map<string, [number, number]>();
+function useRift(locName: string, x: number, z: number, setup: (p: any) => void) {
+    const tries: [number, number][] = stands.has(locName) ? [stands.get(locName)!] : [];
+    if (!tries.length) for (let r = 1; r <= 3; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) if (Math.max(Math.abs(dx), Math.abs(dz)) === r) tries.push([x + dx, z + dz]);
+    for (const [sx, sz] of tries) {
+        const p: any = H.makePlayer('rift' + n++, sx, sz, 60 + n);
+        H.tick(1);
+        H.maxOut(p);
+        H.clearInv(p);
+        setup(p);
+        const m0 = H.mesgs.length;
+        H.opLoc(p, x, z, locName, 1);
+        for (let t = 0; t < 20; t++) H.tick(1);
+        const mes = H.mesgs.slice(m0).filter(m => m.who === p.username).map(m => m.text);
+        const at = [p.x, p.z, p.level];
+        H.despawn(p);
+        if (mes.includes("I can't reach that!")) continue;
+        stands.set(locName, [sx, sz]);
+        return { mes, at };
+    }
+    throw new Error('no tile reaches ' + locName);
 }
+const inAbyss = (at: number[]) => at[0] >= 3008 && at[0] < 3072 && at[1] >= 4800 && at[1] < 4864;
+// the law rift is at 0_47_75_41_39 (3049,4839)
+const law = (setup: (p: any) => void) => useRift('abyss_exit_to_law', 3049, 4839, setup);
 const SARA = 'The power of Saradomin prevents you from taking armour or weaponry to Entrana.';
 {
     const r = law(p => H.give(p, 'bronze_dagger'));
-    check('a dagger in the pack: turned back, still in the Abyss', [r.mes, r.at[0] >= 3008 && r.at[0] < 3072], [[SARA], true]);
+    check('a dagger in the pack: turned back, still in the Abyss', [r.mes, inAbyss(r.at)], [[SARA], true]);
 }
 {
     const r = law(p => H.equip(p, { torso: 'bronze_platebody' }));
@@ -283,6 +296,26 @@ const SARA = 'The power of Saradomin prevents you from taking armour or weaponry
 {
     const r = law(p => { H.give(p, 'blankrune_high', 20); H.give(p, 'lobster'); });
     check('essence and food: through, to the Law altar (2464,4819)', [r.mes, r.at], [[], [2464, 4819, 0]]);
+}
+
+console.log('COSMIC RIFT');
+// 0_47_75_20_37 (3028,4837); Lost City is %zanaris 6 (^zanaris_complete)
+const cosmic = (zanaris: number) => useRift('abyss_exit_to_cosmic', 3028, 4837, p => H.setVar(p, 'zanaris', zanaris));
+{
+    const r = cosmic(5);
+    check('Lost City not finished: refused, still in the Abyss', [r.mes, inAbyss(r.at)], [['You need to have completed the Lost City quest in order to do that.'], true]);
+    const r2 = cosmic(6);
+    check('Lost City done: to the Cosmic altar (2142,4836)', [r2.mes, r2.at], [[], [2142, 4836, 0]]);
+}
+
+console.log('DEATH RIFT');
+// 0_47_75_42_37 (3050,4837); Mourning's End Part II is mourning_quest_main 50 (^mt_complete)
+const death = (mep2: number) => useRift('abyss_exit_to_death', 3050, 4837, p => H.setVarBit(p, 'mourning_quest_main', mep2));
+{
+    const r = death(49);
+    check("Mourning's End Part II not finished: blocked, still in the Abyss", [r.mes, inAbyss(r.at)], [['A strange power blocks your exit.'], true]);
+    const r2 = death(50);
+    check('finished: to the Death altar (2208,4829), not Lumbridge', [r2.mes, r2.at], [[], [2208, 4829, 0]]);
 }
 void World;
 

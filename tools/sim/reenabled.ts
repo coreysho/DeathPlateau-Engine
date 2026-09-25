@@ -1,7 +1,8 @@
 // Code that sat commented out behind "TODO 377: re-enable ..." notes until what it waited on was
 // ported, now switched back on:
-//   specwep.rs2   - the Dragon battleaxe's and Excalibur's instant specials check the duel's
-//                   "no special attacks" rule (duel_arena_spec_check), which the duel arena provides
+//   specwep.rs2   - the Dragon battleaxe's, Dragon axe's, Excalibur's and Dragon pickaxe's instant
+//                   specials check the duel's "no special attacks" rule (duel_arena_spec_check)
+//   charge.rs2    - Charge cannot be recast within a minute
 //   tier1.rs2     - the bronze dagger, axe and pickaxe go through tutorial_island_equip again, so a
 //                   player on Tutorial Island cannot wield them before Vannaka's lesson
 //   upass_journal - the finished Underground Pass journal says what Regicide has done
@@ -88,6 +89,35 @@ const OFF = 'Use of special attacks has been turned off for this duel.';
 {
     const r = spec('dragon_axe', 'combat_axe:specbar', ARENA, true);
     check('Dragon axe (same button), no-specs duel: refused', [r.mes, r.said, r.energy], [[OFF], [], 1000]);
+}
+{
+    const r = spec('dragon_pickaxe', 'combat_pickaxe:specbar', ARENA, true);
+    check('Dragon pickaxe, no-specs duel: refused, energy kept', [r.mes, r.said, r.energy], [[OFF], [], 1000]);
+    const r2 = spec('dragon_pickaxe', 'combat_pickaxe:specbar', ARENA, false);
+    check('  specials allowed: Rock Knocker', [r2.said, r2.energy < 1000], [['Smashing!'], true]);
+}
+
+console.log('CHARGE: ONCE A MINUTE');
+{
+    const p = player(LUMBRIDGE.x, LUMBRIDGE.z);
+    H.setVar(p, 'magearena', 8); // ^mage_arena_staff_given
+    H.give(p, 'firerune', 100);
+    H.give(p, 'bloodrune', 100);
+    H.give(p, 'airrune', 100);
+    const cast = () => {
+        const m0 = H.mesgs.length;
+        H.ifButton(p, 'magic:charge');
+        H.tick(1);
+        return mesOf(p, m0);
+    };
+    const CHARGED = 'You feel charged with magic power.', TOO_STRONG = "You can't recast that yet, your current Charge is too strong.";
+    check('first cast', cast(), [CHARGED]);
+    check('  again at once: refused, no runes spent', [cast(), H.invCount(p, 'bloodrune')], [[TOO_STRONG], 97]);
+    H.tick(96); // 98 ticks after the cast
+    check('  98 ticks on: still refused', cast(), [TOO_STRONG]);
+    H.tick(2);
+    check('  a minute (100 ticks) on: casts again', [cast(), H.invCount(p, 'bloodrune')], [[CHARGED], 94]);
+    H.despawn(p);
 }
 
 console.log('TUTORIAL ISLAND: WIELDING BEFORE THE COMBAT INSTRUCTOR');
