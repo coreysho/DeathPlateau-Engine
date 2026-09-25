@@ -23,6 +23,8 @@ import { PlayerQueueType } from '#/engine/entity/PlayerQueueRequest.js';
 import { findPath, findPathToLoc, canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import Player from '#/engine/entity/Player.js';
+import NpcType from '#/cache/config/NpcType.js';
+const NpcTypeOf = (id: number) => NpcType.get(id).debugname ?? '';
 
 await H.boot();
 H.loginOrder();
@@ -182,17 +184,19 @@ console.log('HORROR FROM THE DEEP');
     check('started, no key: locked, points at Gunnjorn', [c.z < 3636, lastMes(c).includes('Gunnjorn')], [true, true]);
     talk(c, 'gunnjorn');
     check('Gunnjorn hands over the key', H.invCount(c, 'horror_key'), 1);
+    H.setVar(c, 'horror_bridges', 3); // Larrissa will not go in until her bridge is mended (horror2.ts)
     c.teleport(2509, 3634, 0);
     H.tick(1);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
     check('with the key: unlocked and inside', [c.z >= 3636, (H.getVar(c, 'horror_bridges') >> 2) & 1], [true, 1]);
-    op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
+    op(c, 2445, 4596, 'horror_lighthouse_doorway', 1); // mid-quest the way in is the attacked copy's (horror2.ts)
     check('walk back out', c.z < 3636, true);
     H.clearInv(c);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
     check('unlocked for good: in again without the key', c.z >= 3636, true);
 
     console.log('Down to the basement, the strange wall, Jossik:');
+    H.setVar(c, 'horror_lighting', 7); // the light has to be fixed first (horror2.ts)
     c.teleport(2509, 3643, 0);
     H.tick(1);
     op(c, 2509, 3644, 'horror_ladder_top', 1);
@@ -212,11 +216,14 @@ console.log('HORROR FROM THE DEEP');
     const jr = H.npcNear('horror_dagannoth_jr4', c.x, c.z, 0);
     check('the level-100 dagannoth is waiting in the cave', jr !== null && Math.abs(jr.z - c.z) < 12, true);
     const words = talk(c, 'horror_lighthousekeeeper_injured');
-    check('Jossik talks, and no second dagannoth is added', [words.length > 0, World.npcs.filter(n => n && n.isActive && n.type === jr?.type).length], [true, 1]);
+    check('Jossik talks, and no second dagannoth is added', [words.length > 0, World.npcs.filter(n => n && n.isActive && n.type === jr?.type).length <= 1], [true, true]); // it attacks at once, so it may already be dead
     enqueue(c, '[queue,horror_boss_slain]', [1]);
     H.tick(3);
     check('dagannoth dead: stage 3, the Mother surfaces in the same cave', [H.getVar(c, 'horror'), H.npcNear('horror_dagganoth_aira', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airb', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airc', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_air', c.x, c.z, 0) !== null], [3, true]);
     enqueue(c, '[queue,horror_boss_slain]', [2]);
+    // The kill is faked through the queue, so the Mother herself is still alive - and she is aggressive
+    // now (horror2.ts), so take her away or she keeps interrupting the rest of the walk.
+    for (const n of [...World.npcs]) if (n && n.isActive && n.z > 4600 && n.z < 4700 && /^horror_dag+anoth_(air|water|fire|earth|ranged|melee|aira|airb|airc)$/.test(NpcTypeOf(n.type))) World.removeNpc(n, -1);
     H.tick(3);
     check('Mother dead: stage 4 and the casket', [H.getVar(c, 'horror'), H.invCount(c, 'horror_casket')], [4, 1]);
     talk(c, 'horror_lighthousekeeeper_injured');
