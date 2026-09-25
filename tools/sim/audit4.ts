@@ -440,9 +440,9 @@ guard('myreque2', () => {
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
     check('and back', f.x, 3474);
 
-    sv(p, 'routequest', 5); // ^route_complete
+    sv(p, 'routequest', 105); // ^routequest_complete (the original's stage numbers)
     const v0 = player('myreque2v', 3505, 9837);
-    sv(v0, 'routequest', 5);
+    sv(v0, 'routequest', 105);
     talk(v0, 'route_veliaf_hurtz', [1]);
     check('Veliaf in the Hollows starts it: stage 10', gv(v0, 'myreque_2_quest'), 10);
     sv(p, 'myreque_2_quest', 10);
