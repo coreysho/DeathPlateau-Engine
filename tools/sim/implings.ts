@@ -231,12 +231,27 @@ console.log('THE WHEAT');
     const grown = () => !!locAt(A[0], A[1], 'puro_wheat_shifting') && !!locAt(B[0], B[1], 'puro_wheat_shifting');
     if (grown()) { H.runProc(q, '[proc,puro_shift]', [0]); H.tick(4); }
     check('section 0 open: walkable', [grown(), blocked(A[0], A[1]), blocked(B[0], B[1])], [false, false, false]);
+    // the wheat will not grow over anything standing in the gap (checked below), so a roaming impling in
+    // it is moved on first
+    const clearGap = () => { for (const npc of World.npcs) if (npc && npc.isActive && npc.z === A[1] && (npc.x === A[0] || npc.x === B[0])) npc.teleport(2570, 4300, 0); };
+    clearGap();
     H.runProc(q, '[proc,puro_shift]', [0]); H.tick(1);
     check('it grows: wheat you push through, not walk through', [grown(), blocked(A[0], A[1]), blocked(B[0], B[1])], [true, true, true]);
     H.runProc(q, '[proc,puro_shift]', [0]); H.tick(1);
     check('it wilts: wilting wheat for a moment, and open', [!!locAt(A[0], A[1], 'puro_wheat_wilting'), grown(), blocked(A[0], A[1])], [true, false, false]);
     H.tick(5);
     check('  then nothing', !!locAt(A[0], A[1], 'puro_wheat_wilting'), false);
+    // an impling standing in the gap: the wheat does not grow over it
+    const imp: any = H.addNpc('impling_baby_puro', A[0], A[1]); imp.timerInterval = 0; imp.targetOp = 0;
+    H.runProc(q, '[proc,puro_shift]', [0]); H.tick(1);
+    check('  it does not grow over an impling standing in the gap', [grown(), imp.x === A[0] && imp.z === A[1]], [false, true]);
+    World.removeNpc(imp, -1);
+    // every section tile, and every Puro-Puro spawn point: never the same square
+    const shiftTiles = new Set<string>();
+    for (const [x, z] of [[23, 8], [24, 8], [27, 18], [27, 19], [5, 22], [5, 23], [8, 41], [8, 42], [11, 27], [11, 28], [14, 22], [14, 23], [16, 50], [16, 51], [17, 39], [17, 40], [20, 37], [20, 38], [21, 49], [22, 49], [22, 58], [23, 58], [22, 44], [22, 45], [26, 14], [27, 14], [26, 46], [27, 46], [23, 15], [23, 16], [24, 41], [24, 42], [24, 47], [24, 48], [25, 21], [25, 22], [30, 11], [31, 11], [34, 41], [34, 42], [35, 20], [36, 20], [35, 55], [36, 55], [36, 43], [37, 43], [38, 21], [38, 22], [38, 47], [38, 48], [39, 17], [40, 17], [40, 5], [41, 5], [41, 44], [41, 45], [41, 52], [42, 52], [42, 18], [42, 19], [43, 15], [43, 16], [43, 25], [43, 26], [44, 50], [44, 51], [46, 40], [46, 41], [49, 21], [49, 22], [52, 35], [52, 36], [55, 26], [55, 27], [58, 16], [58, 17]]) shiftTiles.add(`${PX + x},${PZ + z}`);
+    const onShift: string[] = [];
+    for (const npc of World.npcs) if (npc && npc.lifecycle === EntityLifeCycle.RESPAWN && shiftTiles.has(`${npc.startX},${npc.startZ}`)) onShift.push(`${NpcType.get(npc.baseType).debugname}@${npc.startX},${npc.startZ}`);
+    check('  no Puro-Puro spawn point is on a square of shifting wheat', onShift, []);
     H.despawn(q);
 }
 
@@ -432,6 +447,8 @@ console.log('SPAWNING');
     const puro = KINDS.reduce((a, k) => a + npcsOf(`impling_${k}_puro`).length, 0);
     const spawnersLeft = ['impling_spawner_low', 'impling_spawner_mid', 'impling_spawner_high'].reduce((a, k) => a + npcsOf(k).length, 0);
     check('after two minutes Puro-Puro\'s invisible spawns are implings', [spawnersLeft, puro >= 51 + 24 - 3], [0, true]);
+    const stuck = KINDS.flatMap(k => npcsOf(`impling_${k}_puro`)).filter(npc => blocked(npc.x, npc.z)).map(npc => `${npc.x},${npc.z}`);
+    check('  and not one of them is inside the wheat', stuck, []);
     const p = fresh(3222, 3218);
     const count = () => ['impling_spawner_world_low', 'impling_spawner_world_mid', 'impling_spawner_world_high'].reduce((a, k) => a + npcsOf(k, false).length, 0);
     const before = count();
