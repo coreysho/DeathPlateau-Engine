@@ -731,81 +731,38 @@ if (want('enakh')) {
 }
 
 // ======================================================================================= Tai Bwo Wannai Trio
+// The quest is now the original (ported from PlagueCityRS 349, original dialogue and stage numbers);
+// the whole playthrough, the Karamja extras and the save migration are tools/sim/port349_tbwt.ts.
+// What stays here is what this audit fixed that the port kept: the Shaikahan's real combat stats and
+// the sons' bamboo doors, which now open (the cache's tbwt_bamboo_door_inactive) once the quest is done.
 if (want('tbwt')) {
     console.log('TAI BWO WANNAI TRIO');
     const p = player('tbwtq', 2781, 3087, 1);
-    talk(p, 'tbwt_timfraku', [1]);
-    check('Timfraku: stage 1', v(p, 'tbwt_main'), 1);
-    for (const son of ['tbwt_tiadeche_multinpc_shore', 'tbwt_tinsay_multinpc_island', 'tbwt_tamayu_multinpc_jungle']) talk(p, son);
-    check('all three sons asked', [v(p, 'tbwt_tiadeche'), v(p, 'tbwt_tinsay'), v(p, 'tbwt_tamayu')], [1, 1, 1]);
-    talk(p, 'tbwt_lubufu');
-    H.give(p, 'net');
-    for (let i = 0; i < 80 && H.invCount(p, 'tbwt_raw_karambwanji') < 21; i++) talk(p, '0_43_47_karambwanji');
-    check('karambwanji can be netted in the village', H.invCount(p, 'tbwt_raw_karambwanji') >= 21, true);
-    talk(p, 'tbwt_lubufu');
-    check('Lubufu makes a vessel for twenty', H.invCount(p, 'tbwt_karambwan_vessel'), 1);
-
-    console.log('Tinsay and Tiadeche:');
-    H.give(p, 'banana');
-    H.give(p, 'knife');
-    H.give(p, 'karamja_rum');
-    useOnHeld(p, 'knife', 'banana');
-    useOnHeld(p, 'karamja_rum', 'tbwt_sliced_banana');
-    check('rum with sliced banana in it', H.invCount(p, 'tbwt_sliced_banana_in_karamja_rum'), 1);
-    talk(p, 'tbwt_tinsay_multinpc_island');
-    check('Tinsay: helped, and the manual', [v(p, 'tbwt_tinsay'), H.invCount(p, 'tbwt_crafting_manual')], [2, 1]);
-    talk(p, 'tbwt_tiadeche_multinpc_shore');
-    check('Tiadeche takes the manual, not the vessel: helped', [v(p, 'tbwt_tiadeche'), H.invCount(p, 'tbwt_crafting_manual'), H.invCount(p, 'tbwt_karambwan_vessel')], [2, 0, 1]);
-
-    console.log('Tamayu:');
-    p.teleport(2912, 3116, 0);
-    H.tick(1);
-    H.give(p, 'tinderbox');
-    for (let i = 0; i < 60 && H.invCount(p, 'tbwt_poisonous_karambwan_paste') === 0; i++) {
-        if (H.invCount(p, 'tbwt_raw_karambwan') === 0) {
-            if (H.invCount(p, 'tbwt_raw_karambwanji') === 0) H.give(p, 'tbwt_raw_karambwanji', 10);
-            useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
-            H.opheld(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji', 1);
-            drive(p);
-        }
-        if (H.invCount(p, 'tbwt_raw_karambwan') > 0) useOnHeld(p, 'tinderbox', 'tbwt_raw_karambwan');
-        if (H.invCount(p, 'tbwt_poorly_cooked_karambwan') > 0) useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
-        if (H.invCount(p, 'tbwt_cooked_karambwan') > 0) H.clearInv(p), H.give(p, 'tinderbox'), H.give(p, 'knife'), H.give(p, 'tbwt_karambwan_vessel'), H.give(p, 'tbwt_raw_karambwanji', 5);
-    }
-    check('a karambwan off the east coast, undercooked into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
-    H.give(p, 'iron_spear');
-    useOnHeld(p, 'iron_spear', 'tbwt_poisonous_karambwan_paste');
-    check('a karambwan-poisoned spear', H.invCount(p, 'tbwt_iron_spear_kp'), 1);
+    H.setVar(p, 'junglepotion', 13);
+    talk(p, 'tbwt_timfraku', [1, 3, 1, 1]); // roving adventurer - Trufitus sent me - gratitude - Yes
+    check('Timfraku: started (original stage 3)', v(p, 'tbwt_main'), 3);
+    for (const son of ['tbwt_tiadeche_multinpc_shore', 'tbwt_tinsay_multinpc_island', 'tbwt_tamayu_multinpc_jungle']) talk(p, son, son.includes('tiadeche') ? [1] : []);
+    check('all three sons given the news (original stage 2 each)', [v(p, 'tbwt_tiadeche'), v(p, 'tbwt_tinsay'), v(p, 'tbwt_tamayu')], [2, 2, 2]);
     const beast = H.npcNear('tbwt_beast', 2906, 3094, 0)!;
     check('the Shaikahan has real combat stats now', [beast.levels[3], beast.levels[0]], [100, 80]);
-    H.equip(p, { rhand: 'tbwt_iron_spear_kp' });
-    p.teleport(beast.x + 3, beast.z, 0);
-    H.tick(1);
-    // a real fight: the kill has to be recorded even though the killer is mid-swing when it dies
-    for (let t = 0; t < 600 && v(p, 'tbwt_flags') === 0; t++) {
-        if (!p.target && beast.isActive) H.attackNpc(p, beast);
-        p.levels[3] = 99;
-        H.tick(1);
-        if (p.activeScript && p.activeScript.execution === ScriptState.PAUSEBUTTON) drive(p);
-    }
-    check('the Shaikahan killed in a fight: the kill is recorded', v(p, 'tbwt_flags'), 1);
-    talk(p, 'tbwt_tamayu_multinpc_jungle');
-    check('Tamayu: helped, all three: stage 4', [v(p, 'tbwt_tamayu'), v(p, 'tbwt_main')], [2, 4]);
-    talk(p, 'tbwt_timfraku');
-    check('Timfraku told: stage 5', v(p, 'tbwt_main'), 5);
-    talk(p, 'tbwt_timfraku');
-    check('Timfraku: complete', v(p, 'tbwt_main'), 6);
 
     console.log('The sons\' houses:');
+    const m0 = H.mesgs.length;
+    p.teleport(2783, 3057, 0);
+    H.tick(1);
+    op(p, 2782, 3057, 'tbwt_bamboo_door');
+    check('before the quest is done: no permission', [H.mesgs.slice(m0).some(m => m.text.includes('permission')), p.x, p.z], [true, 2783, 3057]);
+    H.setVar(p, 'tbwt_main', 6);
     for (const [x, z] of [[2782, 3057], [2792, 3054], [2802, 3058]] as [number, number][]) {
         p.teleport(x + 1, z, 0);
         H.tick(1);
         const outside = reaches(0, p.x, p.z, 2795, 3080, 60);
         op(p, x, z, 'tbwt_bamboo_door');
         const a1 = at(p);
+        H.tick(5);
         op(p, x, z, 'tbwt_bamboo_door');
         const a2 = at(p);
-        check(`bamboo door at ${x},${z} steps you through and back`, [outside, a1[0] !== x + 1 || a1[1] !== z, walkable(0, a1[0], a1[1]), a2[0] === x + 1 && a2[1] === z], [true, true, true, true]);
+        check(`bamboo door at ${x},${z} opens you through and back`, [outside, a1[0] !== x + 1 || a1[1] !== z, walkable(0, a1[0], a1[1]), a2[0] === x + 1 && a2[1] === z], [true, true, true, true]);
     }
 }
 
