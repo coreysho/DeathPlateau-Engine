@@ -331,12 +331,15 @@ if (want('misc')) {
     // here is audit 7's map work: the jetties, the house doors, the throne-room doors and the stairs.
     console.log('THRONE OF MISCELLANIA');
     const p = player('miscq', 2628, 3692);
-    talk(p, 'viking_sailor');
+    // The Fremennik Trials as ported from 349 (2026-09-25): the Rellekka sailor only takes
+    // Fremenniks, and asks first ("Let's go!").
+    H.setVar(p, 'viking', 10);
+    talk(p, 'viking_sailor', [1]);
     check('the Rellekka sailor rows you north onto the island pier, on the ground', [at(p), walkable(0, p.x, p.z)], [[2581, 3846, 0], true]);
     check('the pier walks to the castle gate', reaches(0, p.x, p.z, 2520, 3858), true);
     talk(p, 'misc_sailor', [1]);
     check('and back south, onto the Rellekka jetty', [at(p), walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2640, 3690)], [[2628, 3693, 0], true, true]);
-    talk(p, 'viking_sailor');
+    talk(p, 'viking_sailor', [1]);
 
     console.log('The house doors:');
     p.teleport(2512, 3848, 0);
