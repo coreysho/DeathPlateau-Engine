@@ -590,19 +590,28 @@ if (rfd) {
     op(p, 2696, 2785, 'loc_12610', 1);
     op(p, 2696, 2785, 'loc_12610', 1);
     check('the crown hauled down: a red banana', H.invCount(p, 'hundred_ilm_red_banana'), 1);
-    // NOT REACHABLE ON FOOT (reported, not fixed): the nut cave's way in, loc_12617, is in the Ape
-    // Atoll dungeon under Marim's temple, and Monkey Madness has not wired the way down - the temple
-    // interior is walled off and mm_temple_trapdoor / mm_climbing_rope_bottom_temple have no
-    // triggers. The sim stands next to it to check the rest of the sub-quest.
-    check('(known blocker) the Ape Atoll dungeon is not reachable from Marim', connected(0, 2806, 2785, 2804, 9199, 200), false);
-    p.teleport(2804, 9199, 0);
+    // On foot, the 2006 way: from inside Marim's gate to the temple, down its trapdoor into the crypt,
+    // through the crypt to the nut cave's crack (loc_12617), and back up the rope. Monkey Madness wires
+    // the trapdoor and the rope (quest_mm/scripts/mm_ladders.rs2).
+    check('Marim (inside the gate) reaches the temple trapdoor on foot', [connected(0, 2721, 2767, 2806, 2785, 200), walkable(0, 2807, 2785)], [true, false]);
+    p.teleport(2792, 2772, 0);
     H.tick(2);
+    op(p, 2807, 2785, 'mm_temple_trapdoor', 1);
+    check('the trapdoor opens (worked from the temple floor)', [at(p), World.getLoc(2807, 2785, 0, LocType.getId('mm_temple_trapdoor_open')) !== null], [[2806, 2785, 0], true]);
+    op(p, 2807, 2785, 'mm_temple_trapdoor_open', 1);
+    check('down into the crypt beside the rope, a walkable tile', [at(p), walkable(0, p.x, p.z)], [[2807, 9201, 0], true]);
+    check('  and the crypt leads to the nut cave on foot', connected(0, p.x, p.z, 2804, 9199, 200), true);
     op(p, 2805, 9199, 'loc_12617', 1);
     check('into the nut cave, a walkable tile', [p.z < 6000, walkable(0, p.x, p.z)], [true, true]);
     op(p, 3020, 5457, 'loc_12615', 1);
     check('Tchiki nuts', H.invCount(p, 'hundred_ilm_tchiki_monkey_nuts'), 1);
     op(p, 3025, 5457, 'loc_12616', 1);
     check('out of the nut cave, a walkable tile', [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
+    check('  and back to the rope on foot', connected(0, p.x, p.z, 2807, 9201, 200), true);
+    op(p, 2808, 9201, 'mm_climbing_rope_bottom_temple', 1);
+    check('up the rope, beside the trapdoor', [at(p), walkable(0, p.x, p.z), connected(0, p.x, p.z, 2721, 2767, 200)], [[2806, 2785, 0], true, true]);
+    op(p, 2807, 2785, 'mm_temple_trapdoor_open', 2);
+    check('  and the trapdoor closes', World.getLoc(2807, 2785, 0, LocType.getId('mm_temple_trapdoor')) !== null, true);
     p.teleport(2920, 2721, 0);
     H.tick(2);
     op(p, 2921, 2721, 'loc_12602', 1);
