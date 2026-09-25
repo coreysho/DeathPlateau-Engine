@@ -78,8 +78,9 @@ console.log('SALAMANDERS');
     H.tick(1);
     check('wielded at 70+', worn(p, 3)?.name, 'black_salamander');
     check('  in both hands (the shield slot is its too)', ObjType.get(ObjType.getId('black_salamander')).wearpos2, 5);
-    const labels = H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && [25, 26, 27].map(c => Component.getId(`combat_thrown:com_${c}`)).includes(i.com)).map(i => i.text);
-    check('  the combat tab reads Scorch, Flare, Blaze', labels.slice(-3), ['Scorch', 'Flare', 'Blaze']);
+    // 474's salamander tab (Scorch, Flare, Blaze), titled with the salamander's name
+    const titled = H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && i.com === Component.getId('combat_salamander:name')).map(i => i.text);
+    check('  its own combat tab, titled with its name', titled.slice(-1), ['Black salamander']);
     H.despawn(p);
 }
 const STYLES = [
@@ -162,6 +163,17 @@ console.log('CHINCHOMPAS');
     check('Short fuse at 1,3,4,6,7,9 tiles', row(4), [100, 100, 75, 75, 50, 50]);
     check('Medium fuse', row(5), [75, 75, 100, 100, 75, 75]);
     check('Long fuse', row(6), [50, 50, 75, 75, 100, 100]);
+    H.despawn(p);
+}
+// wielded from the pack: 474's chinchompa tab (Short, Medium, Long fuse), titled with its name
+{
+    const p = fresh(3150, 3300);
+    H.maxOut(p);
+    H.give(p, 'chinchompa', 10);
+    H.opheld(p, 'chinchompa', 2);
+    H.tick(1);
+    const titled = H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && i.com === Component.getId('combat_chinchompa:name')).map(i => i.text);
+    check('a chinchompa wielded: its own combat tab, titled with its name', titled.slice(-1), ['Chinchompa']);
     H.despawn(p);
 }
 // a 3x3 of npcs at 5 tiles: the target in the middle, two attackable neighbours, a butterfly (no Attack)
