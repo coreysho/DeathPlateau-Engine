@@ -137,7 +137,11 @@ check('  and a has not died', H.getVar(a, 'player_deaths'), 0);
 const chicken = H.addNpc('chicken', a.x + 1, a.z);
 H.attackNpc(a, chicken);
 let t = 0;
-while (H.getVar(a, 'player_npc_kills') === 0 && t++ < 40) H.tick(1);
+// the click is thrown away while a is still delayed from b's death, so re-issue it until it lands
+while (H.getVar(a, 'player_npc_kills') === 0 && t++ < 60) {
+    if (t % 5 === 0 && chicken.isActive) H.attackNpc(a, chicken);
+    H.tick(1);
+}
 check('a chicken killed is a monster killed', H.getVar(a, 'player_npc_kills'), 1);
 // ~complete_task writes protected varps: it runs from a queue in game, so run it with protected access
 a.executeScript(ScriptRunner.init(ScriptProvider.getByName('[proc,complete_task]')!, a), true);
