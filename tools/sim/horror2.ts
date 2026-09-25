@@ -25,6 +25,8 @@ import { findPathToLoc, canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
+import SeqType from '#/cache/config/SeqType.js';
+import { PlayerQueueType } from '#/engine/entity/PlayerQueueRequest.js';
 
 await H.boot();
 H.loginOrder();
@@ -333,7 +335,157 @@ console.log('THE DAGANNOTH MOTHER');
     for (let i = 0; i < 12; i++) H.tick(1);
     const bones = World.getObj(spot[0], spot[1], 0, ObjType.getId('bones'), p.hash64) ?? World.getObj(spot[0], spot[1], 0, ObjType.getId('bones'), -1n);
     const big = World.getObj(spot[0], spot[1], 0, ObjType.getId('big_bones'), p.hash64) ?? World.getObj(spot[0], spot[1], 0, ObjType.getId('big_bones'), -1n);
-    check('dead in whatever colour: stage 4, the casket, and plain bones (not big bones)', [H.getVar(p, 'horror'), H.invCount(p, 'horror_casket'), bones !== null, big !== null], [4, 1, true, false]);
+    check('dead in whatever colour: the quest completes (stage 6), the casket, and plain bones (not big bones)', [H.getVar(p, 'horror'), H.invCount(p, 'horror_casket'), bones !== null, big !== null], [6, 1, true, false]);
+}
+
+// ============================================================ round 2b: the rest of the 2006 quest
+/** Stand next to the npc first (they wander), then talk. */
+function talkNear(p: Player, npc: Npc, picks: number[] = []) {
+    for (const [dx, dz] of [[0, -1], [1, 0], [-1, 0], [0, 1], [1, 1], [-1, -1], [2, 0], [0, 2]]) {
+        p.teleport(npc.x + dx, npc.z + dz, npc.level);
+        H.tick(1);
+        H.opNpc(p, npc, 1);
+        for (let t = 0; t < 6 && !p.activeScript; t++) H.tick(1);
+        if (p.activeScript) break;
+    }
+    return drive(p, picks);
+}
+console.log('LARRISSA AND GUNNJORN (the transcript\'s branches)');
+{
+    const larrissa = () => H.npcNear('horror_girlfriend_prequest', 2508, 3635, 0)!;
+    const a = player('hftd2start', 2509, 3633, 0);
+    talkNear(a, larrissa(), [2]);
+    check('"Sorry, just passing through": not started', H.getVar(a, 'horror'), 0);
+    talkNear(a, larrissa(), [1, 2]);
+    check('"With what?", then passing through: still not started', H.getVar(a, 'horror'), 0);
+    talkNear(a, larrissa(), [1, 1, 2]);
+    check('told the story, but "No." to starting: still not started', H.getVar(a, 'horror'), 0);
+    const words = talkNear(a, larrissa(), [1, 1, 1, 1, 2, 3]);
+    check('"Yes.": started, then her cousin, the bridge, and "I\'ll see what I can do"', [H.getVar(a, 'horror'), words.some(w => w.includes('Gunnjorn')), words.some(w => w.includes('thirty steel nails'))], [1, true, true]);
+    const hello = talkNear(a, larrissa(), [3]);
+    check('talking again: "please find my darling" and the same three options', [hello.some(w => w.includes('please find my darling')), hello.includes('Where is your cousin?')], [true, true]);
+
+    const gunnjorn = () => H.npcNear('gunnjorn', 2540, 3548, 0)!;
+    H.fillInv(a);
+    talkNear(a, gunnjorn());
+    check('Gunnjorn with a full pack: no key, and he remembers nothing', [H.invCount(a, 'horror_key'), (H.getVar(a, 'horror_bridges') >> 4) & 1], [0, 0]);
+    H.clearInv(a);
+    const g1 = talkNear(a, gunnjorn());
+    check('first meeting: you ask for Larrissa\'s key, and get it', [H.invCount(a, 'horror_key'), (H.getVar(a, 'horror_bridges') >> 4) & 1, g1.some(w => w.includes('Larrissa'))], [1, 1, true]);
+    const k = talkNear(a, larrissa());
+    check('key, no bridge: Larrissa is still stuck on the causeway', k.some(w => w.includes('bridge')), true);
+    H.clearInv(a);
+    const joke = talkNear(a, larrissa(), [1]);
+    check('lost the key and asked where her cousin is: "Is your memory going?"', joke.some(w => w.includes('memory')), true);
+    const g2 = talkNear(a, gunnjorn());
+    check('back to Gunnjorn: "lost that key", and another', [H.invCount(a, 'horror_key'), g2.some(w => w.includes('lost'))], [1, true]);
+    H.setVar(a, 'horror_bridges', H.getVar(a, 'horror_bridges') | 3);
+    a.teleport(2509, 3634, 0);
+    H.tick(1);
+    op(a, REAL.door[0], REAL.door[1], 'horror_lighthouse_doorway');
+    check('the key goes into the lock (RS transcript): used up, the door stays open', [H.invCount(a, 'horror_key'), (H.getVar(a, 'horror_bridges') >> 2) & 1, a.z > 4000], [0, 1, true]);
+    const g3 = talkNear(a, gunnjorn());
+    check('Gunnjorn has nothing more to give once the door is open', [H.invCount(a, 'horror_key'), g3.some(w => w.includes('clockwise'))], [0, true]);
+}
+
+console.log('The bookcase and its three books:');
+{
+    const b = player('hftd2books', 2508 + CX, 3643 + CZ, 1, { horror: 1 });
+    op(b, 2508 + CX, 3644 + CZ, 'horror_bookcase', 1, [4]);
+    check('"Take all three books": the manual, the diary and the journal', ['horror_diary3', 'horror_diary2', 'horror_diary1'].map(o => H.invCount(b, o)), [1, 1, 1]);
+    H.fillInv(b);
+    op(b, 2508 + CX, 3644 + CZ, 'horror_bookcase', 1, [1]);
+    check('no room: "You do not have enough room to take that."', lastMes(b), 'You do not have enough room to take that.');
+    H.clearInv(b);
+    op(b, 2508 + CX, 3644 + CZ, 'horror_bookcase', 1, [2]);
+    check('the ancient diary on its own', H.invCount(b, 'horror_diary2'), 1);
+    const f0 = H.ifaces.length;
+    H.opheld(b, 'horror_diary2', 1);
+    drive(b);
+    const text = H.ifaces.slice(f0).filter(i => i.who === b.username && i.kind === 'text').map(i => i.text ?? '').join(' ');
+    check('Silas\'s diary gives the key to the strange wall', [text.includes('sword'), text.includes('arrow'), text.includes('fire')], [true, true, true]);
+}
+
+console.log('Jossik\'s cave: the Dagannoth comes when he sees it, and the quest ends on the Mother:');
+{
+    const jrId = NpcType.getId('horror_dagannoth_jr4');
+    const jrs = () => [...World.npcs].filter(n => n && n.isActive && n.type === jrId);
+    for (const n of jrs()) World.removeNpc(n, -1);
+    const j = player('hftd2jossik', 2515, 4629, 1, { horror: 2 });
+    op(j, 2515, 4630, 'horror_ladder_top2');
+    check('down into the cave: nothing comes out of the water yet', [j.level, jrs().length], [0, 0]);
+    const jossik = H.npcNear('horror_lighthousekeeeper_injured', j.x, j.z, 0)!;
+    const w = talkNear(j, jossik);
+    check('Jossik tells his story, and the Dagannoth comes out after you', [w.some(x => x.includes('Silas')), jrs().length, jrs()[0]?.target === j], [true, 1, true]);
+    const m0 = H.mesgs.length;
+    talkNear(j, jossik);
+    check('while it is out: "You are too busy to talk to Jossik."', mesSince(j, m0).includes('You are too busy to talk to Jossik.'), true);
+    for (const n of jrs()) World.removeNpc(n, -1);
+    H.fillInv(j);
+    H.setVar(j, 'horror', 3);
+    const s0 = H.ifaces.length;
+    j.enqueueScript(ScriptProvider.getByName('[queue,horror_boss_slain]')!, PlayerQueueType.NORMAL, 0, [2]);
+    drive(j);
+    H.tick(3);
+    drive(j);
+    const said = H.ifaces.slice(s0).filter(i => i.who === j.username && i.kind === 'text').map(i => i.text ?? '');
+    check('the Mother dies: quest complete, put in front of the strange wall, a full pack so no casket', [H.getVar(j, 'horror'), at(j), H.invCount(j, 'horror_casket'), (H.getVar(j, 'horror_bridges') >> 3) & 1], [6, [2519, 4619, 1], 0, 1]);
+    check('and Jossik tells you to bring the casket to his library', said.some(x => x.includes('library')), true);
+    for (const n of [...World.npcs]) if (n && n.isActive && /^horror_dag+anoth_(air|water|fire|earth|ranged|melee|aira|airb|airc)$/.test(NpcType.get(n.type).debugname ?? '')) World.removeNpc(n, -1);
+
+    j.teleport(2510, 3640, 1);
+    H.tick(1);
+    const well = H.npcNear('horror_lighthousekeeeper_well', j.x, j.z, 1)!;
+    talkNear(j, well, [1]);
+    check('upstairs, still no room: he will not open it yet, and it is still owed', [(H.getVar(j, 'horror_bridges') >> 3) & 1, H.invCount(j, 'unfinished_saradominbook')], [1, 0]);
+    H.clearInv(j);
+    const c = talkNear(j, well, [1, 2, 2]);
+    check('no casket on you - he picked it up; Saradomin, then Zamorak twice: a damaged book of Zamorak', [c.some(x => x.includes('picked it up')), H.invCount(j, 'unfinished_zamorakbook'), H.invCount(j, 'unfinished_saradominbook'), (H.getVar(j, 'horror_bridges') >> 3) & 1], [true, 1, 0, 0]);
+    const again = talkNear(j, well, [3]);
+    check('opened once only: after that he is the shopkeeper', [again.some(x => x.includes('casket')), H.invCount(j, 'unfinished_zamorakbook')], [false, 1]);
+    const old = player('hftd2legacy', 2510, 3640, 1, { horror: 5 });
+    H.give(old, 'horror_casket');
+    talkNear(old, H.npcNear('horror_lighthousekeeeper_well', old.x, old.z, 1)!, [3, 3]);
+    H.tick(3);
+    check('a save left at the old stage 5: completed by Jossik, and the casket opened', [H.getVar(old, 'horror'), H.invCount(old, 'horror_casket'), H.invCount(old, 'unfinished_guthixbook')], [6, 0, 1]);
+}
+
+console.log('The Mother reads your prayers:');
+{
+    const ranged = SeqType.getId('horror_dagannoth_rangeattack'), melee = SeqType.getId('horror_dagannoth_attack');
+    const nanims: { who: Npc; seq: number }[] = [];
+    const orig = (Npc.prototype as any).playAnimation;
+    (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
+        nanims.push({ who: this, seq });
+        return orig.call(this, seq, delay);
+    };
+    const q = player('hftd2prayer', 2524, 4644, 0, { horror: 3 });
+    H.runProc(q, '[proc,horror_spawn_mother]');
+    for (let t = 0; t < 8; t++) { H.tick(1); q.levels[3] = 99; }
+    const m = [...World.npcs].find(n => n && n.isActive && NpcType.get(n.type).name === 'Dagannoth mother' && n.target === q) as Npc;
+    check('she is out and after the player', m !== undefined, true);
+    let spot = [q.x, q.z]; // the player stands still: auto-retaliate would walk them onto her
+    const watch = (ticks: number) => {
+        const from = nanims.length;
+        for (let t = 0; t < ticks; t++) { H.tick(1); q.levels[3] = 99; q.levels[5] = 99; q.clearInteraction(); q.teleport(spot[0], spot[1], 0); }
+        const mine = nanims.slice(from).filter(a => a.who === m);
+        return { ranged: mine.filter(a => a.seq === ranged).length, melee: mine.filter(a => a.seq === melee).length };
+    };
+    const plain = watch(12);
+    check('standing on her, no prayer: she claws', [plain.melee > 0, plain.ranged], [true, 0]);
+    H.setVar(q, 'prayer14', 1);
+    const pm = watch(12);
+    check('Protect from Melee while touching her: she shoots you point-blank instead', [pm.ranged > 0, pm.melee], [true, 0]);
+    H.setVar(q, 'prayer14', 0);
+    spot = [2524, 4639];
+    watch(4);
+    const far = watch(12);
+    check('at a distance, no prayer: she shoots', [far.ranged > 0, far.melee], [true, 0]);
+    H.setVar(q, 'prayer13', 1);
+    const d0 = Math.abs(m.z - q.z);
+    const pr = watch(16);
+    check('Protect from Missiles at a distance: she comes in and claws you', [Math.abs(m.z - q.z) < d0, pr.melee > 0], [true, true]);
+    (Npc.prototype as any).playAnimation = orig;
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

@@ -213,23 +213,27 @@ console.log('HORROR FROM THE DEEP');
     H.tick(1);
     op(c, 2515, 4630, 'horror_ladder_top2', 1);
     check('ladder down lands in Jossik\'s cave', [c.level, c.z > 4630 && c.z < 4640], [0, true]);
-    const jr = H.npcNear('horror_dagannoth_jr4', c.x, c.z, 0);
-    check('the level-100 dagannoth is waiting in the cave', jr !== null && Math.abs(jr.z - c.z) < 12, true);
+    const jrId = NpcType.getId('horror_dagannoth_jr4');
+    const jrs = () => World.npcs.filter(n => n && n.isActive && n.type === jrId && n.z > 4600 && n.z < 4700);
+    check('nothing comes out of the water just for climbing down (horror2.ts)', jrs().length, 0);
     const words = talk(c, 'horror_lighthousekeeeper_injured');
-    check('Jossik talks, and no second dagannoth is added', [words.length > 0, World.npcs.filter(n => n && n.isActive && n.type === jr?.type).length <= 1], [true, true]); // it attacks at once, so it may already be dead
-    enqueue(c, '[queue,horror_boss_slain]', [1]);
+    check('Jossik talks, and at the end of it the level-100 dagannoth comes for you', [words.length > 3, jrs().length === 1 || H.getVar(c, 'horror') === 3], [true, true]);
+    for (const n of jrs()) World.removeNpc(n, -1); // the kill is faked below
+    if (H.getVar(c, 'horror') === 2) enqueue(c, '[queue,horror_boss_slain]', [1]);
+    drive(c);
     H.tick(3);
-    check('dagannoth dead: stage 3, the Mother surfaces in the same cave', [H.getVar(c, 'horror'), H.npcNear('horror_dagganoth_aira', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airb', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airc', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_air', c.x, c.z, 0) !== null], [3, true]);
+    check('dagannoth dead: stage 3, Jossik warns you, the Mother surfaces in the same cave', [H.getVar(c, 'horror'), ['horror_dagganoth_aira', 'horror_dagganoth_airb', 'horror_dagganoth_airc', 'horror_dagganoth_air'].some(t => H.npcNear(t, c.x, c.z, 0) !== null)], [3, true]);
     enqueue(c, '[queue,horror_boss_slain]', [2]);
     // The kill is faked through the queue, so the Mother herself is still alive - and she is aggressive
     // now (horror2.ts), so take her away or she keeps interrupting the rest of the walk.
     for (const n of [...World.npcs]) if (n && n.isActive && n.z > 4600 && n.z < 4700 && /^horror_dag+anoth_(air|water|fire|earth|ranged|melee|aira|airb|airc)$/.test(NpcTypeOf(n.type))) World.removeNpc(n, -1);
+    drive(c);
     H.tick(3);
-    check('Mother dead: stage 4 and the casket', [H.getVar(c, 'horror'), H.invCount(c, 'horror_casket')], [4, 1]);
-    talk(c, 'horror_lighthousekeeeper_injured');
-    check('casket shown to Jossik: stage 5', H.getVar(c, 'horror'), 5);
+    check('Mother dead: the quest completes there and then, casket in hand, back in front of the strange wall', [H.getVar(c, 'horror'), H.invCount(c, 'horror_casket'), c.level, c.z < 4627 && c.z > 4600], [6, 1, 1, true]);
 
     console.log('And back up to the lighthouse on foot:');
+    c.teleport(2515, 4631, 0);
+    H.tick(1);
     op(c, 2515, 4631, 'horror_ladder_base2', 1);
     check('up to the room north of the wall', [c.level, c.z >= 4627], [1, true]);
     H.tick(110); // the panels have swung shut again behind us
@@ -241,9 +245,9 @@ console.log('HORROR FROM THE DEEP');
     op(c, 2519, 4618, 'horror_ladder_base', 1);
     check('basement ladder climbs back up into the lighthouse', [c.level, c.z > 3636 && c.z < 3650], [0, true]);
     check('the lighthouse ground floor reaches the spiral stairs', connected(0, c.x, c.z, 2506, 3639), true);
-    talk(c, 'horror_lighthousekeeeper_well', [4]);
+    talk(c, 'horror_lighthousekeeeper_well', [1, 1]);
     H.tick(3);
-    check('Jossik upstairs: quest complete', H.getVar(c, 'horror'), 6);
+    check('Jossik upstairs opens the casket: a damaged book of Saradomin', [H.getVar(c, 'horror'), H.invCount(c, 'horror_casket'), H.invCount(c, 'unfinished_saradominbook')], [6, 0, 1]);
 
     console.log('Walled in on the north side without having solved the wall (the Waterbirth maze exit):');
     H.tick(110); // let the panels opened above swing shut
