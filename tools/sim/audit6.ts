@@ -9,7 +9,8 @@
 //                      channel obstacles on their multiloc shells, the ranged shot, the genie's cave.
 // Forgettable Tale   - Veldaban's first conversation, the boards in Keldagrim, the chamber landings.
 // Swan Song          - the crawl-hole and the colony gate, Kathy Corkat's boat, the colony doors.
-// In Search of the Myreque - the cellar landing, the false wall, the Myreque's door and its tunnel.
+// In Search of the Myreque - the cellar landing, the false wall, the Myreque's doors and its tunnel
+//                      (the original quest now, ported from PlagueCityRS 349).
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
@@ -599,44 +600,43 @@ console.log('SWAN SONG');
 // ============================================================================== In Search of the Myreque
 console.log('IN SEARCH OF THE MYREQUE');
 {
+    // The original quest (ported from PlagueCityRS 349): its placements. The whole quest is played in
+    // tools/sim/port349_routequest.ts.
     const p = player('myreque', 3494, 3463);
     H.setVar(p, 'routequest', 0);
     op(p, 3494, 3464, 'thrt_tavern_trap_door');
-    check('down the trapdoor, below the ladder on a free tile (was the ladder\'s own tile)', [at(p), free(p)], [[3477, 9845, 0], true]);
-    check('  Veliaf cannot be reached from the cellar on foot', reach(0, p.x, p.z)(3506, 9838), false);
-    op(p, 3480, 9837, 'thrttavernbasementfalsewall');
-    check('Search the false wall: through into the Hollows', [at(p), free(p)], [[3480, 9836, 0], true]);
-    check('  the Myreque\'s door is in reach', reach(0, p.x, p.z)(3500, 9812), true);
-    op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
-    check('  their door: into the hideout', [at(p), free(p)], [[3505, 9832, 0], true]);
-    check('  Veliaf, on foot', walkTalk(p, 'route_veliaf_hurtz', [1, 1, 1, 1]), true);
-    check('  three questions right: sent for the route', H.getVar(p, 'routequest'), 3);
-    op(p, 3505, 9831, 'route_cavewalltunnel');
-    check('the hideout\'s tunnel: back out by the door', [at(p), free(p)], [[3500, 9811, 0], true]);
-
-    // the ladder, Cyreg, Curpile
-    p.teleport(3483, 9842, 0);
+    check('the trapdoor is locked until the way out has been found', at(p), [3494, 3463, 0]);
+    H.setVar(p, 'routequest', 97); // ^routequest_found_exit
+    op(p, 3494, 3464, 'thrt_tavern_trap_door');
+    check('  then: below the ladder on a free tile (not the ladder\'s own tile)', [at(p), free(p)], [[3477, 9845, 0], true]);
+    op(p, 3477, 9846, 'thrttavernbasementladder');
+    check('  and the ladder back up: beside the trapdoor, a free tile', [Math.abs(p.x - 3494) <= 1 && Math.abs(p.z - 3464) <= 1, p.level, free(p)], [true, 0, true]);
+    p.teleport(3480, 9838, 0);
     H.tick(1);
-    H.give(p, 'hammer');
-    H.give(p, 'nails', 10);
-    H.give(p, 'woodplank', 3);
-    for (let i = 0; i < 3; i++) op(p, 3483, 9841, 'ladder_broken');
-    check('three rungs', H.getVarBit(p, 'bridgerung3'), 1);
-    op(p, 3483, 9841, 'ladder_broken');
-    check('  climb it: the south swamp, a free tile', [at(p), free(p)], [[3498, 3382, 0], true]);
-    talk(p, 'route_cyreg_paddlehorn');
-    talk(p, 'route_curpile_fyod');
-    p.teleport(3498, 3376, 0);
+    op(p, 3480, 9837, 'thrttavernbasementfalsewall');
+    check('Search the false wall from the basement: through into the Hollows', [p.x, p.z < 9838, p.level, free(p)], [3480, true, 0, true]);
+    op(p, 3480, 9837, 'thrttavernbasementfalsewall');
+    check('  and back', [p.x, p.z >= 9837, free(p)], [3480, true, true]);
+    p.teleport(3500, 9811, 0);
+    H.tick(1);
+    op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
+    check('the Myreque\'s doors off the Hollows: out into Mort Myre, a free tile', [at(p), free(p)], [[3509, 3449, 0], true]);
+    op(p, 3510, 3447, 'freedomfighterentrancel');
+    check('  and the doors in the swamp back down', [at(p), free(p)], [[3500, 9811, 0], true]);
+    H.setVar(p, 'routequest', 105);
+    p.teleport(3491, 9824, 0);
+    H.tick(1);
+    op(p, 3492, 9824, 'route_stalagmite_cave_entrace', 2);
+    check('the stalagmite: into the hideout, a free tile', [at(p), free(p)], [[3505, 9832, 0], true]);
+    op(p, 3505, 9831, 'route_cavewalltunnel');
+    check('the hideout\'s tunnel: out beside the stalagmite', [at(p), free(p)], [[3491, 9824, 0], true]);
+    p.teleport(3498, 3380, 0);
     H.tick(1);
     op(p, 3498, 3377, 'route_rowboat_hollows');
-    check('the boat under the bank: a free tile by the stalagmite (was blocked)', [at(p), free(p)], [[3491, 9821, 0], true]);
-    p.teleport(3505, 9833, 0);
-    H.tick(1);
-    talk(p, 'route_veliaf_hurtz');
-    check('Veliaf: complete', H.getVar(p, 'routequest'), 5);
+    check('the Hollows boat: to Mort\'ton, a free tile', [at(p), free(p)], [[3522, 3284, 0], true]);
     H.clearLogs();
     talk(p, 'multi_vanstrom_stranger_entity');
-    check('the man in the tavern chair answers Talk-to', H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('passing through')), true);
+    check('the man in the tavern chair answers Talk-to', H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('been through this before')), true);
 }
 
 // ============================================================================== getting there on foot
