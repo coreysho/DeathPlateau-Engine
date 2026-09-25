@@ -327,12 +327,14 @@ if (want('deal')) {
 
 // ======================================================================================= Throne of Miscellania
 if (want('misc')) {
+    // The quest itself - the original one since 2026-09-25 - is tools/sim/miscellania.ts. What stays
+    // here is audit 7's map work: the jetties, the house doors, the throne-room doors and the stairs.
     console.log('THRONE OF MISCELLANIA');
     const p = player('miscq', 2628, 3692);
     talk(p, 'viking_sailor');
     check('the Rellekka sailor rows you north onto the island pier, on the ground', [at(p), walkable(0, p.x, p.z)], [[2581, 3846, 0], true]);
     check('the pier walks to the castle gate', reaches(0, p.x, p.z, 2520, 3858), true);
-    talk(p, 'misc_sailor');
+    talk(p, 'misc_sailor', [1]);
     check('and back south, onto the Rellekka jetty', [at(p), walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2640, 3690)], [[2628, 3693, 0], true, true]);
     talk(p, 'viking_sailor');
 
@@ -352,24 +354,24 @@ if (want('misc')) {
     op(p, 2505, 3848, 'loc_1742');
     check('up to the throne room floor', [p.level, walkable(1, p.x, p.z)], [1, true]);
     check('...which reaches the throne room door, but not Ghrim or the King', [reaches(1, p.x, p.z, 2506, 3856), reaches(1, p.x, p.z, 2499, 3858)], [true, false]);
+    // a Heroes' Guild member, whom the guard lets in
+    H.setVar(p, 'heroquest', 15);
     p.teleport(2506, 3855, 1);
     H.tick(1);
     op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
-    check('before the quest: the throne door lets you in to find Ghrim', [at(p), reaches(1, p.x, p.z, 2503, 3860)], [[2506, 3857, 1], true]);
-    talk(p, 'misc_advisor_ghrim', []);
-    check('Ghrim: stage 2 (working)', v(p, 'misc_quest'), 2);
+    check('the guard lets a hero through the throne door', [at(p), reaches(1, p.x, p.z, 2503, 3860)], [[2506, 3857, 1], true]);
     p.teleport(2506, 3858, 1);
     H.tick(1);
     op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
     check('out through the south door', at(p), [2506, 3856, 1]);
     op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
-    check('and not back in again at 0% approval', at(p), [2506, 3856, 1]);
+    check('and back in: the guard remembers you', at(p), [2506, 3857, 1]);
     p.teleport(2506, 3862, 1);
     H.tick(1);
     op(p, 2506, 3863, 'misc_ulby_throneroomdoor');
     check('out through the north door too', [at(p), reaches(1, p.x, p.z, 2502, 3866)], [[2506, 3864, 1], true]);
 
-    console.log('Down the castle stairs and to work:');
+    console.log('Down the castle stairs:');
     p.teleport(2504, 3849, 1);
     H.tick(1);
     op(p, 2505, 3848, 'loc_1743', 3);
@@ -388,18 +390,6 @@ if (want('misc')) {
     H.tick(1);
     op(p, 2505, 3871, 'loc_1743', 3);
     check('the north staircase goes down too', [p.level, walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2540, 3860)], [0, true, true]);
-    p.teleport(2525, 3853, 0);
-    H.tick(1);
-    for (let i = 0; i < 20; i++) op(p, 2526, 3851, 'misc_dummy_heather_normal');
-    check('twenty jobs: approval 100', vb(p, 'misc_approval'), 100);
-    p.teleport(2506, 3855, 1);
-    H.tick(1);
-    op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
-    check('approved: in through the door', at(p), [2506, 3857, 1]);
-    talk(p, 'misc_advisor_ghrim');
-    check('Ghrim: approved', v(p, 'misc_quest'), 3);
-    talk(p, 'misc_king_vargas');
-    check('Vargas: audience', v(p, 'misc_quest'), 4);
 
     console.log('Etceteria:');
     openDoors(0, 2590, 3855, 2630, 3890, ['misc_viking_abode_door_low']);
@@ -408,35 +398,11 @@ if (want('misc')) {
     p.teleport(2612, 3866, 0);
     H.tick(1);
     op(p, 2613, 3867, 'loc_1738');
-    check('the Etceteria stairs climb to Sigrid and the library', [p.level, walkable(1, p.x, p.z), reaches(1, p.x, p.z, 2611, 3872), reaches(1, p.x, p.z, 2613, 3870)], [1, true, true, true]);
-    op(p, 2613, 3871, 'misc_bookcase');
-    check('the library has the giant nib', H.invCount(p, 'misc_giant_nib'), 1);
-    H.give(p, 'logs');
-    H.give(p, 'knife');
-    useOnHeld(p, 'logs', 'misc_giant_nib');
-    check('nib + logs + knife: the giant pen', H.invCount(p, 'misc_giant_pen'), 1);
-    p.teleport(2504, 3860, 1);
-    H.tick(1);
-    talk(p, 'misc_king_vargas');
-    check('Vargas signs with the pen', v(p, 'misc_quest'), 5);
-    p.teleport(2612, 3872, 1);
-    H.tick(1);
-    talk(p, 'misc_queen_sigrid');
-    check('Sigrid wants an anthem', vb(p, 'misc_know_sigrid'), 1);
-    p.teleport(2612, 3871, 1);
-    H.tick(1);
-    op(p, 2613, 3871, 'misc_bookcase');
-    check('the library has a better anthem', H.invCount(p, 'misc_good_anthem'), 1);
-    talk(p, 'misc_queen_sigrid');
-    check('Sigrid signs', v(p, 'misc_quest'), 6);
+    check('the Etceteria stairs climb to Sigrid', [p.level, walkable(1, p.x, p.z), reaches(1, p.x, p.z, 2611, 3872)], [1, true, true]);
     p.teleport(2614, 3866, 1);
     H.tick(1);
     op(p, 2614, 3867, 'loc_1740');
     check('the Etceteria stairs come back down into the village', [p.level, walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2581, 3845, 200)], [0, true, true]);
-    p.teleport(2504, 3860, 1);
-    H.tick(1);
-    talk(p, 'misc_king_vargas');
-    check('Vargas: complete', [v(p, 'misc_quest'), v(p, 'qp') > 0], [7, true]);
 }
 
 // ======================================================================================= Garden of Tranquillity
