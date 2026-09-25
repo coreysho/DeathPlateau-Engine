@@ -585,7 +585,7 @@ guard('regicide', () => {
 console.log('TROLL ROMANCE');
 guard('trolllove', () => {
     const t = NpcType.get(NpcType.getId('trollromance_arrg_attackable'));
-    check('Arrg has real combat stats', [t.stats[3], t.stats[0], t.stats[2], t.stats[1]], [140, 110, 110, 110]);
+    check('Arrg has real combat stats (OSRS wiki: 140 hp, Attack 70, Strength 140, Defence 40)', [t.stats[3], t.stats[0], t.stats[2], t.stats[1]], [140, 70, 140, 40]);
     const p = player('trolllove', 2828, 10093, 1);
     sv(p, 'troll_love', 35);
     H.equip(p, { rhand: 'dragon_scimitar' });
