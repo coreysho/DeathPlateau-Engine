@@ -422,7 +422,8 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
     }
 
     if (rebuildCategory) {
-        const dat = Packet.alloc(1);
+        // not the 5000-byte tier: the category names passed 5000 bytes with the Hunter areas (2026-09-25)
+        const dat = Packet.alloc(3);
         dat.p2(CategoryPack.size);
         for (let i = 0; i < CategoryPack.size; i++) {
             dat.p1(1);
