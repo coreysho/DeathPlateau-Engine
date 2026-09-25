@@ -1252,11 +1252,10 @@ if (run('marim')) {
     check('the village is walled off from the Ape Atoll landing', connected(0, 2802, 2705, 2788, 2794, 200), false);
     p.teleport(2720, 2764, 0);
     H.tick(2);
+    // Monkey Madness's gate (mm_stage3.rs2) lets anyone through - you arrive a human and have to reach
+    // Garkor before you have a greegree; the elder guards at the palace are what stop a human.
     op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
-    check('a human is stopped at the gate', [p.z < 2766, mesSince(p, 0).some(m => m.includes('not opening the gate'))], [true, true]);
-    H.equip(p, { rhand: 'mm_monkey_greegree_for_small_ninja_monkey' });
-    op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
-    check('in a greegree: through the gate', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
+    check('through the gate', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
     check('  and on to the three wise monkeys and the banana tree', [connected(0, p.x, p.z, 2788, 2794, 200), connected(0, p.x, p.z, 2697, 2784, 200)], [true, true]);
     op(p, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
     check('  and back out', p.z < 2766, true);
