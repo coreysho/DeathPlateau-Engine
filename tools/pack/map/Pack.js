@@ -40,6 +40,11 @@ function readMap(lines) {
             continue;
         }
 
+        if (line.charCodeAt(0) === 47) {
+            // '/' - a comment line (upstream allows them since d7529964)
+            continue;
+        }
+
         const colon = line.indexOf(':');
         const sp1 = line.indexOf(' ');
         const sp2 = line.indexOf(' ', sp1 + 1);
@@ -133,6 +138,11 @@ function readMapSection(lines, ...sections) {
         const line = lines[i];
         if (line.charCodeAt(0) === 61) {
             section = line.slice(4, -4).slice(1, 4);
+            continue;
+        }
+
+        if (line.charCodeAt(0) === 47) {
+            // '/' - a comment line (upstream allows them since d7529964)
             continue;
         }
         if (!sectionSet.has(section)) {
