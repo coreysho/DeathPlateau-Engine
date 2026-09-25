@@ -11,6 +11,12 @@
 //                still does not from level 54 of the real Wilderness
 //   quest        Launa, the rope, the Fear holes, the Confusion illusions and doors, the three forms
 //                of the Hopeless creatures, Tolna's three heads, and the reward on the surface
+//   last room    the OSRS transcript's "Finding Tolna": Brana and Tolna have it out while the heads
+//                hold off, then they hunt; Brana's lines before and after; Tolna himself on the narrow
+//                path once all three heads are down, his talk with Brana, and the three of you taken
+//                up - Tolna by the rift, Launa gone home; his account and the coins on the surface
+//   leaving      an Exit asks "Do you wish to leave?", and "Yes" starts the room over
+//   Launa        what she says at every stage, before and after each room is entered
 import * as H from './harness.ts';
 import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
@@ -27,7 +33,8 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import { findPathToLoc } from '#/engine/GameMap.js';
+import { findPathToLoc, canTravel } from '#/engine/GameMap.js';
+import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 H.loginOrder();
@@ -76,10 +83,10 @@ function drain(p: Player, picks: number[] = []) {
 }
 
 /** Click a loc op and wait for the walk and the script. */
-function useLoc(p: Player, x: number, z: number, loc: string, op = 1, ticks = 12) {
+function useLoc(p: Player, x: number, z: number, loc: string, op = 1, ticks = 12, picks: number[] = []) {
     H.opLoc(p, x, z, loc, op);
     H.tick(ticks);
-    drain(p);
+    drain(p, picks);
 }
 
 /** What OpLocUHandler does: an inventory item used on a loc. */
@@ -108,6 +115,14 @@ function talkTo(p: Player, npc: Npc, picks: number[] = []) {
     for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
     drain(p, picks);
 }
+/** Everything the chatbox showed the player since `from` (an H.ifaces index), as one string. */
+const shown = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && !!i.text && i.text.length > 1).map(i => i.text!).join(' ');
+function talkText(p: Player, npc: Npc, picks: number[] = []) {
+    const from = H.ifaces.length;
+    talkTo(p, npc, picks);
+    return shown(p, from);
+}
+const saidBy = (p: Player) => H.says.filter(x => x.who === p.username).map(x => x.text);
 
 const liveNpcs = (name: string, x: number, z: number, level: number, range = 30): Npc[] => {
     const id = NpcType.getId(name);
@@ -131,6 +146,23 @@ function fight(p: Player, npc: Npc, maxTicks = 80): number {
     return maxTicks;
 }
 const heal = (p: Player) => p.setLevel(PlayerStat.HITPOINTS, 99);
+/** Is (tx,tz) reachable on foot from (x,z)? A flood over the real collision map. */
+function walkable(level: number, x: number, z: number, tx: number, tz: number): boolean {
+    const seen = new Set<string>([`${x},${z}`]);
+    const q: [number, number][] = [[x, z]];
+    while (q.length) {
+        const [cx, cz] = q.shift()!;
+        if (cx === tx && cz === tz) return true;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const k = `${cx + dx},${cz + dz}`;
+            if (!seen.has(k) && Math.abs(cx + dx - x) < 40 && Math.abs(cz + dz - z) < 40 && canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([cx + dx, cz + dz]);
+            }
+        }
+    }
+    return false;
+}
 
 // =============================================================================================
 console.log('MONSTERS');
@@ -161,8 +193,9 @@ useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi');
 truthy('the rift before Launa: still on the surface', a.z < 4000, at(a));
 check('  and not started', prog(a), 0);
 const launa = H.npcNear('soulbane_launa_multi', 3309, 3453)!;
-talkTo(a, launa, [1, 1]);
+const launaStart = talkText(a, launa, [1]);
 check('Launa asks for help: stage 1', prog(a), 1);
+truthy('  in the transcript\'s words (25 years; "just attach it at the edge")', launaStart.includes('25 years') && launaStart.includes('attach it at the edge'), launaStart.slice(0, 120));
 a.teleport(SURFACE[0], SURFACE[1], 0);
 H.tick(1);
 useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi');
@@ -209,8 +242,10 @@ console.log('EXITS');
 b.teleport(3015, 5242, 0);
 H.setVarBit(b, 'soulbane_prog', 2);
 H.tick(1);
-useLoc(b, 3015, 5245, 'soul_bane_awall_void_small');
-check('the Anger room\'s Exit goes back up', at(b), [SURFACE[0], SURFACE[1], 0]);
+useLoc(b, 3015, 5245, 'soul_bane_awall_void_small', 1, 12, [2]);
+truthy('the Anger room\'s Exit asks first: "No, I\'ll finish this room first." stays', b.z > 5000, at(b));
+useLoc(b, 3015, 5245, 'soul_bane_awall_void_small', 1, 12, [1]);
+check('  "Yes, I don\'t mind starting this room again." goes back up', at(b), [SURFACE[0], SURFACE[1], 0]);
 a.teleport(3036, 5228, 0);
 H.tick(1);
 useLoc(a, 3038, 5228, 'soul_bane_awall_void_exit');
@@ -322,6 +357,7 @@ for (let i = 0; i < 12 && prog(a) === 3; i++) {
     if (r) fight(a, r, 40);
     H.tick(3);
 }
+truthy('  the player talks himself out of it, kill by kill (overheads)', ["I don't like looking in these holes but I must!", "I don't feel quite so afraid now.", "These holes aren't that spooky.", "This isn't so scary after all!"].every(t => saidBy(a).includes(t)), saidBy(a));
 check('five reapers: stage 4 (Confusion), the black hole lit', [prog(a), H.getVarBit(a, 'soulbane_fear_killedtally'), H.getVarBit(a, 'soulbane_fear_exitlit')], [4, 5, 1]);
 truthy('  the reaper moved holes between kills', seenHoles.size >= 2, [...seenHoles]);
 a.teleport(3047, 5235, 0);
@@ -384,18 +420,32 @@ for (let i = 0; i < 40 && prog(a) === 5; i++) {
 }
 truthy('a creature comes back smaller when it falls', shrank, shrank);
 check('fifteen falls: the bridge, stage 6', [H.getVarBit(a, 'soulbane_hope_killedtally'), H.getVarBit(a, 'soulbane_hope_bridgepres'), prog(a)], [15, 1, 6]);
+truthy('  one remark per creature gone for good, as in the transcript', ['Is there any end to killing these monsters?', 'This is hard work!', "I've almost killed them all now!", 'Maybe if I kill one more?'].every(t => saidBy(a).includes(t)), saidBy(a).slice(-4));
 a.teleport(3020, 5189, 0);
 H.tick(1);
-useLoc(a, 3020, 5188, 'soul_bane_hwall_void_exit');
+// Through the exit beyond the bridge: the scene with Brana plays before anything attacks.
+const cutFrom = H.ifaces.length;
+H.opLoc(a, 3020, 5188, 'soul_bane_hwall_void_exit', 1);
+for (let t = 0; t < 20 && !(a.level === 1 && a.activeScript && a.activeScript.execution === ScriptState.PAUSEBUTTON); t++) H.tick(1);
 check('over the bridge: Tolna\'s room', at(a), [2970, 5212, 1]);
 check('  which is multicombat', H.runProc(a, '[proc,wilderness_level]', [pack(1, 2970, 5212)])[0] === 0 && World.gameMap.isMulti(pack(1, 2975, 5212)), true);
 
 // =============================================================================================
 console.log('TOLNA');
 const heads = ['soulbane_final_tolna1', 'soulbane_final_tolna2', 'soulbane_final_tolna3'];
+check('three heads and Brana', heads.concat(['soulbane_brana']).map(n => liveNpcs(n, 2976, 5212, 1).length), [1, 1, 1, 1]);
+check('  the heads hold off while Brana talks to his son (huntrange 0)', heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]), [0, 0, 0]);
+drain(a);
+const cut = shown(a, cutFrom);
+truthy('"Finding Tolna", word for word: Brana pleads, Tolna rejects him, then turns on you', ['Son! Is that you?', 'no longer the boy you once knew', 'Something evil in this dungeon has morphed my body and mind.', 'You had your chance to help me', 'Lies!', 'Ah, we have a visitor!', 'Your father isn\'t lying.', 'then you shall both die!'].every(t => cut.includes(t)), cut.slice(0, 240));
+check('  the scene is marked seen', H.getVarBit(a, 'soulbane_final_seencut'), 1);
+check('  and the heads hunt again (their own huntrange, 12)', heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]), [12, 12, 12]);
+const brana = liveNpcs('soulbane_brana', 2976, 5212, 1)[0];
+const branaBefore = talkText(a, brana);
+truthy('Brana: "Now you must do what I cannot, conquer the physical dilemma!"', branaBefore.includes('conquer the physical dilemma!'), branaBefore.slice(0, 160));
+
 a.teleport(2976, 5212, 1); // in the open, where all three can see you
 H.tick(1);
-check('three heads and Brana', heads.concat(['soulbane_brana']).map(n => liveNpcs(n, 2976, 5212, 1).length), [1, 1, 1, 1]);
 // A sim player has no client, so no npc "observes" it and aggressive hunts never fire here
 // (World: rsbuf.getNpcObservers). Put the heads onto the player the way their hunt would.
 H.hits.length = 0;
@@ -417,15 +467,20 @@ H.tick(4);
 drain(a);
 check('all three heads down', [1, 2, 3].map(n => H.getVarBit(a, `soulbane_final_tol${n}dead`)), [1, 1, 1]);
 const tolna = liveNpcs('soulbane_tolna_top', 2976, 5212, 1)[0];
-truthy('  and Tolna stands in their place', !!tolna, !!tolna);
-if (tolna) talkTo(a, tolna);
-check('talking to him takes you back up, Tolna with you', [at(a), H.getVarBit(a, 'soulbane_tolna_pres')], [[SURFACE[0], SURFACE[1], 0], 1]);
+truthy('  and Tolna is himself again, on the narrow path into the chasm (2982-2985,5212)', !!tolna && tolna.z === 5212 && tolna.level === 1 && tolna.x >= 2982 && tolna.x <= 2985, tolna ? [tolna.x, tolna.z, tolna.level] : null);
+truthy('  which is a walk from the way in', walkable(1, 2970, 5212, 2982, 5212), 'flood 2970,5212 -> 2982,5212');
+const branaAfter = talkText(a, brana);
+truthy('Brana, after: "Please talk to him, make sure he\'s OK!"', branaAfter.includes('make sure he'), branaAfter);
+const tolnaTalk = tolna ? talkText(a, tolna) : '';
+truthy('Tolna: the legacy of a civilisation, and Brana forgives him', tolnaTalk.includes('legacy of a civilisation') && tolnaTalk.includes('She misses you dearly!') && tolnaTalk.includes('never gave up hope'), tolnaTalk.slice(0, 200));
+check('then the three of you are back up: Tolna by the rift, Launa gone home', [at(a), H.getVarBit(a, 'soulbane_tolna_pres'), H.getVarBit(a, 'soulbane_launa_pres')], [[SURFACE[0], SURFACE[1], 0], 1, 1]);
 H.setVar(a, 'debug_onehit', 0);
 const defBefore = a.stats[PlayerStat.DEFENCE];
 const hpBefore = a.stats[PlayerStat.HITPOINTS];
 const coinsBefore = H.invCount(a, 'coins');
-talkTo(a, H.npcNear('soulbane_tolna_multi', 3308, 3452)!);
-check('talking to him on the grass completes the quest', prog(a), 7);
+const surfaceTalk = talkText(a, H.npcNear('soulbane_tolna_multi', 3308, 3452)!);
+truthy('Tolna on the grass: what happened to him, and "just a few coins"', surfaceTalk.includes('ground swallowed me whole') && surfaceTalk.includes('just a few coins'), surfaceTalk.slice(0, 200));
+check('  which completes the quest', prog(a), 7);
 check('  500 Defence and 500 Hitpoints experience, 500 coins', [a.stats[PlayerStat.DEFENCE] - defBefore, a.stats[PlayerStat.HITPOINTS] - hpBefore, H.invCount(a, 'coins') - coinsBefore], [5000, 5000, 500]);
 a.teleport(SURFACE[0], SURFACE[1], 0);
 H.tick(1);
@@ -433,6 +488,42 @@ useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi', 1, 14);
 check('after the quest the rift leads to Tolna\'s rift', at(a), [3297, 9824, 0]);
 useLoc(a, 3297, 9823, 'soulbane_rope_up');
 check('  and its rope back up', at(a), [SURFACE[0], SURFACE[1], 0]);
+
+// =============================================================================================
+console.log('LEAVING');
+H.setVarBit(b, 'soulbane_prog', 6);
+H.setVarBit(b, 'soulbane_final_seencut', 1);
+H.setVarBit(b, 'soulbane_final_tol1dead', 1);
+b.teleport(2970, 5212, 1);
+H.tick(1);
+useLoc(b, 2967, 5212, 'soul_bane_tolna_void_small', 1, 12, [2]);
+truthy('Tolna\'s room Exit, "No, I\'ll finish this room first.": still there, the head still down', b.level === 1 && H.getVarBit(b, 'soulbane_final_tol1dead') === 1, [at(b), H.getVarBit(b, 'soulbane_final_tol1dead')]);
+useLoc(b, 2967, 5212, 'soul_bane_tolna_void_small', 1, 12, [1]);
+check('  "Yes, I don\'t mind starting this room again.": up, and the room starts over', [at(b), H.getVarBit(b, 'soulbane_final_tol1dead')], [[SURFACE[0], SURFACE[1], 0], 0]);
+
+// =============================================================================================
+console.log('LAUNA');
+const launaAt = (stage: number, bits: Record<string, number>) => {
+    H.setVarBit(b, 'soulbane_prog', stage);
+    for (const [k, v] of Object.entries(bits)) H.setVarBit(b, k, v);
+    return talkText(b, H.npcNear('soulbane_launa_multi', 3309, 3453)!);
+};
+for (const [stage, bits, want] of [
+    [1, {}, 'Go into the rift beside me and find my husband and son!'],
+    [2, { soulbane_room_entered: 1 }, 'Feel my ANGER!'],
+    [3, { soulbane_room_entered: 0 }, 'I managed to defeat the monsters in the room!'],
+    [3, { soulbane_room_entered: 1 }, 'Help him get over his fear!'],
+    [4, { soulbane_room_entered: 0 }, 'an exit has been illuminated.'],
+    [4, { soulbane_room_entered: 1 }, 'overcome his confusion!'],
+    [5, { soulbane_room_entered: 0 }, 'I have prevailed over a third room.'],
+    [5, { soulbane_room_entered: 1 }, 'You must fight to give him back his hope!'],
+    [6, { soulbane_final_seencut: 0 }, 'I have endured against hopelessness'],
+    [6, { soulbane_final_seencut: 1, soulbane_final_tol1dead: 0 }, 'no longer physically what he once was.'],
+    [6, { soulbane_final_seencut: 1, soulbane_final_tol1dead: 1, soulbane_final_tol2dead: 1, soulbane_final_tol3dead: 1 }, 'I have returned your son to his normal state!']
+] as [number, Record<string, number>, string][]) {
+    const said = launaAt(stage, bits);
+    truthy(`Launa at stage ${stage} ${JSON.stringify(bits)}: "${want}"`, said.includes(want), said.slice(0, 120));
+}
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);
