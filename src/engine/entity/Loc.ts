@@ -19,8 +19,9 @@ export default class Loc extends NonPathingEntity {
 
     private packInfo(type: number, shape: number, angle: number): number {
         const layer: number = locShapeLayer(shape);
-        // 16383, 31, 3, 3
-        return (type & 0x3fff) | ((shape & 0x1f) << 14) | ((angle & 0x3) << 19) | ((layer & 0x3) << 21);
+        // 65535, 31, 3, 3 - sixteen bits of type, as the loc protocol (p2) and the map format carry: loc ids
+        // passed 16383 with the Hunter areas' imports, and fourteen bits turned loc 16603 into loc 219.
+        return (type & 0xffff) | ((shape & 0x1f) << 16) | ((angle & 0x3) << 21) | ((layer & 0x3) << 23);
     }
 
     isChanged(): boolean {
@@ -28,19 +29,19 @@ export default class Loc extends NonPathingEntity {
     }
 
     get type(): number {
-        return this.currentInfo & 0x3fff;
+        return this.currentInfo & 0xffff;
     }
 
     get shape(): number {
-        return (this.currentInfo >> 14) & 0x1f;
+        return (this.currentInfo >> 16) & 0x1f;
     }
 
     get angle(): number {
-        return (this.currentInfo >> 19) & 0x3;
+        return (this.currentInfo >> 21) & 0x3;
     }
 
     get layer(): number {
-        return (this.baseInfo >> 21) & 0x3;
+        return (this.baseInfo >> 23) & 0x3;
     }
 
     change(type: number, shape: number, angle: number) {
