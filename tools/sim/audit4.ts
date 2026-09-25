@@ -12,8 +12,9 @@
 //                     re-issued), the ending, the museum's Study options on their multiloc shells.
 // In Aid of the       the village gate and fence, the store and cellar ladders, the rubble and inn
 //   Myreque           trapdoor, the cellar, the temple library, the Hollows tomb and back, the ending.
-// Regicide            into Tirannwn at all: the Well of Voyage, its temple, Idris; Iorwerth replacing
-//                     a lost pendant, barrels, limestone and letter.
+// Regicide            (now the 349 original) into Tirannwn at all: Iban's temple doors into the
+//                     ruined temple, its Well of Voyage, the temple under Isafdar and back; Iorwerth
+//                     replacing a lost pendant, book and message. The whole quest: port349_regicide.ts.
 // Troll Romance       Arrg's stats, the kill counting (it was an npc-context write of a protected
 //                     varp), Ug's reward, the journal's complete page.
 import * as H from './harness.js';
@@ -539,46 +540,46 @@ guard('myreque2', () => {
 // =============================================================================== Regicide
 console.log('REGICIDE');
 guard('regicide', () => {
+    // Stage numbers are the 349 original's: 2 spoken_lathas, 5 spoken_tracker, 11 spoken_iorwerth2,
+    // 13 reported_iorwerth. The old re-creation went in through the Well of Voyage in Iban's temple;
+    // the original goes through the temple's own doors into its ruins (m31_73).
     const p = player('regicide', 2371, 9718);
     sv(p, 'upass', 10); // ^upass_complete
-    sv(p, 'regicide_quest', 1);
+    sv(p, 'regicide_quest', 2);
     check('Tirannwn cannot be walked to', connected(0, 2371, 9718, 2313, 3213), false);
-    const said = op(p, 2373, 9718, 'bloodwell_upass', 1, [1]);
-    check('the Well of Voyage takes you down into its temple', [at(p), walkable(0, p.x, p.z)], [[2340, 9622, 0], true]);
-    void said;
+    op(p, 2373, 9718, 'bloodwell_upass', 1);
+    check('the blood well in Iban\'s temple is only its inscription again', [Math.abs(p.x - 2372) <= 3, Math.abs(p.z - 9718) <= 3, gv(p, 'regicide_quest')], [true, true, 2]);
+    p.teleport(2144, 4647, 1);
+    H.tick(1);
+    op(p, 2143, 4647, 'upass_templedoor_closed_left', 1);
+    check('Iban\'s temple doors open onto the ruined temple', [Math.abs(p.x - 2014) <= 1, Math.abs(p.z - 4711) <= 1, p.level], [true, true, 1]);
+    op(p, 2008, 4711, 'regicide_voyage_temple_well1', 1);
+    check('its Well of Voyage takes you down into the temple under Isafdar', [at(p), walkable(0, p.x, p.z)], [[2343, 9622, 0], true]);
     check('the temple reaches its exit', connected(0, p.x, p.z, 2314, 9624), true);
     op(p, 2312, 9623, 'regicide_voyage_temple_exit', 1);
-    check('out into Isafdar', [at(p), walkable(0, p.x, p.z)], [[2313, 3214, 0], true]);
-    const idris = H.npcNear('regicide_good_elf1', p.x, p.z, 0);
-    check('Idris and the two elves are waiting by the cave mouth', [idris !== null, H.npcNear('regicide_evil_elf1', p.x, p.z, 0) !== null, H.npcNear('regicide_evil_elf2', p.x, p.z, 0) !== null], [true, true, true]);
-    talk(p, 'regicide_good_elf1');
-    check('Idris is killed warning you: stage 2', gv(p, 'regicide_quest'), 2);
-    p.teleport(2313, 3214, 0);
-    H.tick(1);
+    check('out into Isafdar', [at(p), walkable(0, p.x, p.z)], [[2312, 3216, 0], true]);
     op(p, 2313, 3215, 'regicide_voyage_temple_entrance', 1);
     check('the cave entrance leads back into the temple', [at(p), reachesNear(0, p.x, p.z, 2341, 9622)], [[2314, 9624, 0], true]);
     p.teleport(2340, 9622, 0);
     H.tick(1);
     op(p, 2341, 9622, 'regicide_voyage_temple_well2', 1);
-    check('and its well back up into Iban\'s temple', at(p), [2372, 9718, 0]);
+    check('and its well back up into the ruined temple', at(p), [2010, 4712, 1]);
 
     const q = player('regicide2', 2204, 3250);
-    sv(q, 'regicide_quest', 2);
+    sv(q, 'regicide_quest', 5);
     talk(q, 'lord_iorwerth');
-    check('Iorwerth: the pendant, stage 3', [gv(q, 'regicide_quest'), H.invCount(q, 'regicide_crystal_pendant')], [3, 1]);
+    check('Iorwerth: the pendant for the tracker', H.invCount(q, 'regicide_crystal_pendant'), 1);
     del(q, 'regicide_crystal_pendant');
     talk(q, 'lord_iorwerth');
     check('a lost pendant is replaced', H.invCount(q, 'regicide_crystal_pendant'), 1);
-    sv(q, 'regicide_quest', 7);
+    sv(q, 'regicide_quest', 11);
     H.clearInv(q);
     talk(q, 'lord_iorwerth');
-    check('out of barrels and limestone: he tops both up', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
-    talk(q, 'lord_iorwerth');
-    check('...once - with them in hand he just points at the book', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
-    sv(q, 'regicide_quest', 9);
+    check('a lost Big Book o\' Bangs is copied again', H.invCount(q, 'regicide_alchemy'), 1);
+    sv(q, 'regicide_quest', 13);
     H.clearInv(q);
     talk(q, 'lord_iorwerth');
-    check('a lost letter is written again', H.invCount(q, 'regicide_iorwerth_message'), 1);
+    check('a lost message is written again', H.invCount(q, 'regicide_iorwerth_message'), 1);
 });
 
 // =============================================================================== Troll Romance
