@@ -103,7 +103,7 @@ function nearestNpc(name: string, x: number, z: number, level: number): Npc | nu
 /** Click an npc from where the player stands (no teleporting next to it) and run the dialogue. */
 function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = nearestNpc(npcName, p.x, p.z, p.level);
-    if (!npc) throw new Error('no npc ' + npcName);
+    if (!npc) throw new Error(`no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs].filter(n => n && n.type === NpcType.getId(npcName)).map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`).join(' ')}`);
     const m0 = H.mesgs.length;
     drive(p, [], 2);
     const i0 = H.ifaces.length;
@@ -118,7 +118,7 @@ function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): str
 /** Stand next to the npc first, then talk. */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = [0, 1, 2, 3].map(l => nearestNpc(npcName, p.x, p.z, l)).filter(n => n).sort((a, b) => Math.max(Math.abs(a!.x - p.x), Math.abs(a!.z - p.z)) - Math.max(Math.abs(b!.x - p.x), Math.abs(b!.z - p.z)))[0];
-    if (!npc) throw new Error('no npc ' + npcName);
+    if (!npc) throw new Error(`no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs].filter(n => n && n.type === NpcType.getId(npcName)).map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`).join(' ')}`);
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2]]) {
         if (!canTravel(npc.level, npc.x + dx, npc.z + dz, 0, 0, 1, 0, CollisionType.NORMAL) && false) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);

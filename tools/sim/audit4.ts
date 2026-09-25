@@ -482,10 +482,11 @@ guard('myreque2', () => {
     p.teleport(3493, 3235, 0);
     H.tick(1);
     check('the pocket beside the rubble and trapdoor cannot be reached from the street', connected(0, p.x, p.z, 3491, 3232), false);
+    // a real door since the merge with audit-3: it opens (the generic door code, ahoy_harbour_door ->
+    // ahoy_harbour_door_open) and you walk through, rather than being moved through a shut one
     op(p, 3493, 3233, 'ahoy_harbour_door', 1);
-    check('the inn door opens (it said nothing interesting happens)', p.z <= 3232, true);
-    op(p, 3493, 3233, 'ahoy_harbour_door', 1);
-    check('and out again', p.z >= 3233, true);
+    check('the inn door opens (it said nothing interesting happens)', connected(0, p.x, p.z, 3493, 3232), true);
+    check('and the street is still reachable through it', connected(0, 3493, 3232, 3493, 3236), true);
     p.teleport(3491, 3229, 0);
     H.tick(1);
     op(p, 3491, 3230, 'burgh_inn_climb_over', 1);
