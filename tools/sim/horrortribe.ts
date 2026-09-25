@@ -94,7 +94,7 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
 }
 
 /** "Use" an inventory item on a loc: OpLocUHandler, with the route a client would send. */
-function useOn(p: Player, x: number, z: number, locName: string, objName: string) {
+function useOn(p: Player, x: number, z: number, locName: string, objName: string, picks: number[] = []) {
     const id = LocType.getId(locName);
     const loc = World.getLoc(x, z, p.level, id);
     if (!loc) throw new Error(`no ${locName} at ${x},${z},${p.level}`);
@@ -109,7 +109,7 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
     p.lastUseSlot = slot;
     p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
     (p as unknown as { opcalled: boolean }).opcalled = true;
-    drive(p);
+    drive(p, picks);
 }
 function op(p: Player, x: number, z: number, locName: string, n = 1, picks: number[] = []) {
     H.opLoc(p, x, z, locName, n);
@@ -206,7 +206,7 @@ console.log('HORROR FROM THE DEEP');
     for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) H.give(c, item);
     c.teleport(2514, 4626, 1);
     H.tick(1);
-    for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) useOn(c, 2514, 4627, 'horror_mid_left_door', item);
+    for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) useOn(c, 2514, 4627, 'horror_mid_left_door', item, [1]); // "Really place it?" - Yes
     check('all six placed: wall solved, stage 2', [H.getVar(c, 'horror_wall'), H.getVar(c, 'horror')], [63, 2]);
     check('the hinged panels are gone - the way north is open', connected(1, 2514, 4626, 2515, 4629), true);
     c.teleport(2515, 4629, 1);
@@ -259,7 +259,7 @@ console.log('HORROR FROM THE DEEP');
     const e2 = player('hftdsouth', 2516, 4625, 1);
     H.setVar(e2, 'horror', 1);
     op(e2, 2516, 4627, 'horror_far_right_door', 1);
-    check('but not from the south, unsolved', [connected(1, 2516, 4625, 2515, 4629), lastMes(e2).includes('budge')], [false, true]);
+    check('but not from the south, unsolved', [connected(1, 2516, 4625, 2515, 4629), lastMes(e2).includes('any way to move')], [false, true]);
 
     console.log('Post-quest:');
     c.teleport(2515, 4629, 1);

@@ -90,7 +90,7 @@ function talkTo(p: Player, npc: Npc, picks: number[] = []) {
     for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
     return drive(p, picks);
 }
-function useOn(p: Player, x: number, z: number, locName: string, objName: string) {
+function useOn(p: Player, x: number, z: number, locName: string, objName: string, picks: number[] = []) {
     const id = LocType.getId(locName);
     const loc = World.getLoc(x, z, p.level, id);
     if (!loc) throw new Error(`no ${locName} at ${x},${z},${p.level}`);
@@ -105,7 +105,7 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
     p.lastUseSlot = slot;
     p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
     (p as unknown as { opcalled: boolean }).opcalled = true;
-    return drive(p);
+    return drive(p, picks);
 }
 function connected(level: number, x: number, z: number, tx: number, tz: number, radius = 40): boolean {
     const seen = new Set<string>([x + ',' + z]);
@@ -353,7 +353,7 @@ function talkNear(p: Player, npc: Npc, picks: number[] = []) {
 console.log('LARRISSA AND GUNNJORN (the transcript\'s branches)');
 {
     const larrissa = () => H.npcNear('horror_girlfriend_prequest', 2508, 3635, 0)!;
-    const a = player('hftd2start', 2509, 3633, 0);
+    const a = player('hftd2start', 2509, 3633, 0, { barcrawl: 2 });
     talkNear(a, larrissa(), [2]);
     check('"Sorry, just passing through": not started', H.getVar(a, 'horror'), 0);
     talkNear(a, larrissa(), [1, 2]);
@@ -486,6 +486,60 @@ console.log('The Mother reads your prayers:');
     const pr = watch(16);
     check('Protect from Missiles at a distance: she comes in and claws you', [Math.abs(m.z - q.z) < d0, pr.melee > 0], [true, true]);
     (Npc.prototype as any).playAnimation = orig;
+}
+
+// ============================================================ round 2c: requirement, wall, books
+console.log('Starting needs Alfred Grimhand\'s Barcrawl (not 35 Agility):');
+{
+    const larrissa = () => H.npcNear('horror_girlfriend_prequest', 2508, 3635, 0)!;
+    const n = player('hftd2nobar', 2509, 3633, 0);
+    const w = talkNear(n, larrissa(), [1, 1, 1]);
+    check('no Barcrawl: "You do not meet the requirements", not started', [H.getVar(n, 'horror'), w.some(x => x.includes('requirements'))], [0, true]);
+    H.setVar(n, 'barcrawl', 2);
+    (n as any).levels[16] = 1; (n as any).baseLevels[16] = 1;
+    talkNear(n, larrissa(), [1, 1, 1, 3]);
+    check('Barcrawl done, Agility 1: started', H.getVar(n, 'horror'), 1);
+}
+
+console.log('The strange wall:');
+{
+    const wl = player('hftd2wall', 2514, 4626, 1, { horror: 1 });
+    H.give(wl, 'airrune', 5);
+    H.give(wl, 'bronze_sword');
+    const m0 = H.mesgs.length;
+    const said = useOn(wl, 2514, 4627, 'horror_mid_left_door', 'airrune', [2]);
+    check('an air rune: "I won\'t get that back" and "Really place it?" - No keeps it', [said.some(x => x.includes('get that back')), said.some(x => x.includes('Really place the rune into the door?')), H.invCount(wl, 'airrune'), H.getVar(wl, 'horror_wall')], [true, true, 5, 0]);
+    useOn(wl, 2514, 4627, 'horror_mid_left_door', 'airrune', [1]);
+    check('Yes: one rune (not the stack) into its slot', [H.invCount(wl, 'airrune'), H.getVar(wl, 'horror_wall'), mesSince(wl, m0).includes('You place an air rune into the slot in the wall.')], [4, 2, true]);
+    useOn(wl, 2514, 4627, 'horror_mid_left_door', 'airrune');
+    check('a second air rune: "There is no space"', [lastMes(wl), H.invCount(wl, 'airrune')], ['There is no space to put an air rune into the wall.', 4]);
+    const w2 = useOn(wl, 2514, 4627, 'horror_mid_left_door', 'bronze_sword', [1]);
+    check('a sword asks about "the weapon"', [w2.some(x => x.includes('Really place the weapon into the door?')), lastMes(wl)], [true, 'You place a sword into the slot in the wall.']);
+    op(wl, 2516, 4627, 'horror_far_right_door');
+    check('the hinged panel, unsolved: "You cannot see any way to move this part of the wall...."', lastMes(wl), 'You cannot see any way to move this part of the wall....');
+    const back = player('hftd2back', 2514, 4629, 1, { horror: 2 });
+    op(back, 2514, 4627, 'horror_mid_left_door');
+    check('studied from the cave side', lastMes(back), 'You cannot see anything unusual about the wall from this side.');
+}
+
+console.log('Jossik\'s prayer books:');
+{
+    const pb = player('hftd2books2', 2510, 3640, 1, { horror: 6, horror_bridges: 7 | (1 << 5) });
+    const jossik = () => H.npcNear('horror_lighthousekeeeper_well', pb.x, pb.z, 1)!;
+    talkNear(pb, jossik(), [2]);
+    check('lost your Saradomin book: he gives it back for nothing', [H.invCount(pb, 'unfinished_saradominbook'), H.invCount(pb, 'coins')], [1, 0]);
+    const w = talkNear(pb, jossik(), [2]);
+    check('book not yet completed: nothing new for sale', [w.some(x => x.includes('Nope')), H.invCount(pb, 'unfinished_zamorakbook')], [true, 0]);
+    H.clearInv(pb);
+    H.give(pb, 'saradominbook_complete');
+    H.give(pb, 'coins', 6000);
+    const s1 = talkNear(pb, jossik(), [2, 1, 1]);
+    check('completed: he offers another god\'s for 5,000 - but not the one you have', [s1.some(x => x.includes('5,000')), H.invCount(pb, 'coins'), H.invCount(pb, 'unfinished_saradominbook')], [true, 6000, 0]);
+    talkNear(pb, jossik(), [2, 1, 3]);
+    check('Guthix for 5,000 coins', [H.invCount(pb, 'coins'), H.invCount(pb, 'unfinished_guthixbook'), (H.getVar(pb, 'horror_bridges') >> 7) & 1], [1000, 1, 1]);
+    const old = player('hftd2oldbook', 2510, 3640, 1, { horror: 6, horror_bridges: 7 });
+    talkNear(old, H.npcNear('horror_lighthousekeeeper_well', old.x, old.z, 1)!, [2, 2]);
+    check('an old save with its book lost and nothing on record: picks it back, free', [H.invCount(old, 'unfinished_zamorakbook'), (H.getVar(old, 'horror_bridges') >> 6) & 1], [1, 1]);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
