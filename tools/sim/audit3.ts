@@ -395,76 +395,66 @@ if (run('ahoy')) {
 }
 
 // =============================================================================== Eadgar's Ruse
+// The original (PlagueCityRS 349) replaced this server's invented version; the full walk-through,
+// every stage and the save migration, is tools/sim/port349_eadgar.ts. This keeps the audit's own
+// checks: who starts it, the storeroom door (from the right side), the crate and Sanfew's reward.
 if (run('eadgar')) {
     console.log("EADGAR'S RUSE");
     const p = player('eadgar1', 2897, 3427, 1);
     const stage = () => gv(p, 'eadgar_quest');
-    talk(p, 'sanfew', [1]);
-    check('no Troll Stronghold or Druidic Ritual: Sanfew will not start it', stage(), 0);
     sv(p, 'druidquest', 4);
-    sv(p, 'troll_quest', 50);
     talk(p, 'sanfew', [1]);
+    check('Druidic Ritual but no Death Plateau or Troll Stronghold: Sanfew will not start it', stage(), 0);
+    sv(p, 'death_equiproom', 80);
+    sv(p, 'troll_quest', 50);
+    talk(p, 'sanfew', [1, 1]);
     check('Sanfew starts it: stage 10', stage(), 10);
     standBy(p, 2890, 10086, 2);
-    talk(p, 'troll_eadgar');
-    check('Mad Eadgar gives the plan: stage 20', stage(), 20);
+    talk(p, 'troll_eadgar', [1]);
+    check('Mad Eadgar sends you to the troll cook: stage 15', stage(), 15);
+    talk(p, 'eadgar_troll_chief_cook');
+    check('Burntmeat wants a tasty human: stage 25', stage(), 25);
     const thistle = nearest('eadgar_troll_thistle', p);
     standBy(p, thistle.x, thistle.z, thistle.level);
     talkHere(p, thistle);
     check('a troll thistle picked', H.invCount(p, 'eadgar_troll_thistle'), 1);
-    check('the rack had no Search script; it has one now', hasOp('loc', 'eadgar_rack', 1), true);
+    check('the rack has its Search script', hasOp('loc', 'eadgar_rack', 1), true);
     standBy(p, 2828, 10096, 0);
     op(p, 2828, 10096, 'eadgar_rack', 1);
-    check('  searching it hints at the thistle', lastMes(p).includes('thistle'), true);
-    useOn(p, 2828, 10096, 'eadgar_rack', 'eadgar_troll_thistle');
-    check('the thistle dried on the rack', H.invCount(p, 'eadgar_dried_troll_thistle'), 1);
-    H.give(p, 'pestle_and_mortar');
-    useOnHeld(p, 'pestle_and_mortar', 'eadgar_dried_troll_thistle');
-    H.give(p, 'vial_water');
-    useOnHeld(p, 'vial_water', 'eadgar_ground_troll_thistle');
-    check('ground and mixed: the potion, stage 30', [H.invCount(p, 'eadgar_ground_troll_thistle_potion'), stage()], [1, 30]);
-    standBy(p, 2844, 10055, 1);
-    useOn(p, 2844, 10055, 'eadgar_troll_cauldron', 'eadgar_ground_troll_thistle_potion');
-    check('the stew dosed: stage 40', stage(), 40);
-    talk(p, 'eadgar_troll_chief_cook');
-    check('Burntmeat hands over the storeroom key: stage 50', [stage(), H.invCount(p, 'eadgar_troll_storeroom_key')], [50, 1]);
-    standBy(p, 2912, 3418, 0);
-    op(p, 2912, 3418, 'eadgar_laundry_basket', 1);
-    check('a dirty robe out of the Taverley basket', H.invCount(p, 'eadgar_dirty_druid_robe'), 1);
-    H.give(p, 'karamja_rum');
-    talk(p, 'eadgar_zoo_keeper_aviary');
-    check('Parroty Pete soaks pineapple in the rum', H.invCount(p, 'eadgar_alco_chunks'), 1);
-    const parrots = nearest('eadgar_parrotts', p);
-    void parrots;
-    standBy(p, 2610, 3287, 0);
-    useOn(p, 2611, 3287, 'eadgar_aviary_wall_hatch', 'eadgar_alco_chunks');
-    check('chunks through the aviary hatch: a drunk parrot', H.invCount(p, 'eadgar_drunk_parrot'), 1);
-    useOnHeld(p, 'eadgar_drunk_parrot', 'eadgar_dirty_druid_robe');
-    check('robe and parrot make a fake man', H.invCount(p, 'eadgar_fake_man'), 1);
-    const q = player('eadgar2', 2869, 10088);
+    check('  nothing under it yet', lastMes(p).includes('find nothing') || texts(p).some(t => t.includes('find nothing')), true);
+    // skip the scarecrow to the fake man (every step of it is in port349_eadgar.ts)
+    sv(p, 'eadgar_quest', 87);
+    H.give(p, 'eadgar_fake_man');
+    talk(p, 'eadgar_troll_chief_cook', [2]);
+    check('Burntmeat takes the fake man: stage 90, burnt meat', [stage(), H.invCount(p, 'burnt_meat')], [90, 1]);
+    standBy(p, 2852, 10049, 1);
+    op(p, 2852, 10049, 'eadgar_kitchen_drawers', 1);
+    op(p, 2852, 10049, 'eadgar_kitchen_drawers_open', 2);
+    check('the storeroom key in the kitchen drawers', H.invCount(p, 'eadgar_troll_storeroom_key'), 1);
+    // the storeroom is north of its door; the way in is from the south
+    const q = player('eadgar2', 2869, 10083);
     op(q, 2869, 10085, 'eadgar_storeroomdoor', 1);
-    check('the storeroom door: no key, still outside', [q.z >= 10085, lastMes(q).includes('key')], [true, true]);
+    check('the storeroom door: no key, still outside', [q.z < 10085, lastMes(q).includes('key')], [true, true]);
     H.despawn(q);
-    p.teleport(2869, 10088, 0);
+    p.teleport(2869, 10083, 0);
     H.tick(1);
     op(p, 2869, 10085, 'eadgar_storeroomdoor', 1);
-    check('with the key: through the door into the storeroom (the "open" door used to block the same edge)', p.z < 10085, true);
+    check('with the key: unlocked (stage 100) and into the storeroom', [stage(), p.z >= 10085], [100, true]);
     op(p, 2869, 10085, 'eadgar_storeroomdoor', 1);
-    check('  and back out again', p.z >= 10085, true);
-    // The goutweed crates are down in the guards' hall, through the stronghold's interior door.
-    op(p, 2861, 10092, 'troll_stronghold_interior_door', 1);
+    check('  and back out again', p.z < 10085, true);
+    // the goutweed crates are in the guards' hall, through the storeroom's interior door
     const guard = nearest('eadgar_storeroom_guard', p);
-    check('  the guard reachable through it', reaches(0, p.x, p.z, guard.x, guard.z), true);
-    useOnNpc(p, 'eadgar_fake_man', guard);
-    check('the guard distracted by the fake man', gv(p, 'eadgar_scarecrow_items'), 1);
+    check('  the storeroom guard is beside the crates', [guard.x, guard.z], [2857, 10075]);
+    standBy(p, 2856, 10074, 0);
     op(p, 2856, 10074, 'eadgar_crate_goutweed', 1);
-    check('goutweed from the crate: stage 60', [stage(), H.invCount(p, 'eadgar_goutweed_herb')], [60, 1]);
+    H.tick(6);
+    check('goutweed from the crate, and the guard knocks you back to the door', [H.invCount(p, 'eadgar_goutweed_herb'), p.x, p.z], [1, 2865, 10088]);
     const herb = p.stats[15];
     p.teleport(2897, 3427, 1);
     H.tick(1);
     talk(p, 'sanfew');
     H.tick(3);
-    check('Sanfew takes the goutweed: complete, 11,000 Herblore xp', [stage(), p.stats[15] - herb], [70, 110000]);
+    check('Sanfew takes the goutweed: complete, 11,000 Herblore xp', [stage(), p.stats[15] - herb], [110, 110000]);
 }
 
 // =============================================================================== Zogre Flesh Eaters
