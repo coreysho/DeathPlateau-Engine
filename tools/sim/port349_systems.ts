@@ -627,6 +627,16 @@ await section('TRAIL: locked drawers, bookcase', () => {
         check('Burthorpe drawers, key used on them: riddle008 answered', progressed(p, 'trail_clue_medium_riddle008'), true);
         H.despawn(p);
     }
+    // Varrock: Black Heather's key used on the chest (349's [oplocu,_chest_closed])
+    {
+        const p = trailPlayer('0_50_54_56_30', 'trail_clue_medium_riddle001');
+        H.give(p, 'trail_clue_medium_riddle001_key');
+        const [cx, cz] = at('0_50_54_56_31');
+        const chest = locNameAt(cx, cz, 0, 'chest_closed');
+        useOnLoc(p, 'trail_clue_medium_riddle001_key', '0_50_54_56_31', chest!);
+        check('a riddle001 key used on its chest answers the clue', [progressed(p, 'trail_clue_medium_riddle001'), H.invCount(p, 'trail_clue_medium_riddle001_key')], [true, 0]);
+        H.despawn(p);
+    }
     // the Seers' bookcase
     {
         const p = trailPlayer('1_42_53_15_17', 'trail_clue_hard_riddle022');
@@ -767,7 +777,7 @@ await section('TRAIL: puzzle boxes', () => {
 await section('TRAIL: rewards', () => {
     const p = fresh('0_50_50_20_20');
     const seen = new Set<string>();
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 500; i++) {
         for (const tier of ['easy', 'medium', 'hard']) {
             runProt(p, `[proc,trail_clue_${tier}_rare]`);
             runProt(p, `[proc,trail_clue_${tier}_normal]`);
