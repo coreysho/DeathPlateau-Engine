@@ -1,10 +1,11 @@
 // Horror from the Deep and The Lost Tribe, driven through the real content on the real map.
 // Usage: npx tsx tools/sim/horrortribe.ts
 //
-// Horror from the Deep: the broken bridge the OSRS way (a plank on your own side, leap the gap, a
-// plank on the far side, then a safe crossing), the lighthouse's front door and Gunnjorn's key, the
-// basement ladders in their OSRS order (lighthouse -> basement -> strange wall -> Jossik's cave and
-// back up again), the bosses turning up in Jossik's cave, and the casket back to Jossik upstairs.
+// Horror from the Deep (the PlagueCityRS 349 original since 2026-09-25): the broken bridge the OSRS
+// way (a plank on your own side, leap the gap, a plank on the far side, then a safe crossing), the
+// lighthouse's front door and Gunnjorn's key, the basement ladders (lighthouse -> basement -> strange
+// wall -> Jossik's cave and back up again), the bosses turning up in Jossik's cave, and the casket
+// back to Jossik upstairs.
 //
 // The Lost Tribe: the whole quest in its OSRS order, every step clicked - Sigmund, the Lumbridge
 // witnesses, the Duke, the rubble, the brooch, Reldo and the library, the goblin generals, the bow
@@ -49,6 +50,8 @@ const at = (p: Player) => [p.x, p.z, p.level];
 const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
 const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
 
+/** While true, a fight does not count as busy: drive() only waits for scripts and queues. */
+let fighting = false;
 /** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
 function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
     const from = H.ifaces.length;
@@ -56,7 +59,7 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
     for (let guard = 0; guard < 400 && idle < guardTicks; guard++) {
         const s = p.activeScript;
         if (!s || s.execution !== ScriptState.PAUSEBUTTON) {
-            if (!s && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
+            if (!s && !p.delayed && [...p.queue.all()].length === 0 && (fighting || !p.target)) idle++;
             else idle = 0;
             H.tick(1);
             continue;
@@ -92,7 +95,7 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
 }
 
 /** "Use" an inventory item on a loc: OpLocUHandler, with the route a client would send. */
-function useOn(p: Player, x: number, z: number, locName: string, objName: string) {
+function useOn(p: Player, x: number, z: number, locName: string, objName: string, picks: number[] = []) {
     const id = LocType.getId(locName);
     const loc = World.getLoc(x, z, p.level, id);
     if (!loc) throw new Error(`no ${locName} at ${x},${z},${p.level}`);
@@ -107,7 +110,7 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
     p.lastUseSlot = slot;
     p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
     (p as unknown as { opcalled: boolean }).opcalled = true;
-    drive(p);
+    drive(p, picks);
 }
 function op(p: Player, x: number, z: number, locName: string, n = 1, picks: number[] = []) {
     H.opLoc(p, x, z, locName, n);
@@ -135,24 +138,30 @@ function enqueue(p: Player, name: string, args: number[] = []) {
 }
 
 // =============================================================================== Horror from the Deep
+// Since the PlagueCityRS 349 port (2026-09-25) the quest is the original: its stage and flags are
+// varbits of %deephorror, and a span takes a plank and four nails. The whole quest is played in
+// tools/sim/port349_horror.ts; this keeps the parts that are ours - the bridge crossing, the door and
+// Gunnjorn's key, the basement ladders both ways, the wall from its north side (the Waterbirth maze
+// exit), the bosses in Jossik's cave, and the post-quest caves.
 console.log('HORROR FROM THE DEEP');
 {
+    const vb = (p: Player, n: string) => H.getVarBit(p, n);
     console.log('The broken bridge, from the lighthouse side:');
     const a = player('hftdbridge', 2575, 3611);
-    H.setVar(a, 'horror', 1);
+    H.setVarBit(a, 'horrorquest', 1);
     H.give(a, 'woodplank', 2);
-    H.give(a, 'nails', 60);
+    H.give(a, 'nails', 8);
     H.give(a, 'hammer');
     op(a, 2596, 3608, 'horror_broken_bridge_left_spot', 1);
     check('Cross before any plank: refused, still on the west side', [a.x <= 2596, lastMes(a).includes('too rotten')], [true, true]);
     useOn(a, 2596, 3608, 'horror_broken_bridge_left_spot', 'woodplank');
-    check('plank on the west span: bit 0, 1 plank and 30 nails used', [H.getVar(a, 'horror_bridges'), H.invCount(a, 'woodplank'), H.invCount(a, 'nails')], [1, 1, 30]);
+    check('plank on the west span: its bit, 1 plank and 4 nails used', [vb(a, 'horrorbridgeleft'), H.invCount(a, 'woodplank'), H.invCount(a, 'nails')], [1, 1, 4]);
     useOn(a, 2596, 3608, 'horror_broken_bridge_left_spot', 'woodplank');
-    check('a second plank on the same span is refused', [H.getVar(a, 'horror_bridges'), H.invCount(a, 'woodplank')], [1, 1]);
+    check('a second plank on the same span is refused', [vb(a, 'horrorbridgeleft'), H.invCount(a, 'woodplank')], [1, 1]);
     op(a, 2596, 3608, 'horror_broken_bridge_left_spot', 1);
     check('Cross leaps the gap to the east span', at(a), [2598, 3608, 0]);
     useOn(a, 2598, 3608, 'horror_broken_bridge_right_spot', 'woodplank');
-    check('plank on the east span: both bits, all planks and nails used', [H.getVar(a, 'horror_bridges'), H.invCount(a, 'woodplank'), H.invCount(a, 'nails')], [3, 0, 0]);
+    check('plank on the east span: both bits, all planks and nails used', [vb(a, 'horrorbridgeleft'), vb(a, 'horrorbridgeright'), H.invCount(a, 'woodplank'), H.invCount(a, 'nails')], [1, 1, 0, 0]);
     const hp = a.levels[3];
     op(a, 2598, 3608, 'horror_broken_bridge_right_spot', 1);
     check('repaired: crosses back west without a scratch', [at(a), a.levels[3] === hp, lastMes(a)], [[2596, 3608, 0], true, 'You cross the repaired bridge.']);
@@ -160,103 +169,111 @@ console.log('HORROR FROM THE DEEP');
 
     console.log('From the Rellekka side, no hammer:');
     const b = player('hftdeast', 2620, 3625);
-    H.setVar(b, 'horror', 1);
+    H.setVarBit(b, 'horrorquest', 1);
     H.give(b, 'woodplank', 2);
-    H.give(b, 'nails', 60);
+    H.give(b, 'nails', 8);
     useOn(b, 2598, 3608, 'horror_broken_bridge_right_spot', 'woodplank');
-    check('no hammer: told so, nothing used', [lastMes(b), H.invCount(b, 'woodplank')], ['You need a hammer to nail the plank in place.', 2]);
+    check('no hammer: told so, nothing used', [H.invCount(b, 'woodplank'), vb(b, 'horrorbridgeright')], [2, 0]);
     H.give(b, 'hammer');
     useOn(b, 2598, 3608, 'horror_broken_bridge_right_spot', 'woodplank');
-    check('east span fixed from the east side (bit 1)', H.getVar(b, 'horror_bridges'), 2);
+    check('east span fixed from the east side', vb(b, 'horrorbridgeright'), 1);
     op(b, 2598, 3608, 'horror_broken_bridge_right_spot', 1);
     check('leaps west', at(b), [2596, 3608, 0]);
     useOn(b, 2596, 3608, 'horror_broken_bridge_left_spot', 'woodplank');
-    check('west span fixed too', H.getVar(b, 'horror_bridges'), 3);
+    check('west span fixed too', vb(b, 'horrorbridgeleft'), 1);
 
     console.log('The lighthouse front door:');
     const c = player('hftddoor', 2509, 3634);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
-    check('quest not started: locked, still outside', [c.z < 3636, lastMes(c)], [true, 'The door is locked.']);
-    H.setVar(c, 'horror', 1);
-    op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
-    check('started, no key: locked, points at Gunnjorn', [c.z < 3636, lastMes(c).includes('Gunnjorn')], [true, true]);
+    check('quest not started: locked, still outside', [c.z < 3636, lastMes(c)], [true, 'This door is locked securely shut.']);
+    H.setVarBit(c, 'horrorquest', 1);
+    c.teleport(2540, 3550, 0);
+    H.tick(1);
     talk(c, 'gunnjorn');
-    check('Gunnjorn hands over the key', H.invCount(c, 'horror_key'), 1);
+    check('Gunnjorn hands over the key', [H.invCount(c, 'horror_key'), vb(c, 'horroragilitykey')], [1, 1]);
     c.teleport(2509, 3634, 0);
     H.tick(1);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
-    check('with the key: unlocked and inside', [c.z >= 3636, (H.getVar(c, 'horror_bridges') >> 2) & 1], [true, 1]);
+    check('the key unlocks the door, and is used up', [vb(c, 'horrorlighthouseentrance'), H.invCount(c, 'horror_key')], [1, 0]);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
-    check('walk back out', c.z < 3636, true);
-    H.clearInv(c);
+    check('bridge not repaired: Larrissa keeps me out', c.z < 3636, true);
+    H.setVarBit(c, 'horrorbridgeleft', 1);
+    H.setVarBit(c, 'horrorbridgeright', 1);
     op(c, 2509, 3636, 'horror_lighthouse_doorway', 1);
-    check('unlocked for good: in again without the key', c.z >= 3636, true);
+    check('bridge repaired: in, without the key, into the quest\'s lighthouse (m38_71), stage 2', [at(c), vb(c, 'horrorquest')], [[2445, 4596, 0], 2]);
+    op(c, 2445, 4596, 'horror_lighthouse_doorway', 1);
+    check('walk back out, to the real front step', at(c), [2509, 3635, 0]);
 
     console.log('Down to the basement, the strange wall, Jossik:');
-    c.teleport(2509, 3643, 0);
+    H.setVarBit(c, 'horrorquest', 4);
+    c.teleport(2445, 4603, 0);
     H.tick(1);
-    op(c, 2509, 3644, 'horror_ladder_top', 1);
+    op(c, 2445, 4604, 'horror_ladder_top', 1);
     check('lighthouse ladder lands in the basement, south of the wall', [c.level, c.z < 4627, c.z > 4600], [1, true, true]);
     check('basement ladder foot is reachable from the arrival tile', connected(1, c.x, c.z, 2519, 4619), true);
     check('the wall is reachable from the arrival tile', connected(1, c.x, c.z, 2516, 4626), true);
     for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) H.give(c, item);
     c.teleport(2514, 4626, 1);
     H.tick(1);
-    for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) useOn(c, 2514, 4627, 'horror_mid_left_door', item);
-    check('all six placed: wall solved, stage 2', [H.getVar(c, 'horror_wall'), H.getVar(c, 'horror')], [63, 2]);
-    check('the hinged panels are gone - the way north is open', connected(1, 2514, 4626, 2515, 4629), true);
-    c.teleport(2515, 4629, 1);
-    H.tick(1);
+    for (const item of ['firerune', 'airrune', 'waterrune', 'earthrune', 'bronze_sword', 'bronze_arrow']) useOn(c, 2514, 4627, 'horror_mid_left_door', item, [1]);
+    check('all six placed', ['horrorfire', 'horrorair', 'horrorwater', 'horrorearth', 'horrorsword', 'horrorarrow'].map(n => vb(c, n)), [1, 1, 1, 1, 1, 1]);
+    op(c, 2516, 4627, 'horror_far_right_door', 1);
+    check('through the far right panel, north', [c.level, c.z >= 4627], [1, true]);
     op(c, 2515, 4630, 'horror_ladder_top2', 1);
     check('ladder down lands in Jossik\'s cave', [c.level, c.z > 4630 && c.z < 4640], [0, true]);
-    const jr = H.npcNear('horror_dagannoth_jr4', c.x, c.z, 0);
-    check('the level-100 dagannoth is waiting in the cave', jr !== null && Math.abs(jr.z - c.z) < 12, true);
+    fighting = true; // the Dagannoth comes for us; do not wait for that fight to end
     const words = talk(c, 'horror_lighthousekeeeper_injured');
-    check('Jossik talks, and no second dagannoth is added', [words.length > 0, World.npcs.filter(n => n && n.isActive && n.type === jr?.type).length], [true, 1]);
-    enqueue(c, '[queue,horror_boss_slain]', [1]);
-    H.tick(3);
-    check('dagannoth dead: stage 3, the Mother surfaces in the same cave', [H.getVar(c, 'horror'), H.npcNear('horror_dagganoth_aira', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airb', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_airc', c.x, c.z, 0) !== null || H.npcNear('horror_dagganoth_air', c.x, c.z, 0) !== null], [3, true]);
-    enqueue(c, '[queue,horror_boss_slain]', [2]);
-    H.tick(3);
-    check('Mother dead: stage 4 and the casket', [H.getVar(c, 'horror'), H.invCount(c, 'horror_casket')], [4, 1]);
-    talk(c, 'horror_lighthousekeeeper_injured');
-    check('casket shown to Jossik: stage 5', H.getVar(c, 'horror'), 5);
+    H.tick(10);
+    const jr = H.npcNear('horror_dagannoth_jr4', c.x, c.z, 0);
+    if (!jr || Math.abs(jr.z - c.z) >= 12) console.log('    (at', at(c), 'jr4', jr ? [jr.x, jr.z, jr.level] : null, 'stage', vb(c, 'horrorquest'), 'mes', lastMes(c), ')');
+    check('Jossik talks, and the level-100 dagannoth rises in the cave', [words.length > 0, jr !== null && Math.abs(jr.z - c.z) < 12], [true, true]);
+    if (jr) World.removeNpc(jr, -1); // as if killed (tools/sim/port349_horror.ts fights it for real)
+    enqueue(c, '[queue,queue_defeat_dagjr]');
+    drive(c);
+    const mother = () => ['horror_dagganoth_aira', 'horror_dagganoth_airb', 'horror_dagganoth_airc', 'horror_dagganoth_air', 'horror_dagganoth_water'].some(n => { const m = H.npcNear(n, c.x, c.z, 0); return m !== null && Math.abs(m.z - c.z) < 20; });
+    for (let t = 0; t < 20 && !mother(); t++) H.tick(1);
+    check('dagannoth dead: stage 5, the Mother surfaces in the same cave', [vb(c, 'horrorquest'), mother()], [5, true]);
+    enqueue(c, '[queue,quest_horror_complete]');
+    drive(c);
+    fighting = false;
+    check('Mother dead: complete, the casket, in the post-quest caves', [vb(c, 'horrorquest'), H.invCount(c, 'horror_casket'), c.z > 9984], [10, 1, true]);
 
     console.log('And back up to the lighthouse on foot:');
-    op(c, 2515, 4631, 'horror_ladder_base2', 1);
-    check('up to the room north of the wall', [c.level, c.z >= 4627], [1, true]);
-    H.tick(110); // the panels have swung shut again behind us
-    check('the wall has closed again', connected(1, c.x, c.z, 2516, 4626), false);
-    op(c, 2516, 4627, 'horror_far_right_door', 1);
-    check('the wall opens from the north side', connected(1, c.x, c.z, 2516, 4626), true);
+    c.teleport(2515, 4629, 1);
+    H.tick(1);
+    op(c, 2513, 4627, 'horror_far_left_door', 1);
+    check('the far left panel lets me back south', [c.level, c.z < 4627], [1, true]);
     c.teleport(2519, 4619, 1);
     H.tick(1);
     op(c, 2519, 4618, 'horror_ladder_base', 1);
-    check('basement ladder climbs back up into the lighthouse', [c.level, c.z > 3636 && c.z < 3650], [0, true]);
+    check('basement ladder climbs back up into the (real) lighthouse', [c.level, c.z > 3636 && c.z < 3650], [0, true]);
     check('the lighthouse ground floor reaches the spiral stairs', connected(0, c.x, c.z, 2506, 3639), true);
-    talk(c, 'horror_lighthousekeeeper_well', [4]);
-    H.tick(3);
-    check('Jossik upstairs: quest complete', H.getVar(c, 'horror'), 6);
+    talk(c, 'horror_lighthousekeeeper_well', [1, 1]);
+    check('Jossik upstairs opens the casket', [H.invCount(c, 'horror_casket'), H.invCount(c, 'unfinished_saradominbook')], [0, 1]);
 
     console.log('Walled in on the north side without having solved the wall (the Waterbirth maze exit):');
-    H.tick(110); // let the panels opened above swing shut
     const d = player('hftdmaze', 2515, 4629, 1);
-    H.setVar(d, 'horror', 1);
-    op(d, 2516, 4627, 'horror_far_right_door', 1);
-    check('the hinged panel opens from the north side', connected(1, 2515, 4629, 2516, 4626), true);
-    H.tick(110);
+    H.setVarBit(d, 'horrorquest', 1);
+    op(d, 2513, 4627, 'horror_far_left_door', 1);
+    check('the far left panel lets you out south', [d.level, d.z < 4627], [1, true]);
     const e2 = player('hftdsouth', 2516, 4625, 1);
-    H.setVar(e2, 'horror', 1);
+    H.setVarBit(e2, 'horrorquest', 1);
     op(e2, 2516, 4627, 'horror_far_right_door', 1);
-    check('but not from the south, unsolved', [connected(1, 2516, 4625, 2515, 4629), lastMes(e2).includes('budge')], [false, true]);
+    check('but not back north, unsolved', [e2.z < 4627, lastMes(e2)], [true, 'You cannot see any way to move this part of the wall...']);
 
     console.log('Post-quest:');
-    c.teleport(2515, 4629, 1);
+    c.teleport(2509, 3643, 0);
     H.tick(1);
-    op(c, 2515, 4630, 'horror_ladder_top2', 1);
-    check('the ladder down now leads to the dagannoth caves', [c.level, c.z > 9990], [0, true]);
+    op(c, 2509, 3644, 'horror_ladder_top', 1);
+    check('the lighthouse ladder now leads to the dagannoth caves', [c.level, c.z > 9990], [1, true]);
+    c.teleport(2516, 10002, 1);
+    H.tick(1);
+    op(c, 2516, 10003, 'horror_far_right_door', 1);
+    check('through the wall there', c.z >= 10003, true);
+    op(c, 2515, 10006, 'horror_ladder_top2', 1);
+    check('down among the dagannoths', [c.level, c.z > 10006], [0, true]);
     op(c, 2515, 10007, 'horror_ladder_base2', 1);
-    check('and back up', [c.level, c.z >= 4627 && c.z < 4640], [1, true]);
+    check('and back up', [c.level, c.z >= 10003 && c.z < 10016], [1, true]);
 }
 
 // =============================================================================== The Lost Tribe
