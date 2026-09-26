@@ -1,7 +1,8 @@
 // The ten PlagueCityRS 349 ports together: what no single port's sim covers. Every quest's
 // migration runs from one [login,_] (a fresh player comes out with all eight bits set and nothing
 // else touched), Mort Myre's swamp decay now that its map squares call it, and Diango, whose
-// greeting came from one port and whose yo-yo menu came from another.
+// greeting came from one port and whose yo-yo menu came from another, and the music tab's LOOP
+// button, which had no handler until 349's looping came over.
 // Usage: npx tsx tools/sim/port349_all.ts
 import * as H from './harness.js';
 import Component from '#/cache/config/Component.js';
@@ -170,6 +171,38 @@ console.log('DRAYNOR  Diango');
     H.setVar(p, 'xmas_yoyo_unlocked', 1);
     const said2 = talk(p, 'aprilfoolshorsesalesman', [3]);
     check('with a yo-yo from Santa he offers it back, and gives it', [said2.some(t => /yo-yo back/.test(t)), H.invCount(p, 'xmas_yoyo')], [true, 1]);
+    check('  no script errors', errors.slice(e0), []);
+}
+
+// ============================================================================================
+console.log('MUSIC  the LOOP button');
+{
+    const e0 = errors.length;
+    const p = H.makePlayer('looper', 3222, 3222, bucket++);
+    H.tick(1);
+    drive(p);
+    H.setVar(p, 'musicplay', 1);
+    // Lumbridge's own music trigger, as walking in would fire it
+    p.triggerMapzone(p.x, p.z);
+    H.tick(1);
+    const song = H.getVar(p, 'currentsong');
+    const len = H.getVar(p, 'musiclength');
+    check('a song playing knows its length from the cache', [song >= 0, len > 0], [true, true]);
+    const m0 = H.mesgs.length;
+    H.ifButton(p, 'music:com_251');
+    H.tick(1);
+    check('LOOP on', [H.getVar(p, 'musicloop'), H.mesgs.slice(m0).some(m => m.who === p.username && /looping now enabled/.test(m.text))], [1, true]);
+    // make the song have ended: the timer starts it again
+    H.setVar(p, 'musicstart', 0);
+    H.setVar(p, 'musiclength', 1);
+    H.tick(3);
+    check('the song ending starts it again', [H.getVar(p, 'currentsong'), H.getVar(p, 'musicstart') > 1, H.getVar(p, 'musiclength')], [song, true, len]);
+    H.ifButton(p, 'music:com_251');
+    H.tick(1);
+    H.setVar(p, 'musicstart', 0);
+    H.setVar(p, 'musiclength', 1);
+    H.tick(3);
+    check('LOOP off: an ended song stays ended', [H.getVar(p, 'musicloop'), H.getVar(p, 'musicstart')], [0, 0]);
     check('  no script errors', errors.slice(e0), []);
 }
 
