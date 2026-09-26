@@ -11,8 +11,8 @@
 // The Giant Dwarf   Keldagrim's doors open (the arrival house was a sealed room), the directors and
 //                   the boatman out; the quest from Hammerspike to the Supreme Commander
 // Enter the Abyss   the 1000 Runecrafting experience the mage promised
-// Monkey Madness    the gate into Marim, Kruk across the palisade, the zoo monkeys through the
-//                   bars, and the rest of the quest to Daero's training
+// Monkey Madness    the gate into Marim (now the PlagueCityRS 349 original - the whole quest is
+//                   tools/sim/port349_mm.ts)
 // Death Plateau and A Fairy Tale Part I are unchanged - walked and driven to show they still work
 // on today's map (Burthorpe's west end is an OSRS import now).
 import * as H from './harness.js';
@@ -425,109 +425,29 @@ if (run('abyss')) {
 
 // =============================================================================================
 if (run('mm')) {
+    // Monkey Madness is now the PlagueCityRS 349 original (the audit above was of this server's own
+    // re-creation, whose stages and invented steps are gone). The whole quest is played through by
+    // tools/sim/port349_mm.ts; what this audit fixed that still applies is checked here.
     console.log('MONKEY MADNESS');
     const p = player('mmonkey', 2465, 3495);
     const st = () => var_(p, 'mm_main');
     H.setVar(p, 'grandtree', 160);
-    talk(p, 'grandtree_narnode');
+    H.setVar(p, 'treequest', 9);
+    talk(p, 'grandtree_narnode', [1]);
     check('King Narnode starts it and hands over the seal', [st(), H.invCount(p, 'mm_gnome_royal_seal')], [1, 1]);
-    talk(p, 'mm_daero', [1, 2, 3, 1]);
-    check('Daero, three questions, and down to the hangar', [st(), at(p)], [3, [2584, 4516, 0]]);
-    talkHere(p, 'mm_waydar', [1]);
-    check('Waydar flies you to Crash Island', [st(), at(p)], [4, [2899, 2726, 0]]);
-    talkHere(p, 'mm_lumdo', [1]);
-    check('Lumdo rows you to Ape Atoll', [st(), at(p)], [5, [2802, 2705, 0]]);
-    check('  and the beach does not reach Garkor on foot', connected(0, p.x, p.z, 2805, 2762), false);
-    const g = goTo(p, 2720, 2764, 0);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    check('the bamboo gate into Marim lets you through (it was a dead click)', [g, at(p), connected(0, p.x, p.z, 2805, 2762)], [true, [2721, 2767, 0], true]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    check('  and back out', at(p), [2721, 2765, 0]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    goTo(p, 2804, 2762, 0);
-    talkHere(p, 'mm_garkor');
-    check('Garkor takes the seal: mould and dentures', [st(), H.invCount(p, 'mm_monkey_amulet_mould'), H.invCount(p, 'mm_monkey_dentures')], [6, 1, 1]);
-    // the tunnels
-    goTo(p, 2721, 2768, 0);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    const t = goTo(p, 2763, 2704, 0);
-    op(p, 2763, 2703, 'mm_bamboo_ladder_dungeon_entrance');
-    check('down the tunnel on the west shore, and Zooknock can be walked to', [t, p.z > 9000, connected(0, p.x, p.z, 2804, 9145)], [true, true, true]);
-    goTo(p, 2804, 9144, 0);
-    talkHere(p, 'mm_zooknock');
-    check('Zooknock says what he needs', st(), 7);
-    H.give(p, 'gold_bar');
-    talkHere(p, 'mm_zooknock');
-    H.give(p, 'ball_of_wool');
-    itemOnItem(p, 'ball_of_wool', 'mm_amulet_of_monkey_speak_without_string');
-    check('the amulet, strung', [st(), H.invCount(p, 'mm_amulet_of_monkey_speak')], [8, 1]);
-    H.clearInv(p);
-    H.equip(p, { front: 'mm_amulet_of_monkey_speak' });
-    // the monkey child - the aunt has to be out of earshot, and she wanders
-    const aunt = nearestNpc('mm_monkeys_aunt', 2738, 2794, 0)!;
-    check('the aunt can wander out of earshot of the child (she never leaves otherwise)', NpcType.get(aunt.type).wanderrange, NpcType.get(aunt.type).wanderrange);
-    p.teleport(2744, 2796, 0);
+    // the bamboo gate into Marim had no trigger at all (a dead click); the original's is a monkey's gate
+    setV(p, 'mm_main', 4);
+    p.teleport(2720, 2764, 0);
     H.tick(1);
-    H.give(p, 'banana', 5);
-    // move the aunt away for the test, as her wander eventually does
-    aunt.teleport(2730, 2780, 0);
-    { const c = nearestNpc('mm_monkey_child', p.x, p.z, 0)!; let said: string[] = [];
-      try { said = talk(p, 'mm_monkey_child', [1]); } catch (e) { console.log('    [debug child]', String(e), at(p), [c.x, c.z], [aunt.x, aunt.z], H.ifaces.filter(i => i.who === p.username && i.kind === 'text').slice(-4).map(i => i.text)); } }
-    aunt.teleport(2730, 2780, 0);
-    talk(p, 'mm_monkey_child');
-    check('five bananas for the talisman', [st(), H.invCount(p, 'mm_monkey_talisman')], [9, 1]);
-    H.give(p, 'mm_normal_monkey_bones');
-    p.teleport(2804, 9144, 0);
-    H.tick(1);
-    talkHere(p, 'mm_zooknock');
-    check('Zooknock carves the greegree', [st(), H.invCount(p, 'mm_monkey_greegree_for_normal_monkey')], [10, 1]);
+    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
+    check('the bamboo gate into Marim is too heavy for a human', p.z < 2766, true);
+    H.give(p, 'mm_monkey_greegree_for_normal_monkey');
     H.opheld(p, 'mm_monkey_greegree_for_normal_monkey', 2);
     drive(p);
-    check('holding it makes you a monkey', H.runProc(p, '[proc,mm_is_monkey]')[0], 1);
-    // Kruk, across the palisade
-    p.teleport(2721, 2767, 0);
-    H.tick(1);
-    const kruk = talkHere(p, 'mm_kruk', [1]);
-    check('Kruk can be spoken to from Marim (he stands in a yard nobody can walk into)', [kruk.length > 0, at(p)], [true, [2802, 2761, 0]]);
-    talkHere(p, 'mm_awowogei_cutscene');
-    check('Awowogei names his price', st(), 11);
-    // the zoo
-    p.teleport(2604, 3270, 0);
-    H.tick(1);
-    talkHere(p, 'mm_monkey_minder');
-    const zm = talkHere(p, 'mm_zoo_monkey', [1]);
-    check('the zoo monkey can be spoken to and climbs in', [zm.length > 0, st(), H.invCount(p, 'mm_monkey_in_backpack')], [true, 12, 1]);
-    p.teleport(2721, 2767, 0);
-    H.tick(1);
-    talkHere(p, 'mm_kruk');
-    talkHere(p, 'mm_awowogei_cutscene');
-    check('the monkey home: the alliance', st(), 13);
-    const gg = goTo(p, 2804, 2762, 0);
-    const gs = talkHere(p, 'mm_garkor');
-    if (st() !== 14) console.log('    [debug garkor]', gg, at(p), gs);
-    check('Garkor hands over the sigil', [st(), H.invCount(p, 'mm_sigil')], [14, 1]);
-    H.equip(p, { rhand: 'rune_scimitar' });
-    H.opheld(p, 'mm_sigil', 2);
-    drive(p);
-    const demon = nearestNpc('mm_demon', p.x, p.z, 0);
-    check('the sigil puts you in the arena with the Jungle Demon', [at(p), demon !== null], [[2415, 9908, 0], true]);
-    for (let i = 0; i < 400 && demon && demon.isActive; i++) {
-        if (i % 4 === 0 && p.target !== demon) H.opNpc(p, demon, 2);
-        p.setLevel(PlayerStat.HITPOINTS, 99);
-        p.setLevel(PlayerStat.PRAYER, 99);
-        H.tick(1);
-    }
-    drive(p);
-    check('the demon dies and the quest moves on', st(), 15);
-    talkHere(p, 'mm_zooknock_final_battle');
-    check('Zooknock puts you back at the Grand Tree', at(p), [2483, 3486, 1]);
-    p.teleport(2465, 3495, 0);
-    H.tick(1);
-    talk(p, 'grandtree_narnode');
-    check('Narnode completes the quest', st(), 20);
-    p.teleport(2483, 3486, 1);
-    talk(p, 'mm_daero', [1]);
-    check('and Daero pays the training', vb(p, 'mm_daero'), 1);
+    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
+    check('  and opens for a monkey (it was a dead click)', [p.z > 2766, connected(0, p.x, p.z, 2805, 2762)], [true, true]);
+    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
+    check('  and back out', p.z < 2766, true);
 }
 
 // =============================================================================================
