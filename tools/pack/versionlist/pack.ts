@@ -97,7 +97,7 @@ export function packClientVersionList(cache: FileStream, modelFlags: number[]) {
 
     const animVersion = Packet.alloc(3);
     const animCrc = Packet.alloc(4);
-    const animIndex = Packet.alloc(3);
+    const animIndex = Packet.alloc(4);
     const frameBase = new Uint16Array(AnimPack.max);
     const animFiles = new Map(listFilesExt(`${Environment.BUILD_SRC_DIR}/models`, '.anim').map(file => [path.basename(file, '.anim'), file]));
     for (let id = 0; id < AnimSetPack.max; id++) {
