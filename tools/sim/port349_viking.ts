@@ -30,13 +30,47 @@ import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import LocType from '#/cache/config/LocType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ScriptState from '#/engine/script/ScriptState.js';
 import { PlayerQueueType } from '#/engine/entity/PlayerQueueRequest.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import {
-    R, check, errors, npcSays, bits, bit, stage, setStage, setBit, viking, at, player, drain, text, mesSince, has, talk, clickLoc,
-    useOnLoc, useOnNpc, useHeld, held, opObj, npcsOf, until, done, BIT, runProtected, reachSet, walkable
+    R,
+    check,
+    errors,
+    npcSays,
+    bits,
+    bit,
+    stage,
+    setStage,
+    setBit,
+    viking,
+    at,
+    player,
+    drain,
+    text,
+    mesSince,
+    has,
+    talk,
+    clickLoc,
+    useOnLoc,
+    useOnNpc,
+    useHeld,
+    held,
+    opObj,
+    npcsOf,
+    until,
+    done,
+    BIT,
+    runProtected,
+    reachSet,
+    walkable
 } from './vikinglib.js';
-void R; void errors; void npcSays; void Component; void setBit; void text;
+void R;
+void errors;
+void npcSays;
+void Component;
+void setBit;
+void text;
 
 await H.boot();
 H.loginOrder();
@@ -111,14 +145,36 @@ if (want('swensen')) {
     }
     const before = viking(p);
     t = clickLoc(p, ...M41_156(41, 53), 'vt_mazeladderexit', 1);
-    check('out of the far side: Swensen\'s vote', [stage(p, 'swensen'), viking(p) - before, at(p)], [2, 1, [...M41_57(25, 13), 0]]);
+    check("out of the far side: Swensen's vote", [stage(p, 'swensen'), viking(p) - before, at(p)], [2, 1, [...M41_57(25, 13), 0]]);
     t = clickLoc(p, ...M41_57(20, 9), 'vt_mazeladdertopentrance', 1);
     check('  and no way back down', has(t, 'No way am I doing that maze again'), true);
 
     // every one of the twenty places a wrong portal can drop you (349's list) is open floor in a
     // dead-end room with a way out - a rope or a portal - on this server's map
-    const DEAD: [number, number, number, number][] = [[9, 53, 8, 53], [18, 52, 18, 53], [7, 34, 7, 33], [7, 28, 7, 29], [32, 31, 31, 31], [37, 20, 38, 20], [7, 18, 7, 19], [21, 55, 20, 55], [3, 53, 4, 53], [29, 34, 29, 33], [33, 42, 32, 42], [43, 20, 42, 20], [18, 45, 18, 44], [27, 42, 28, 42], [18, 39, 18, 40], [15, 21, 16, 21], [4, 31, 5, 31], [21, 21, 20, 21], [26, 31, 27, 31]];
-    const outs = ['vt_mazeladderescapeladder', 'vt_mazeportal_wrong', 'vt_mazeladderentrance', 'vt_mazeportal_1', 'vt_mazeportal_2', 'vt_mazeportal_3', 'vt_mazeportal_4', 'vt_mazeportal_5', 'vt_mazeportal_6', 'vt_mazeportal_7'].map(n => LocType.getId(n));
+    const DEAD: [number, number, number, number][] = [
+        [9, 53, 8, 53],
+        [18, 52, 18, 53],
+        [7, 34, 7, 33],
+        [7, 28, 7, 29],
+        [32, 31, 31, 31],
+        [37, 20, 38, 20],
+        [7, 18, 7, 19],
+        [21, 55, 20, 55],
+        [3, 53, 4, 53],
+        [29, 34, 29, 33],
+        [33, 42, 32, 42],
+        [43, 20, 42, 20],
+        [18, 45, 18, 44],
+        [27, 42, 28, 42],
+        [18, 39, 18, 40],
+        [15, 21, 16, 21],
+        [4, 31, 5, 31],
+        [21, 21, 20, 21],
+        [26, 31, 27, 31]
+    ];
+    const outs = ['vt_mazeladderescapeladder', 'vt_mazeportal_wrong', 'vt_mazeladderentrance', 'vt_mazeportal_1', 'vt_mazeportal_2', 'vt_mazeportal_3', 'vt_mazeportal_4', 'vt_mazeportal_5', 'vt_mazeportal_6', 'vt_mazeportal_7'].map(n =>
+        LocType.getId(n)
+    );
     const bad: string[] = [];
     for (const [, , wx, wz] of DEAD) {
         const [ax, az] = M41_156(wx, wz);
@@ -126,7 +182,13 @@ if (want('swensen')) {
         let exit = false;
         for (const k of reach) {
             const [rx, rz] = k.split(',').map(Number);
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const id of outs) if (World.getLoc(rx + dx, rz + dz, 0, id)) exit = true;
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ])
+                for (const id of outs) if (World.getLoc(rx + dx, rz + dz, 0, id)) exit = true;
         }
         if (!walkable(0, ax, az) || !exit) bad.push(`${wx},${wz}`);
     }
@@ -161,7 +223,7 @@ if (want('manni')) {
     H.tick(1);
     H.give(p, 'coins', 250);
     t = talk(p, 'poison_salesman', [2, 1]);
-    check('the Poison Salesman: the sales pitch, and a low alcohol keg for 250', [H.invCount(p, 'viking_low_alcahol_beerkeg'), H.invCount(p, 'coins'), bit(p, BIT.poisonsalesman), has(t, 'Peter Potter\'s Patented Party Potions')], [1, 0, 1, true]);
+    check('the Poison Salesman: the sales pitch, and a low alcohol keg for 250', [H.invCount(p, 'viking_low_alcahol_beerkeg'), H.invCount(p, 'coins'), bit(p, BIT.poisonsalesman), has(t, "Peter Potter's Patented Party Potions")], [1, 0, 1, true]);
 
     // lighting it and the pipe
     H.give(p, 'tinderbox');
@@ -202,7 +264,11 @@ if (want('sigli')) {
     check('Sigli: the hunt, and the talisman', [stage(p, 'sigli'), H.invCount(p, 'viking_draugen_talisman_uncharged'), has(t, 'The Draugen')], [1, 1, true]);
     const m0 = H.mesgs.length;
     held(p, 'viking_draugen_talisman_uncharged', 1);
-    check('Locate: the talisman points the way', mesSince(p, m0).some(m => m.startsWith('The talisman guides you')), true);
+    check(
+        'Locate: the talisman points the way',
+        mesSince(p, m0).some(m => m.startsWith('The talisman guides you')),
+        true
+    );
     // walk up to the butterfly and Locate again - it can move on (a timer), so chase it
     let draugen = null as any;
     let appeared = false;
@@ -243,17 +309,40 @@ if (want('sigli')) {
 
 // ===================================================================================== thorvald
 function killForm(p: Player, form: string, next: string) {
-    const k = npcsOf(form).filter(n => n.level === p.level).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
-    if (!k) return false;
+    const k = npcsOf(form)
+        .filter(n => n.level === p.level)
+        .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+    // With auto-retaliate on, the player's own counter-blows can finish a form while its revival line is
+    // being clicked through - he is already the next one, which is what this is waiting for.
+    if (!k) return npcsOf(next).some(n => n.level === p.level);
     k.levels[3] = 1;
     let ok = false;
     for (let i = 0; i < 400 && !ok; i++) {
+        // A revival's line ("It seems you have some idea of combat...") waits for Continue, and nothing
+        // swings until it is clicked; the player does that, so the sim must too (it passed or failed on
+        // whether the pause landed before the next swing).
+        if (p.activeScript && p.activeScript.execution === ScriptState.PAUSEBUTTON) drain(p, [], 3);
         if (i % 8 === 0 && !(p as any).target) H.attackNpc(p, k); // a revival's dialogue stops your swing
         H.tick(1);
         ok = k.type === NpcType.getId(next);
     }
     drain(p);
-    if (!ok) console.log('killForm', form, k.type, k.isActive, k.levels[3], at(p), [k.x, k.z], (p as any).target?.constructor?.name, H.mesgs.filter(m => m.who === p.username).slice(-5).map(m => m.text), H.npcHits.slice(-5));
+    if (!ok)
+        console.log(
+            'killForm',
+            form,
+            k.type,
+            k.isActive,
+            k.levels[3],
+            at(p),
+            [k.x, k.z],
+            (p as any).target?.constructor?.name,
+            H.mesgs
+                .filter(m => m.who === p.username)
+                .slice(-5)
+                .map(m => m.text),
+            H.npcHits.slice(-5)
+        );
     return ok;
 }
 if (want('thorvald')) {
@@ -268,7 +357,11 @@ if (want('thorvald')) {
     H.give(p, 'lobster', 3);
     clickLoc(p, ...M41_57(43, 46), 'viking_warrior_ladder', 2);
     check('empty-handed but for food: down into the battleground', at(p), [2671, 10098, 2]);
-    check('  Koschei turns up', until(() => npcsOf('viking_enemy1').length > 0, 100), true);
+    check(
+        '  Koschei turns up',
+        until(() => npcsOf('viking_enemy1').length > 0, 100),
+        true
+    );
     check('form one down: he gets up as form two', killForm(p, 'viking_enemy1', 'viking_enemy2'), true);
     check('form two down: form three', killForm(p, 'viking_enemy2', 'viking_enemy3'), true);
     p.levels[PlayerStat.PRAYER] = 10;
@@ -278,13 +371,15 @@ if (want('thorvald')) {
     drain(p);
     check('form three down: form four, and your prayer drained', [third, text(p, i3).includes('you lose your prayer'), p.levels[PlayerStat.PRAYER]], [true, true, 0]);
     // the fourth form: fight to the death - your own
-    const k4 = npcsOf('viking_enemy4').filter(n => n.level === 2).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+    const k4 = npcsOf('viking_enemy4')
+        .filter(n => n.level === 2)
+        .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
     p.levels[PlayerStat.HITPOINTS] = 1;
     const before = viking(p);
     H.attackNpc(p, k4);
     const got = until(() => stage(p, 'thorvald') === 2, 120);
     drain(p);
-    check('the fourth form\'s last blow: the honour death, Thorvald\'s vote', [got, viking(p) - before, p.level, p.levels[PlayerStat.HITPOINTS] > 1, npcsOf('viking_enemy4').filter(n => n === k4).length], [true, 1, 1, true, 0]);
+    check("the fourth form's last blow: the honour death, Thorvald's vote", [got, viking(p) - before, p.level, p.levels[PlayerStat.HITPOINTS] > 1, npcsOf('viking_enemy4').filter(n => n === k4).length], [true, 1, 1, true, 0]);
     check('  and no real death (items kept)', H.invCount(p, 'lobster'), 3);
     p.teleport(...M41_57(42, 44), 0);
     H.tick(1);
@@ -299,7 +394,9 @@ if (want('thorvald')) {
     killForm(w, 'viking_enemy1', 'viking_enemy2');
     killForm(w, 'viking_enemy2', 'viking_enemy3');
     killForm(w, 'viking_enemy3', 'viking_enemy4');
-    const k = npcsOf('viking_enemy4').filter(n => n.level === 2).sort((a, b) => Math.hypot(a.x - w.x, a.z - w.z) - Math.hypot(b.x - w.x, b.z - w.z))[0];
+    const k = npcsOf('viking_enemy4')
+        .filter(n => n.level === 2)
+        .sort((a, b) => Math.hypot(a.x - w.x, a.z - w.z) - Math.hypot(b.x - w.x, b.z - w.z))[0];
     k.levels[3] = 1;
     H.attackNpc(w, k);
     until(() => stage(w, 'thorvald') === 2, 60);
@@ -317,14 +414,14 @@ if (want('thorvald')) {
     H.runProc(d, '[proc,player_die]');
     until(() => d.level === 0, 30);
     H.tick(5);
-    check('killed by form one: back in Thorvald\'s hut, food kept, trial still on', [at(d), H.invCount(d, 'lobster'), stage(d, 'thorvald')], [[...M41_57(42, 46), 0], 2, 1]);
+    check("killed by form one: back in Thorvald's hut, food kept, trial still on", [at(d), H.invCount(d, 'lobster'), stage(d, 'thorvald')], [[...M41_57(42, 46), 0], 2, 1]);
     H.despawn(d);
 }
 
 // ===================================================================================== peer
 const RIDDLES = ['MIND', 'TREE', 'LIFE', 'FIRE', 'TIME', 'WIND'];
 if (want('peer')) {
-    console.log('PEER  the Seer\'s house');
+    console.log("PEER  the Seer's house");
     const p = heroAt(...M41_57(10, 21), 4);
     H.give(p, 'coins', 100);
     H.equip(p, { hat: 'bronze_med_helm' });
@@ -373,7 +470,7 @@ if (want('peer')) {
     // the disks
     clickLoc(p, ...M41_57(8, 12), 'viking_unimountedhead', 1);
     clickLoc(p, ...M41_57(10, 12), 'viking_bullmountedhead', 1);
-    check('the unicorn\'s eye is a red disk, the bull\'s a wooden one', [H.invCount(p, 'viking_red_wooden_coin'), H.invCount(p, 'viking_uncoloured_wooden_coin')], [1, 1]);
+    check("the unicorn's eye is a red disk, the bull's a wooden one", [H.invCount(p, 'viking_red_wooden_coin'), H.invCount(p, 'viking_uncoloured_wooden_coin')], [1, 1]);
     clickLoc(p, ...M41_57(10, 17), 'viking_seer_bookcase', 1);
     check('behind the books: a red herring', H.invCount(p, 'viking_red_herring'), 1);
     useOnLoc(p, ...M41_57(5, 15), 'viking_seer_range', 'viking_red_herring');
@@ -399,7 +496,11 @@ if (want('peer')) {
     H.tick(1);
     const before = viking(p);
     t = clickLoc(p, ...M41_57(12, 19), 'viking_seers_door2', 1);
-    check('out of the far door with the key: Peer\'s vote, the house\'s things left behind', [stage(p, 'peer'), viking(p) - before, p.z >= 3667, H.invCount(p, 'viking_key'), H.invCount(p, 'viking_bucket_empty') + H.invCount(p, 'viking_jug_3')], [3, 1, true, 0, 0]);
+    check(
+        "out of the far door with the key: Peer's vote, the house's things left behind",
+        [stage(p, 'peer'), viking(p) - before, p.z >= 3667, H.invCount(p, 'viking_key'), H.invCount(p, 'viking_bucket_empty') + H.invCount(p, 'viking_jug_3')],
+        [3, 1, true, 0, 0]
+    );
     // get the bank back for the later trials
     H.clearInv(p);
 }
@@ -471,7 +572,7 @@ if (want('olaf')) {
     held(p, 'viking_enchanted_strung_lyre', 1);
     until(() => stage(p, 'olaf') === 7, 40);
     drain(p);
-    check('on the stage: the epic, and Olaf\'s vote; the lyre is plain again', [stage(p, 'olaf'), viking(p) - before, H.invCount(p, 'viking_enchanted_strung_lyre'), H.invCount(p, 'viking_strung_lyre'), bits(p) >>> 27], [7, 1, 0, 1, 0]);
+    check("on the stage: the epic, and Olaf's vote; the lyre is plain again", [stage(p, 'olaf'), viking(p) - before, H.invCount(p, 'viking_enchanted_strung_lyre'), H.invCount(p, 'viking_strung_lyre'), bits(p) >>> 27], [7, 1, 0, 1, 0]);
     check('  four lines sung', H.says.filter(x => x.who === p.username).length >= 4, true);
     p.teleport(...M41_57(42, 35), 0);
     H.tick(1);
@@ -500,7 +601,7 @@ if (want('sigmund')) {
         ['viking_fisherman1', 'secret map of the best fishing spots'],
         ['viking_hallifred', 'weather forecast from our Seer'],
         ['viking_peer', 'I require a bodyguard'],
-        ['viking_thorvald', 'Champions\' Token'],
+        ['viking_thorvald', "Champions' Token"],
         ['viking_reveller_3', 'legendary cocktail'],
         ['viking_longhall_barkeep', 'NEVER EVER EVER']
     ];
@@ -568,7 +669,6 @@ if (want('brundt')) {
     check('Brundt afterwards: brother or sister, and the history', has(t2, 'Hello again'), true);
     const j = journal(p);
     check('the journal: QUEST COMPLETE, and the name', [j.includes('QUEST COMPLETE!'), j.includes('They also gave me a new name')], [true, true]);
-    t2;
 }
 
 function journal(p: Player) {
@@ -584,16 +684,42 @@ if (want('journal')) {
     const p = player('frem_journal', ...M41_57(34, 21), 0);
     check('not started: Chieftain Brundt', journal(p).includes('Chieftain Brundt'), true);
     H.setVar(p, 'viking', 4);
-    setStage(p, 'swensen', 2); setStage(p, 'reveller', 2); setStage(p, 'sigli', 3); setStage(p, 'olaf', 1);
+    setStage(p, 'swensen', 2);
+    setStage(p, 'reveller', 2);
+    setStage(p, 'sigli', 3);
+    setStage(p, 'olaf', 1);
     const j = journal(p);
-    check('three votes, the Bard\'s trial on', [j.includes('three'), j.includes('I now have the Navigator\'s vote'), j.includes('a lyre')], [true, true, true]);
+    check("three votes, the Bard's trial on", [j.includes('three'), j.includes("I now have the Navigator's vote"), j.includes('a lyre')], [true, true, true]);
     H.despawn(p);
 }
 
 // ===================================================================================== migrate
 if (want('migrate')) {
     console.log('MIGRATE  old saves');
-    const OLD = { manni: 0, sigli: 1, olaf: 2, sigmund: 3, thorvald: 4, peer: 5, talisman: 6, slain: 7, beaten: 12, planted: 13, olafAsked: 14, thorvaldAsked: 15, kLo: 16, maze: 18, mLo: 19, riddle: 24, askRock: 25, lalliRock: 26, swensen: 27, potato: 28, cabbage: 29, onion: 30 };
+    const OLD = {
+        manni: 0,
+        sigli: 1,
+        olaf: 2,
+        sigmund: 3,
+        thorvald: 4,
+        peer: 5,
+        talisman: 6,
+        slain: 7,
+        beaten: 12,
+        planted: 13,
+        olafAsked: 14,
+        thorvaldAsked: 15,
+        kLo: 16,
+        maze: 18,
+        mLo: 19,
+        riddle: 24,
+        askRock: 25,
+        lalliRock: 26,
+        swensen: 27,
+        potato: 28,
+        cabbage: 29,
+        onion: 30
+    };
     const old = (...ns: number[]) => ns.reduce((v, n) => v | (1 << n), 0);
     const migrate = (name: string, vik: number, b: number, setup?: (p: Player) => void, x = 2659, z = 3669, level = 0) => {
         const p = player(name, x, z, vik, level);
@@ -674,7 +800,7 @@ if (want('migrate')) {
     check('Thorvald: one form down -> started (Koschei from the start)', [stage(k2, 'thorvald'), viking(k2)], [1, 1]);
 
     const r1 = migrate('mig_riddle', 1, old(OLD.riddle), p => H.give(p, 'viking_dummy_coin'));
-    check('Peer: riddle answered -> completed_riddle, a riddle set, the old red disk -> 349\'s', [stage(r1, 'peer'), H.invCount(r1, 'viking_red_wooden_coin'), H.invCount(r1, 'viking_dummy_coin')], [2, 1, 0]);
+    check("Peer: riddle answered -> completed_riddle, a riddle set, the old red disk -> 349's", [stage(r1, 'peer'), H.invCount(r1, 'viking_red_wooden_coin'), H.invCount(r1, 'viking_dummy_coin')], [2, 1, 0]);
 
     const pen = migrate('mig_pen', 1, old(OLD.olafAsked, OLD.lalliRock), undefined, 2765, 3606, 0);
     check('left in the golden sheep pen by the old version: set down outside', [pen.x, pen.z], [2770, 3622]);

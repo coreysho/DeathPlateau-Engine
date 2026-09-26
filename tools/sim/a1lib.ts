@@ -43,7 +43,11 @@ export const at = (p: Player) => [p.x, p.z, p.level];
 export const mesOf = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
 export const lastMes = (p: Player) => mesOf(p).slice(-1)[0] ?? '';
 export const mark = () => H.mesgs.length;
-export const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+export const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 export const said = (p: Player, from: number, s: string) => mesSince(p, from).some(m => m.includes(s));
 
 export let chatLog: string[] = [];
@@ -85,7 +89,10 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    const out = H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    const out = H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
     chatLog = out;
     return out;
 }
@@ -104,7 +111,18 @@ export function talk(p: Player, npcName: string, picks: (number | string)[] = []
         for (let t = 0; t < 40 && !p.activeScript; t++) H.tick(1);
         return drive(p, picks);
     }
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -194,23 +212,34 @@ export function connected(level: number, x: number, z: number, tx: number, tz: n
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (Math.abs(cx - tx) + Math.abs(cz - tz) === 0) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
 }
 /** Can a player standing on (x,z) reach an interaction position next to the loc? */
-export function reachLoc(level: number, x: number, z: number, locName: string, lx: number, lz: number, radius = 160) {
+export function reachLoc(level: number, x: number, z: number, locName: string, lx: number, lz: number, _radius = 160) {
     const id = LocType.getId(locName);
     const loc = World.getLoc(lx, lz, level, id);
     if (!loc) return false;
     const path = findPathToLoc(level, x, z, loc.x, loc.z, 1, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach);
     if (!path.length) return false;
     const last = path[path.length - 1];
-    const px = (last >> 14) & 0x3fff, pz = last & 0x3fff;
+    const px = (last >> 14) & 0x3fff,
+        pz = last & 0x3fff;
     // the route ends next to the loc (or on it for ground decor); compare against the loc's footprint
     const d = Math.max(Math.max(loc.x - px, 0, px - (loc.x + loc.width - 1)), Math.max(loc.z - pz, 0, pz - (loc.z + loc.length - 1)));
     return d <= 1;
@@ -238,7 +267,8 @@ export function deadLocOps(x1: number, z1: number, x2: number, z2: number, level
                     for (let o = 0; o < 5; o++) {
                         const labels = variants.map(v => v.op?.[o]).filter(l => l && l !== 'hidden');
                         if (!labels.length) continue;
-                        const has = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPLOC1 + o, t.id, -1) || (t.category !== -1 && ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPLOC1 + o, -1, t.category));
+                        // an ap trigger alone answers the op too: Player.ts runs it when there is no op trigger
+                        const has = [ServerTriggerType.OPLOC1 + o, ServerTriggerType.APLOC1 + o].some(trig => ScriptProvider.getByTriggerSpecific(trig, t.id, -1) || (t.category !== -1 && ScriptProvider.getByTriggerSpecific(trig, -1, t.category)));
                         if (has) continue;
                         const k = `${t.debugname} op${o + 1}=${[...new Set(labels)].join('/')}`;
                         if (!out.has(k)) out.set(k, []);
@@ -260,7 +290,8 @@ export function deadNpcOps(x1: number, z1: number, x2: number, z2: number) {
             const labels = variants.map(v => v.op?.[o]).filter(l => l && l !== 'hidden');
             if (!labels.length) continue;
             if (labels.every(l => /attack/i.test(l!))) continue;
-            const has = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPNPC1 + o, t.id, -1) || (t.category !== -1 && ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPNPC1 + o, -1, t.category));
+            // an ap trigger alone answers the op too: Player.ts runs it when there is no op trigger
+            const has = [ServerTriggerType.OPNPC1 + o, ServerTriggerType.APNPC1 + o].some(trig => ScriptProvider.getByTriggerSpecific(trig, t.id, -1) || (t.category !== -1 && ScriptProvider.getByTriggerSpecific(trig, -1, t.category)));
             if (has) continue;
             const k = `${t.debugname} op${o + 1}=${[...new Set(labels)].join('/')}`;
             if (!out.has(k)) out.set(k, []);
@@ -279,9 +310,7 @@ export function locsNamed(name: string, x1: number, z1: number, x2: number, z2: 
     const out: number[][] = [];
     for (const level of levels)
         for (let zx = x1 & ~7; zx <= x2; zx += 8)
-            for (let zz = z1 & ~7; zz <= z2; zz += 8)
-                for (const loc of World.gameMap.getZone(zx, zz, level).getAllLocsUnsafe())
-                    if (loc.type === id && loc.x >= x1 && loc.x <= x2 && loc.z >= z1 && loc.z <= z2) out.push([loc.x, loc.z, level]);
+            for (let zz = z1 & ~7; zz <= z2; zz += 8) for (const loc of World.gameMap.getZone(zx, zz, level).getAllLocsUnsafe()) if (loc.type === id && loc.x >= x1 && loc.x <= x2 && loc.z >= z1 && loc.z <= z2) out.push([loc.x, loc.z, level]);
     return out;
 }
 export { H, World, LocType, NpcType, ObjType, ScriptProvider, ServerTriggerType, Player, Npc };
@@ -291,10 +320,20 @@ export function ascii(level: number, x1: number, z1: number, x2: number, z2: num
     const q = [[sx, sz]];
     while (q.length) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || nx < x1 - 20 || nx > x2 + 20 || nz < z1 - 20 || nz > z2 + 20) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     const rows: string[] = [];
