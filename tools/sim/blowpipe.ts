@@ -28,6 +28,7 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
 import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
 import Packet from '#/io/Packet.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
 
 await H.boot();
 H.loginOrder();
@@ -41,9 +42,12 @@ const HP = 3, RNG = 4, FLETCH = 9;
 const MAX = 16383;
 const fresh = (x = 3222 + (n % 8) * 4, z = 3218 + Math.floor(n / 8) * 4) => {
     const p: any = H.makePlayer('bp' + n, x, z, 90 + n); n++;
-    H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000); H.tick(1);
+    H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000); noRandoms(p); H.tick(1);
     return p;
 };
+// A random event arriving in the middle of a 1,200-tick fight takes the player away and the count with
+// them (seen once in about ten runs), so the sim's players are left out of them.
+const noRandoms = (p: any) => { const t = ScriptProvider.getByName('[timer,general_macro_events]'); if (t) p.clearTimer(t.id); };
 const mes = (p: any) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
 const lastMes = (p: any) => mes(p).slice(-1)[0];
 const worn = (p: any, slot: number) => { const o = p.getInventory(InvType.WORN)!.get(slot); return o ? ObjType.get(o.id).debugname : null; };
@@ -236,6 +240,7 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     const usedScales = 5000 - v(p, 'blowpipe_scales'), usedDarts = 5000 - v(p, 'blowpipe_darts');
     const damaging = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type === 1 && h.damage > 0).length;
     console.log(`    ${shots} shots: ${usedScales} scales, ${usedDarts} darts; ${damaging} damaging hits, ${venoms} envenomed`);
+    if (shots < 590) console.log('    DEBUG', p.x, p.z, npc.x, npc.z, npc.isActive, p.levels[HP], JSON.stringify(mes(p).slice(-6)), JSON.stringify(H.says.filter(s => s.tick > World.currentTick - 1300).slice(0, 5)));
     check('  ~600 shots in 1,200 ticks on Rapid', shots >= 590 && shots <= 601, true);
     check('  a dart every shot, none saved without a cape', usedDarts, shots);
     check('  two scales in three shots (within 4 sd)', Math.abs(usedScales - shots * 2 / 3) <= 4 * Math.sqrt(shots * 2 / 9), true);
@@ -378,13 +383,32 @@ console.log('CHARGES SURVIVE A RE-LOGIN');
     H.despawn(p);
 }
 
+// ------------------------------------------------------------------------------ death
+console.log('DEATH');
+{
+    const p = fresh();
+    charge(p, 500, 300);
+    H.equip(p, { rhand: 'toxic_blowpipe' });
+    const keep = p.getInventory(InvType.getId('deathkeep'))!;
+    p.invSet(InvType.getId('deathkeep'), ObjType.getId('toxic_blowpipe'), 1, 0);
+    A.runProcProtected(p, '[proc,blowpipe_death_spill]');
+    check('a kept blowpipe keeps its contents', [v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts')], [500, 300]);
+    p.invDelSlot(InvType.getId('deathkeep'), 0);
+    void keep;
+    const z = World.gameMap.getZone(p.x, p.z, p.level);
+    A.runProcProtected(p, '[proc,blowpipe_death_spill]');
+    const floor = [...z.getAllObjsUnsafe()].filter((o: any) => o.x === p.x && o.z === p.z).map((o: any) => [ObjType.get(o.type).debugname, o.count]);
+    check('a lost one goes empty, with its scales and darts on the floor', [worn(p, 3), v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts'), floor.sort()], ['toxic_blowpipe_empty', 0, 0, [['rune_dart', 300], ['zulrahs_scales', 500]]]);
+    H.despawn(p);
+}
+
 // ------------------------------------------------------------------------------ pvp
 console.log('PVP');
 {
     const a: any = H.makePlayer('bpa', 3100, 3700, 201);
     const b: any = H.makePlayer('bpb', 3103, 3700, 202);
     H.tick(2);
-    for (const x of [a, b]) { H.maxOut(x); H.clearInv(x); H.setVar(x, 'tutorial', 1000); }
+    for (const x of [a, b]) { H.maxOut(x); H.clearInv(x); H.setVar(x, 'tutorial', 1000); noRandoms(x); }
     charge(a, 5000, 5000);
     H.equip(a, { rhand: 'toxic_blowpipe' });
     for (const [mode, rate] of [[0, 4], [1, 3]]) {
