@@ -54,7 +54,11 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const v = (p: Player, name: string) => H.getVar(p, name);
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 
 /** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
 function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
@@ -86,7 +90,10 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function npcAny(name: string, x: number, z: number, level: number): Npc | null {
@@ -96,7 +103,18 @@ function settle(p: Player) {
     for (let t = 0; t < 30 && (p.delayed || p.activeScript); t++) H.tick(1);
 }
 function standBy(p: Player, npc: Npc) {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         return;
     }
@@ -106,7 +124,20 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
     const npc = npcAny(npcName, p.x, p.z, p.level);
     if (!npc) throw new Error('no npc ' + npcName);
     settle(p);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2], [3, 0], [0, 3]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2],
+        [3, 0],
+        [0, 3]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -183,12 +214,13 @@ function op(p: Player, x: number, z: number, locName: string, n = 1, picks: numb
 /** The first loc in a box whose type carries a category. */
 function findLocByCategory(cat: string, level: number, x0: number, z0: number, r: number) {
     const catId = CategoryType.getId(cat);
-    for (let x = x0 - r; x <= x0 + r; x += 8) for (let z = z0 - r; z <= z0 + r; z += 8) {
-        const zone = World.gameMap.getZone(x, z, level);
-        for (const loc of [...zone.getAllLocsUnsafe()]) {
-            if (LocType.get(loc.type).category === catId) return loc;
+    for (let x = x0 - r; x <= x0 + r; x += 8)
+        for (let z = z0 - r; z <= z0 + r; z += 8) {
+            const zone = World.gameMap.getZone(x, z, level);
+            for (const loc of [...zone.getAllLocsUnsafe()]) {
+                if (LocType.get(loc.type).category === catId) return loc;
+            }
         }
-    }
     return null;
 }
 function journal(p: Player): string {
@@ -196,7 +228,11 @@ function journal(p: Player): string {
     const from = H.ifaces.length;
     H.ifButton(p, 'questlist:tbwt');
     drive(p);
-    const t = H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!).join('|');
+    const t = H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .join('|');
     p.closeModal();
     return t;
 }
@@ -233,8 +269,10 @@ if (want('quest')) {
     talk(p, 'tbwt_tamayu_multinpc_jungle');
     check('Tamayu: vows to slay the Shaikahan (2)', v(p, 'tbwt_tamayu'), 2);
 
-    console.log('Tinsay\'s rum:');
-    H.give(p, 'banana', 2); H.give(p, 'knife'); H.give(p, 'karamja_rum', 2);
+    console.log("Tinsay's rum:");
+    H.give(p, 'banana', 2);
+    H.give(p, 'knife');
+    H.give(p, 'karamja_rum', 2);
     useOnHeld(p, 'karamja_rum', 'banana');
     check('banana stuffed into the rum', H.invCount(p, 'tbwt_banana_in_karamja_rum'), 1);
     useOnHeld(p, 'banana', 'knife');
@@ -271,7 +309,7 @@ if (want('quest')) {
     talk(p, 'tbwt_lubufu', [3, 1]); // what do you use - apprentice? Yes!
     check('apprenticed: complete (31), vessel in hand', [v(p, 'tbwt_lubufu'), H.invCount(p, 'tbwt_karambwan_vessel')], [31, 1]);
 
-    console.log('Karambwan fishing (Lubufu\'s spot):');
+    console.log("Karambwan fishing (Lubufu's spot):");
     useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
     check('vessel loaded with karambwanji', H.invCount(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji'), 1);
     const kspot = npcAny('lubufu_karambwan', 2768, 3165, 0)!;
@@ -285,12 +323,12 @@ if (want('quest')) {
     }
     check('a raw karambwan caught in the vessel', H.invCount(p, 'tbwt_raw_karambwan') >= 1, true);
 
-    console.log('Tiadeche\'s karambwan:');
+    console.log("Tiadeche's karambwan:");
     if (H.invCount(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji') === 0) useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
     useOnNpc(p, 'tbwt_tiadeche_multinpc_shore', 'tbwt_karambwan_vessel_loaded_with_karambwanji', [1]); // accept his first catch
     check('Tiadeche traps one and wants the vessel studied (4)', v(p, 'tbwt_tiadeche'), 4);
 
-    console.log('Tamayu\'s hunt:');
+    console.log("Tamayu's hunt:");
     talk(p, 'tbwt_tamayu_multinpc_jungle', [3, 1]); // when will you succeed - follow him: yes
     check('watched the hunt (3), back beside Tamayu', [v(p, 'tbwt_tamayu'), p.x >= 2830 && p.x <= 2860 && p.z >= 3030 && p.z <= 3055], [3, true]);
     H.give(p, '4dose1agility');
@@ -308,7 +346,7 @@ if (want('quest')) {
             if (H.invCount(p, 'tbwt_raw_karambwan') === 0) H.give(p, 'tbwt_raw_karambwan');
             useOnLoc(p, range.x, range.z, lt, 'tbwt_raw_karambwan');
         }
-        check('karambwan cooked poorly (no choice before Tinsay\'s reward)', H.invCount(p, 'tbwt_poorly_cooked_karambwan') >= 1, true);
+        check("karambwan cooked poorly (no choice before Tinsay's reward)", H.invCount(p, 'tbwt_poorly_cooked_karambwan') >= 1, true);
     }
     H.give(p, 'pestle_and_mortar');
     useOnHeld(p, 'tbwt_poorly_cooked_karambwan', 'pestle_and_mortar');
@@ -340,20 +378,29 @@ if (want('quest')) {
     const m0 = H.mesgs.length;
     H.attackNpc(p, monkey);
     for (let t = 0; t < 12; t++) H.tick(1);
-    check('a monkey dodges melee while the quest runs', mesSince(p, m0).some(m => m.includes('deftly avoids')), true);
+    check(
+        'a monkey dodges melee while the quest runs',
+        mesSince(p, m0).some(m => m.includes('deftly avoids')),
+        true
+    );
     p.clearPendingAction();
     H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });
-    const mx = monkey.x, mz = monkey.z;
+    const mx = monkey.x,
+        mz = monkey.z;
     for (let t = 0; t < 200 && monkey.isActive; t++) {
-        if (!p.target) { p.teleport(mx + 4, mz, 0); H.attackNpc(p, monkey); }
+        if (!p.target) {
+            p.teleport(mx + 4, mz, 0);
+            H.attackNpc(p, monkey);
+        }
         H.tick(1);
     }
     H.tick(4);
     let corpse = false;
-    for (let dx = -8; dx <= 8 && !corpse; dx++) for (let dz = -8; dz <= 8 && !corpse; dz++) {
-        const zone = World.gameMap.getZone(mx + dx, mz + dz, 0);
-        for (const o of [...zone.getAllObjsUnsafe()]) if (o.type === ObjType.getId('tbwt_monkey_corpse')) corpse = true;
-    }
+    for (let dx = -8; dx <= 8 && !corpse; dx++)
+        for (let dz = -8; dz <= 8 && !corpse; dz++) {
+            const zone = World.gameMap.getZone(mx + dx, mz + dz, 0);
+            for (const o of [...zone.getAllObjsUnsafe()]) if (o.type === ObjType.getId('tbwt_monkey_corpse')) corpse = true;
+        }
     check('a monkey killed at range drops a monkey corpse', corpse, true);
     H.give(p, 'tbwt_monkey_corpse');
     H.give(p, 'seaweed', 2);
@@ -370,12 +417,14 @@ if (want('quest')) {
 
     console.log('Jogre bones:');
     H.give(p, 'tbwt_jogre_bones', 2);
-    H.give(p, 'firerune', 8); H.give(p, 'naturerune', 2);
+    H.give(p, 'firerune', 8);
+    H.give(p, 'naturerune', 2);
     H.castOnHeld(p, 'tbwt_jogre_bones', 'magic:superheat_item');
     drive(p);
     check('Superheat burns the Jogre bones', H.invCount(p, 'tbwt_burnt_jogre_bones'), 1);
     H.give(p, 'tinderbox');
-    const fmx = 2800, fmz = 3070;
+    const fmx = 2800,
+        fmz = 3070;
     p.teleport(fmx, fmz, 0);
     H.tick(1);
     useOnHeld(p, 'tinderbox', 'tbwt_jogre_bones');
@@ -383,7 +432,10 @@ if (want('quest')) {
         H.tick(1);
         const zone = World.gameMap.getZone(fmx, fmz, 0);
         const burnt = [...zone.getAllObjsUnsafe()].find(o => o.type === ObjType.getId('tbwt_burnt_jogre_bones'));
-        if (burnt) { check('lit on the ground with a tinderbox, they burn', true, true); break; }
+        if (burnt) {
+            check('lit on the ground with a tinderbox, they burn', true, true);
+            break;
+        }
     }
     useOnHeld(p, 'tbwt_raw_karambwanji', 'pestle_and_mortar');
     check('raw karambwanji paste', H.invCount(p, 'tbwt_raw_karambwanji_paste'), 1);
@@ -401,14 +453,17 @@ if (want('quest')) {
     console.log('The crafting manual:');
     talk(p, 'tbwt_lubufu', [3, 2]); // lost my vessel - "a Karambwan stole it!"
     check('Lubufu replaces a lost vessel', H.invCount(p, 'tbwt_karambwan_vessel') >= 1, true);
-    if (H.invCount(p, 'tbwt_karambwan_vessel') > 1) H.clearInv(p), H.give(p, 'tbwt_karambwan_vessel');
+    if (H.invCount(p, 'tbwt_karambwan_vessel') > 1) {
+        H.clearInv(p);
+        H.give(p, 'tbwt_karambwan_vessel');
+    }
     useOnNpc(p, 'tbwt_tinsay_multinpc_island', 'tbwt_karambwan_vessel');
     check('Tinsay writes the manual (Tiadeche 5)', [v(p, 'tbwt_tiadeche'), H.invCount(p, 'tbwt_crafting_manual')], [5, 1]);
     talk(p, 'tbwt_tiadeche_multinpc_shore');
     check('Tiadeche takes it (6); all three done: stage 4', [v(p, 'tbwt_tiadeche'), H.invCount(p, 'tbwt_crafting_manual'), v(p, 'tbwt_main')], [6, 0, 4]);
     check('journal: speak with Timfraku', journal(p).includes('speak with'), true);
 
-    console.log('Timfraku\'s reward:');
+    console.log("Timfraku's reward:");
     H.clearInv(p);
     H.fillInv(p);
     const qpBefore = qp(p);
@@ -420,25 +475,27 @@ if (want('quest')) {
     check('quest points: +2', qp(p) - qpBefore, 2);
     void qp0;
     let onFloor = false;
-    for (let dx = -8; dx <= 8; dx += 8) for (let dz = -8; dz <= 8; dz += 8) for (const lvl of [0, 1]) {
-        for (const o of [...World.gameMap.getZone(p.x + dx, p.z + dz, lvl).getAllObjsUnsafe()]) if (o.type === ObjType.getId('coins') && o.count === 2000) onFloor = true;
-    }
+    for (let dx = -8; dx <= 8; dx += 8)
+        for (let dz = -8; dz <= 8; dz += 8)
+            for (const lvl of [0, 1]) {
+                for (const o of [...World.gameMap.getZone(p.x + dx, p.z + dz, lvl).getAllObjsUnsafe()]) if (o.type === ObjType.getId('coins') && o.count === 2000) onFloor = true;
+            }
     check('full pack: the 2,000 coins land at your feet, not lost', onFloor, true);
     H.clearInv(p);
     check('journal: QUEST COMPLETE', journal(p).includes('QUEST COMPLETE'), true);
 
     console.log('The sons at home:');
     talk(p, 'tbwt_tiadeche_multinpc_house');
-    check('Tiadeche\'s reward (7)', v(p, 'tbwt_tiadeche'), 7);
+    check("Tiadeche's reward (7)", v(p, 'tbwt_tiadeche'), 7);
     talk(p, 'tbwt_tinsay_multinpc_house');
-    check('Tinsay\'s reward (8)', v(p, 'tbwt_tinsay'), 8);
+    check("Tinsay's reward (8)", v(p, 'tbwt_tinsay'), 8);
     talk(p, 'tbwt_tamayu_multinpc_house');
-    check('Tamayu\'s reward (5) and the rune spear(kp)', [v(p, 'tbwt_tamayu'), H.invCount(p, 'tbwt_rune_spear_kp')], [5, 1]);
+    check("Tamayu's reward (5) and the rune spear(kp)", [v(p, 'tbwt_tamayu'), H.invCount(p, 'tbwt_rune_spear_kp')], [5, 1]);
     talk(p, 'tbwt_tamayu_multinpc_house', [1]);
-    check('Tamayu\'s spear stall opens', [p.modalMain === Component.getId('shop_template'), v(p, 'shop') === InvType.getId('tbwt_tamayu_final_inventory')], [true, true]);
+    check("Tamayu's spear stall opens", [p.modalMain === Component.getId('shop_template'), v(p, 'shop') === InvType.getId('tbwt_tamayu_final_inventory')], [true, true]);
     p.closeModal();
     talk(p, 'tbwt_tiadeche_multinpc_house', [1]);
-    check('Tiadeche\'s karambwan stall opens', [p.modalMain === Component.getId('shop_template'), v(p, 'shop') === InvType.getId('tbwt_tiadeche_final_inventory')], [true, true]);
+    check("Tiadeche's karambwan stall opens", [p.modalMain === Component.getId('shop_template'), v(p, 'shop') === InvType.getId('tbwt_tiadeche_final_inventory')], [true, true]);
     p.closeModal();
     if (range) {
         H.give(p, 'tbwt_raw_karambwan', 1);
@@ -450,9 +507,18 @@ if (want('quest')) {
         }
         check('after Tinsay: karambwan cooked thoroughly', H.invCount(p, 'tbwt_cooked_karambwan') >= 1, true);
         p.levels[3] = 50;
+        // Measured against what else landed while eating: drive() runs a few idle ticks, and on a
+        // loaded machine a hitpoints regen tick or the last hit of the poorly cooked one's poison
+        // could fall inside them (seen as 66 and 69).
+        const hits0 = H.hits.length;
         H.opheld(p, 'tbwt_cooked_karambwan', 1);
         drive(p);
-        check('a cooked karambwan still eats as combo food (heals 18)', p.levels[3], 68);
+        const hurt = H.hits
+            .slice(hits0)
+            .filter(h => h.who === p.username)
+            .reduce((a, h) => a + h.damage, 0);
+        const healed = p.levels[3] - 50 + hurt;
+        check('a cooked karambwan still eats as combo food (heals 18, give or take one regen tick)', healed === 18 || healed === 19, true);
     }
     H.give(p, 'tbwt_poorly_cooked_karambwan');
     const hp0 = p.levels[3];
@@ -464,17 +530,29 @@ if (want('quest')) {
     H.tick(1);
     op(p, 2795, 3090, 'tbwt_tribal_statue');
     check('the repaired statue can be prayed at', p.levels[5], 99);
-    for (const [x, z] of [[2782, 3057], [2792, 3054], [2802, 3058]] as [number, number][]) {
+    for (const [x, z] of [
+        [2782, 3057],
+        [2792, 3054],
+        [2802, 3058]
+    ] as [number, number][]) {
         p.teleport(x + 1, z, 0);
         H.tick(1);
         const m2 = H.mesgs.length;
         op(p, x, z, 'tbwt_bamboo_door');
-        check(`bamboo door at ${x},${z} opens after the quest`, mesSince(p, m2).some(m => m.includes('permission')), false);
+        check(
+            `bamboo door at ${x},${z} opens after the quest`,
+            mesSince(p, m2).some(m => m.includes('permission')),
+            false
+        );
     }
     const q2 = player('tbwtdoor', 2783, 3057);
     const m3 = H.mesgs.length;
     op(q2, 2782, 3057, 'tbwt_bamboo_door');
-    check('...and not before it', mesSince(q2, m3).some(m => m.includes('permission')), true);
+    check(
+        '...and not before it',
+        mesSince(q2, m3).some(m => m.includes('permission')),
+        true
+    );
     check('no script errors in the quest', errors.slice(e0), []);
 }
 
@@ -508,7 +586,7 @@ if (want('extras')) {
     p.teleport(2649, 9591, 0);
     H.tick(1);
     op(p, 2648, 9592, 'karam_dungeon_cavestairs');
-    check('up the cave stairs to the dragons\' level', p.level, 2);
+    check("up the cave stairs to the dragons' level", p.level, 2);
     op(p, 2644, 9593, 'loc_5096');
     check('and down again', p.level, 0);
     p.teleport(2713, 9564, 0);
@@ -545,9 +623,16 @@ if (want('migrate')) {
         ['all asked, Lubufu asked', { main: 1, tia: 1, tin: 1, tam: 1, lub: 1, flags: 0 }, { main: 3, tia: 2, tin: 2, tam: 2, lub: 5, flags: 0 }],
         ['two sons helped, beast dead, Lubufu paid', { main: 3, tia: 2, tin: 2, tam: 1, lub: 2, flags: 1 }, { main: 3, tia: 3, tin: 3, tam: 2, lub: 25, flags: 4 }],
         ['all three helped, Timfraku told', { main: 5, tia: 2, tin: 2, tam: 2, lub: 2, flags: 1 }, { main: 3, tia: 3, tin: 3, tam: 3, lub: 25, flags: 4 }],
-        ['complete', { main: 6, tia: 2, tin: 2, tam: 2, lub: 2, flags: 1 }, { main: 6, tia: 7, tin: 8, tam: 4, lub: 31, flags: 4 | (4 << 3) | 7 << 6 }]
+        ['complete', { main: 6, tia: 2, tin: 2, tam: 2, lub: 2, flags: 1 }, { main: 6, tia: 7, tin: 8, tam: 4, lub: 31, flags: 4 | (4 << 3) | (7 << 6) }]
     ];
-    const setS = (p: Player, s: S) => { H.setVar(p, 'tbwt_main', s.main); H.setVar(p, 'tbwt_tiadeche', s.tia); H.setVar(p, 'tbwt_tinsay', s.tin); H.setVar(p, 'tbwt_tamayu', s.tam); H.setVar(p, 'tbwt_lubufu', s.lub); H.setVar(p, 'tbwt_flags', s.flags); };
+    const setS = (p: Player, s: S) => {
+        H.setVar(p, 'tbwt_main', s.main);
+        H.setVar(p, 'tbwt_tiadeche', s.tia);
+        H.setVar(p, 'tbwt_tinsay', s.tin);
+        H.setVar(p, 'tbwt_tamayu', s.tam);
+        H.setVar(p, 'tbwt_lubufu', s.lub);
+        H.setVar(p, 'tbwt_flags', s.flags);
+    };
     const getS = (p: Player): S => ({ main: v(p, 'tbwt_main'), tia: v(p, 'tbwt_tiadeche'), tin: v(p, 'tbwt_tinsay'), tam: v(p, 'tbwt_tamayu'), lub: v(p, 'tbwt_lubufu'), flags: v(p, 'tbwt_flags') });
     /** Run a proc as the login trigger does: with protected access. */
     const runProtected = (p: Player, name: string) => {
