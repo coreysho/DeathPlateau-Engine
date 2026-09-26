@@ -48,7 +48,6 @@ function player(name: string, x: number, z: number, level = 0) {
 }
 const at = (p: Player) => [p.x, p.z, p.level];
 const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
 
 /** While true, a fight does not count as busy: drive() only waits for scripts and queues. */
 let fighting = false;

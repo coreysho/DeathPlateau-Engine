@@ -17,6 +17,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
+import ParamType from '#/cache/config/ParamType.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
@@ -193,6 +194,10 @@ function bankCount(p: Player, name: string) {
     return n;
 }
 
+function groundObj(spot: number[], objName: string, p: Player): boolean {
+    const id = ObjType.getId(objName);
+    return (World.getObj(spot[0], spot[1], 0, id, p.hash64) ?? World.getObj(spot[0], spot[1], 0, id, -1n)) !== null;
+}
 function npcsNear(names: string[], x: number, z: number, level: number, radius = 30): Npc[] {
     const ids = new Set(names.map(n => NpcType.getId(n)));
     const out: Npc[] = [];
@@ -211,6 +216,13 @@ const qp0 = H.getVar(p, 'qp');
 const e0 = errors.length;
 {
     console.log('Larrissa, outside the lighthouse:');
+    // Alfred Grimhand's Barcrawl is the start requirement (merged from 377-wip, da356015e)
+    const mStart = H.mesgs.length;
+    const i0 = H.ifaces.length;
+    talk(p, 'horror_girlfriend_prequest', [1, 1, 1]);
+    const refused = H.ifaces.slice(i0).some(i => i.who === p.username && i.text && /do not meet the requirements/.test(i.text)) || mesSince(p, mStart).some(m => /do not meet the requirements/.test(m));
+    check('without the Barcrawl she will not let you start', [stage(p), refused], [0, true]);
+    H.setVar(p, 'barcrawl', 2); // ^barcrawl_complete
     const words = talk(p, 'horror_girlfriend_prequest', [1, 1, 1, 3]);
     check('the original dialogue ("Oh, thank Armadyl!")', said(words).includes('thank Armadyl'), true);
     check('"Okay, I\'ll help!": started', stage(p), 1);
@@ -357,13 +369,16 @@ const e0 = errors.length;
     if (jr4) {
         const ms = H.mesgs.length;
         H.attackNpc(p, jr4);
+        let jrSpot = [jr4.x, jr4.z];
         for (let t = 0; t < 500 && jr4.isActive; t++) {
+            jrSpot = [jr4.x, jr4.z];
             H.tick(1);
             if (!p.target && !p.delayed && t % 6 === 5) H.attackNpc(p, jr4);
             if (p.levels[3] < 40) p.levels[3] = 99;
             if (p.activeScript && p.activeScript.execution === ScriptState.PAUSEBUTTON) break;
         }
         check('the Dagannoth dies', jr4.isActive, false);
+        check('  and drops nothing (both wikis; the big bones were invented)', groundObj(jrSpot, 'big_bones', p) || groundObj(jrSpot, 'bones', p), false);
         settle(p);
         void ms;
     }
@@ -381,6 +396,11 @@ const e0 = errors.length;
     };
     for (let t = 0; t < 8; t++) { H.tick(1); track(); }
     check('the Dagannoth Mother surfaces out of the water, white, and comes for me', [colours.includes('horror_dagganoth_air'), mother?.target === p], [true, true]);
+    // (377-wip's version surfaced her with 1 hitpoint, via a keep-all changetype: 3df99cb33)
+    check('  with her 120 hitpoints, not 1', [mother?.levels[3], mother?.baseLevels[3]], [120, 120]);
+    const def = (form: string, name: string) => NpcType.get(NpcType.getId(form)).params.get(ParamType.getId(name));
+    check('  and her defence bonuses in every colour: +150 melee, +50 magic and ranged', MOTHER.slice(3).map(f => [def(f, 'stabdefence'), def(f, 'slashdefence'), def(f, 'crushdefence'), def(f, 'magicdefence'), def(f, 'rangedefence')].join()), MOTHER.slice(3).map(() => '150,150,150,50,50'));
+    if (mother) mother.levels[3] = 100; // 20 damage, to see it survive her colour changes
 
     console.log('The Mother\'s colours, and killing her:');
     // Wait for her melee (orange) form, keeping the player alive: only melee hurts her then.
@@ -389,12 +409,15 @@ const e0 = errors.length;
         track();
     }
     check('white, then blue, then orange - 30 ticks apart', colours.filter(c => !/air[abc]$/.test(c)), ['horror_dagganoth_air', 'horror_dagganoth_water', 'horror_dagganoth_melee']);
+    check('  the damage stays with her through the changes (not back to 120, nor 1)', [mother !== undefined && mother.levels[3] > 1 && mother.levels[3] <= 101, mother?.baseLevels[3]], [true, 120]);
     check('  "The Dagannoth changes to blue..." / "...to orange..."', [mesSince(p, m0).includes('The Dagannoth changes to blue...'), mesSince(p, m0).includes('The Dagannoth changes to orange...')], [true, true]);
     const hitsBefore = H.npcHits.length;
+    let motherSpot = [0, 0];
     if (mother) {
         mother.levels[3] = 3;
         H.attackNpc(p, mother);
         for (let t = 0; t < 60 && mother.isActive; t++) {
+            motherSpot = [mother.x, mother.z];
             H.tick(1);
             if (!p.target && !p.delayed && t % 5 === 4) H.attackNpc(p, mother);
             if (p.levels[3] < 40) p.levels[3] = 99;
@@ -402,6 +425,7 @@ const e0 = errors.length;
         }
     }
     check('melee hurts her in her orange form, and she dies', [H.npcHits.slice(hitsBefore).some(h => h.damage > 0), mother?.isActive], [true, false]);
+    check('  she drops bones, not big bones (both wikis)', [groundObj(motherSpot, 'bones', p), groundObj(motherSpot, 'big_bones', p)], [true, false]);
     settle(p);
     fighting = false;
     check('QUEST COMPLETE: stage 10, the casket, in the post-quest caves (m39_156)', [stage(p), H.invCount(p, 'horror_casket'), p.z > 9984, p.level], [10, 1, true, 1]);
@@ -476,7 +500,7 @@ console.log('The basalt rocks (the original\'s: fixed landings, slips at the two
         landed.push([b.x, b.z]);
     }
     check('shore to lighthouse island, rock by rock (99 Agility)', landed, chain.map(c => c[3]));
-    check('  never "I can\'t reach that!"', mesSince(b, m0).filter(t => t.includes("reach")).length, 0);
+    check('  never "I can\'t reach that!"', mesSince(b, m0).filter(t => t.includes('reach')).length, 0);
     check('  and the island walks on to the lighthouse door', connected(0, b.x, b.z, 2509, 3635), true);
     for (const [x, z, name] of [[2514, 3619, 'horror_jumping_spot10'], [2514, 3615, 'horror_jumping_spot8'], [2516, 3611, 'horror_jumping_spot6'], [2522, 3602, 'horror_jumping_spot4'], [2522, 3597, 'horror_jumping_spot2']] as [number, number, string][]) {
         b.levels[3] = 99;
@@ -542,6 +566,9 @@ console.log('OLD SAVES (this server\'s earlier Horror from the Deep) at login:')
     check('old 5 (casket shown) -> 5, the old casket taken back', [stage(k5), H.invCount(k5, 'horror_casket'), bankCount(k5, 'horror_casket'), olds(k5)], [5, 0, 0, [0, 0, 0, 0]]);
     const k4 = login('mig_mother', { horror: 4, bridges: 7, lighting: 7, wall: 63, give: ['horror_casket'] });
     check('old 4 (Mother dead) -> 5, casket taken back', [stage(k4), H.invCount(k4, 'horror_casket')], [5, 0]);
+    // 377-wip's later version recorded Jossik's books in %horror_bridges bits 5-7 (Sara, Zam, Guthix)
+    const kb = login('mig_books', { horror: 6, bridges: 7 | (1 << 6) });
+    check('old complete, a Zamorak book on record but lost -> it is still theirs', [stage(kb), vb(kb, 'horror_claimed_unholybook'), vb(kb, 'horror_claimed_holybook'), vb(kb, 'horror_claimed_guthixbook')], [10, 1, 0, 0]);
     const k3 = login('mig_dag', { horror: 3, bridges: 3, lighting: 5, wall: 63 });
     check('old 3 (Dagannoth dead) -> 5', [stage(k3), flags(k3)], [5, '1100111111110']);
     const k2 = login('mig_wall', { horror: 2, bridges: 7, lighting: 7, wall: 63 });
@@ -579,6 +606,59 @@ console.log('OLD SAVES (this server\'s earlier Horror from the Deep) at login:')
     talk(inside, 'horror_lighthousekeeeper_well');
     check('  and Jossik upstairs hands out nothing early', [H.invCount(inside, 'unfinished_saradominbook') + H.invCount(inside, 'unfinished_zamorakbook') + H.invCount(inside, 'unfinished_guthixbook'), H.getVar(inside, 'godbook_multi')], [0, 0]);
     check('no script errors in the migration', errors.slice(e2), []);
+}
+
+// ================================================================================ merged from 377-wip
+console.log('Logging in inside the quest\'s copy of the lighthouse:');
+{
+    const copy = (name: string, st: number) => {
+        const q = H.makePlayer(name, 2445, 4596, bucket++);
+        H.setVarBit(q, 'port349_horror', 1);
+        H.setVarBit(q, 'horrorquest', st);
+        H.tick(3);
+        return q;
+    };
+    check('quest done: put on the same tile of the real lighthouse', at(copy('in_copy_done', 10)), [2509, 3636, 0]);
+    check('quest in progress: left where it is', at(copy('in_copy_mid', 2)), [2445, 4596, 0]);
+}
+
+console.log('Wrong-element spells splash (377-wip, 3df99cb33):');
+{
+    const e5 = errors.length;
+    const q = player('splasher', 2520, 4645);
+    // a fresh blue Mother for each run: her colour timer is 30 ticks, and each run is 26
+    const cast = (spell: number) => {
+        const m = H.addNpcAt('horror_dagganoth_water', 2522, 4645, 0);
+        H.setNpcVar(m, 'npc_aggressive_player', (q as any).uid);
+        H.equip(q, { rhand: 'staff_of_air' });
+        for (const r of ['airrune', 'waterrune', 'earthrune', 'firerune', 'deathrune', 'chaosrune', 'bloodrune']) H.give(q, r, 500);
+        H.setVarBit(q, 'autocast_set', 1);
+        H.setVarBit(q, 'autocast_spell', spell);
+        const s0 = H.sounds.length, h0 = H.npcHits.length;
+        H.attackNpc(q, m);
+        for (let i = 0; i < 26; i++) {
+            H.tick(1);
+            q.levels[3] = 99;
+            q.levels[6] = 99;
+            m.levels[3] = 90;
+            if (!q.target && !q.delayed && i % 2 === 1) H.attackNpc(q, m);
+        }
+        const fails = H.sounds.slice(s0).filter(x => x.who === q.username && x.synth === 'spellfail').length;
+        const casts = H.sounds.slice(s0).filter(x => x.who === q.username && x.synth.endsWith('_cast_and_fire')).length;
+        const stillBlue = NpcType.get(m.type).debugname === 'horror_dagganoth_water';
+        q.clearPendingAction();
+        if (m.isActive) World.removeNpc(m, -1);
+        H.tick(2);
+        return { casts, fails, hits: H.npcHits.slice(h0).filter(h => h.damage > 0).length, stillBlue };
+    };
+    const wrong = cast(12); // Wind Wave at blue
+    check('Wind Wave at her blue form: every cast splashes', [wrong.stillBlue, wrong.casts > 0, wrong.casts === wrong.fails, wrong.hits], [true, true, true, 0]);
+    // With her +50 magic defence a hit is well under even odds, so up to three rounds (15 or so casts)
+    // before a right-element spell that never lands counts as a failure.
+    let right = cast(13); // Water Wave at blue
+    for (let round = 1; round < 3 && right.stillBlue && right.hits === 0; round++) right = cast(13);
+    check('Water Wave at her blue form: it lands', [right.stillBlue, right.casts > 0, right.hits > 0], [true, true, true]);
+    check('  no script errors', errors.slice(e5), []);
 }
 
 check('no script errors anywhere', errors, []);
