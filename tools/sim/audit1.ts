@@ -609,7 +609,9 @@ if (rfd) {
     check('out of the nut cave, a walkable tile', [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
     check('  and back to the rope on foot', connected(0, p.x, p.z, 2807, 9201, 200), true);
     op(p, 2808, 9201, 'mm_climbing_rope_bottom_temple', 1);
-    check('up the rope, beside the trapdoor', [at(p), walkable(0, p.x, p.z), connected(0, p.x, p.z, 2721, 2767, 200)], [[2806, 2785, 0], true, true]);
+    // Monkey Madness is the PlagueCityRS 349 original now: the rope sets you down on a free tile within
+    // two of the trapdoor (map_findsquare), not on one fixed tile.
+    check('up the rope, beside the trapdoor', [p.level, Math.max(Math.abs(p.x - 2807), Math.abs(p.z - 2785)) <= 2, walkable(0, p.x, p.z), connected(0, p.x, p.z, 2721, 2767, 200)], [0, true, true, true]);
     op(p, 2807, 2785, 'mm_temple_trapdoor_open', 2);
     check('  and the trapdoor closes', World.getLoc(2807, 2785, 0, LocType.getId('mm_temple_trapdoor')) !== null, true);
     p.teleport(2920, 2721, 0);
@@ -1261,10 +1263,16 @@ if (run('marim')) {
     check('the village is walled off from the Ape Atoll landing', connected(0, 2802, 2705, 2788, 2794, 200), false);
     p.teleport(2720, 2764, 0);
     H.tick(2);
-    // Monkey Madness's gate (mm_stage3.rs2) lets anyone through - you arrive a human and have to reach
-    // Garkor before you have a greegree; the elder guards at the palace are what stop a human.
+    // Monkey Madness is the PlagueCityRS 349 original now: the gate is "too heavy" for a human and the
+    // guards open it for a monkey - which RFD's player is, having finished Monkey Madness with a greegree.
     op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
-    check('through the gate', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
+    check('a human cannot move the gate', p.z < 2766, true);
+    H.setVar(p, 'mm_main', 10);
+    H.give(p, 'mm_monkey_greegree_for_normal_monkey');
+    H.opheld(p, 'mm_monkey_greegree_for_normal_monkey', 2);
+    drive(p);
+    op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
+    check('through the gate, as a monkey', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
     check('  and on to the three wise monkeys and the banana tree', [connected(0, p.x, p.z, 2788, 2794, 200), connected(0, p.x, p.z, 2697, 2784, 200)], [true, true]);
     op(p, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
     check('  and back out', p.z < 2766, true);
