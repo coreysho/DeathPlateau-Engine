@@ -36,6 +36,12 @@ import Environment from '#/util/Environment.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
 
+// custom (2026-09-27) - ::yell reaches every player on the world, so a player gets one every
+// YELL_COOLDOWN_TICKS (10 seconds). Staff (2+) are not held to it. Keyed weakly so a logged-out
+// player's entry goes with them.
+const YELL_COOLDOWN_TICKS = 17;
+const lastYell: WeakMap<Player, number> = new WeakMap();
+
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
         if (message.input.length > 80) {
@@ -58,6 +64,21 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             if (!player.canAccess()) {
                 player.messageGame('Please finish what you are doing first.');
                 return false;
+            }
+
+            // custom (2026-09-27) - not a free escape. Anything that stops a logout (combat, for 16
+            // ticks after the last hit: p_preventlogout) stops ::home too, and so does the wilderness.
+            // Administrators and up are not held to it.
+            if (player.staffModLevel < 3) {
+                if (World.currentTick < player.preventLogoutUntil) {
+                    player.messageGame("You can't teleport home until 10 seconds after the end of combat.");
+                    return false;
+                }
+
+                if (player.isInWilderness()) {
+                    player.messageGame("You can't teleport home from the Wilderness.");
+                    return false;
+                }
             }
 
             player.clearInteraction();
@@ -114,6 +135,15 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 .trim();
             if (text.length <= 0 || text.length > 100) {
                 return false;
+            }
+
+            if (player.staffModLevel < 2) {
+                const last = lastYell.get(player);
+                if (last !== undefined && World.currentTick - last < YELL_COOLDOWN_TICKS) {
+                    player.messageGame('You can only yell once every 10 seconds.');
+                    return false;
+                }
+                lastYell.set(player, World.currentTick);
             }
 
             const script = ScriptProvider.getByName('[proc,yell]');

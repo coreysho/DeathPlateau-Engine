@@ -1,3 +1,4 @@
+import net from 'net';
 import path from 'path';
 import { existsSync, readFileSync } from 'fs';
 
@@ -19,6 +20,7 @@ import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 
 import WSClientSocket from '#/server/ws/WSClientSocket.js';
 import ConnectionLimiter, { HANDSHAKE_TIMEOUT_MS, normalizeAddress } from '#/server/ConnectionLimiter.js';
+import { isProxyProtocolEnabled, isTrustedProxy, readProxyHeader } from '#/server/ProxyProtocol.js';
 
 import Environment from '#/util/Environment.js';
 import { tryParseInt } from '#/util/TryParse.js';
@@ -239,7 +241,42 @@ fastify.register(FastifyStatic, {
 });
 
 export async function startWeb() {
-    await fastify.listen({ port: Environment.WEB_PORT, host: '0.0.0.0' });
+    if (!isProxyProtocolEnabled()) {
+        await fastify.listen({ port: Environment.WEB_PORT, host: '0.0.0.0' });
+        return;
+    }
+
+    // custom (2026-09-27) - behind a proxy that sends PROXY protocol (server/ProxyProtocol.ts). The web
+    // server does not listen itself: this does, takes the header off a proxied connection, and hands
+    // the socket on carrying the player's address - which is what req.socket.remoteAddress (the
+    // WebSocket game connection, ConnectionLimiter) and req.ip read.
+    await fastify.ready();
+    const server = net.createServer(socket => {
+        socket.on('error', () => socket.destroy());
+
+        if (!isTrustedProxy(normalizeAddress(socket.remoteAddress))) {
+            fastify.server.emit('connection', socket);
+            return;
+        }
+
+        readProxyHeader(socket).then(player => {
+            if (player === null) {
+                return;
+            }
+
+            Object.defineProperty(socket, 'remoteAddress', { value: player, configurable: true });
+            // Node's HTTP server normally reads the socket's handle directly, which would jump ahead of
+            // the bytes readProxyHeader put back. Marked consumed, it reads them through the stream, in order.
+            const handle = (socket as unknown as { _handle?: { _consumed?: boolean } })._handle;
+            if (handle) {
+                handle._consumed = true;
+            }
+            fastify.server.emit('connection', socket);
+            socket.resume();
+        });
+    });
+
+    await new Promise<void>(resolve => server.listen(Environment.WEB_PORT, '0.0.0.0', resolve));
 }
 
 // management routes
