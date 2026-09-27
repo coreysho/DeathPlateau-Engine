@@ -39,6 +39,9 @@ if (Environment.EASY_STARTUP) {
 if (!Environment.NODE_PRODUCTION) {
     printWarning('NODE_PRODUCTION is false: every player gets developer commands and login rate limits are off. Set NODE_PRODUCTION=true in .env on any world other people can reach.');
 }
+if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
+    printInfo(`Staff-only world: accounts below staff level ${Environment.NODE_MIN_STAFF_LEVEL} are refused at login (NODE_MIN_STAFF_LEVEL).`);
+}
 
 await World.start();
 

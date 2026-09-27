@@ -50,6 +50,11 @@ export default {
     NODE_XPRATE: tryParseInt(process.env.NODE_XPRATE, 1),
     // production mode!
     NODE_PRODUCTION: tryParseBoolean(process.env.NODE_PRODUCTION, false),
+    // custom (2026-09-27) - a staff-only world (the dev world): a login whose account is below this
+    // staffmodlevel is refused with "This world is full". 3 = administrators and up; 1-2 (player mods,
+    // mods) are turned away. It is the level in the database that counts, not the developer level
+    // NODE_PRODUCTION=false gives everyone who does get in. 0 = anyone may log in. See LoginThread.
+    NODE_MIN_STAFF_LEVEL: tryParseInt(process.env.NODE_MIN_STAFF_LEVEL, 0),
     NODE_SUBMIT_INPUT: tryParseBoolean(process.env.NODE_SUBMIT_INPUT, false),
     // Maximum approximate number of storage bytes allowed per single input tracking session.
     // It does not seem remotely possible to get near this amount under normal inputs.

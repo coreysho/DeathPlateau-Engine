@@ -1986,6 +1986,13 @@ class World {
                 client.send(Uint8Array.from([12]));
                 client.close();
                 return;
+            } else if (reply === 11) {
+                // custom (2026-09-27) - below NODE_MIN_STAFF_LEVEL on a staff-only world (LoginThread).
+                // 7 is the 377 client's "This world is full. Please use a different world." - the
+                // nearest thing it has to "not for you", and it sends them where they should go.
+                client.send(Uint8Array.from([7]));
+                client.close();
+                return;
             } else if (reply === 10) {
                 // hop timer
                 const { remaining } = msg;

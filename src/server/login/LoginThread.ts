@@ -30,6 +30,17 @@ type ParentPort = {
     postMessage: (msg: GenericLoginThreadResponse) => void;
 };
 
+// custom (2026-09-27) - the reply for a login refused by NODE_MIN_STAFF_LEVEL. Not one the login server
+// uses; World.onLoginMessage turns it into the client's "This world is full. Please use a different world."
+// (Not exported: this file is a worker, and importing it anywhere else would run it.)
+const REPLY_STAFF_ONLY = 11;
+
+// The account's own level, from the database - checked BEFORE the dev-mode bump below lifts everyone to
+// 4, or a staff-only dev world would let every player in.
+function belowStaffLevel(staffmodlevel: number | undefined | null): boolean {
+    return Environment.NODE_MIN_STAFF_LEVEL > 0 && (staffmodlevel ?? 0) < Environment.NODE_MIN_STAFF_LEVEL;
+}
+
 async function handleRequests(parentPort: ParentPort, msg: any) {
     const { type } = msg;
 
@@ -47,6 +58,16 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 trackLoginAttempts.inc();
                 const stopTimer = trackLoginTime.startTimer();
                 const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave);
+
+                // A staff-only world (NODE_MIN_STAFF_LEVEL). Only a login the login server let in (0, 2, 4)
+                // is refused here - it has marked the account online on this world by now, so it is
+                // released again, the way World releases a login it cannot finish.
+                if ((response.reply === 0 || response.reply === 2 || response.reply === 4) && belowStaffLevel(response.staffmodlevel)) {
+                    await client.playerForceLogout(username);
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: REPLY_STAFF_ONLY, save: null, account_id: -1, members: false });
+                    stopTimer();
+                    break;
+                }
 
                 if (!Environment.NODE_PRODUCTION) {
                     // dev (destructive commands) - AT LEAST 4, so an owner (5) is not demoted
@@ -66,6 +87,13 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 const profile = Environment.NODE_PROFILE;
 
                 let account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
+
+                // A staff-only world never registers anybody: a name it does not know cannot be staff.
+                if (!account && Environment.NODE_MIN_STAFF_LEVEL > 0) {
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: REPLY_STAFF_ONLY, save: null, account_id: -1, members: false });
+                    break;
+                }
+
                 if (!account) {
                     await db
                         .insertInto('account')
@@ -89,6 +117,12 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
 
                 if (account.banned_until !== null && new Date(account.banned_until) > new Date()) {
                     parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 5, save: null, account_id: -1, members: false });
+                    break;
+                }
+
+                // after the password and the ban, so a wrong password still says so
+                if (belowStaffLevel(account.staffmodlevel)) {
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: REPLY_STAFF_ONLY, save: null, account_id: -1, members: false });
                     break;
                 }
 
