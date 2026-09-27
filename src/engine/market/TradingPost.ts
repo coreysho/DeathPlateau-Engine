@@ -302,7 +302,15 @@ export default class TradingPost {
         return '';
     }
 
-    buyNow(buyer: TpPocket, listingId: number): string {
+    // want: how many of the lot to take, or 0 for all of it. A lot of 2 imbued hearts is two things
+    // somebody may only want one of, and OSRS prices per item, so a part of a listing can be bought
+    // and the rest stays up.
+    //
+    // WHAT A PART COSTS. buyout is the price of the whole lot, so a part costs its share of it,
+    // rounded up - and the listing's own price drops by exactly what was paid. Buying a lot one at a
+    // time therefore costs the same as buying it in one go, to the coin, and never less than the
+    // seller asked.
+    buyNow(buyer: TpPocket, listingId: number, want = 0): string {
         const l = this.listing(listingId);
         if (!l || l.state !== ListingState.OPEN) {
             return 'That item is no longer for sale.';
@@ -313,29 +321,50 @@ export default class TradingPost {
         if (l.buyout <= 0) {
             return 'That item has no buyout price - make an offer instead.';
         }
-        if (buyer.total(this.coins) < l.buyout) {
-            return `You need ${tpCoins(l.buyout)} to buy that.`;
+        if (want < 0) {
+            return 'You cannot buy that many.';
+        }
+        const take = want === 0 || want > l.count ? l.count : want;
+        const part = take < l.count;
+        const cost = part ? Math.ceil((l.buyout * take) / l.count) : l.buyout;
+        if (buyer.total(this.coins) < cost) {
+            return `You need ${tpCoins(cost)} to buy that.`;
         }
 
+        // An offer was made for the lot as it stood. Selling a piece of it out from under those
+        // offers changes what they were for, so they go back with a word about why.
         const others = this.offersOn(l.id);
+        const sold = { ...l, count: take };
         this.atomic(undo => {
-            const paid = buyer.del(this.coins, l.buyout);
+            const paid = buyer.del(this.coins, cost);
             undo.push(() => buyer.add(this.coins, paid));
-            if (paid !== l.buyout) {
-                throw new Error(`buyNow: took ${paid} of ${l.buyout}`);
+            if (paid !== cost) {
+                throw new Error(`buyNow: took ${paid} of ${cost}`);
             }
-            this.close(l, ListingState.SOLD, buyer.username, `${l.buyout}`);
-            this.credit(l.seller, this.coins, l.buyout);
-            this.hand(buyer, l.obj, l.count, undo);
+            if (part) {
+                this.db.prepare('UPDATE listing SET count = count - ?, buyout = buyout - ? WHERE id = ?').run(take, cost, l.id);
+            } else {
+                this.close(l, ListingState.SOLD, buyer.username, `${cost}`);
+            }
+            this.credit(l.seller, this.coins, cost);
+            this.hand(buyer, l.obj, take, undo);
             for (const o of others) {
                 this.refund(o, OfferState.LAPSED);
             }
         });
 
         this.hooks.changed(buyer.username);
-        this.notify(l.seller, `${this.name(buyer.username)} bought your ${this.describe(l)} for ${tpCoins(l.buyout)}.`);
+        if (part) {
+            const left = this.listing(l.id)!;
+            this.notify(l.seller, `${this.name(buyer.username)} bought ${this.describe(sold)} of your ${this.describe(l)} for ${tpCoins(cost)}. ${this.describe(left)} is still up, for ${tpCoins(left.buyout)}.`);
+        } else {
+            this.notify(l.seller, `${this.name(buyer.username)} bought your ${this.describe(l)} for ${tpCoins(cost)}.`);
+        }
         for (const o of others) {
-            this.notify(o.buyer, `The ${this.describe(l)} you made an offer on has been sold. Your offer is in your collection box.`);
+            this.notify(
+                o.buyer,
+                part ? `Part of the ${this.describe(l)} you made an offer on was bought, so your offer is in your collection box.` : `The ${this.describe(l)} you made an offer on has been sold. Your offer is in your collection box.`
+            );
         }
         return '';
     }

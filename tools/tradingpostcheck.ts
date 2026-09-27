@@ -312,6 +312,51 @@ console.log('a failed write moves nothing');
 // market itself; it asks the game thread, which calls exactly these two - with a username and an
 // offer id, and nothing else. The seller is not online and has no inventory here at all, which is
 // the point: everything they are owed has to land in the collection box.
+// Buying PART of a lot. Two imbued hearts up, and somebody who wants one of them.
+console.log('buying part of a lot');
+{
+    const alice = new Pocket('alice'),
+        bob = new Pocket('bob');
+    alice.add(CAPE, 3);
+    bob.add(COINS, 1_000);
+    const w = world(alice, bob);
+    w.tp.list(alice, CAPE, 3, 100);
+    const id = lastListing(w);
+    const t0 = census(w);
+    check(w.tp.buyNow(bob, id, 4) === '', 'asking for more than the lot buys the lot');
+    check(w.tp.listing(id)!.state === 1, 'and closes it');
+    check(bob.total(CAPE) === 3 && bob.total(COINS) === 900, 'bob has all three and paid 100');
+    conserved(w, t0, 'buying more than the lot');
+}
+{
+    const alice = new Pocket('alice'),
+        bob = new Pocket('bob'),
+        carol = new Pocket('carol');
+    alice.add(CAPE, 3);
+    bob.add(COINS, 1_000);
+    carol.add(COINS, 1_000);
+    const w = world(alice, bob, carol);
+    w.tp.list(alice, CAPE, 3, 100);
+    const id = lastListing(w);
+    check(w.tp.makeOffer(carol, id, 80, carol, []) === '', 'carol has an offer in on the lot');
+    const t0 = census(w);
+    check(w.tp.buyNow(bob, id, 1) === '', 'bob buys one of the three');
+    check(bob.total(CAPE) === 1, 'and gets one');
+    check(bob.total(COINS) === 966, 'for a third of 100, rounded up: 34');
+    check(w.tp.boxCount('alice', COINS) === 34, 'which the seller can collect');
+    const left = w.tp.listing(id)!;
+    check(left.state === 0 && left.count === 2, 'the other two are still up');
+    check(left.buyout === 66, 'for what is left of the asking price');
+    check(w.tp.boxCount('carol', COINS) === 80, 'an offer on the lot goes back, since the lot changed');
+    check(w.tp.buyNow(bob, id, 1) === '', 'bob buys another');
+    check(w.tp.listing(id)!.buyout === 33, 'and the price again drops by what he paid');
+    check(w.tp.buyNow(bob, id, 0) === '', 'and then the last one');
+    check(w.tp.listing(id)!.state === 1, 'which closes the listing');
+    check(bob.total(COINS) === 900, 'three ones cost exactly what the lot cost');
+    check(bob.total(CAPE) === 3, 'and he has all three');
+    conserved(w, t0, 'buying part of a lot');
+}
+
 console.log('acting with the seller away');
 {
     const alice = new Pocket('alice'),

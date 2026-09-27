@@ -392,10 +392,10 @@ const TradingPostOps: CommandHandlers = {
         state.pushString(tradingPost().list(pocket(player, ownInv(state, inv)), obj, count, buyout));
     },
 
-    // tp_buynow(int $listing, inv $inv)(string)
+    // tp_buynow(int $listing, int $count, inv $inv)(string): $count of the lot, or 0 for all of it.
     [ScriptOpcode.TP_BUYNOW]: state => {
-        const [id, inv] = state.popInts(2);
-        state.pushString(tradingPost().buyNow(pocket(state.activePlayer, ownInv(state, inv)), id));
+        const [id, count, inv] = state.popInts(3);
+        state.pushString(tradingPost().buyNow(pocket(state.activePlayer, ownInv(state, inv)), id, count));
     },
 
     // tp_makeoffer(int $listing, int $coins, inv $inv, inv $barter)(string): coins out of $inv, and
