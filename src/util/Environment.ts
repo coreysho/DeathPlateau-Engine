@@ -163,5 +163,11 @@ export default {
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.
     DISCORD_TOKEN: tryParseString(process.env.DISCORD_TOKEN, ''),
-    DISCORD_GUILD_ID: tryParseString(process.env.DISCORD_GUILD_ID, '')
+    DISCORD_GUILD_ID: tryParseString(process.env.DISCORD_GUILD_ID, ''),
+
+    // custom (2026-09-27) - the ticket bot (server/tickets/TicketBot.ts, `npm run tickets`): support
+    // tickets and bug reports. A separate Discord application from the relay above, with its own
+    // token. The guild defaults to DISCORD_GUILD_ID. Keep the token in .env only.
+    TICKET_BOT_TOKEN: tryParseString(process.env.TICKET_BOT_TOKEN, ''),
+    TICKET_GUILD_ID: tryParseString(process.env.TICKET_GUILD_ID, '')
 };

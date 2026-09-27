@@ -31,6 +31,7 @@ import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHan
 import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
+import { queueBugReport } from '#/server/tickets/TicketInbox.js';
 
 import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
@@ -50,6 +51,11 @@ const lastYell: WeakMap<Player, number> = new WeakMap();
 const PASSWORD_COOLDOWN_TICKS = 8;
 const lastPasswordChange: WeakMap<Player, number> = new WeakMap();
 const PASSWORD_CHARS = /^[a-z0-9!"$%^&*()\-_=+[{\]};:'@#~,<.>/?\\|]+$/;
+
+// custom (2026-09-27) - ::bug goes to the staff as a Discord ticket, so one a minute per account.
+// Keyed by username rather than Player so logging out and back in does not reset it.
+const BUG_COOLDOWN_MS = 60_000;
+const lastBugReport: Map<string, number> = new Map();
 
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
@@ -152,6 +158,36 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             const code = World.discordCode(player);
             player.wrappedMessageGame(`Your Discord link code is @dre@${code}@bla@ - it works once, for 10 minutes.`);
             player.wrappedMessageGame(`In our Discord, type @dre@/link ${code}@bla@. To stop alerts later: ::discord unlink`);
+            return true;
+        }
+
+        if (cmd === 'bug') {
+            // custom (2026-09-27) - report a bug from where it happened. Available to all players.
+            // It is filed as a private bug report in our Discord by the ticket bot, a process of its
+            // own that may be down: the report waits in the inbox until it is back - see
+            // server/tickets/TicketInbox.ts. Where the player stands goes with it.
+            const text = cheat.substring(cmd.length).trim();
+            if (text.length < 10) {
+                player.wrappedMessageGame('Type ::bug followed by what went wrong, e.g. ::bug the cook in Lumbridge will not talk to me');
+                return true;
+            }
+
+            const last = lastBugReport.get(player.username);
+            if (last !== undefined && Date.now() - last < BUG_COOLDOWN_MS) {
+                player.messageGame('You can only send one bug report a minute.');
+                return true;
+            }
+
+            if (queueBugReport({ username: player.username, text, x: player.x, z: player.z, level: player.level }) === null) {
+                player.messageGame('Your bug report could not be sent just now. Please try again in a moment.');
+                return true;
+            }
+            lastBugReport.set(player.username, Date.now());
+
+            player.messageGame('Thanks - your bug report has been sent to the staff.');
+            if (World.discordEnabled) {
+                player.wrappedMessageGame('If your account is linked to our Discord (::discord), you will be added to its ticket there to follow it up.');
+            }
             return true;
         }
 
