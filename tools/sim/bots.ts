@@ -23,7 +23,7 @@ import NpcType from '#/cache/config/NpcType.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
-import { getVarp, wildernessLevel } from '#/engine/bot/BotBrain.js';
+import { getVarp, sameUid, wildernessLevel } from '#/engine/bot/BotBrain.js';
 import { isMapBlocked } from '#/engine/GameMap.js';
 import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
 import ClientCheat from '#/network/game/client/model/ClientCheat.js';
@@ -244,7 +244,7 @@ console.log('BOT AGAINST BOT');
     for (let t = 0; t < 120; t++) {
         H.tick(1);
         if (BotManager.stateOf(hunter)?.pvpTarget === prey) hunted = true;
-        if (getVarp(hunter, 'pk_predator1') === prey.uid) foughtBack = true; // the roamer's hits landed on the hunter
+        if (sameUid(getVarp(hunter, 'pk_predator1'), prey.uid)) foughtBack = true; // the roamer's hits landed on the hunter
         // neither is under test for its food here
         for (const x of [hunter, prey]) if (x.levels[PlayerStat.HITPOINTS] < 30) x.levels[PlayerStat.HITPOINTS] = x.baseLevels[PlayerStat.HITPOINTS];
     }
@@ -266,6 +266,9 @@ console.log('BOT AGAINST BOT');
                 .join(' / ')
         );
     check('  and the roamer fights back', foughtBack, true);
+    // a uid of 2^31 or more (World: unsigned) reads back from a varp negative - half of all names
+    const bigUid = 0xf17d0003;
+    check('  a player_uid varp matches a uid of 2^31 or more', [sameUid(bigUid | 0, bigUid), sameUid((bigUid | 0) + 1, bigUid)], [true, false]);
     BotManager.despawn(hunter);
     BotManager.despawn(prey);
     H.tick(5);
@@ -276,7 +279,7 @@ console.log('BOT AGAINST BOT');
     let left = true;
     for (let t = 0; t < 60; t++) {
         H.tick(1);
-        if (BotManager.stateOf(h2)?.pvpTarget === p2 || getVarp(p2, 'pk_predator1') === h2.uid) left = false;
+        if (BotManager.stateOf(h2)?.pvpTarget === p2 || sameUid(getVarp(p2, 'pk_predator1'), h2.uid)) left = false;
     }
     check('  with botsAttackBots false it leaves bots alone', left, true);
     BotManager.despawn(h2);
@@ -407,10 +410,18 @@ console.log('RUNNING');
     const r = BotManager.spawn('roamer', { kitId: 'low-main-melee', at: { x: spot.x, z: spot.z, level: 0 }, manual: true }) as BotPlayer;
     H.tick(3);
     check('a bot starts with its run on', r.run, 1);
-    // spent: the engine turns run off at 0, as it does for anyone
+    // spent: the engine turns run off at 0 (Player.updateEnergy). Doing it here rather than waiting for
+    // the engine: a bot standing still that tick gets its first 8+ energy back before the engine looks,
+    // and keeps running - which made this check pass or fail on where the bot happened to be.
     r.runenergy = 0;
-    H.tick(1);
-    check('  out of energy, it walks', r.run, 0);
+    r.run = 0;
+    let turnedOnEarly = false;
+    for (let t = 0; t < 10; t++) {
+        r.runenergy = 0; // held at nothing
+        H.tick(1);
+        if (r.run === 1) turnedOnEarly = true;
+    }
+    check('  out of energy, it walks (and leaves run off)', [r.run, turnedOnEarly], [0, false]);
     r.runenergy = 6000; // got its breath back
     let back = -1;
     for (let t = 0; t < 40 && back === -1; t++) {

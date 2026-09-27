@@ -83,6 +83,19 @@ function noAntifire(type: NpcType): boolean {
     return (type.debugname ?? '').includes('dragon');
 }
 
+/**
+ * Is this varp's player_uid that player? A player's uid is unsigned (World: `>>> 0`, up to 2^32) and a
+ * varp holds a signed 32-bit int, so a uid of 2^31 or more comes back from %pk_predator1 negative -
+ * about half of all names. Compared as they are, those never matched: a bot read the player who had
+ * just hit it as "someone else", and single-way combat stopped it hitting back.
+ */
+export function sameUid(varpValue: number, uid: number): boolean {
+    return (varpValue | 0) === (uid | 0);
+}
+
+/** Beyond this a bot runs after its target rather than clicking it (see fightPlayer). */
+const CHASE_DISTANCE = 10;
+
 function dist(a: { x: number; z: number }, b: { x: number; z: number }): number {
     return Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 }
@@ -138,6 +151,7 @@ export class BotState {
     npcSince = 0;
     npcHp = 0;
     legFights = 0;
+    chaseTo: { x: number; z: number } | null = null;
     // where it was a while ago, to notice a bot that has got itself walled in
     anchor = { x: 0, z: 0, since: 0 };
 
@@ -299,12 +313,12 @@ export class BotBrain {
             const now = World.currentTick;
             if (getVarp(bot, 'lastcombat') + 8 > now) {
                 const mine = getVarp(bot, 'pk_predator1');
-                if (mine !== other.uid && mine !== -1 && mine !== 0) return false;
+                if (!sameUid(mine, other.uid) && mine !== -1 && mine !== 0) return false;
                 if (World.getNpcByUid(getVarp(bot, 'aggressive_npc'))) return false;
             }
             if (getVarp(other, 'lastcombat') + 8 > now) {
                 const theirs = getVarp(other, 'pk_predator1');
-                if (theirs !== bot.uid && theirs !== -1 && theirs !== 0) return false;
+                if (!sameUid(theirs, bot.uid) && theirs !== -1 && theirs !== 0) return false;
                 if (World.getNpcByUid(getVarp(other, 'aggressive_npc'))) return false;
             }
         }
@@ -731,6 +745,22 @@ export class BotBrain {
         const kit = this.kit;
         const d = dist(bot, t);
 
+        // Too far to click: a player can only click someone on their screen, and the attack handler
+        // turns away anyone further than that (BotInput: 15 tiles) without a word - so a bot that kept
+        // clicking a target running away from it stood still for good. Run after them instead, and
+        // click once they are close.
+        if (d > CHASE_DISTANCE) {
+            if (!bot.hasWaypoints() || this.s.chaseTo === null || dist(this.s.chaseTo, t) > 3) {
+                const to = { x: t.x, z: t.z };
+                this.later('chase', () => {
+                    this.s.chaseTo = to;
+                    Input.walk(bot, to.x, to.z);
+                });
+            }
+            return;
+        }
+        this.s.chaseTo = null;
+
         this.manageSpec(t, d);
 
         if (kit.style === 'mage' || kit.style === 'hybrid') {
@@ -854,7 +884,7 @@ export class BotBrain {
     }
 
     private inCombatWith(p: Player): boolean {
-        return this.bot.target === p || getVarp(p, 'pk_predator1') === this.bot.uid;
+        return this.bot.target === p || sameUid(getVarp(p, 'pk_predator1'), this.bot.uid);
     }
 
     // ---------------------------------------------------------------- roamer
