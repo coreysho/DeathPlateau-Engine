@@ -1,5 +1,5 @@
 import { PlayerInfoProt, Visibility } from '#/network/rsbuf/index.js';
-import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
+import { CollisionFlag } from '#/engine/routefinder/index.js';
 
 import Component from '#/cache/config/Component.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
@@ -28,13 +28,14 @@ import { MoveStrategy } from '#/engine/entity/MoveStrategy.js';
 import { isClientConnected } from '#/engine/entity/NetworkPlayer.js';
 import Npc from '#/engine/entity/Npc.js';
 import Obj from '#/engine/entity/Obj.js';
-import PathingEntity from '#/engine/entity/PathingEntity.js';
+import PathingEntity, { TargetOp } from '#/engine/entity/PathingEntity.js';
+import { Interaction } from '#/engine/entity/Interaction.js';
 import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
 import { PlayerQueueRequest, PlayerQueueType, QueueType, ScriptArgument } from '#/engine/entity/PlayerQueueRequest.js';
 import { PLAYER_STAT_COUNT, PlayerStat, PlayerStatEnabled, PlayerStatFree, PlayerStatNameMap } from '#/engine/entity/PlayerStat.js';
 import InputTracking from '#/engine/entity/tracking/InputTracking.js';
 import { WealthEventParams } from '#/engine/entity/tracking/WealthEvent.js';
-import { changeNpcCollision, changePlayerOccCollision, findNaivePath, reachedEntity, reachedLoc, reachedObj } from '#/engine/GameMap.js';
+import { changeNpcCollision, changePlayerOccCollision, findPathToEntity, reachedEntity, reachedLoc, reachedObj } from '#/engine/GameMap.js';
 import { Inventory, InventoryListener } from '#/engine/Inventory.js';
 import ScriptFile from '#/engine/script/ScriptFile.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
@@ -308,6 +309,9 @@ export default class Player extends PathingEntity {
     varsString: string[];
     invs: Map<number, Inventory> = new Map<number, Inventory>();
     nextTarget: Entity | null = null;
+    // where a player/npc target stood when the route to it was last worked out (pathToPathingTarget)
+    routedTargetX: number = -1;
+    routedTargetZ: number = -1;
 
     publicChat: ChatModePublic = ChatModePublic.ON;
     privateChat: ChatModePrivate = ChatModePrivate.ON;
@@ -1112,13 +1116,23 @@ export default class Player extends PathingEntity {
         return ScriptProvider.getByTrigger(this.targetOp, typeId, categoryId) ?? null;
     }
 
+    setInteraction(interaction: Interaction, target: Entity, op: TargetOp, com?: number): boolean {
+        // a new interaction routes afresh (the route in hand is the client's, or for another target)
+        this.routedTargetX = -1;
+        this.routedTargetZ = -1;
+        return super.setInteraction(interaction, target, op, com);
+    }
+
     pathToPathingTarget(): void {
         if (!(this.target instanceof PathingEntity)) {
             return;
         }
 
-        if (this.isLastWaypoint() && (this.targetOp === ServerTriggerType.APPLAYER3 || this.targetOp === ServerTriggerType.OPPLAYER3)) {
-            this.queueWaypoint(this.target.followX, this.target.followZ);
+        // Follow walks in the followed player's footsteps (the tile they last stepped off), not up to them.
+        if (this.targetOp === ServerTriggerType.APPLAYER3 || this.targetOp === ServerTriggerType.OPPLAYER3) {
+            if (this.isLastWaypoint()) {
+                this.queueWaypoint(this.target.followX, this.target.followZ);
+            }
             return;
         }
 
@@ -1126,39 +1140,30 @@ export default class Player extends PathingEntity {
             return;
         }
 
-        // Different mechanics for naive and smart paths
-        if (this.moveStrategy === MoveStrategy.NAIVE) {
-            // This logic is redundant with some stuff in pathToTarget and findNaivePath,
-            // But for maintainability it's nice to split it out... It's pretty hard to match correct mechanics
-            const underTarget = CoordGrid.intersects(this.x, this.z, this.width, this.length, this.target.x, this.target.z, this.target.width, this.target.length);
-            if (underTarget) {
-                this.randomWalk();
-                return;
-            }
-
+        if (this.moveStrategy === MoveStrategy.FLY) {
             if (this.isLastWaypoint()) {
-                this.naivePathToTarget();
+                this.pathToTarget();
             }
-        } else if (this.isLastWaypoint()) {
-            this.pathToTarget();
-        }
-    }
-
-    naivePathToTarget() {
-        if (!this.target) {
             return;
         }
-        let angle = 0;
-        if (this.target instanceof Loc) {
-            angle = this.target.angle;
-        }
 
-        const { x, z } = CoordGrid.unpackCoord(this.waypoints[0]);
-
-        // If no waypoint, or waypoint is further than 1 tile from target, set new dest
-        if (this.waypointIndex === -1 || Math.abs(this.target.x - x) > 1 || Math.abs(this.target.z - z) > 1) {
-            const waypoints = findNaivePath(this.level, this.x, this.z, this.target.x, this.target.z, this.width, this.length, this.target.width, this.target.length, angle, CollisionType.NORMAL);
-            this.queueWaypoints(waypoints);
+        // Walking up to a player or an npc is the server's route, as in Old School: the smart
+        // pathfinder to a tile beside the target's whole footprint, worked out again whenever the
+        // target has moved since (or the route has run out short of it).
+        //
+        // It used to keep the route the client sent with the click, and only when the target had
+        // wandered more than a tile from that route's end fall back to a straight-line step towards
+        // it - with the target treated as 1x1 at its south-west tile. The 377 client routes to an npc
+        // the same way (Client.tryMove with a 1x1 target, npcs not in its collision map), so for
+        // anything bigger than 1x1 the route ENDED ON THE NPC: the player ran onto a cow or a demon,
+        // then random-walked a tile a tick until it happened to come out - "runs towards it, then
+        // back, then towards it again". And a straight line into a fence stood the player at the
+        // fence for good. The server knows the npc's size and every wall, so it routes.
+        const target = this.target;
+        if (!this.hasWaypoints() || target.x !== this.routedTargetX || target.z !== this.routedTargetZ || target.level !== this.level) {
+            this.queueWaypoints(findPathToEntity(this.level, this.x, this.z, target.x, target.z, this.width, target.width, target.length));
+            this.routedTargetX = target.x;
+            this.routedTargetZ = target.z;
         }
     }
 
