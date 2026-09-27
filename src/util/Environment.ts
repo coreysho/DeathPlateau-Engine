@@ -82,6 +82,8 @@ export default {
     NODE_BOTS_CONFIG: tryParseString(process.env.NODE_BOTS_CONFIG, 'data/config/bots.json'),
     NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
     NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
+    // what bots pray in a fight: smite, protect or none ('' = the file, or the default: smite)
+    NODE_BOTS_PRAYER: tryParseString(process.env.NODE_BOTS_PRAYER, ''),
     // every N ticks, one log line per bot: what it is doing and why (0 = off)
     NODE_BOTS_TRACE: tryParseInt(process.env.NODE_BOTS_TRACE, 0),
     // entities cap

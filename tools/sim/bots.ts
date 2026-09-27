@@ -22,7 +22,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
-import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
+import { DEFAULT_BOT_CONFIG, areaFor } from '#/engine/bot/BotConfig.js';
 import { getVarp, sameUid, wildernessLevel } from '#/engine/bot/BotBrain.js';
 import { isMapBlocked } from '#/engine/GameMap.js';
 import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
@@ -167,6 +167,9 @@ check("  the content's playercount agrees (scale_by_playercount(4000) = 4000 - o
 
 console.log('PKERS');
 BotManager.config.roamers = { low: 0, mid: 0, high: 0, max: 0 }; // quiet from here on
+// the fights below are at level 19 with melee kits: the melee area (Edgeville, level 5 and below) is
+// off for them, and checked in its own section at the end
+BotManager.config.meleeArea = null;
 BotManager.despawnAll();
 H.tick(25);
 check('despawned: none left', bots().length, 0);
@@ -465,6 +468,8 @@ const trace = (t: number, prey: BotPlayer) => {
         );
 };
 {
+    // prayerMode 'protect' here (the default is 'smite', checked below): a protection prayer against melee
+    BotManager.config.prayerMode = 'protect';
     const prey = BotManager.spawn('pker', { kitId: 'mid-main-melee', at: { x: k.x + 2, z: k.z, level: 0 }, manual: true }) as BotPlayer;
     H.tick(2);
     const food0 = count(prey, 'swordfish');
@@ -483,12 +488,39 @@ const trace = (t: number, prey: BotPlayer) => {
     }
     fought = H.hitsFor('botkiller').length > 0;
     check('the bot fought back', fought, true);
-    check('  prayed against melee', prayed, true);
+    check('  prayed against melee (prayerMode protect)', prayed, true);
     check('  ate', ate, true);
     check('  and ran once its food was gone', fled, true);
     BotManager.despawn(prey);
     H.tick(5);
 }
+
+// prayerMode 'smite' (the default) and 'none': the same kit against the same attacker (a higher kit would
+// be out of the killer's level range here), given the 52+ Prayer that Smite needs
+for (const mode of ['smite', 'none'] as const) {
+    BotManager.config.prayerMode = mode;
+    const prey = BotManager.spawn('pker', { kitId: 'mid-main-melee', at: { x: k.x + 2, z: k.z, level: 0 }, manual: true }) as BotPlayer;
+    prey.baseLevels[PlayerStat.PRAYER] = 60;
+    prey.levels[PlayerStat.PRAYER] = 60;
+    H.tick(2);
+    let smite = false,
+        protect = false;
+    for (let t = 0; t < 150 && prey.isActive; t++) {
+        hunt(prey);
+        H.tick(1);
+        if (getVarp(prey, 'prayer17') === 1) smite = true;
+        if (['prayer12', 'prayer13', 'prayer14'].some(v => getVarp(prey, v) === 1)) protect = true;
+    }
+    if (mode === 'smite') {
+        check('prayerMode smite (the default): Smite in the fight, never a protection prayer', [smite, protect], [true, false]);
+    } else {
+        check('prayerMode none: no prayer at all', [smite, protect], [false, false]);
+    }
+    BotManager.despawn(prey);
+    killer.clearInteraction(); // hunt() only picks a new prey when the killer is after nobody
+    H.tick(5);
+}
+BotManager.config.prayerMode = 'smite';
 
 console.log('DEATH');
 const doomed = BotManager.spawn('pker', { kitId: 'mid-main-melee', at: { x: k.x + 1, z: k.z, level: 0 }, manual: true }) as BotPlayer;
@@ -573,6 +605,59 @@ check(
 
 const saves = `data/players/${Environment.NODE_PROFILE}`;
 check('  and no save file for one', fs.existsSync(saves) ? fs.readdirSync(saves).filter(f => f.startsWith('bot_')) : [], []);
+
+console.log('MELEE AREA');
+BotManager.config.meleeArea = structuredClone(DEFAULT_BOT_CONFIG.meleeArea);
+{
+    const area = DEFAULT_BOT_CONFIG.meleeArea!;
+    check('melee kits keep to Edgeville, level 5 and below; others to their depth', [areaFor({ style: 'melee', bracket: 'max' }, BotManager.config), areaFor({ style: 'ranged', bracket: 'mid' }, BotManager.config).maxLevel], [area, 30]);
+    // spawned with no spot given: where the manager puts a melee kit, then 600 ticks of roaming
+    const walkers = ['low-main-melee', 'mid-main-melee', 'high-tank', 'max-dharok'].map(kitId => BotManager.spawn('roamer', { kitId, manual: true }) as BotPlayer);
+    let worst = 0, minX = Infinity, maxX = -Infinity, moved = 0;
+    const s0 = new Map(walkers.map(b => [b, { x: b.x, z: b.z }]));
+    for (let t = 0; t < 600; t++) {
+        H.tick(1);
+        for (const b of walkers) {
+            // (a bot gone to restock is out of the wilderness - teleported off, then back at a spawn point)
+            if (!b.isActive || wildernessLevel(b, b.x, b.z, 0) < 1) continue;
+            worst = Math.max(worst, wildernessLevel(b, b.x, b.z, 0));
+            minX = Math.min(minX, b.x);
+            maxX = Math.max(maxX, b.x);
+            const o = s0.get(b)!;
+            moved = Math.max(moved, Math.abs(b.x - o.x) + Math.abs(b.z - o.z));
+        }
+    }
+    console.log(`    melee roamers: deepest level ${worst}, x ${minX}-${maxX}, furthest ${moved} tiles`);
+    check('  melee roamers stay at level 5 or shallower', worst <= area.maxLevel, true);
+    check('  and in the Edgeville stretch', minX >= area.minX - 3 && maxX <= area.maxX + 3, true);
+    check('  and still get about', moved >= 15, true);
+    for (const b of walkers) BotManager.despawn(b);
+    H.tick(5);
+
+    // a melee PKer ignores a player at level 10, and goes for one at level 3
+    for (const [lvlZ, want] of [
+        [3596, false],
+        [3540, true]
+    ] as const) {
+        const spot = open(3094, lvlZ);
+        const prey = H.makePlayer('botedge' + lvlZ, spot.x, spot.z);
+        H.tick(2);
+        setStats(prey, { [PlayerStat.ATTACK]: 70, [PlayerStat.STRENGTH]: 70, [PlayerStat.DEFENCE]: 70, [PlayerStat.HITPOINTS]: 70, [PlayerStat.PRAYER]: 43 });
+        const hunter = BotManager.spawn('pker', { kitId: 'mid-main-melee', at: { x: spot.x + 3, z: spot.z, level: 0 }, manual: true }) as BotPlayer;
+        H.clearLogs();
+        let hit = false;
+        for (let t = 0; t < 40 && !hit; t++) {
+            H.tick(1);
+            if (H.hitsFor(prey.username).length) hit = true;
+        }
+        const lvl = wildernessLevel(prey, prey.x, prey.z, 0);
+        if (hit !== want) console.log('    hunter:', BotManager.describe(BotManager.stateOf(hunter)!), BotManager.stateOf(hunter)?.lastAction, hunter.messages.slice(-4).map(m => m.text).join(' / '), `prey cb${prey.combatLevel} hunter cb${hunter.combatLevel}`);
+        check(`  a melee PKer ${want ? 'attacks' : 'leaves alone'} a player at level ${lvl}`, hit, want);
+        BotManager.despawn(hunter);
+        H.despawn(prey);
+        H.tick(5);
+    }
+}
 
 console.log('STAFF COMMANDS');
 check('::bots is for administrators: a moderator gets nothing', cheat(mod, 'bots'), []);

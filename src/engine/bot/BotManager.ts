@@ -2,7 +2,7 @@ import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
-import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, loadBotConfig } from '#/engine/bot/BotConfig.js';
+import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
 import { type BotKind, type BotKit, BOT_KITS, kitById, kitsFor } from '#/engine/bot/BotKits.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
@@ -235,9 +235,13 @@ class BotManager implements BotHooks {
 
     /** A spawn point: a hotspot the kit's bracket may be at (its brackets list, else its depth). */
     private hotspotFor(kit: BotKit): BotHotspot {
-        const depth = this.config.depth[kit.bracket];
-        const ok = this.config.hotspots.filter(h => (h.brackets ? h.brackets.includes(kit.bracket) : surfaceWildernessLevel(h.x, h.z) <= depth));
-        return pick(ok.length ? ok : this.config.hotspots);
+        const area = areaFor(kit, this.config);
+        const inside = (h: BotHotspot) => surfaceWildernessLevel(h.x, h.z) <= area.maxLevel && h.x >= area.minX && h.x <= area.maxX;
+        const ok = this.config.hotspots.filter(h => (h.brackets ? h.brackets.includes(kit.bracket) && inside(h) : inside(h)));
+        if (ok.length) return pick(ok);
+        // none configured in its area (a melee area with no hotspot of its own): its middle, shallow end
+        const z = 3520 + Math.min(area.maxLevel, 3) * 8 - 4;
+        return { name: 'its area', x: Math.floor((area.minX + area.maxX) / 2), z, radius: 10 };
     }
 
     /**
