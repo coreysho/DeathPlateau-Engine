@@ -72,10 +72,14 @@ export default {
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),
     // custom (2026-09-27) - open sockets (game + ondemand, TCP + WebSocket), see server/ConnectionLimiter.ts.
-    // 0 = no limit. Behind a proxy that does not pass the real address on, every player shares the
-    // proxy's address - set NODE_MAX_SOCKETS_PER_IP=0 there, or everyone is capped together.
+    // 0 = no limit. Behind a proxy, set PROXY_PROTOCOL_FROM below so players keep their own addresses -
+    // without it every player shares the proxy's, and one per-IP cap.
     NODE_MAX_SOCKETS: tryParseInt(process.env.NODE_MAX_SOCKETS, 2048),
     NODE_MAX_SOCKETS_PER_IP: tryParseInt(process.env.NODE_MAX_SOCKETS_PER_IP, 16),
+    // custom (2026-09-27) - addresses (and IPv4 CIDRs), comma separated, of a proxy or tunnel in front of
+    // the game and web ports that sends PROXY protocol, so players keep their own addresses. Empty = off.
+    // Connections from these must carry the header; everyone else connects as before. server/ProxyProtocol.ts
+    PROXY_PROTOCOL_FROM: tryParseString(process.env.PROXY_PROTOCOL_FROM, ''),
     NODE_MAX_NPCS: tryParseInt(process.env.NODE_MAX_NPCS, 16383),
     NODE_DEBUGPROC_CHAR: tryParseString(process.env.NODE_DEBUGPROC_CHAR, '~'),
     NODE_WS_ONDEMAND: tryParseBoolean(process.env.NODE_WS_ONDEMAND, false),
