@@ -103,7 +103,14 @@ import HashTable from '#/datastruct/HashTable.js';
 import Midi from '#/cache/midi/Midi.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
 
-const priv = forge.pki.privateKeyFromPem(fs.readFileSync('data/config/private.pem', 'ascii'));
+// custom (2026-09-27) - the login block's key. The old one (data/config/private.pem) was 512-bit and
+// committed to a public repo, so anyone who saw a login could read the password in it. The new one is
+// made on the server by `npm run rsa`, is never committed (data/config/ is ignored), and the client
+// carries its public half (Client.java LOGIN_RSAN / LOGIN_RSAE).
+if (!fs.existsSync(Environment.LOGIN_RSA_KEY_PATH)) {
+    throw new Error(`No login RSA key at ${Environment.LOGIN_RSA_KEY_PATH}. Run \`npm run rsa\` to make one, then put the modulus it prints into the client (Client.java LOGIN_RSAN / LOGIN_RSAE).`);
+}
+const priv = forge.pki.privateKeyFromPem(fs.readFileSync(Environment.LOGIN_RSA_KEY_PATH, 'ascii'));
 
 type LogoutRequest = {
     save: Uint8Array;
@@ -2182,9 +2189,34 @@ class World {
 
     static loginBuf = Packet.alloc(1);
 
+    private isLoginRateLimited(client: ClientSocket): boolean {
+        if (!Environment.NODE_PRODUCTION || Environment.NODE_RATELIMIT_ADDRESS_LOGIN <= 0) {
+            return false;
+        }
+
+        const last = this.loginAddressAttempts.get(client.remoteAddress);
+        const attempts = last ? last + 1 : 1;
+        this.loginAddressAttempts.set(client.remoteAddress, attempts);
+
+        if (attempts >= Environment.NODE_RATELIMIT_ADDRESS_LOGIN) {
+            // login attempts exceeded
+            client.send(Uint8Array.from([16]));
+            client.close();
+            return true;
+        }
+
+        return false;
+    }
+
     onClientData(client: ClientSocket) {
         if (client.state !== 0) {
             // connection negotiation only
+            return;
+        }
+
+        if (this.loginRequests.has(client.uuid)) {
+            // custom (2026-09-27) - one login attempt per socket: the answer is on its way, and anything
+            // sent meanwhile was a way to queue password guesses without reconnecting
             return;
         }
 
@@ -2206,6 +2238,11 @@ class World {
             } else {
                 client.waiting = 0;
             }
+        }
+
+        // the length can arrive in a later TCP segment than the opcode - wait for it (the opcode is kept)
+        if ((client.waiting === -1 && client.available < 1) || (client.waiting === -2 && client.available < 2)) {
+            return;
         }
 
         if (client.waiting === -1) {
@@ -2230,17 +2267,8 @@ class World {
         if (client.opcode === 14) {
             client.send(Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0]));
 
-            if (Environment.NODE_PRODUCTION && Environment.NODE_RATELIMIT_ADDRESS_LOGIN > 0) {
-                const last = this.loginAddressAttempts.get(client.remoteAddress);
-                const attempts = last ? last + 1 : 1;
-                this.loginAddressAttempts.set(client.remoteAddress, attempts);
-
-                if (attempts >= Environment.NODE_RATELIMIT_ADDRESS_LOGIN) {
-                    // login attempts exceeded
-                    client.send(Uint8Array.from([16]));
-                    client.close();
-                    return;
-                }
+            if (this.isLoginRateLimited(client)) {
+                return;
             }
 
             const _loginServer = World.loginBuf.g1(); // jagex stores player saves on different servers
@@ -2251,6 +2279,12 @@ class World {
             seed.p4(Math.floor(Math.random() * 0xffffffff));
             client.send(seed.data);
         } else if (client.opcode === 16 || client.opcode === 18) {
+            // custom (2026-09-27) - counted here too: nothing makes a client send 14 first (the seed it
+            // returns is never checked), so a limit on 14 alone was skipped by sending 16 directly
+            if (this.isLoginRateLimited(client)) {
+                return;
+            }
+
             let rev = World.loginBuf.g1();
             if (rev === 0xff) {
                 rev = World.loginBuf.g2();

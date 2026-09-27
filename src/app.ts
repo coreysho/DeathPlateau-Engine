@@ -7,7 +7,7 @@ import { packAll } from '#tools/pack/PackAll.js';
 import World from '#/engine/World.js';
 import TcpServer from '#/server/tcp/TcpServer.js';
 import Environment from '#/util/Environment.js';
-import { printError, printInfo } from '#/util/Logger.js';
+import { printError, printInfo, printWarning } from '#/util/Logger.js';
 import { startManagementWeb, startWeb } from '#/web.js';
 import OnDemand from '#/engine/OnDemand.js';
 
@@ -31,6 +31,13 @@ if (Environment.EASY_STARTUP) {
     new Worker(new URL('./login.ts', import.meta.url));
     new Worker(new URL('./friend.ts', import.meta.url));
     new Worker(new URL('./logger.ts', import.meta.url));
+}
+
+// custom (2026-09-27) - development mode makes EVERY login a developer (LoginThread) with the
+// destructive commands, and turns the login rate limits off. Fine on a laptop, a disaster on a
+// port-forwarded world - say so where the log is read.
+if (!Environment.NODE_PRODUCTION) {
+    printWarning('NODE_PRODUCTION is false: every player gets developer commands and login rate limits are off. Set NODE_PRODUCTION=true in .env on any world other people can reach.');
 }
 
 await World.start();

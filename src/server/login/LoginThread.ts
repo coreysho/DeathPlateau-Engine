@@ -79,6 +79,19 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                     account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
                 }
 
+                // custom (2026-09-27) - this path used to load any existing account and its save without
+                // ever looking at the password: anyone could log in as anyone by typing their name.
+                // Same checks and replies as LoginServer's player_login.
+                if (!account || !(await bcrypt.compare(password.toLowerCase(), account.password))) {
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 1, save: null, account_id: -1, members: false });
+                    break;
+                }
+
+                if (account.banned_until !== null && new Date(account.banned_until) > new Date()) {
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 5, save: null, account_id: -1, members: false });
+                    break;
+                }
+
                 let staffmodlevel = account ? account.staffmodlevel : 0;
                 if (!Environment.NODE_PRODUCTION) {
                     // dev (destructive commands) - AT LEAST 4, so an owner (5) is not demoted

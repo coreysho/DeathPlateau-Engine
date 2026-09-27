@@ -6,6 +6,7 @@ import NullClientSocket from '#/server/NullClientSocket.js';
 import TcpClientSocket from '#/server/tcp/TcpClientSocket.js';
 import Environment from '#/util/Environment.js';
 import OnDemand from '#/engine/OnDemand.js';
+import ConnectionLimiter, { HANDSHAKE_TIMEOUT_MS, normalizeAddress } from '#/server/ConnectionLimiter.js';
 
 export default class TcpServer {
     tcp: net.Server;
@@ -16,10 +17,23 @@ export default class TcpServer {
 
     start() {
         this.tcp.on('connection', (s: net.Socket) => {
+            const address = normalizeAddress(s.remoteAddress);
+            if (!ConnectionLimiter.tryAcquire(address)) {
+                s.destroy();
+                return;
+            }
+
             s.setTimeout(30000);
             s.setNoDelay(true);
 
-            const client = new TcpClientSocket(s, s.remoteAddress ?? 'unknown');
+            const client = new TcpClientSocket(s, address);
+
+            // the idle timeout alone can be held off forever by a byte every 25 seconds
+            const handshakeDeadline = setTimeout(() => {
+                if (client.state === 0) {
+                    client.terminate();
+                }
+            }, HANDSHAKE_TIMEOUT_MS);
 
             s.on('data', (data: Buffer) => {
                 try {
@@ -41,6 +55,8 @@ export default class TcpServer {
             });
 
             s.on('close', () => {
+                clearTimeout(handshakeDeadline);
+                ConnectionLimiter.release(address);
                 client.state = -1;
                 OnDemand.onClientClosed(client);
 

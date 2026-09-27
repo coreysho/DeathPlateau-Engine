@@ -21,7 +21,14 @@ type OnDemandReloadCache = {
     type: 'reload_cache';
 };
 
-type OnDemandMessage = OnDemandRequest | OnDemandClientClosed | OnDemandReloadCache;
+// custom (2026-09-27) - backpressure. The main thread pauses a client whose socket has too much
+// unsent data (a client that stopped reading) and resumes it once that drains.
+type OnDemandFlowControl = {
+    type: 'pause' | 'resume';
+    clientId: string;
+};
+
+type OnDemandMessage = OnDemandRequest | OnDemandClientClosed | OnDemandReloadCache | OnDemandFlowControl;
 
 type PendingRequest = {
     clientId: string;
@@ -61,6 +68,7 @@ const MAX_PUMP_MS = 8;
 let cache = new FileStream('data/pack', false, true);
 const clients: Map<string, ClientQueue> = new Map();
 const roundRobin: string[] = [];
+const paused: Set<string> = new Set();
 
 let pumpScheduled = false;
 
@@ -78,7 +86,25 @@ parentPort.on('message', (msg: OnDemandMessage) => {
             return;
         }
 
-        enqueue(msg);
+        if (msg.type === 'request') {
+            enqueue(msg);
+            return;
+        }
+
+        if (msg.type === 'pause') {
+            paused.add(msg.clientId);
+            return;
+        }
+
+        if (msg.type === 'resume') {
+            paused.delete(msg.clientId);
+            const client = clients.get(msg.clientId);
+            if (client && hasWork(client)) {
+                scheduleClient(client);
+                schedulePump();
+            }
+            return;
+        }
     } catch (err) {
         console.error(err);
     }
@@ -188,6 +214,12 @@ function pump() {
         }
 
         client.scheduled = false;
+
+        if (paused.has(clientId)) {
+            // left out of the round robin until 'resume' puts it back; its queue is kept
+            continue;
+        }
+
         serveClient(client);
 
         if (hasWork(client)) {
@@ -305,6 +337,8 @@ function closeClient(clientId: string) {
 }
 
 function deleteClient(clientId: string) {
+    paused.delete(clientId);
+
     const client = clients.get(clientId);
     if (!client) {
         return;

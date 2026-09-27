@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 
 import WsSyncReq from '#3rdparty/ws-sync/ws-sync.js';
+import { internalClientHeaders } from '#/server/InternalServer.js';
 
 export default class InternalClient {
     protected ws: WebSocket | null = null;
@@ -21,7 +22,8 @@ export default class InternalClient {
 
         return new Promise(res => {
             this.ws = new WebSocket(`ws://${this.host}:${this.port}`, {
-                timeout: 5000
+                timeout: 5000,
+                headers: internalClientHeaders()
             });
 
             const timeout = setTimeout(() => {
@@ -42,8 +44,13 @@ export default class InternalClient {
                 res();
             });
 
-            this.ws.once('error', () => {
+            this.ws.once('error', (err: Error) => {
                 clearTimeout(timeout);
+
+                // 401 = the server has INTERNAL_SECRET set and this process has a different one (or none)
+                if (err.message.includes('401')) {
+                    console.error(`[InternalClient]: ${this.host}:${this.port} rejected INTERNAL_SECRET - it must be the same in every process's .env`);
+                }
 
                 this.ws = null;
                 this.wsr = null;
