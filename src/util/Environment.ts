@@ -92,7 +92,8 @@ export default {
     NODE_MAX_SOCKETS_PER_IP: tryParseInt(process.env.NODE_MAX_SOCKETS_PER_IP, 16),
     // custom (2026-09-27) - addresses (and IPv4 CIDRs), comma separated, of a proxy or tunnel in front of
     // the game and web ports that sends PROXY protocol, so players keep their own addresses. Empty = off.
-    // Connections from these must carry the header; everyone else connects as before. server/ProxyProtocol.ts
+    // Connections from these are read for the header (one with none keeps its own address - Tailscale in
+    // userspace mode forwards from 127.0.0.1); everyone else connects as before. server/ProxyProtocol.ts
     PROXY_PROTOCOL_FROM: tryParseString(process.env.PROXY_PROTOCOL_FROM, ''),
     NODE_MAX_NPCS: tryParseInt(process.env.NODE_MAX_NPCS, 16383),
     NODE_DEBUGPROC_CHAR: tryParseString(process.env.NODE_DEBUGPROC_CHAR, '~'),

@@ -8,9 +8,11 @@ import Environment from '#/util/Environment.js';
 // address - one per-IP socket cap, one login rate limit, and IP bans that ban everyone. A proxy that
 // speaks PROXY protocol puts the player's real address in front of the stream instead.
 //
-// Only connections FROM an address in PROXY_PROTOCOL_FROM are expected to carry the header, and they
-// must - one without it is dropped. Anyone else connects as before, with their socket address, so a
-// player cannot claim an address by sending a header of their own.
+// Only connections FROM an address in PROXY_PROTOCOL_FROM are read for the header. One of those that
+// starts with no header at all (Tailscale in userspace mode forwards from 127.0.0.1, inside playit's
+// 127.0.0.0/8) keeps its socket address; one with a broken or unfinished header is dropped. Anyone
+// else connects as before, with their socket address, so a player cannot claim an address by sending
+// a header of their own.
 
 const HEADER_TIMEOUT_MS = 5000;
 const V1_MAX = 107; // "PROXY TCP6 <39> <39> <5> <5>\r\n"
@@ -80,6 +82,15 @@ export function isTrustedProxy(address: string): boolean {
 
 type Parsed = { address: string | null; length: number } | 'incomplete' | 'invalid';
 
+// whether these bytes could still be the start of a v1 or v2 header
+function mayStartHeader(buf: Buffer): boolean {
+    if (buf.length === 0 || buf[0] === 0x0d) {
+        return true;
+    }
+    const n = Math.min(buf.length, 6);
+    return buf.subarray(0, n).toString('latin1') === 'PROXY '.substring(0, n);
+}
+
 // address null = a LOCAL / UNKNOWN connection (a health check from the proxy itself): keep the socket's
 function parseHeader(buf: Buffer): Parsed {
     if (buf.length >= 1 && buf[0] === 0x0d) {
@@ -138,8 +149,9 @@ function parseHeader(buf: Buffer): Parsed {
 
 /**
  * Read the PROXY header off the front of a socket from a trusted proxy. Resolves with the player's
- * address, the socket left paused with whatever followed the header put back to be read again - or
- * with null, the socket destroyed, when the header is missing, broken or too slow.
+ * address, the socket left paused with whatever followed the header put back to be read again. A
+ * connection that plainly starts without a header resolves with its own socket address, its bytes put
+ * back. Null, the socket destroyed, when a header is broken or too slow.
  */
 export function readProxyHeader(socket: net.Socket): Promise<string | null> {
     return new Promise(resolve => {
@@ -158,6 +170,19 @@ export function readProxyHeader(socket: net.Socket): Promise<string | null> {
 
         const onData = (data: Buffer) => {
             buf = Buffer.concat([buf, data]);
+            // No header at all: a local connection that is not the proxy - Tailscale in userspace mode
+            // (tailscaled --tun=userspace-networking, as in an LXC) hands its connections on from
+            // 127.0.0.1, inside the same 127.0.0.0/8 that playit.gg's agent comes from. The first bytes
+            // decide it: a header starts with \r (v2) or "PROXY " (v1), and nothing the game or a
+            // browser sends first does (a login's first byte is 14/15; an HTTP method is "GET", "POST"...).
+            // It keeps its socket address, as any other connection does - nobody can claim an address
+            // by leaving the header out.
+            if (!mayStartHeader(buf)) {
+                socket.pause();
+                socket.unshift(buf);
+                finish(normalizeAddress(socket.remoteAddress));
+                return;
+            }
             const parsed = parseHeader(buf);
             if (parsed === 'incomplete') {
                 return;
