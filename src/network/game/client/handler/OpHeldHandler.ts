@@ -51,7 +51,13 @@ export default class OpHeldHandler extends ClientGameMessageHandler<OpHeld> {
         player.lastItem = objId;
         player.lastSlot = slot;
 
-        if (com.rootLayer != player.modalMain) {
+        // ...AND NOT AN OP IN THE OPEN SIDE PANEL EITHER (2026-09-27). A side modal is the half of a
+        // window that sits where the tabs were - the bank's pack, Equipment Stats' pack
+        // (content equipment_side.if) - so an item op there is an op ON that window: wielding a
+        // sword from Equipment Stats' own pack must leave Equipment Stats open to show the new
+        // bonuses. Only the rune pouch's side panel offered item ops before, and closing the pouch
+        // when you drop something beside it was never the point either.
+        if (com.rootLayer != player.modalMain && com.rootLayer != player.modalSide) {
             // AN INVENTORY OPTION NO LONGER DROPS YOUR TARGET. This was clearPendingAction(),
             // which is closeModal() PLUS clearInteraction(), and clearInteraction() sets
             // this.target = null - so eating, drinking, burying or equipping anything stopped you
