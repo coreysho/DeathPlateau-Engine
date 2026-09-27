@@ -279,7 +279,7 @@ async function command(i: ChatInputCommandInteraction) {
     }
 }
 
-async function notify(username: string, text: string, offer?: number) {
+async function notify(username: string, text: string, offer?: number, items?: string[]) {
     const row = db.prepare('SELECT discord_id FROM link WHERE username = ?').get(username) as { discord_id: string } | undefined;
     if (!row || !client.isReady()) {
         return;
@@ -287,11 +287,9 @@ async function notify(username: string, text: string, offer?: number) {
     try {
         const user = await client.users.fetch(row.discord_id);
         // any @col@ tag is for the game chatbox, and would show in Discord as text
-        let content = `**${toDisplayName(username)}** - ${text.replace(/@[a-z0-9]{3}@/g, '')}`;
-        // and what is actually in it, which the summary in that line cannot say
-        if (offer !== undefined) {
-            content += bullets((await ask(username, 'describe-offer', offer)).items);
-        }
+        // The breakdown comes WITH the notice rather than being asked for: one message, and no way
+        // for the list to be missing because a round trip to the game thread was slow.
+        const content = `**${toDisplayName(username)}** - ${text.replace(/@[a-z0-9]{3}@/g, '')}${bullets(items)}`;
         // An offer can be answered from here. Both buttons ask before they do anything.
         const components: ActionRowBuilder<ButtonBuilder>[] = [];
         if (offer !== undefined) {
@@ -325,7 +323,7 @@ port.on('message', msg => {
             break;
         }
         case 'notify':
-            void notify(msg.username, msg.text, msg.offer);
+            void notify(msg.username, msg.text, msg.offer, msg.items);
             break;
         case 'tp-result': {
             const resolve = waiting.get(msg.id);

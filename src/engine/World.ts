@@ -245,9 +245,9 @@ class World {
     }
 
     // offer: the pending offer this notice is about, if it is about one - the relay puts Accept and
-    // Decline on that message (server/discord/DiscordThread.ts).
-    discordNotify(username: string, text: string, offer?: number): void {
-        this.discordThread?.postMessage({ type: 'notify', username, text, offer });
+    // Decline on that message (server/discord/DiscordThread.ts). items: what is in it, listed.
+    discordNotify(username: string, text: string, offer?: number, items?: string[]): void {
+        this.discordThread?.postMessage({ type: 'notify', username, text, offer, items });
     }
 
     private onDiscordMessage(msg: { type: string; username: string; discord?: string; had?: boolean; id?: number; action?: string; arg?: number }): void {

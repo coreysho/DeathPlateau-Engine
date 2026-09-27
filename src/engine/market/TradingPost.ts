@@ -88,8 +88,10 @@ export type TpHooks = {
     // cannot roll their inventory back to before a trade the market has already recorded.
     changed(username: string): void;
     // Every notice, online or not. Where the Discord relay plugs in. offer is the pending offer the
-    // notice is about, when it is about one: the relay puts Accept and Decline on that message.
-    notice?(username: string, text: string, offer?: number): void;
+    // notice is about, when it is about one: the relay puts Accept and Decline on that message, and
+    // lists items - what the offer holds, one line each, because "+ 4 items" is not enough to
+    // decide from.
+    notice?(username: string, text: string, offer?: number, items?: string[]): void;
     now(): number;
 };
 
@@ -229,6 +231,19 @@ export default class TradingPost {
 
     describe(l: Listing): string {
         return l.count === 1 ? this.objs.name(l.obj) : `${tpFormat(l.count)} x ${this.objs.name(l.obj)}`;
+    }
+
+    // Everything in an offer, one line each - the coins, then each item with its count. describeOffer
+    // sums it up for a chatbox line; this is for somewhere with room.
+    itemise(o: Offer): string[] {
+        const lines: string[] = [];
+        if (o.coins > 0) {
+            lines.push(tpCoins(o.coins));
+        }
+        for (const i of this.offerItems(o.id)) {
+            lines.push(i.count === 1 ? this.objs.name(i.obj) : `${tpFormat(i.count)} x ${this.objs.name(i.obj)}`);
+        }
+        return lines;
     }
 
     // "12,000 coins + 3 items", "2 items", "500 coins"
@@ -395,7 +410,7 @@ export default class TradingPost {
 
         this.hooks.changed(buyer.username);
         const o = this.offer(offerId)!;
-        this.notify(l.seller, `${this.name(buyer.username)} offered ${this.describeOffer(o)} for your ${this.describe(l)}.`, o.id);
+        this.notify(l.seller, `${this.name(buyer.username)} offered ${this.describeOffer(o)} for your ${this.describe(l)}.`, o.id, this.itemise(o));
         return '';
     }
 
@@ -589,9 +604,9 @@ export default class TradingPost {
 
     // In game the "Trading post:" is dark blue, so the news stands out among the other game messages;
     // Discord gets the same words without the colour tags.
-    private notify(username: string, text: string, offer?: number) {
+    private notify(username: string, text: string, offer?: number, items?: string[]) {
         const line = `@dbl@Trading post:@bla@ ${text}`;
-        this.hooks.notice?.(username, `Trading post: ${text}`, offer);
+        this.hooks.notice?.(username, `Trading post: ${text}`, offer, items);
         if (!this.hooks.tell(username, line)) {
             this.db.prepare('INSERT INTO notice (player, text, created) VALUES (?, ?, ?)').run(username, line, this.hooks.now());
         }
