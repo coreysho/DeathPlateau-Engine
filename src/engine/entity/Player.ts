@@ -384,6 +384,9 @@ export default class Player extends PathingEntity {
 
     staffModLevel: number = 0;
     visibility: Visibility = Visibility.DEFAULT;
+    // custom (2026-09-27) - a server-side bot (engine/bot/BotPlayer.ts). Never saved, never counted as
+    // online, never announced to the friend server or a clan channel; see the isBot checks in World.
+    isBot: boolean = false;
 
     heroPoints: HeroPoints = new HeroPoints(16); // be sure to reset when stats are recovered/reset
 
@@ -678,6 +681,10 @@ export default class Player extends PathingEntity {
     }
 
     addSessionLog(event_type: LoggerEventType, message: string, ...args: string[]): void {
+        if (this.isBot) {
+            // a bot has no session and no account for a moderator to look up
+            return;
+        }
         World.addSessionLog(event_type, this.session, CoordGrid.packCoord(this.level, this.x, this.z), message, ...args);
     }
 

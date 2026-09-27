@@ -125,7 +125,8 @@ const ServerOps: CommandHandlers = {
     },
 
     [ScriptOpcode.PLAYERCOUNT]: state => {
-        state.pushInt(World.getTotalPlayers());
+        // bots are not players online (World.getHumanPlayerCount)
+        state.pushInt(World.getHumanPlayerCount());
     },
 
     [ScriptOpcode.MAP_BLOCKED]: state => {

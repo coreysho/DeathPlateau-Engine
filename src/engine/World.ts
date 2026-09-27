@@ -102,6 +102,7 @@ import FriendlistLoaded from '#/network/game/server/model/FriendlistLoaded.js';
 import HashTable from '#/datastruct/HashTable.js';
 import Midi from '#/cache/midi/Midi.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
+import type { BotHooks } from '#/engine/bot/BotHooks.js';
 
 // custom (2026-09-27) - the login block's key. The old one (data/config/private.pem) was 512-bit and
 // committed to a public repo, so anyone who saw a login could read the password in it. The new one is
@@ -186,6 +187,10 @@ class World {
     sessionLogs: SessionLog[] = [];
     wealthTransactionGroup: Map<string, WealthTransactionEvent> = new Map();
     wealthTransactions: WealthTransactionEvent[] = [];
+
+    // custom (2026-09-27) - the bot manager (engine/bot/BotManager.ts) plugs in here when NODE_BOTS is
+    // set. A hook rather than an import so the world does not depend on the bots at all.
+    bots: BotHooks | null = null;
 
     loginAddressAttempts: TTLCache<string, number> = new TTLCache({ ttl: 60000 });
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
@@ -531,7 +536,7 @@ class World {
 
             // push stats to prometheus
             if (Environment.NODE_PRODUCTION) {
-                trackPlayerCount.set(this.getTotalPlayers());
+                trackPlayerCount.set(this.getHumanPlayerCount());
                 trackNpcCount.set(this.getTotalNpcs());
 
                 trackCycleTime.observe(this.cycleStats[WorldStat.CYCLE]);
@@ -659,6 +664,15 @@ class World {
 
         this.cycleStats[WorldStat.BANDWIDTH_IN] = 0;
 
+        // bots: spawns, respawns, removals - before anyone's input, as a login would be
+        if (this.bots) {
+            try {
+                this.bots.cycle();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
         for (const player of this.playerLoop.all()) {
             try {
                 player.playtime++;
@@ -669,6 +683,22 @@ class World {
 
                 // - client input tracking
                 player.processInputTracking();
+
+                // A bot's "packets": its brain calls the same handlers a client's packets reach, here,
+                // where a client's are read - then the engine treats the result exactly as it would a
+                // client's (the block below, repeated for it).
+                if (player.isBot && this.bots) {
+                    const bot = player as Player & { userPath: number[]; opcalled: boolean };
+                    this.bots.input(player);
+                    if (bot.userPath.length > 0 || bot.opcalled) {
+                        if (player.delayed) {
+                            player.unsetMapFlag();
+                            continue;
+                        }
+
+                        player.moveClickRequest = !(!player.busy() && bot.opcalled);
+                    }
+                }
 
                 if (isClientConnected(player) && player.decodeIn()) {
                     if (player.userPath.length > 0 || player.opcalled) {
@@ -937,6 +967,13 @@ class World {
                 }
             }
 
+            // a bot world keeps the bots' names to the bots, so "Bot <name>" always means a bot
+            if (player instanceof NetworkPlayer && this.bots && this.bots.isReservedName(player.username)) {
+                player.addSessionLog(LoggerEventType.ENGINE, 'Tried to log in - name reserved for bots');
+                this.forceLogout(player, 3);
+                continue;
+            }
+
             // player already logged in
             for (const other of this.playerLoop.all()) {
                 if (player.username !== other.username) {
@@ -1027,6 +1064,10 @@ class World {
 
             this.gameMap.getZone(player.x, player.z, player.level).enter(player);
             player.onLogin();
+            if (player.isBot) {
+                // no clan channel, no friends-list presence
+                continue;
+            }
             ClanChat.onLogin(player);
 
             if (this.shutdownTick != -1) {
@@ -1310,6 +1351,13 @@ class World {
             }
         }
 
+        // bots have nothing to save: they go at once
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot) {
+                this.removePlayer(player);
+            }
+        }
+
         const online = this.getTotalPlayers();
         if (online === 0 && this.logoutRequests.size === 0) {
             printInfo('Server shutdown complete');
@@ -1324,6 +1372,9 @@ class World {
 
     private savePlayers(): void {
         for (const player of this.playerLoop.all()) {
+            if (player.isBot) {
+                continue; // bots have no save file
+            }
             this.loginThread.postMessage({
                 type: 'player_autosave',
                 username: player.username,
@@ -1336,6 +1387,9 @@ class World {
     // their save file cannot follow - the trading post above all - so a crash cannot roll the inventory
     // back to before a trade that has already been recorded elsewhere.
     autosavePlayer(player: Player): void {
+        if (player.isBot) {
+            return;
+        }
         this.loginThread.postMessage({
             type: 'player_autosave',
             username: player.username,
@@ -1720,6 +1774,11 @@ class World {
 
         player.isActive = false;
 
+        if (player.isBot) {
+            // never saved, never announced to the friend server
+            return;
+        }
+
         player.addSessionLog(LoggerEventType.MODERATOR, 'Logged out');
         this.flushPlayer(player);
 
@@ -1822,6 +1881,22 @@ class World {
 
         for (let i = 1; i < 2047; i++) {
             if (typeof this.players[i] !== 'undefined') {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    // custom (2026-09-27) - players online, not counting bots: what anyone is TOLD is online (the
+    // playercount command, the quest tab's "Players online", the metrics). getTotalPlayers above still
+    // counts bots, because the engine uses it to decide whether the world has anyone in it at all.
+    getHumanPlayerCount(): number {
+        let count = 0;
+
+        for (let i = 1; i < 2047; i++) {
+            const player = this.players[i];
+            if (typeof player !== 'undefined' && !player.isBot) {
                 count++;
             }
         }

@@ -31,6 +31,14 @@ export default class OpPlayerHandler extends ClientGameMessageHandler<OpPlayer> 
             return false;
         }
 
+        // custom (2026-09-27) - a bot fights and can be followed; it does not trade, duel or answer
+        // anything else (engine/bot). Attack is op 2 and Follow op 3 wherever set_player_op puts them.
+        if (other.isBot && message.op !== 2 && message.op !== 3) {
+            player.messageGame(`${other.displayName} is a bot - it doesn't trade or duel.`);
+            player.write(new UnsetMapFlag());
+            return false;
+        }
+
         // todo: validate set_player_op is set?
 
         const trigger: ServerTriggerType = ServerTriggerType.APPLAYER1 + (message.op - 1);

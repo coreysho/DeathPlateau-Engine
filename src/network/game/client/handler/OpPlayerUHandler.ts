@@ -57,6 +57,13 @@ export default class OpPlayerUHandler extends ClientGameMessageHandler<OpPlayerU
             return false;
         }
 
+        if (other.isBot) {
+            // custom (2026-09-27) - nothing is handed to a bot (engine/bot)
+            player.messageGame(`${other.displayName} is a bot - it doesn't take items.`);
+            player.write(new UnsetMapFlag());
+            return false;
+        }
+
         if (!rsbuf.hasPlayer(player.slot, other.slot)) {
             // bad client or lag: player is not visible on client
             player.write(new UnsetMapFlag());
