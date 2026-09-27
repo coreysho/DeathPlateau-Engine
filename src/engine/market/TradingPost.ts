@@ -283,6 +283,11 @@ export default class TradingPost {
         if (buyout < 0) {
             return 'That is not a price.';
         }
+        // Coins stop at 2,147,483,647 in game and a script's int is the same width, so a listing
+        // priced above it could never be paid for and would overflow the arithmetic that shows it.
+        if (buyout > INT_MAX) {
+            return 'That is more coins than there are.';
+        }
         if (seller.total(obj) < count) {
             return "You don't have that many.";
         }
