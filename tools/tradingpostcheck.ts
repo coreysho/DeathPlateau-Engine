@@ -308,5 +308,40 @@ console.log('a failed write moves nothing');
     conserved(w, t0, 'a failed write');
 }
 
+// Answering an offer from Discord (server/discord/DiscordThread.ts). The bot cannot reach the
+// market itself; it asks the game thread, which calls exactly these two - with a username and an
+// offer id, and nothing else. The seller is not online and has no inventory here at all, which is
+// the point: everything they are owed has to land in the collection box.
+console.log('acting with the seller away');
+{
+    const alice = new Pocket('alice'),
+        bob = new Pocket('bob'),
+        carol = new Pocket('carol');
+    alice.add(CAPE, 1);
+    bob.add(COINS, 1_000);
+    carol.add(COINS, 2_000);
+    const w = world(alice, bob, carol);
+    w.tp.list(alice, CAPE, 1, 0);
+    const id = lastListing(w);
+    check(w.tp.makeOffer(bob, id, 600, bob, []) === '', 'bob offers 600');
+    check(w.tp.makeOffer(carol, id, 900, carol, []) === '', 'carol offers 900');
+    // offersOn is best-first (coins DESC), so pick them out by buyer rather than by position
+    const offers = w.tp.offersOn(id);
+    const bobs = offers.find(o => o.buyer === 'bob')!;
+    const carols = offers.find(o => o.buyer === 'carol')!;
+    const t0 = census(w);
+    // a stranger cannot, however they got hold of the id
+    check(w.tp.accept('bob', carols.id) !== '', 'somebody else cannot accept an offer on it');
+    check(w.tp.decline('bob', bobs.id) !== '', 'or decline one');
+    check(w.tp.decline('alice', bobs.id) === '', "alice declines bob's, with no inventory of her own");
+    check(w.tp.boxCount('bob', COINS) === 600, "a declined offer goes back to the buyer's box");
+    check(w.tp.accept('alice', carols.id) === '', "alice accepts carol's");
+    check(w.tp.boxCount('alice', COINS) === 900, "the proceeds are in the seller's box, not her inventory");
+    check(w.tp.boxCount('carol', CAPE) === 1, "and the cape is in the buyer's");
+    check(w.tp.accept('alice', carols.id) !== '', 'the same offer cannot be accepted twice');
+    check(alice.total(COINS) === 0, "the absent seller's inventory was never touched");
+    conserved(w, t0, 'acting with the seller away');
+}
+
 console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);

@@ -1,7 +1,7 @@
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import Player from '#/engine/entity/Player.js';
-import TradingPost, { Listing, ListingState, OfferState, TpObjInfo, TpPocket } from '#/engine/market/TradingPost.js';
+import TradingPost, { Listing, ListingState, OfferState, tpCoins, TpObjInfo, TpPocket } from '#/engine/market/TradingPost.js';
 import { ScriptOpcode } from '#/engine/script/ScriptOpcode.js';
 import { ProtectedActivePlayer } from '#/engine/script/ScriptPointer.js';
 import { CommandHandlers } from '#/engine/script/ScriptRunner.js';
@@ -58,12 +58,130 @@ export function tradingPost(): TradingPost {
                 }
             },
             // every notice, online or not, also goes to the player's Discord if they have linked one
-            notice: (username, text) => World.discordNotify(username, text),
+            notice: (username, text, offer) => World.discordNotify(username, text, offer),
             now: () => Date.now()
         });
         printInfo(`Trading post open: ${file}`);
     }
     return market;
+}
+
+// ---- what the Discord bot can ask for (custom, 2026-09-27) ----
+//
+// The bot runs in its own worker thread and must not touch the market's database: one writer, on
+// this thread, is what keeps a trade atomic (see TradingPost.ts's header). So the worker asks, this
+// answers, and every action here is the same call the in-game button makes.
+//
+// ACCEPT, DECLINE and CANCEL need nothing from the seller's inventory - the goods are already held
+// by the market and the proceeds go to the collection box - so they work with the seller offline,
+// which is the whole point of doing them from Discord. COLLECTING does need an inventory, so the
+// bot can only show what is waiting.
+//
+// The worker has already checked that the Discord account it is acting for is linked to $username.
+// Everything below is still written as if it had not: every action goes through the market's own
+// ownership checks, which answer "that offer is not yours" on their own.
+
+export type TpDiscordRequest = { username: string; action: string; arg: number };
+export type TpDiscordReply = { text: string; offers?: { id: number; label: string }[] };
+
+// A pocket with no room, for a seller who is not standing at a post: everything the market hands
+// back lands in their collection box instead.
+function boxOnly(username: string): TpPocket {
+    return { username, total: () => 0, add: () => 0, del: () => 0 };
+}
+
+function tpTell(username: string, text: string): void {
+    const player = World.getPlayerByUsername(username);
+    player?.wrappedMessageGame(`@dbl@Trading post:@bla@ ${text}`);
+}
+
+export function tradingPostDiscord(req: TpDiscordRequest): TpDiscordReply {
+    const tp = tradingPost();
+    const me = req.username;
+
+    if (req.action === 'listings') {
+        const rows = tp.listingsBy(me).filter(l => l.state === ListingState.OPEN);
+        if (rows.length === 0) {
+            return { text: 'You have nothing listed.' };
+        }
+        const lines = rows.map(l => {
+            const offers = tp.offersOn(l.id).filter(o => o.state === OfferState.PENDING).length;
+            const price = l.buyout > 0 ? `buyout ${tpCoins(l.buyout)}` : 'offers only';
+            return `\`#${l.id}\` ${tp.describe(l)} - ${price}${offers > 0 ? ` - **${offers}** offer${offers === 1 ? '' : 's'}` : ''}`;
+        });
+        return { text: lines.join('\n') };
+    }
+
+    if (req.action === 'offers') {
+        const out: { id: number; label: string }[] = [];
+        for (const l of tp.listingsBy(me).filter(l => l.state === ListingState.OPEN)) {
+            for (const o of tp.offersOn(l.id).filter(o => o.state === OfferState.PENDING)) {
+                out.push({ id: o.id, label: `${tp.describeOffer(o)} from ${toDisplayName(o.buyer)} for your ${tp.describe(l)}` });
+            }
+        }
+        if (out.length === 0) {
+            return { text: 'Nobody has an offer in on your listings.' };
+        }
+        return { text: out.map(o => `\`#${o.id}\` ${o.label}`).join('\n'), offers: out };
+    }
+
+    if (req.action === 'box') {
+        const rows = tp.box(me);
+        if (rows.length === 0) {
+            return { text: 'Your collection box is empty.' };
+        }
+        const lines = rows.map(r => (r.count === 1 ? objs.name(r.obj) : `${r.count} x ${objs.name(r.obj)}`));
+        return { text: `${lines.join('\n')}\n\nCollect it at any trading post.` };
+    }
+
+    // What an Accept or Decline would be agreeing to, for the bot's "are you sure?" - and the
+    // ownership check, so a stale button says so before it asks.
+    if (req.action === 'describe-offer') {
+        const o = tp.offer(req.arg);
+        const l = o ? tp.listing(o.listing) : undefined;
+        if (!o || !l || l.seller !== me) {
+            return { text: '' };
+        }
+        if (o.state !== OfferState.PENDING || l.state !== ListingState.OPEN) {
+            return { text: '' };
+        }
+        return { text: `**${tp.describeOffer(o)}** from **${toDisplayName(o.buyer)}** for your **${tp.describe(l)}**` };
+    }
+
+    if (req.action === 'describe-listing') {
+        const l = tp.listing(req.arg);
+        if (!l || l.seller !== me || l.state !== ListingState.OPEN) {
+            return { text: '' };
+        }
+        const offers = tp.offersOn(l.id).filter(o => o.state === OfferState.PENDING).length;
+        return { text: `**${tp.describe(l)}**${offers > 0 ? ` - ${offers} pending offer${offers === 1 ? '' : 's'} would be returned` : ''}` };
+    }
+
+    if (req.action === 'accept' || req.action === 'decline') {
+        const o = tp.offer(req.arg);
+        const l = o ? tp.listing(o.listing) : undefined;
+        const what = o && l ? `${tp.describeOffer(o)} for your ${tp.describe(l)}` : 'that offer';
+        const err = req.action === 'accept' ? tp.accept(me, req.arg) : tp.decline(me, req.arg);
+        if (err !== '') {
+            return { text: err };
+        }
+        const done = req.action === 'accept' ? 'Accepted' : 'Declined';
+        tpTell(me, `${done} ${what} from Discord.`);
+        return { text: req.action === 'accept' ? `Accepted ${what}. It is in your collection box.` : `Declined ${what}.` };
+    }
+
+    if (req.action === 'cancel') {
+        const l = tp.listing(req.arg);
+        const what = l ? tp.describe(l) : 'that listing';
+        const err = tp.cancel(boxOnly(me), req.arg);
+        if (err !== '') {
+            return { text: err };
+        }
+        tpTell(me, `Took ${what} off the trading post from Discord. It is in your collection box.`);
+        return { text: `Took ${what} off the trading post. It is in your collection box.` };
+    }
+
+    return { text: 'I do not know how to do that.' };
 }
 
 // search is what the last tp_browse / tp_browse_obj asked for, so tp_repage can turn its pages.

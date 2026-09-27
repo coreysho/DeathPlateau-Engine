@@ -87,8 +87,9 @@ export type TpHooks = {
     // A player's holdings changed because of the market. The game saves them on the spot, so a crash
     // cannot roll their inventory back to before a trade the market has already recorded.
     changed(username: string): void;
-    // Every notice, online or not. Where the Discord relay plugs in.
-    notice?(username: string, text: string): void;
+    // Every notice, online or not. Where the Discord relay plugs in. offer is the pending offer the
+    // notice is about, when it is about one: the relay puts Accept and Decline on that message.
+    notice?(username: string, text: string, offer?: number): void;
     now(): number;
 };
 
@@ -394,7 +395,7 @@ export default class TradingPost {
 
         this.hooks.changed(buyer.username);
         const o = this.offer(offerId)!;
-        this.notify(l.seller, `${this.name(buyer.username)} offered ${this.describeOffer(o)} for your ${this.describe(l)}.`);
+        this.notify(l.seller, `${this.name(buyer.username)} offered ${this.describeOffer(o)} for your ${this.describe(l)}.`, o.id);
         return '';
     }
 
@@ -588,9 +589,9 @@ export default class TradingPost {
 
     // In game the "Trading post:" is dark blue, so the news stands out among the other game messages;
     // Discord gets the same words without the colour tags.
-    private notify(username: string, text: string) {
+    private notify(username: string, text: string, offer?: number) {
         const line = `@dbl@Trading post:@bla@ ${text}`;
-        this.hooks.notice?.(username, `Trading post: ${text}`);
+        this.hooks.notice?.(username, `Trading post: ${text}`, offer);
         if (!this.hooks.tell(username, line)) {
             this.db.prepare('INSERT INTO notice (player, text, created) VALUES (?, ?, ?)').run(username, line, this.hooks.now());
         }

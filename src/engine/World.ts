@@ -56,6 +56,7 @@ import { Inventory } from '#/engine/Inventory.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
+import { tradingPostDiscord } from '#/engine/script/handlers/TradingPostOps.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { WorldStat } from '#/engine/WorldStat.js';
@@ -243,11 +244,27 @@ class World {
         this.discordThread?.postMessage({ type: 'unlink', username: player.username });
     }
 
-    discordNotify(username: string, text: string): void {
-        this.discordThread?.postMessage({ type: 'notify', username, text });
+    // offer: the pending offer this notice is about, if it is about one - the relay puts Accept and
+    // Decline on that message (server/discord/DiscordThread.ts).
+    discordNotify(username: string, text: string, offer?: number): void {
+        this.discordThread?.postMessage({ type: 'notify', username, text, offer });
     }
 
-    private onDiscordMessage(msg: { type: string; username: string; discord?: string; had?: boolean }): void {
+    private onDiscordMessage(msg: { type: string; username: string; discord?: string; had?: boolean; id?: number; action?: string; arg?: number }): void {
+        // A trading post request from the bot. It is answered from this thread because this thread
+        // owns the market's database - see the note above tradingPostDiscord - and the reply carries
+        // the worker's own request id back so it can match it up.
+        if (msg.type === 'tp') {
+            let reply;
+            try {
+                reply = tradingPostDiscord({ username: msg.username, action: msg.action ?? '', arg: msg.arg ?? 0 });
+            } catch (err) {
+                console.error('Discord relay: trading post request failed', err);
+                reply = { text: 'Something went wrong. Try it in game.' };
+            }
+            this.discordThread?.postMessage({ type: 'tp-result', id: msg.id, ...reply });
+            return;
+        }
         const player = this.getPlayerByUsername(msg.username);
         if (!player) {
             return;
