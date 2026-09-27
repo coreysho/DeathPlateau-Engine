@@ -73,7 +73,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
 import {
     trackCycleBandwidthInBytes,
     trackCycleBandwidthOutBytes,
@@ -2069,7 +2069,43 @@ class World {
             if (success) {
                 this.logoutRequests.delete(username);
             }
+        } else if (isChangePasswordResponse(msg)) {
+            const { username, result } = msg;
+            this.passwordChanges.delete(username);
+
+            const player = this.getPlayerByUsername(username);
+            if (!player) {
+                return;
+            }
+
+            if (result === 'ok') {
+                player.messageGame('Your password has been changed.');
+            } else if (result === 'wrong') {
+                player.messageGame('That is not your current password. Your password has not been changed.');
+            } else {
+                player.messageGame('Your password could not be changed right now. Please try again later.');
+            }
         }
+    }
+
+    // custom (2026-09-27) - ::changepassword (ClientCheatHandler). The check and the new hash are done by
+    // the login thread against the account table; the answer comes back through onLoginMessage.
+    // One request at a time per account.
+    passwordChanges: Set<string> = new Set();
+
+    requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {
+        if (this.passwordChanges.has(player.username)) {
+            return false;
+        }
+
+        this.passwordChanges.add(player.username);
+        this.loginThread.postMessage({
+            type: 'player_change_password',
+            username: player.username,
+            oldPassword,
+            newPassword
+        });
+        return true;
     }
 
     onFriendMessage(msg: FriendThreadMessage) {
