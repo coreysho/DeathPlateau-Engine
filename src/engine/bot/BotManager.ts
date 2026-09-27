@@ -1,8 +1,8 @@
 import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
-import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, wildernessLevel } from '#/engine/bot/BotBrain.js';
-import { type BotConfigData, type BotHotspot, loadBotConfig } from '#/engine/bot/BotConfig.js';
+import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
+import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
 import { type BotKind, type BotKit, BOT_KITS, kitById, kitsFor } from '#/engine/bot/BotKits.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
@@ -10,6 +10,7 @@ import { isMapBlocked } from '#/engine/GameMap.js';
 import Player from '#/engine/entity/Player.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import World from '#/engine/World.js';
+import Environment from '#/util/Environment.js';
 import { printInfo, printWarning } from '#/util/Logger.js';
 
 // Keeps the configured number of bots in the world, gives each its kit on every (re)spawn, handles
@@ -17,7 +18,7 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 // again. Started by app.ts only when NODE_BOTS=true; World.bots points here while it runs.
 
 type Entry = { state: BotState; brain: BotBrain; removeBy: number; respawn: boolean; loggedIn: boolean };
-type Respawn = { kind: BotKind; name: string; kitId: string | null; at: number; manual: boolean };
+type Respawn = { kind: BotKind; bracket: BotBracket; name: string; kitId: string | null; at: number; manual: boolean };
 
 const NAME_PREFIX = 'bot_'; // base37 of "Bot " - the display name reads "Bot Grimlock"
 
@@ -52,7 +53,11 @@ class BotManager implements BotHooks {
             printWarning(`bots: ${line}`);
         }
         World.bots = this;
-        printInfo(`bots: on - ${this.config.roamers} roamers, ${this.config.pkers} PKers across ${this.config.hotspots.length} hotspots`);
+        const total = (c: Record<BotBracket, number>) => BOT_BRACKETS.reduce((n, b) => n + c[b], 0);
+        const per = (c: Record<BotBracket, number>) => BOT_BRACKETS.map(b => `${c[b]} ${b}`).join(', ');
+        printInfo(
+            `bots: on - ${total(this.config.roamers)} roamers (${per(this.config.roamers)}), ${total(this.config.pkers)} PKers (${per(this.config.pkers)}), bots fight bots: ${this.config.botsAttackBots}, ${this.config.hotspots.length} hotspots`
+        );
     }
 
     stop(): void {
@@ -124,7 +129,7 @@ class BotManager implements BotHooks {
                 if (bot.slot === -1 || !bot.isActive) {
                     this.entries.delete(bot);
                     if (entry.respawn && !this.paused) {
-                        this.queueRespawn(s.kind, bot.username.slice(NAME_PREFIX.length), s.manual ? s.kit.id : null, s.manual);
+                        this.queueRespawn(s.kind, s.kit.bracket, bot.username.slice(NAME_PREFIX.length), s.manual ? s.kit.id : null, s.manual);
                     }
                 } else if (now >= entry.removeBy) {
                     World.removePlayer(bot); // it had its chance to log out properly
@@ -164,37 +169,48 @@ class BotManager implements BotHooks {
                 continue;
             }
             this.respawns.splice(i--, 1);
-            this.spawn(r.kind, { name: r.name, kitId: r.kitId ?? undefined, manual: r.manual });
+            this.spawn(r.kind, { name: r.name, kitId: r.kitId ?? undefined, bracket: r.bracket, manual: r.manual });
+        }
+
+        if (Environment.NODE_BOTS_TRACE > 0 && now % Environment.NODE_BOTS_TRACE === 0) {
+            for (const s of this.all()) {
+                const b = s.bot;
+                const heard = b.messages.length ? b.messages[b.messages.length - 1].text : '';
+                const dest = s.dest ? `${s.dest.why}@${s.dest.x},${s.dest.z}${s.destArrived ? '(there)' : ''}` : '-';
+                printInfo(`bot t${now} ${this.describe(s)} @${b.x},${b.z} ${b.run ? 'run' : 'walk'} ${(b.runenergy / 100) | 0}% dest:${dest} last:${s.lastAction} heard:${heard}`);
+            }
         }
 
         // top up to the configured counts, one at a time
         if (!this.paused && now >= this.nextSpawnTick) {
-            for (const kind of ['roamer', 'pker'] as BotKind[]) {
-                const want = kind === 'roamer' ? this.config.roamers : this.config.pkers;
-                if (this.count(kind) < want) {
-                    this.spawn(kind);
-                    this.nextSpawnTick = now + this.config.spawnIntervalTicks;
-                    break;
+            top: for (const kind of ['roamer', 'pker'] as BotKind[]) {
+                for (const bracket of BOT_BRACKETS) {
+                    const want = (kind === 'roamer' ? this.config.roamers : this.config.pkers)[bracket] ?? 0;
+                    if (this.count(kind, bracket) < want) {
+                        this.spawn(kind, { bracket });
+                        this.nextSpawnTick = now + this.config.spawnIntervalTicks;
+                        break top;
+                    }
                 }
             }
         }
     }
 
-    /** Automatic bots of a kind in the world or on their way back (manual ones do not count). */
-    private count(kind: BotKind): number {
+    /** Automatic bots of a kind and bracket in the world or on their way back (manual ones do not count). */
+    private count(kind: BotKind, bracket: BotBracket): number {
         let n = 0;
         for (const e of this.entries.values()) {
-            if (e.state.kind === kind && !e.state.manual && (e.state.phase !== 'removing' || e.respawn)) n++;
+            if (e.state.kind === kind && e.state.kit.bracket === bracket && !e.state.manual && (e.state.phase !== 'removing' || e.respawn)) n++;
         }
         for (const r of this.respawns) {
-            if (r.kind === kind && !r.manual) n++;
+            if (r.kind === kind && r.bracket === bracket && !r.manual) n++;
         }
         return n;
     }
 
-    private queueRespawn(kind: BotKind, name: string, kitId: string | null, manual: boolean): void {
+    private queueRespawn(kind: BotKind, bracket: BotBracket, name: string, kitId: string | null, manual: boolean): void {
         const [min, max] = this.config.respawnTicks;
-        this.respawns.push({ kind, name, kitId, manual, at: World.currentTick + rand(min, max) });
+        this.respawns.push({ kind, bracket, name, kitId, manual, at: World.currentTick + rand(min, max) });
     }
 
     // ------------------------------------------------------------------ spawning
@@ -217,8 +233,10 @@ class BotManager implements BotHooks {
         return 'X' + rand(1000, 9999);
     }
 
+    /** A spawn point: a hotspot the kit's bracket may be at (its brackets list, else its depth). */
     private hotspotFor(kit: BotKit): BotHotspot {
-        const ok = this.config.hotspots.filter(h => !h.brackets || h.brackets.includes(kit.bracket));
+        const depth = this.config.depth[kit.bracket];
+        const ok = this.config.hotspots.filter(h => (h.brackets ? h.brackets.includes(kit.bracket) : surfaceWildernessLevel(h.x, h.z) <= depth));
         return pick(ok.length ? ok : this.config.hotspots);
     }
 
@@ -226,14 +244,15 @@ class BotManager implements BotHooks {
      * Put a bot in the world. It logs in next tick like anyone (the login script sets its tabs up
      * around the kit it is wearing). Returns the bot, or why it could not.
      */
-    spawn(kind: BotKind, opts: { name?: string; kitId?: string; at?: { x: number; z: number; level: number }; manual?: boolean } = {}): BotPlayer | string {
+    spawn(kind: BotKind, opts: { name?: string; kitId?: string; bracket?: BotBracket; at?: { x: number; z: number; level: number }; manual?: boolean } = {}): BotPlayer | string {
         let kit: BotKit | undefined;
         if (opts.kitId) {
             kit = kitById(opts.kitId);
             if (!kit) return `no kit "${opts.kitId}"`;
             if (this.missingObjs(kit).length) return `kit ${kit.id} names objs that do not exist`;
         } else {
-            const usable = kitsFor(kind).filter(k => this.missingObjs(k).length === 0);
+            let usable = kitsFor(kind, opts.bracket).filter(k => this.missingObjs(k).length === 0);
+            if (!usable.length) usable = kitsFor(kind).filter(k => this.missingObjs(k).length === 0);
             if (!usable.length) return `no usable kit for ${kind}s`;
             kit = pick(usable);
         }
@@ -276,6 +295,9 @@ class BotManager implements BotHooks {
         for (const [stat, level] of Object.entries(kit.stats)) {
             bot.setLevel(Number(stat), level as number);
         }
+        // Agility for run energy: a bot crosses the whole Wilderness, and at Agility 1 it would spend
+        // most of the way walking while its energy crawled back (Player.updateEnergy: level / 6 + 8 a tick)
+        bot.setLevel(PlayerStat.AGILITY, { low: 30, mid: 50, high: 70, max: 85 }[kit.bracket]);
         bot.combatLevel = bot.getCombatLevel();
 
         const worn = bot.getInventory(InvType.WORN)!;

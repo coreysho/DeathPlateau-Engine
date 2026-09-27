@@ -6,12 +6,21 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 // Everything a world can tune about its bots. Every field has a default, so NODE_BOTS=true alone is a
 // working setup; NODE_BOTS_CONFIG (default data/config/bots.json, optional) overrides any of them -
 // a partial file is fine, only the keys it has are taken. NODE_BOTS_ROAMERS / NODE_BOTS_PKERS override
-// the two counts on top of that.
+// the two counts on top of that (a total, spread over the brackets).
 //
 // Example data/config/bots.json:
-//   { "roamers": 4, "pkers": 2, "botsAttackBots": true, "respawnTicks": [100, 200] }
+//   { "roamers": { "low": 2, "mid": 2, "high": 2, "max": 1 }, "pkers": 3, "respawnTicks": [100, 200] }
 
-export type BotBracket = 'low' | 'mid' | 'high';
+export type BotBracket = 'low' | 'mid' | 'high' | 'max';
+export const BOT_BRACKETS: BotBracket[] = ['low', 'mid', 'high', 'max'];
+export type BotCounts = Record<BotBracket, number>;
+
+/** A total spread over the brackets, low first: 6 is 2 low, 2 mid, 1 high, 1 max. */
+export function spreadCount(total: number): BotCounts {
+    const out: BotCounts = { low: 0, mid: 0, high: 0, max: 0 };
+    for (let i = 0; i < total; i++) out[BOT_BRACKETS[i % BOT_BRACKETS.length]]++;
+    return out;
+}
 
 export type BotHotspot = {
     name: string;
@@ -19,7 +28,7 @@ export type BotHotspot = {
     z: number;
     level?: number;
     radius: number;
-    /** Which level brackets use this spot. Omitted = all. */
+    /** Which level brackets spawn here. Omitted = any whose depth (below) reaches it. */
     brackets?: BotBracket[];
 };
 
@@ -33,14 +42,21 @@ export type BotDeathDrop = {
 };
 
 export type BotConfigData = {
-    /** How many of each kind to keep in the world. */
-    roamers: number;
-    pkers: number;
+    /** How many of each kind to keep in the world, by level bracket (a plain number is spread over them). */
+    roamers: BotCounts;
+    pkers: BotCounts;
+    /**
+     * The deepest Wilderness level each bracket travels to. Hotspots are spawn points and waypoints, not
+     * leashes: a bot walks from one destination to the next across the whole Wilderness inside this.
+     */
+    depth: BotCounts;
+    /** Ticks a bot stays around a destination it reached before it picks the next. */
+    lingerTicks: [number, number];
     /** Ticks between two spawns while filling up (so they arrive over time, not all at once). */
     spawnIntervalTicks: number;
     /** A dead (or restocking) bot comes back after a random number of ticks in this range. */
     respawnTicks: [number, number];
-    /** false: bots fight monsters and real players, never each other. */
+    /** true (the default on the dev world): bots fight each other as well as monsters and players. */
     botsAttackBots: boolean;
     /** Ticks between noticing something and acting on it, drawn per decision. Human-ish, not tick-perfect. */
     reactionTicks: [number, number];
@@ -64,11 +80,13 @@ export type BotConfigData = {
 };
 
 export const DEFAULT_BOT_CONFIG: BotConfigData = {
-    roamers: 6,
-    pkers: 4,
+    roamers: { low: 2, mid: 2, high: 1, max: 1 },
+    pkers: { low: 1, mid: 1, high: 1, max: 1 },
+    depth: { low: 15, mid: 30, high: 56, max: 56 },
+    lingerTicks: [40, 160],
     spawnIntervalTicks: 5,
     respawnTicks: [60, 180],
-    botsAttackBots: false,
+    botsAttackBots: true,
     reactionTicks: [1, 3],
     mistakeChance: 0.1,
     eatPercent: 50,
@@ -82,12 +100,24 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
         { name: 'edgeville north', x: 3100, z: 3565, radius: 10 }, // 6
         { name: 'varrock wilderness', x: 3240, z: 3548, radius: 12 }, // 4
         { name: 'chaos temple', x: 3236, z: 3620, radius: 8 }, // 13
-        { name: 'dark warriors', x: 3032, z: 3614, radius: 8, brackets: ['mid', 'high'] }, // 12
-        { name: 'graveyard', x: 3160, z: 3672, radius: 10, brackets: ['mid', 'high'] }, // 20
-        { name: 'bandit camp', x: 3036, z: 3700, radius: 10, brackets: ['mid', 'high'] }, // 23
-        { name: 'chaos altar', x: 2956, z: 3816, radius: 8, brackets: ['high'] }, // 38
+        { name: 'green dragons', x: 2980, z: 3620, radius: 8 }, // 13
+        { name: 'dark warriors', x: 3032, z: 3614, radius: 8 }, // 12
+        { name: 'hill giants', x: 3300, z: 3650, radius: 8 }, // 17
+        { name: 'graveyard', x: 3160, z: 3672, radius: 10 }, // 20
+        { name: 'bandit camp', x: 3036, z: 3700, radius: 10 }, // 23
+        { name: 'bone yard', x: 3235, z: 3740, radius: 8 }, // 28
+        { name: 'red spider ruins', x: 3160, z: 3750, radius: 8 }, // 29
+        { name: 'hobgoblin mine', x: 3080, z: 3760, radius: 8 }, // 31
+        { name: 'chaos altar', x: 2956, z: 3816, radius: 8 }, // 38
+        { name: 'lava maze', x: 3060, z: 3850, radius: 6 }, // 42
+        { name: 'demonic ruins', x: 3288, z: 3885, radius: 8 }, // 46
+        { name: 'spider hill', x: 3170, z: 3880, radius: 8 }, // 46
+        { name: 'ice plateau', x: 2960, z: 3890, radius: 8 }, // 47
+        { name: 'scorpion pit', x: 3235, z: 3945, radius: 6 }, // 54
+        // (not the Rogues' Castle, the Pirates' Hideout or the agility course: walled in, doors a bot
+        // does not open)
         // outside the Mage Arena's fence (mage_arena.dbrow ends at z 3953), by the lever down to the bank
-        { name: 'mage bank', x: 3092, z: 3960, radius: 6, brackets: ['high'] } // 56
+        { name: 'mage bank', x: 3092, z: 3960, radius: 6 } // 56
     ],
     names: [
         'Grimlock',
@@ -144,7 +174,8 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     deathDrop: {
         low: { coins: [200, 1000], food: 2, extraChance: 0.1 },
         mid: { coins: [1000, 4000], food: 3, extraChance: 0.15 },
-        high: { coins: [3000, 10000], food: 3, extraChance: 0.2 }
+        high: { coins: [3000, 10000], food: 3, extraChance: 0.2 },
+        max: { coins: [8000, 20000], food: 3, extraChance: 0.25 }
     }
 };
 
@@ -164,6 +195,21 @@ export function loadBotConfig(path: string = Environment.NODE_BOTS_CONFIG): BotC
                     continue;
                 }
                 const current = (config as Record<string, unknown>)[key];
+                if (key === 'roamers' || key === 'pkers' || key === 'depth') {
+                    // a total (spread over the brackets), or a count per bracket
+                    if (typeof value === 'number' && key !== 'depth') {
+                        config[key] = spreadCount(value);
+                    } else if (typeof value === 'object' && value !== null) {
+                        config[key] = { ...config[key], ...(value as Partial<BotCounts>) };
+                    } else {
+                        printWarning(`bots: "${key}" in ${path} has the wrong type - kept the default`);
+                    }
+                    continue;
+                }
+                if (key === 'deathDrop' && typeof value === 'object' && value !== null) {
+                    config.deathDrop = { ...config.deathDrop, ...(value as Partial<Record<BotBracket, BotDeathDrop>>) };
+                    continue;
+                }
                 if (Array.isArray(current) && current.length === 2 && typeof current[0] === 'number') {
                     if (!isRange(value)) {
                         printWarning(`bots: "${key}" in ${path} must be [min, max] - kept the default`);
@@ -182,10 +228,10 @@ export function loadBotConfig(path: string = Environment.NODE_BOTS_CONFIG): BotC
     }
 
     if (Environment.NODE_BOTS_ROAMERS >= 0) {
-        config.roamers = Environment.NODE_BOTS_ROAMERS;
+        config.roamers = spreadCount(Environment.NODE_BOTS_ROAMERS);
     }
     if (Environment.NODE_BOTS_PKERS >= 0) {
-        config.pkers = Environment.NODE_BOTS_PKERS;
+        config.pkers = spreadCount(Environment.NODE_BOTS_PKERS);
     }
 
     // a name longer than 8 does not fit "Bot " + name in the 12 characters a name can have

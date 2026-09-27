@@ -49,13 +49,17 @@ function clientPath(waypoints: ArrayLike<number>): { x: number; z: number }[] {
     return path;
 }
 
-/** A minimap/ground click: MoveClickHandler. False when the click is thrown away (delayed, no route). */
-export function walk(p: BotPlayer, x: number, z: number, run = true): boolean {
+/**
+ * A minimap/ground click: MoveClickHandler. False when the click is thrown away (delayed, no route).
+ * Whether it runs is the run orb's business (BotBrain.manageRun); `ctrlRun` is a ctrl-click, which
+ * runs this one path whatever the orb says - kept for running for its life.
+ */
+export function walk(p: BotPlayer, x: number, z: number, ctrlRun = false): boolean {
     const path = clientPath(findPath(p.level, p.x, p.z, x, z));
     if (path.length === 0) {
         return false;
     }
-    return moveClick.handle(new MoveClick(path, run && p.runenergy >= 100 ? 1 : 0, false), p as unknown as NetworkPlayer);
+    return moveClick.handle(new MoveClick(path, ctrlRun && p.runenergy >= 100 ? 1 : 0, false), p as unknown as NetworkPlayer);
 }
 
 /** The route a client sends with an op click (MOVE_OPCLICK), ahead of the op packet itself. */

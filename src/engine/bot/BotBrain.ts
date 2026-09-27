@@ -16,6 +16,7 @@ import Player from '#/engine/entity/Player.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
 import { Visibility } from '#/network/rsbuf/index.js';
 
@@ -51,6 +52,12 @@ export function resetBrainCaches(): void {
 
 // ---- wilderness level, from the content's own proc so a bot reads the map exactly as combat does
 const wildyCache = new Map<number, number>();
+/** A tile's surface Wilderness level by the client's rule - for planning a route; fights use the proc. */
+export function surfaceWildernessLevel(x: number, z: number): number {
+    if (x < 2944 || x >= 3392 || z < 3520 || z >= 3968) return 0;
+    return ((z - 3520) >> 3) + 1;
+}
+
 export function wildernessLevel(p: Player, x: number, z: number, level: number): number {
     const coord = CoordGrid.packCoord(level, x, z);
     const cached = wildyCache.get(coord);
@@ -69,6 +76,11 @@ export function wildernessLevel(p: Player, x: number, z: number, level: number):
     }
     wildyCache.set(coord, result);
     return result;
+}
+
+/** Dragons breathe fire, and no kit carries an anti-dragon shield: a roamer leaves them be. */
+function noAntifire(type: NpcType): boolean {
+    return (type.debugname ?? '').includes('dragon');
 }
 
 function dist(a: { x: number; z: number }, b: { x: number; z: number }): number {
@@ -114,9 +126,20 @@ export class BotState {
     // loot
     lootSpot: { x: number; z: number; until: number } | null = null;
 
-    // movement
+    // movement: where it is heading across the Wilderness, and when it got there
+    dest: { x: number; z: number; why: string } | null = null;
+    destArrived = 0;
+    destUntil = 0;
+    stuckCount = 0;
     wanderAt = 0;
     lastPos = { x: 0, z: 0, since: 0 };
+    runAgainAt = 3000;
+    lastSwing = 0;
+    npcSince = 0;
+    npcHp = 0;
+    legFights = 0;
+    // where it was a while ago, to notice a bot that has got itself walled in
+    anchor = { x: 0, z: 0, since: 0 };
 
     // reactions
     pending = new Map<string, { at: number; fn: () => void }>();
@@ -144,7 +167,7 @@ export class BotBrain {
         readonly config: BotConfigData
     ) {
         const jitter = rand(-10, 10);
-        s.eatBelow = Math.max(20, Math.min(80, config.eatPercent + jitter));
+        s.eatBelow = Math.max(20, Math.min(80, (s.kit.eatPercent ?? config.eatPercent) + jitter));
     }
 
     get bot(): BotPlayer {
@@ -312,9 +335,20 @@ export class BotBrain {
         }
 
         this.survive();
+        this.manageRun();
 
         if (this.s.phase === 'leaving') {
             this.leave();
+            return;
+        }
+
+        // walled in somewhere (a building it walked into, a spawn it cannot leave): out, and back fresh
+        const a = this.s.anchor;
+        if (dist(bot, a) > 10 || this.inCombatRecently(16)) {
+            this.s.anchor = { x: bot.x, z: bot.z, since: World.currentTick };
+        } else if (World.currentTick - a.since > 400) {
+            this.startLeaving('stuck');
+            this.s.restocked = true;
             return;
         }
 
@@ -374,6 +408,11 @@ export class BotBrain {
             }
         }
 
+        // a ranger out of arrows (or bolt racks) goes and gets more, as a mage out of runes does
+        if (this.s.phase === 'active' && bot.heard('no ammo left')) {
+            this.startLeaving('out of ammo');
+        }
+
         // flee: nothing left to eat and going down
         if (this.s.phase === 'active' && this.foodLeft() === 0 && this.hpPercent() < this.config.fleePercent) {
             this.startLeaving('out of food');
@@ -427,7 +466,7 @@ export class BotBrain {
         if (!bot.hasWaypoints() || this.stuck()) {
             const side = this.stuck() ? rand(-12, 12) : rand(-3, 3);
             const dz = Math.min(20, Math.max(4, bot.z - 3515));
-            this.later('flee', () => Input.walk(bot, bot.x + side, bot.z - dz), -1);
+            this.later('flee', () => Input.walk(bot, bot.x + side, bot.z - dz, true), -1);
         }
     }
 
@@ -441,26 +480,250 @@ export class BotBrain {
         return World.currentTick - s.lastPos.since > 6;
     }
 
-    // ---------------------------------------------------------------- wandering
+    // ---------------------------------------------------------------- travelling the Wilderness
 
-    private wander(): void {
+    /** The deepest Wilderness level this bot's bracket goes to. */
+    private depth(): number {
+        return this.config.depth[this.kit.bracket] ?? 56;
+    }
+
+    /**
+     * Pick where to go next. Hotspots are waypoints, not leashes: a roamer heads for monsters its level
+     * can take, a PKer drifts toward where the players (and, on a bots world, the other bots) are, and
+     * either sometimes just picks a spot - all within its bracket's depth.
+     */
+    private pickDestination(): void {
+        const s = this.s;
         const bot = this.bot;
-        const spot = this.s.hotspot;
-        if (World.currentTick < this.s.wanderAt || bot.hasWaypoints()) return;
-        this.s.wanderAt = World.currentTick + rand(8, 25);
-        const far = dist(bot, spot) > spot.radius * 2;
-        const r = far ? 2 : spot.radius;
-        for (let i = 0; i < 10; i++) {
-            const x = spot.x + rand(-r, r);
-            const z = spot.z + rand(-r, r);
+        const depth = this.depth();
+        const inBand = (x: number, z: number) => {
+            const wl = surfaceWildernessLevel(x, z);
+            return wl >= 1 && wl <= depth && x >= 2946 && x <= 3390;
+        };
+        let dest: { x: number; z: number; why: string } | null = null;
+        const roll = Math.random();
+
+        if (s.kind === 'pker' && roll < 0.55) {
+            // where the people are - a real player counts twice
+            const people: Player[] = [];
+            for (const p of World.playerLoop.all()) {
+                if (p === bot || p.level !== 0 || !inBand(p.x, p.z)) continue;
+                if (p.isBot && !this.config.botsAttackBots) continue;
+                // only someone it could fight where they are
+                if (Math.abs(bot.combatLevel - p.combatLevel) > surfaceWildernessLevel(p.x, p.z)) continue;
+                people.push(p);
+                if (!p.isBot) people.push(p);
+            }
+            if (people.length) {
+                const p = people[rand(0, people.length - 1)];
+                dest = { x: p.x + rand(-4, 4), z: p.z + rand(-4, 4), why: 'towards ' + p.displayName };
+            }
+        } else if (s.kind === 'roamer' && roll < 0.6) {
+            // monsters it can take
+            const min = Math.max(1, Math.floor(bot.combatLevel / 5));
+            const max = bot.combatLevel + 5;
+            const found: Npc[] = [];
+            for (const npc of World.npcs) {
+                if (!npc.isActive || npc.level !== 0 || !inBand(npc.x, npc.z)) continue;
+                const type = NpcType.get(npc.type);
+                if (type.vislevel < min || type.vislevel > max || noAntifire(type) || !this.attackOp(npc)) continue;
+                found.push(npc);
+            }
+            if (found.length) {
+                const npc = found[rand(0, found.length - 1)];
+                dest = { x: npc.x, z: npc.z, why: 'monsters (' + (NpcType.get(npc.type).name ?? 'npc') + ')' };
+            }
+        }
+
+        if (!dest && Math.random() < 0.7) {
+            const spots = this.config.hotspots.filter(h => inBand(h.x, h.z) && dist(h, bot) > 12);
+            if (spots.length) {
+                const h = spots[rand(0, spots.length - 1)];
+                dest = { x: h.x + rand(-h.radius, h.radius), z: h.z + rand(-h.radius, h.radius), why: h.name };
+            }
+        }
+        for (let i = 0; !dest && i < 20; i++) {
+            const x = rand(2950, 3385);
+            const z = rand(3525, Math.min(3965, 3520 + depth * 8 - 1));
+            if (inBand(x, z) && !isMapBlocked(x, z, 0)) dest = { x, z, why: 'somewhere' };
+        }
+        if (!dest) dest = { x: s.hotspot.x, z: s.hotspot.z, why: s.hotspot.name };
+
+        s.dest = dest;
+        s.destArrived = 0;
+        s.destUntil = World.currentTick + 900; // give up on a place it cannot reach in nine minutes
+        s.stuckCount = 0;
+        s.legFights = 0;
+        s.lastAction = 'heading for ' + dest.why;
+    }
+
+    /** Walk the long way to the destination, a screen's worth at a time, then look around a while. */
+    private travel(): void {
+        const s = this.s;
+        const bot = this.bot;
+        const now = World.currentTick;
+        if (!s.dest || now >= s.destUntil) {
+            this.pickDestination();
+        }
+        const dest = s.dest!;
+        const d = dist(bot, dest);
+
+        if (d <= 6 || s.destArrived) {
+            // there: potter about the spot until it is time to move on
+            if (!s.destArrived) {
+                s.destArrived = now;
+                const [min, max] = this.config.lingerTicks;
+                s.destUntil = now + rand(min, max);
+            }
+            if (bot.hasWaypoints() || now < s.wanderAt) return;
+            s.wanderAt = now + rand(8, 25);
+            for (let i = 0; i < 10; i++) {
+                const x = dest.x + rand(-6, 6);
+                const z = dest.z + rand(-6, 6);
+                if (!isMapBlocked(x, z, bot.level)) {
+                    this.later('wander', () => Input.walk(bot, x, z));
+                    return;
+                }
+            }
+            return;
+        }
+
+        const stuck = this.stuck();
+        if (bot.hasWaypoints() && !stuck) return;
+        if (stuck) {
+            s.stuckCount++;
+            s.lastPos.since = now; // one detour per stall
+            if (s.stuckCount > 8) {
+                s.dest = null; // it cannot get there from here
+                return;
+            }
+        }
+        // the next click: up to 15 tiles along the way, and off to the side to get round what is in it
+        const step = Math.min(d, 15);
+        const side = stuck ? 6 + 2 * s.stuckCount : 2;
+        const depthZ = 3520 + this.depth() * 8 - 1;
+        for (let i = 0; i < 12; i++) {
+            const x = bot.x + Math.round(((dest.x - bot.x) * step) / d) + rand(-side, side);
+            const z = Math.min(depthZ, bot.z + Math.round(((dest.z - bot.z) * step) / d) + rand(-side, side));
             if (!isMapBlocked(x, z, bot.level)) {
-                this.later('wander', () => Input.walk(bot, x, z, false));
+                this.later('travel', () => Input.walk(bot, x, z), -1);
                 return;
             }
         }
     }
 
+    /** The run orb: back on once it has its breath back, as a player would click it. */
+    private manageRun(): void {
+        const bot = this.bot;
+        // (the button drops what it is doing, so not in the middle of a fight with a player - against a
+        // monster it just clicks it again afterwards)
+        if (bot.run === 0 && bot.runenergy >= this.s.runAgainAt && !(bot.target instanceof Player) && !bot.delayed) {
+            this.later('run', () => {
+                if (bot.run === 0 && !(bot.target instanceof Player)) Input.button(bot, 'options:run');
+            });
+            this.s.runAgainAt = rand(2000, 5000); // 20-50% next time
+        }
+    }
+
     // ---------------------------------------------------------------- fighting a player
+
+    /**
+     * The obj in an inventory that IS this piece - itself, or a worn-down copy of it: Barrows armour
+     * turns into barrows_verac_body_100, _75 and so on as it is used.
+     */
+    private pieceIn(inv: number, name: string): string | null {
+        const c = this.bot.getInventory(inv);
+        if (!c) return null;
+        for (let i = 0; i < c.capacity; i++) {
+            const o = c.get(i);
+            const n = o ? ObjType.get(o.id).debugname : null;
+            if (n && (n === name || (n.startsWith(name + '_') && /_\d+$/.test(n)))) return n;
+        }
+        return null;
+    }
+
+    /** Wear every piece of a set; true once it is all on (the clicks go out two a tick at most). */
+    private wearSet(set: string[]): boolean {
+        let all = true;
+        for (const name of set) {
+            if (this.pieceIn(InvType.WORN, name)) continue;
+            all = false;
+            const held = this.pieceIn(InvType.INV, name);
+            if (held) {
+                this.later('wear-' + name, () => Input.heldOp(this.bot, held, Input.heldOpNamed(held, 'Wield', 'Wear') || 2));
+            }
+        }
+        return all;
+    }
+
+    /**
+     * A caster's fight, the whole of it, not just the opening freeze: freeze whenever the target is
+     * free and past its immunity, damage spells in between, and - for a hybrid - a rush in its melee
+     * set while the target is held long enough to reach, with a spell mixed in between the hits, and
+     * back into its casting set once the hold has worn off.
+     */
+    private fightWithMagic(t: Player, d: number): void {
+        const s = this.s;
+        const bot = this.bot;
+        const kit = this.kit;
+        const now = World.currentTick;
+        const frozenUntil = getVarp(t, 'frozen');
+        const frozen = frozenUntil > now;
+        const canFreeze = !!kit.freezeSpell && !s.noFreeze && frozenUntil + 5 <= now;
+
+        if (bot.heard('You do not have enough')) {
+            // out of runes for what it last cast: the hold first, then everything
+            bot.messages.length = 0;
+            if (s.lastSpell === kit.freezeSpell) s.noFreeze = true;
+            else {
+                this.startLeaving('out of runes');
+                return;
+            }
+        }
+
+        const hybrid = kit.style === 'hybrid' && !!kit.mageSet && !!kit.meleeSet;
+        const rush = hybrid && !canFreeze && frozen && frozenUntil - now > d + 2;
+
+        if (rush) {
+            if (!this.wearSet(kit.meleeSet!)) return;
+            // once per swing, sometimes a spell instead of the next hit
+            const swing = getVarp(bot, 'action_delay');
+            if (swing !== s.lastSwing) {
+                s.lastSwing = swing;
+                if (kit.damageSpell && Math.random() < 0.35) {
+                    const spell = kit.damageSpell;
+                    this.later('cast', () => {
+                        s.lastSpell = spell;
+                        Input.castOnPlayer(bot, t, spell);
+                    });
+                    return;
+                }
+            }
+            if (!this.casting(t) && bot.target !== t) this.later('attack', () => Input.opPlayer(bot, t, 2));
+            return;
+        }
+
+        if (hybrid && !this.wearSet(kit.mageSet!)) return;
+        if (kit.style === 'mage' && frozen && d <= 1) {
+            // it cannot follow: step back and cast from range
+            this.later('kite', () => Input.walk(bot, bot.x + (bot.x - t.x) * 3, bot.z + (bot.z - t.z) * 3));
+            return;
+        }
+        if (this.casting(t)) return; // a cast is on its way
+        const spell = canFreeze ? kit.freezeSpell : kit.damageSpell;
+        if (spell) {
+            this.later('cast', () => {
+                s.lastSpell = spell;
+                Input.castOnPlayer(bot, t, spell);
+            });
+        }
+    }
+
+    /** Is a spell on its way to this target (rather than a melee or ranged attack)? */
+    private casting(t: Player): boolean {
+        const op = this.bot.targetOp;
+        return this.bot.target === t && (op === ServerTriggerType.APPLAYERT || op === ServerTriggerType.OPPLAYERT);
+    }
 
     /** One step of a fight with a player: prayer is handled by survive(); this is weapons and spells. */
     private fightPlayer(t: Player): void {
@@ -471,48 +734,7 @@ export class BotBrain {
         this.manageSpec(t, d);
 
         if (kit.style === 'mage' || kit.style === 'hybrid') {
-            const weapon = this.wornWeapon();
-            const staff = this.mainWeapon();
-            const frozen = this.isFrozen(t);
-            if (kit.style === 'hybrid' && kit.meleeSwitch) {
-                // held long enough to walk up to: rush in with the blade; once it is free, back to the staff
-                const heldFor = getVarp(t, 'frozen') - World.currentTick;
-                if (frozen && heldFor > d + 3 && d <= 8 && weapon !== kit.meleeSwitch && this.invCount(kit.meleeSwitch) > 0) {
-                    const sw = kit.meleeSwitch;
-                    this.later('switch-melee', () => Input.heldOp(bot, sw, Input.heldOpNamed(sw, 'Wield', 'Wear') || 2));
-                    return;
-                }
-                if (weapon === kit.meleeSwitch && !frozen && d > 1 && staff && this.invCount(staff) > 0) {
-                    this.later('switch-mage', () => Input.heldOp(bot, staff, Input.heldOpNamed(staff, 'Wield', 'Wear') || 2));
-                    return;
-                }
-                if (weapon === kit.meleeSwitch) {
-                    if (bot.target !== t) this.later('attack', () => Input.opPlayer(bot, t, 2));
-                    return;
-                }
-            }
-            if (kit.style === 'mage' && frozen && d <= 1) {
-                // it cannot follow: step back and cast from range
-                this.later('kite', () => Input.walk(bot, bot.x + (bot.x - t.x) * 3, bot.z + (bot.z - t.z) * 3));
-                return;
-            }
-            if (bot.target === t) return; // a cast is on its way
-            if (bot.heard('You do not have enough')) {
-                // out of runes for what it last cast: the hold first, then everything
-                bot.messages.length = 0;
-                if (this.s.lastSpell === kit.freezeSpell) this.s.noFreeze = true;
-                else {
-                    this.startLeaving('out of runes');
-                    return;
-                }
-            }
-            const spell = kit.freezeSpell && !this.s.noFreeze && !this.freezeImmune(t) ? kit.freezeSpell : kit.damageSpell;
-            if (spell) {
-                this.later('cast', () => {
-                    this.s.lastSpell = spell;
-                    Input.castOnPlayer(bot, t, spell);
-                });
-            }
+            this.fightWithMagic(t, d);
             return;
         }
 
@@ -557,8 +779,9 @@ export class BotBrain {
                 }
                 return;
             }
-            if (kit.specWeapon && main && weapon !== main && this.invCount(main) > 0) {
-                this.later('unspec', () => Input.heldOp(bot, main, Input.heldOpNamed(main, 'Wield', 'Wear') || 2));
+            const held = kit.specWeapon && main ? this.pieceIn(InvType.INV, main) : null;
+            if (held) {
+                this.later('unspec', () => Input.heldOp(bot, held, Input.heldOpNamed(held, 'Wield', 'Wear') || 2));
             }
             return;
         }
@@ -621,13 +844,13 @@ export class BotBrain {
 
         // top up the spec weapon swap if a fight left it wielded
         const main = this.mainWeapon();
-        const weapon = this.wornWeapon();
-        if (main && weapon !== main && this.invCount(main) > 0 && !this.inCombatRecently(16)) {
-            this.later('rewield', () => Input.heldOp(bot, main, Input.heldOpNamed(main, 'Wield', 'Wear') || 2));
+        const held = main && !this.pieceIn(InvType.WORN, main) ? this.pieceIn(InvType.INV, main) : null;
+        if (held && !this.inCombatRecently(16)) {
+            this.later('rewield', () => Input.heldOp(bot, held, Input.heldOpNamed(held, 'Wield', 'Wear') || 2));
             return;
         }
 
-        this.wander();
+        this.travel();
     }
 
     private inCombatWith(p: Player): boolean {
@@ -683,10 +906,21 @@ export class BotBrain {
                 s.kills++;
                 s.lootSpot = { x: npc.x, z: npc.z, until: World.currentTick + 12 };
                 s.npcTarget = null;
-            } else if (dist(bot, npc) > 16 || bot.heard('already under attack') || bot.heard('Someone else is fighting')) {
-                s.blacklist.set(npc.uid, World.currentTick + 50);
+            } else if (
+                dist(bot, npc) > 16 ||
+                bot.heard('already under attack') ||
+                bot.heard('Someone else is fighting') ||
+                bot.heard("can't reach") ||
+                // no hit on it in half a minute: behind a fence, across water, out of reach - give it up
+                (World.currentTick - s.npcSince > 50 && npc.levels[3] >= s.npcHp)
+            ) {
+                s.blacklist.set(npc.uid, World.currentTick + 200);
                 s.npcTarget = null;
             } else {
+                if (npc.levels[3] < s.npcHp) {
+                    s.npcHp = npc.levels[3];
+                    s.npcSince = World.currentTick;
+                }
                 if (bot.target !== npc) {
                     const op = this.attackOp(npc);
                     if (op) this.later('attack-npc', () => Input.opNpc(bot, npc, op));
@@ -700,19 +934,28 @@ export class BotBrain {
         // something is already chewing on it: fight that
         const aggressor = World.getNpcByUid(getVarp(bot, 'aggressive_npc'));
         if (aggressor && this.inCombatRecently(8) && aggressor.isActive && this.attackOp(aggressor)) {
-            s.npcTarget = aggressor;
+            this.engageNpc(aggressor);
             return;
         }
 
-        const found = this.findMonster();
+        // on the way somewhere it stops for a couple of fights at most; once there, for as many as it likes
+        const lingering = s.destArrived && World.currentTick < s.destUntil;
+        const found = lingering || s.legFights < 2 ? this.findMonster() : null;
         if (found) {
-            s.npcTarget = found;
+            s.legFights++;
+            this.engageNpc(found);
             const op = this.attackOp(found);
             if (op) this.later('attack-npc', () => Input.opNpc(bot, found, op));
             return;
         }
 
-        this.wander();
+        this.travel();
+    }
+
+    private engageNpc(npc: Npc): void {
+        this.s.npcTarget = npc;
+        this.s.npcHp = npc.levels[3];
+        this.s.npcSince = World.currentTick;
     }
 
     private attackOp(npc: Npc): number {
@@ -736,7 +979,7 @@ export class BotBrain {
                     if (d > r || d >= bestD) continue;
                     if (!npc.isActive || npc.delayed || npc.levels[3] <= 0) continue;
                     const type = NpcType.get(npc.type);
-                    if (type.vislevel < minLevel || type.vislevel > maxLevel) continue;
+                    if (type.vislevel < minLevel || type.vislevel > maxLevel || noAntifire(type)) continue;
                     if (!this.attackOp(npc)) continue;
                     const until = this.s.blacklist.get(npc.uid);
                     if (until !== undefined && until > World.currentTick) continue;

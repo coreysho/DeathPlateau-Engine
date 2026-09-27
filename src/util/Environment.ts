@@ -82,6 +82,8 @@ export default {
     NODE_BOTS_CONFIG: tryParseString(process.env.NODE_BOTS_CONFIG, 'data/config/bots.json'),
     NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
     NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
+    // every N ticks, one log line per bot: what it is doing and why (0 = off)
+    NODE_BOTS_TRACE: tryParseInt(process.env.NODE_BOTS_TRACE, 0),
     // entities cap
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),
