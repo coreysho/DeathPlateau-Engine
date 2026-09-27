@@ -42,6 +42,14 @@ import { tryParseInt } from '#/util/TryParse.js';
 const YELL_COOLDOWN_TICKS = 17;
 const lastYell: WeakMap<Player, number> = new WeakMap();
 
+// custom (2026-09-27) - ::changepassword: one try every 5 seconds, so a logged-in session left open
+// cannot be used to guess the current password quickly. The characters are the ones the login
+// screen lets you type (Client.CHARSET), less space and backtick - a password you cannot type there
+// would lock you out.
+const PASSWORD_COOLDOWN_TICKS = 8;
+const lastPasswordChange: WeakMap<Player, number> = new WeakMap();
+const PASSWORD_CHARS = /^[a-z0-9!"$%^&*()\-_=+[{\]};:'@#~,<.>/?\\|]+$/;
+
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
         if (message.input.length > 80) {
@@ -86,6 +94,41 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
             player.teleJump((48 << 6) + 14, (54 << 6) + 35, 0);
             player.messageGame('You teleport home to Edgeville.');
+            return true;
+        }
+
+        if (cmd === 'changepassword') {
+            // custom (2026-09-27) - handled before the staff "Ran cheat" session log below, which would
+            // otherwise write a moderator's passwords into the logs. Available to all players.
+            // ::changepassword <current> <new> <new again> - lowercase, like every password here.
+            const [oldPassword, newPassword, confirm] = args;
+            if (!oldPassword || !newPassword || !confirm || args.length !== 3) {
+                player.messageGame('Usage: ::changepassword current new new');
+                return true;
+            }
+
+            const last = lastPasswordChange.get(player);
+            if (last !== undefined && World.currentTick - last < PASSWORD_COOLDOWN_TICKS) {
+                player.messageGame('Please wait a few seconds before trying again.');
+                return true;
+            }
+            lastPasswordChange.set(player, World.currentTick);
+
+            if (newPassword !== confirm) {
+                player.messageGame('The two new passwords do not match.');
+            } else if (newPassword.length < 5 || newPassword.length > 20) {
+                player.messageGame('Your new password must be 5 to 20 characters long.');
+            } else if (!PASSWORD_CHARS.test(newPassword)) {
+                player.messageGame('Your new password can only use letters, numbers and symbols you can type at the login screen.');
+            } else if (newPassword === oldPassword) {
+                player.messageGame('Your new password must be different from your current one.');
+            } else if (newPassword === player.username.replaceAll('_', ' ') || newPassword === player.username) {
+                player.messageGame('Your password cannot be your username.');
+            } else if (!World.requestPasswordChange(player, oldPassword, newPassword)) {
+                player.messageGame('Your last password change is still being processed.');
+            } else {
+                player.messageGame('Checking your password...');
+            }
             return true;
         }
 

@@ -113,6 +113,7 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         reconnecting,
                         reply: 4,
                         staffmodlevel,
+                        muted_until: account.muted_until,
                         save: null,
                         account_id: accountId,
                         members: Environment.NODE_MEMBERS
@@ -126,6 +127,7 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         reconnecting,
                         reply: 0,
                         staffmodlevel,
+                        muted_until: account.muted_until,
                         save: fs.readFileSync(`data/players/${profile}/${username}.sav`),
                         account_id: accountId,
                         members: Environment.NODE_MEMBERS
@@ -184,19 +186,54 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
             break;
         }
         case 'player_ban': {
+            const { staff, username, until } = msg;
             if (Environment.LOGIN_SERVER) {
                 // todo: wait for confirmation? resend?
-                const { staff, username, until } = msg;
                 await client.playerBan(staff, username, until);
+            } else {
+                // custom (2026-09-27) - without a login server a ::ban used to go nowhere: the player was
+                // kicked and could log straight back in. Written here, as LoginServer would.
+                await db
+                    .updateTable('account')
+                    .set({ banned_until: toDbDate(until) })
+                    .where('username', '=', username)
+                    .execute();
             }
             break;
         }
         case 'player_mute': {
+            const { staff, username, until } = msg;
             if (Environment.LOGIN_SERVER) {
                 // todo: wait for confirmation? resend?
-                const { staff, username, until } = msg;
                 await client.playerMute(staff, username, until);
+            } else {
+                // custom (2026-09-27) - as player_ban: a mute now outlasts a relog without a login server
+                await db
+                    .updateTable('account')
+                    .set({ muted_until: toDbDate(until) })
+                    .where('username', '=', username)
+                    .execute();
             }
+            break;
+        }
+        case 'player_change_password': {
+            // custom (2026-09-27) - ::changepassword. The account table is the same database in both login
+            // modes, so this goes to it directly. Passwords are compared and stored lowercased, as at login.
+            const { username, oldPassword, newPassword } = msg;
+            let result: 'ok' | 'wrong' | 'error' = 'error';
+            try {
+                const account = await db.selectFrom('account').select(['id', 'password']).where('username', '=', username).executeTakeFirst();
+                if (!account || !(await bcrypt.compare(oldPassword.toLowerCase(), account.password))) {
+                    result = 'wrong';
+                } else {
+                    const hash = await bcrypt.hash(newPassword.toLowerCase(), 10);
+                    await db.updateTable('account').set({ password: hash }).where('id', '=', account.id).execute();
+                    result = 'ok';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            parentPort.postMessage({ type: 'player_change_password', username, result });
             break;
         }
         case 'world_heartbeat': {
