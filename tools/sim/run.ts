@@ -880,7 +880,7 @@ if (which === 'lunar') {
     // that gives the book, and the boat home. Magic 64 first, which the altar must refuse.
     console.log('LUNAR ISLE  Rellekka -> Lokar -> Lunar Isle -> the Astral altar -> Rellekka');
     const at = (p: any) => `${p.x},${p.z},${p.level}`;
-    const p = H.makePlayer('moonie', 2628, 3700, 1);
+    const p = H.makePlayer('moonie', 2630, 3695, 1);
     H.tick(1);
     H.maxOut(p);
     p.setLevel(6, 64);
@@ -912,7 +912,7 @@ if (which === 'lunar') {
     H.opNpc(p, island!, 3);
     for (t = 0; t < 90 && p.z > 3800; t++) H.tick(1);
     H.tick(2);
-    console.log('  after Travel home:', at(p), '(want 2628,3700,0)');
+    console.log('  after Travel home:', at(p), '(want 2630,3696,0)');
 }
 
 if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
