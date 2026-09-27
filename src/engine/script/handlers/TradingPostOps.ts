@@ -1,7 +1,7 @@
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import Player from '#/engine/entity/Player.js';
-import TradingPost, { Listing, ListingState, OfferState, tpCoins, TpObjInfo, TpPocket } from '#/engine/market/TradingPost.js';
+import TradingPost, { Listing, ListingState, Offer, OfferState, tpCoins, TpObjInfo, TpPocket } from '#/engine/market/TradingPost.js';
 import { ScriptOpcode } from '#/engine/script/ScriptOpcode.js';
 import { ProtectedActivePlayer } from '#/engine/script/ScriptPointer.js';
 import { CommandHandlers } from '#/engine/script/ScriptRunner.js';
@@ -82,7 +82,7 @@ export function tradingPost(): TradingPost {
 // ownership checks, which answer "that offer is not yours" on their own.
 
 export type TpDiscordRequest = { username: string; action: string; arg: number };
-export type TpDiscordReply = { text: string; offers?: { id: number; label: string }[] };
+export type TpDiscordReply = { text: string; offers?: { id: number; label: string }[]; items?: string[] };
 
 // A pocket with no room, for a seller who is not standing at a post: everything the market hands
 // back lands in their collection box instead.
@@ -93,6 +93,19 @@ function boxOnly(username: string): TpPocket {
 function tpTell(username: string, text: string): void {
     const player = World.getPlayerByUsername(username);
     player?.wrappedMessageGame(`@dbl@Trading post:@bla@ ${text}`);
+}
+
+// One line per thing in an offer - the coins, then each item with its count. Noted or not does not
+// arise: the market holds everything unnoted.
+function tpOfferItems(tp: TradingPost, o: Offer): string[] {
+    const lines: string[] = [];
+    if (o.coins > 0) {
+        lines.push(tpCoins(o.coins));
+    }
+    for (const i of tp.offerItems(o.id)) {
+        lines.push(i.count === 1 ? objs.name(i.obj) : `${i.count} x ${objs.name(i.obj)}`);
+    }
+    return lines;
 }
 
 export function tradingPostDiscord(req: TpDiscordRequest): TpDiscordReply {
@@ -145,7 +158,9 @@ export function tradingPostDiscord(req: TpDiscordRequest): TpDiscordReply {
         if (o.state !== OfferState.PENDING || l.state !== ListingState.OPEN) {
             return { text: '' };
         }
-        return { text: `**${tp.describeOffer(o)}** from **${toDisplayName(o.buyer)}** for your **${tp.describe(l)}**` };
+        // describeOffer says "10 items" - fine for one chatbox line, useless in a DM you are
+        // deciding from. The breakdown goes with it so Discord can show every one.
+        return { text: `**${tp.describeOffer(o)}** from **${toDisplayName(o.buyer)}** for your **${tp.describe(l)}**`, items: tpOfferItems(tp, o) };
     }
 
     if (req.action === 'describe-listing') {

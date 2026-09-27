@@ -109,7 +109,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
 // ---- asking the game thread ----
 
-type TpReply = { text: string; offers?: { id: number; label: string }[] };
+type TpReply = { text: string; offers?: { id: number; label: string }[]; items?: string[] };
 const waiting = new Map<number, (reply: TpReply) => void>();
 let nextRequest = 1;
 
@@ -126,6 +126,12 @@ function ask(username: string, action: string, arg = 0): Promise<TpReply> {
         });
         port.postMessage({ type: 'tp', id, username, action, arg });
     });
+}
+
+// An offer's contents, one line each under the summary. "+ 10 items" is all one chatbox line has
+// room for; a DM is where the seller decides, so it lists them.
+function bullets(items?: string[]): string {
+    return items && items.length > 0 ? `\n${items.map(l => `- ${l}`).join('\n')}` : '';
 }
 
 // ---- which game account ----
@@ -199,7 +205,7 @@ async function confirm(i: RepliableInteraction, action: string, id: number, user
         await say(i, action === 'cancel' ? 'That listing is not yours, or has already closed.' : 'That offer is not yours, or is no longer open.');
         return;
     }
-    await say(i, `${words.verb} ${what.text}?\n_${words.warn}_`, [confirmRow(action, id, username, words.verb, from)]);
+    await say(i, `${words.verb} ${what.text}?${bullets(what.items)}\n_${words.warn}_`, [confirmRow(action, id, username, words.verb, from)]);
 }
 
 async function button(i: ButtonInteraction) {
@@ -281,7 +287,11 @@ async function notify(username: string, text: string, offer?: number) {
     try {
         const user = await client.users.fetch(row.discord_id);
         // any @col@ tag is for the game chatbox, and would show in Discord as text
-        const content = `**${toDisplayName(username)}** - ${text.replace(/@[a-z0-9]{3}@/g, '')}`;
+        let content = `**${toDisplayName(username)}** - ${text.replace(/@[a-z0-9]{3}@/g, '')}`;
+        // and what is actually in it, which the summary in that line cannot say
+        if (offer !== undefined) {
+            content += bullets((await ask(username, 'describe-offer', offer)).items);
+        }
         // An offer can be answered from here. Both buttons ask before they do anything.
         const components: ActionRowBuilder<ButtonBuilder>[] = [];
         if (offer !== undefined) {
