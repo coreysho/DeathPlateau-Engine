@@ -4,7 +4,7 @@ import NpcType from '#/cache/config/NpcType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
-import type { BotConfigData, BotHotspot } from '#/engine/bot/BotConfig.js';
+import { type BotArea, type BotConfigData, type BotHotspot, areaFor } from '#/engine/bot/BotConfig.js';
 import * as Input from '#/engine/bot/BotInput.js';
 import type { BotKind, BotKit } from '#/engine/bot/BotKits.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
@@ -110,6 +110,8 @@ const PROTECT = {
     magic: { com: 'prayer:prayer_protectfrommagic', varp: 'prayer12', level: 37 }
 } as const;
 type CombatStyle = keyof typeof PROTECT;
+// the offensive one bots pray instead, by default (BotConfig prayerMode)
+const SMITE = { com: 'prayer:prayer_smite', varp: 'prayer17', level: 52 } as const;
 
 /** What a player is fighting with, as a watcher would tell: the weapon's combat tab. */
 export function styleOf(p: Player): CombatStyle {
@@ -402,7 +404,8 @@ export class BotBrain {
             });
         }
 
-        // prayer: restore when low, protection against whoever is hitting it, off once it is over
+        // prayer: restore when low, Smite (or protection, by prayerMode) against whoever it is fighting,
+        // off once it is over
         if (bot.levels[PlayerStat.PRAYER] < 12) {
             const pot = this.invFind(/^[1-4]doseprayerrestore$/);
             if (pot && fighting) {
@@ -413,10 +416,10 @@ export class BotBrain {
         if (foe && fighting) {
             this.prayAgainst(foe);
         } else if (World.currentTick - this.s.lastCombatTick > 15) {
-            for (const style of Object.keys(PROTECT) as CombatStyle[]) {
-                if (getVarp(bot, PROTECT[style].varp) === 1) {
-                    this.later('pray-off-' + style, () => {
-                        if (getVarp(bot, PROTECT[style].varp) === 1) Input.button(bot, PROTECT[style].com);
+            for (const p of [...Object.values(PROTECT), SMITE]) {
+                if (getVarp(bot, p.varp) === 1) {
+                    this.later('pray-off-' + p.varp, () => {
+                        if (getVarp(bot, p.varp) === 1) Input.button(bot, p.com);
                     });
                 }
             }
@@ -436,6 +439,20 @@ export class BotBrain {
     private prayAgainst(foe: Player): void {
         const bot = this.bot;
         if (bot.levels[PlayerStat.PRAYER] <= 0) return;
+        const mode = this.config.prayerMode;
+        if (mode === 'none') return;
+        if (mode === 'smite') {
+            // below 52 Prayer it has nothing to pray - no protection prayer instead
+            if (bot.baseLevels[PlayerStat.PRAYER] < SMITE.level || getVarp(bot, SMITE.varp) === 1) return;
+            this.later(
+                'pray',
+                () => {
+                    if (getVarp(bot, SMITE.varp) !== 1) Input.button(bot, SMITE.com);
+                },
+                1
+            );
+            return;
+        }
         let style = styleOf(foe);
         if (bot.baseLevels[PlayerStat.PRAYER] < PROTECT[style].level) return;
         if (getVarp(bot, PROTECT[style].varp) === 1) return;
@@ -496,24 +513,31 @@ export class BotBrain {
 
     // ---------------------------------------------------------------- travelling the Wilderness
 
-    /** The deepest Wilderness level this bot's bracket goes to. */
-    private depth(): number {
-        return this.config.depth[this.kit.bracket] ?? 56;
+    /** Where this bot goes: its bracket's depth, or the melee area for a melee kit (BotConfig areaFor). */
+    private area(): BotArea {
+        return areaFor(this.kit, this.config);
+    }
+
+    /**
+     * Inside its area - with slack levels/tiles of give, for someone it is already fighting; or inset
+     * tiles short of its deep edge, for a monster it would have to stand beside.
+     */
+    private inArea(x: number, z: number, slack = 0, inset = 0): boolean {
+        const a = this.area();
+        const wl = surfaceWildernessLevel(x, z + inset);
+        return wl >= 1 && wl <= a.maxLevel + slack && x >= a.minX - slack * 5 && x <= a.maxX + slack * 5;
     }
 
     /**
      * Pick where to go next. Hotspots are waypoints, not leashes: a roamer heads for monsters its level
      * can take, a PKer drifts toward where the players (and, on a bots world, the other bots) are, and
-     * either sometimes just picks a spot - all within its bracket's depth.
+     * either sometimes just picks a spot - all within its area (its bracket's depth, or the melee area).
      */
     private pickDestination(): void {
         const s = this.s;
         const bot = this.bot;
-        const depth = this.depth();
-        const inBand = (x: number, z: number) => {
-            const wl = surfaceWildernessLevel(x, z);
-            return wl >= 1 && wl <= depth && x >= 2946 && x <= 3390;
-        };
+        const area = this.area();
+        const inBand = (x: number, z: number) => this.inArea(x, z);
         let dest: { x: number; z: number; why: string } | null = null;
         const roll = Math.random();
 
@@ -557,8 +581,8 @@ export class BotBrain {
             }
         }
         for (let i = 0; !dest && i < 20; i++) {
-            const x = rand(2950, 3385);
-            const z = rand(3525, Math.min(3965, 3520 + depth * 8 - 1));
+            const x = rand(Math.max(2950, area.minX), Math.min(3385, area.maxX));
+            const z = rand(3525, Math.min(3965, 3520 + area.maxLevel * 8 - 1));
             if (inBand(x, z) && !isMapBlocked(x, z, 0)) dest = { x, z, why: 'somewhere' };
         }
         if (!dest) dest = { x: s.hotspot.x, z: s.hotspot.z, why: s.hotspot.name };
@@ -594,6 +618,7 @@ export class BotBrain {
             for (let i = 0; i < 10; i++) {
                 const x = dest.x + rand(-6, 6);
                 const z = dest.z + rand(-6, 6);
+                if (!this.inArea(x, z)) continue; // pottering about stays inside its area too
                 if (!isMapBlocked(x, z, bot.level)) {
                     this.later('wander', () => Input.walk(bot, x, z));
                     return;
@@ -615,9 +640,10 @@ export class BotBrain {
         // the next click: up to 15 tiles along the way, and off to the side to get round what is in it
         const step = Math.min(d, 15);
         const side = stuck ? 6 + 2 * s.stuckCount : 2;
-        const depthZ = 3520 + this.depth() * 8 - 1;
+        const area = this.area();
+        const depthZ = 3520 + area.maxLevel * 8 - 1;
         for (let i = 0; i < 12; i++) {
-            const x = bot.x + Math.round(((dest.x - bot.x) * step) / d) + rand(-side, side);
+            const x = Math.max(area.minX, Math.min(area.maxX, bot.x + Math.round(((dest.x - bot.x) * step) / d) + rand(-side, side)));
             const z = Math.min(depthZ, bot.z + Math.round(((dest.z - bot.z) * step) / d) + rand(-side, side));
             if (!isMapBlocked(x, z, bot.level)) {
                 this.later('travel', () => Input.walk(bot, x, z), -1);
@@ -842,8 +868,8 @@ export class BotBrain {
                     s.lootSpot = { x: t.x, z: t.z, until: World.currentTick + 15 };
                 }
                 s.pvpTarget = null;
-            } else if (!t.isActive || t.slot === -1 || dist(bot, t) > 20 || this.wildy(t) < 1) {
-                s.pvpTarget = null; // got away
+            } else if (!t.isActive || t.slot === -1 || dist(bot, t) > 20 || this.wildy(t) < 1 || !this.inArea(t.x, t.z, 2)) {
+                s.pvpTarget = null; // got away (or out past where this bot goes)
             } else if (bot.heard('already under attack') || bot.heard('Someone else is already fighting') || bot.heard('level difference is too great')) {
                 s.blacklist.set(t.uid, World.currentTick + 50);
                 s.pvpTarget = null;
@@ -861,6 +887,7 @@ export class BotBrain {
         for (const other of World.playerLoop.all()) {
             const d = dist(bot, other);
             if (d > this.config.pkerScanRadius || d >= bestD) continue;
+            if (!this.inArea(other.x, other.z)) continue;
             if (!this.canAttack(other)) continue;
             best = other;
             bestD = d;
@@ -909,7 +936,7 @@ export class BotBrain {
             if (this.isDead(t)) {
                 if (getVarp(t, 'death') === 1) s.kills++;
                 s.pvpTarget = null;
-            } else if (!t.isActive || dist(bot, t) > 15 || (!this.inCombatRecently(16) && bot.target !== t)) {
+            } else if (!t.isActive || dist(bot, t) > 15 || !this.inArea(t.x, t.z, 2) || (!this.inCombatRecently(16) && bot.target !== t)) {
                 s.pvpTarget = null;
             } else {
                 this.fightPlayer(t);
@@ -938,6 +965,7 @@ export class BotBrain {
                 s.npcTarget = null;
             } else if (
                 dist(bot, npc) > 16 ||
+                !this.inArea(npc.x, npc.z) || // it wandered out of this bot's part of the wilderness
                 bot.heard('already under attack') ||
                 bot.heard('Someone else is fighting') ||
                 bot.heard("can't reach") ||
@@ -1016,6 +1044,7 @@ export class BotBrain {
                     // someone else's fight
                     if (npc.target instanceof Player && npc.target !== bot) continue;
                     if (wildernessLevel(bot, npc.x, npc.z, npc.level) < 1) continue; // stay in the wilderness
+                    if (!this.inArea(npc.x, npc.z, 0, 2)) continue; // and in its own part of it, off the deep edge
                     best = npc;
                     bestD = d;
                 }

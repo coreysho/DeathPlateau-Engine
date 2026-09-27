@@ -32,6 +32,29 @@ export type BotHotspot = {
     brackets?: BotBracket[];
 };
 
+/**
+ * What a bot prays in a fight. 'smite' (the default): Smite, from 52 Prayer - it drains a quarter of
+ * each hit from the target's prayer points, so a bot never makes itself immune to a player's style.
+ * 'protect': the protection prayer against its attacker's style. 'none': it never prays.
+ */
+export type BotPrayerMode = 'smite' | 'protect' | 'none';
+export const BOT_PRAYER_MODES: BotPrayerMode[] = ['smite', 'protect', 'none'];
+
+/** Where a bot may go: Wilderness level 1 to maxLevel, between two x's. */
+export type BotArea = { maxLevel: number; minX: number; maxX: number };
+
+/**
+ * A kit's area: melee kits keep to meleeArea (the Edgeville stretch of the Wilderness, level 5 and
+ * below, by default) when it is set; everything else ranges its bracket's depth across the whole
+ * Wilderness.
+ */
+export function areaFor(kit: { style: string; bracket: BotBracket }, config: BotConfigData): BotArea {
+    if (kit.style === 'melee' && config.meleeArea) {
+        return config.meleeArea;
+    }
+    return { maxLevel: config.depth[kit.bracket] ?? 56, minX: 2946, maxX: 3390 };
+}
+
 export type BotDeathDrop = {
     /** Coins, a random amount in [min, max]. [0, 0] for none. */
     coins: [number, number];
@@ -50,6 +73,11 @@ export type BotConfigData = {
      * leashes: a bot walks from one destination to the next across the whole Wilderness inside this.
      */
     depth: BotCounts;
+    /**
+     * Melee kits stay in here instead (null: they range like everyone else). Default: the Edgeville
+     * part of the Wilderness, level 5 and below. A melee PKer does not follow anyone far out of it.
+     */
+    meleeArea: BotArea | null;
     /** Ticks a bot stays around a destination it reached before it picks the next. */
     lingerTicks: [number, number];
     /** Ticks between two spawns while filling up (so they arrive over time, not all at once). */
@@ -62,6 +90,8 @@ export type BotConfigData = {
     reactionTicks: [number, number];
     /** Chance (0-1) a decision is fumbled: a late eat, the wrong prayer, a missed switch. */
     mistakeChance: number;
+    /** What it prays in a fight (BotPrayerMode above). NODE_BOTS_PRAYER overrides it. */
+    prayerMode: BotPrayerMode;
     /** Eat below this % of max hitpoints (each bot jitters it by up to 10 either way). */
     eatPercent: number;
     /** With no food left, run for it below this % of max hitpoints. */
@@ -83,12 +113,14 @@ export const DEFAULT_BOT_CONFIG: BotConfigData = {
     roamers: { low: 2, mid: 2, high: 1, max: 1 },
     pkers: { low: 1, mid: 1, high: 1, max: 1 },
     depth: { low: 15, mid: 30, high: 56, max: 56 },
+    meleeArea: { maxLevel: 5, minX: 3040, maxX: 3140 },
     lingerTicks: [40, 160],
     spawnIntervalTicks: 5,
     respawnTicks: [60, 180],
     botsAttackBots: true,
     reactionTicks: [1, 3],
     mistakeChance: 0.1,
+    prayerMode: 'smite',
     eatPercent: 50,
     fleePercent: 30,
     pkerScanRadius: 14,
@@ -232,6 +264,13 @@ export function loadBotConfig(path: string = Environment.NODE_BOTS_CONFIG): BotC
     }
     if (Environment.NODE_BOTS_PKERS >= 0) {
         config.pkers = spreadCount(Environment.NODE_BOTS_PKERS);
+    }
+    if (Environment.NODE_BOTS_PRAYER !== '') {
+        config.prayerMode = Environment.NODE_BOTS_PRAYER.toLowerCase() as BotPrayerMode;
+    }
+    if (!BOT_PRAYER_MODES.includes(config.prayerMode)) {
+        printWarning(`bots: prayer mode "${config.prayerMode}" is not one of ${BOT_PRAYER_MODES.join(', ')} - using smite`);
+        config.prayerMode = 'smite';
     }
 
     // a name longer than 8 does not fit "Bot " + name in the 12 characters a name can have
