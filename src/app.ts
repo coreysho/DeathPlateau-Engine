@@ -10,6 +10,7 @@ import Environment from '#/util/Environment.js';
 import { printError, printInfo, printWarning } from '#/util/Logger.js';
 import { startManagementWeb, startWeb } from '#/web.js';
 import OnDemand from '#/engine/OnDemand.js';
+import BotManager from '#/engine/bot/BotManager.js';
 
 if (OnDemand.cache.count(0) !== 9 || OnDemand.cache.count(2) === 0 || !fs.existsSync('data/pack/server/script.dat')) {
     printInfo('Packing cache, please wait until you see the world is ready.');
@@ -44,6 +45,11 @@ if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
 }
 
 await World.start();
+
+// custom (2026-09-27) - server-side bots, only where asked for (the dev world). Never on live.
+if (Environment.NODE_BOTS) {
+    BotManager.start();
+}
 
 const tcpServer = new TcpServer();
 tcpServer.start();

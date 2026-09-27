@@ -73,6 +73,15 @@ export default {
     NODE_WALKTRIGGER_SETTING: tryParseInt(process.env.NODE_WALKTRIGGER_SETTING, WalkTriggerSetting.PLAYERPACKET),
     // separate save folder
     NODE_PROFILE: tryParseString(process.env.NODE_PROFILE, 'main'),
+    // custom (2026-09-27) - server-side bot players in the Wilderness (src/engine/bot). OFF unless a
+    // world asks for them: the dev world sets NODE_BOTS=true, the live world never does. Counts,
+    // hotspots and the rest come from NODE_BOTS_CONFIG (a JSON file, optional - see
+    // src/engine/bot/BotConfig.ts for every knob and its default); the two counts can also be set here,
+    // -1 meaning "whatever the file (or the default) says".
+    NODE_BOTS: tryParseBoolean(process.env.NODE_BOTS, false),
+    NODE_BOTS_CONFIG: tryParseString(process.env.NODE_BOTS_CONFIG, 'data/config/bots.json'),
+    NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
+    NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
     // entities cap
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),

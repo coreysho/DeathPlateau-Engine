@@ -33,6 +33,7 @@ import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 
 import Environment from '#/util/Environment.js';
+import handleBotCommand from '#/engine/bot/BotCommands.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
 
@@ -339,6 +340,12 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
         if (player.staffModLevel >= 3) {
             // admin commands (potentially destructive for a live economy)
+
+            // custom (2026-09-27) - server-side bots (engine/bot/BotCommands.ts). They only exist
+            // where NODE_BOTS=true, the dev world; anywhere else these say so.
+            if (cmd === 'bots' || cmd === 'bot') {
+                return handleBotCommand(player, cmd, args);
+            }
 
             if (cmd === 'bank') {
                 // ::bank - open the bank from anywhere.
