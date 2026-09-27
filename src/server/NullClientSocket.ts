@@ -17,6 +17,10 @@ export default class NullClientSocket extends ClientSocket {
         return 0;
     }
 
+    get bufferedBytes(): number {
+        return 0;
+    }
+
     close(): void {
         // no-op
     }

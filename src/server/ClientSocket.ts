@@ -4,7 +4,6 @@ import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import Isaac from '#/io/Isaac.js';
 import Packet from '#/io/Packet.js';
 
-
 export default abstract class ClientSocket {
     uuid = randomUUID();
     remoteAddress = 'unknown';
@@ -55,11 +54,15 @@ export default abstract class ClientSocket {
         dest.set(this.in.data.subarray(0, length), offset);
         this.in.pos -= length;
 
-        // shift buffer to the next read
-        this.in.data.set(this.in.data.subarray(length), 0);
+        // shift buffer to the next read - only the bytes still buffered, not the whole 64 KB: a flood of
+        // 1-byte packets made every read copy the full buffer
+        this.in.data.copyWithin(0, length, length + this.in.pos);
 
         return true;
     }
+
+    // bytes handed to send() that the OS has not taken yet - grows when the peer stops reading
+    abstract get bufferedBytes(): number;
 
     abstract send(src: Uint8Array): void;
     abstract close(): void;

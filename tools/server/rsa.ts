@@ -1,14 +1,33 @@
 import fs from 'fs';
+import path from 'path';
 
 import forge from 'node-forge';
 
-const key = forge.pki.rsa.generateKeyPair(1024);
+import Environment from '#/util/Environment.js';
 
-const pubkey = forge.pki.publicKeyToPem(key.publicKey);
-fs.writeFileSync('data/config/public.pem', pubkey);
+// Makes the login RSA key: the private half for the server (LOGIN_RSA_KEY_PATH, never committed) and
+// the two numbers the client needs (Client.java LOGIN_RSAN / LOGIN_RSAE). `npm run rsa`.
+//
+// 1024 bits is the most the login block has room for: the client writes the encrypted block's length
+// in one byte, and the whole login packet's length in another (Client.login, World.onClientData).
 
-const privkey = forge.pki.privateKeyToPem(key.privateKey);
-fs.writeFileSync('data/config/private.pem', privkey);
+const out = Environment.LOGIN_RSA_KEY_PATH;
+const force = process.argv.includes('--force');
 
-console.log('static readonly exponent: bigint = ' + key.publicKey.e.toString(10) + 'n;');
-console.log('static readonly modulus: bigint = ' + key.publicKey.n.toString(10) + 'n;');
+if (fs.existsSync(out) && !force) {
+    console.error(`${out} already exists. Replacing it locks out every client built with the current key.`);
+    console.error('Re-run with --force if that is what you want: npm run rsa -- --force');
+    process.exit(1);
+}
+
+const key = forge.pki.rsa.generateKeyPair({ bits: 1024, e: 0x10001 });
+
+fs.mkdirSync(path.dirname(out), { recursive: true });
+fs.writeFileSync(out, forge.pki.privateKeyToPem(key.privateKey), { mode: 0o600 });
+fs.chmodSync(out, 0o600);
+
+console.log(`Wrote the private key to ${out} (mode 600). Keep it off GitHub and back it up.`);
+console.log('');
+console.log('Put these in DeathPlateau-Client/src/main/java/jagex2/client/Client.java:');
+console.log(`    LOGIN_RSAN = new BigInteger("${key.publicKey.n.toString(10)}");`);
+console.log(`    LOGIN_RSAE = new BigInteger("${key.publicKey.e.toString(10)}");`);

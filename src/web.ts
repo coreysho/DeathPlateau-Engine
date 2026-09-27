@@ -18,6 +18,7 @@ import NullClientSocket from '#/server/NullClientSocket.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 
 import WSClientSocket from '#/server/ws/WSClientSocket.js';
+import ConnectionLimiter, { HANDSHAKE_TIMEOUT_MS, normalizeAddress } from '#/server/ConnectionLimiter.js';
 
 import Environment from '#/util/Environment.js';
 import { tryParseInt } from '#/util/TryParse.js';
@@ -57,8 +58,17 @@ fastify.route({
         return reply.redirect('/rs2.cgi', 302);
     },
     wsHandler: (socket, req) => {
+        const address = normalizeAddress(req.socket.remoteAddress);
+        if (!ConnectionLimiter.tryAcquire(address)) {
+            socket.terminate();
+            return;
+        }
+
         const client = new WSClientSocket(
             {
+                get bufferedAmount() {
+                    return socket.bufferedAmount;
+                },
                 send(data: Uint8Array) {
                     socket.send(data);
                 },
@@ -69,10 +79,22 @@ fastify.route({
                     socket.terminate();
                 }
             },
-            req.socket.remoteAddress ?? 'unknown'
+            address
         );
 
+        // custom (2026-09-27) - the same rules as TCP (TcpServer): 30 seconds without a byte, or 30
+        // seconds without finishing a login, and the socket is dropped. WebSockets had no timeout at all.
+        const handshakeDeadline = setTimeout(() => {
+            if (client.state === 0) {
+                client.terminate();
+            }
+        }, HANDSHAKE_TIMEOUT_MS);
+        let idleTimer = setTimeout(() => client.terminate(), 30000);
+
         socket.on('message', (message: Buffer<ArrayBufferLike>) => {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => client.terminate(), 30000);
+
             try {
                 if (client.state === -1 || client.remaining <= 0) {
                     client.terminate();
@@ -92,6 +114,9 @@ fastify.route({
         });
 
         socket.on('close', () => {
+            clearTimeout(handshakeDeadline);
+            clearTimeout(idleTimer);
+            ConnectionLimiter.release(address);
             client.state = -1;
             OnDemand.onClientClosed(client);
 
@@ -237,6 +262,8 @@ management.get('/prometheus', async (_req, reply) => {
 // the "System update in" countdown every client draws, a line in chat, and a clean shutdown when it
 // runs out - the same as ::slowreboot, without needing to be logged in. Loopback only: anyone who
 // can reach this port from outside must not be able to take the world down.
+// req.ip is the socket's address (no trustProxy), so a header cannot fake it - but a reverse proxy on
+// this machine would make every request loopback. Never put one in front of the management port.
 management.post<{ Querystring: { seconds?: string } }>('/reboot', async (req, reply) => {
     if (req.ip !== '127.0.0.1' && req.ip !== '::1' && req.ip !== '::ffff:127.0.0.1') {
         return reply.code(403).send('loopback only\n');
@@ -253,5 +280,5 @@ management.post<{ Querystring: { seconds?: string } }>('/reboot', async (req, re
 });
 
 export async function startManagementWeb() {
-    await management.listen({ port: Environment.WEB_MANAGEMENT_PORT, host: '0.0.0.0' });
+    await management.listen({ port: Environment.WEB_MANAGEMENT_PORT, host: Environment.WEB_MANAGEMENT_HOST });
 }

@@ -23,6 +23,7 @@
     "login": "tsx src/login.ts",
     "prepare": "husky",
     "quickstart": "tsx src/app.ts",
+    "rsa": "tsx tools/server/rsa.ts",
     "setup": "npm install && tsx tools/server/setup.ts",
     "sqlite:migrate": "prisma migrate deploy --schema prisma/singleworld/schema.prisma",
     "sqlite:reset": "prisma migrate reset --force --schema prisma/singleworld/schema.prisma",

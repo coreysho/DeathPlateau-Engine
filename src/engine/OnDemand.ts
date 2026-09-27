@@ -32,7 +32,21 @@ type OnDemandWorkerMessage =
           clientId: string;
       };
 
-type OnDemandWorkerRequest = OnDemandRequest | OnDemandClientClosed | OnDemandReloadCache;
+type OnDemandFlowControl = {
+    type: 'pause' | 'resume';
+    clientId: string;
+};
+
+type OnDemandWorkerRequest = OnDemandRequest | OnDemandClientClosed | OnDemandReloadCache | OnDemandFlowControl;
+
+// custom (2026-09-27) - backpressure. The worker serves as fast as it can, and send() never blocks, so
+// a client that requests files and then stops reading (no login needed) made Node buffer without limit
+// until the whole world ran out of memory. Past HIGH the client is paused in the worker; it resumes
+// once its socket drains below LOW. Past HARD - only possible if a pause is ignored - it is dropped.
+const BACKPRESSURE_HIGH = 1024 * 1024;
+const BACKPRESSURE_LOW = 256 * 1024;
+const BACKPRESSURE_HARD = 16 * 1024 * 1024;
+const BACKPRESSURE_POLL_MS = 50;
 
 type WorkerWithTransfers = Worker & {
     postMessage(value: OnDemandWorkerRequest): void;
@@ -44,6 +58,8 @@ class OnDemand {
     private worker: WorkerWithTransfers | null = null;
     private clients: Map<string, ClientSocket> = new Map();
     private restarting: NodeJS.Timeout | null = null;
+    private paused: Set<string> = new Set();
+    private drainTimer: NodeJS.Timeout | null = null;
 
     cycle() {
         this.startWorker();
@@ -85,6 +101,8 @@ class OnDemand {
     }
 
     onClientClosed(client: ClientSocket) {
+        this.paused.delete(client.uuid);
+
         if (!this.clients.delete(client.uuid)) {
             return;
         }
@@ -126,6 +144,7 @@ class OnDemand {
         worker.on('exit', code => {
             this.worker = null;
             this.clients.clear();
+            this.paused.clear();
 
             if (code === 0 || this.restarting) {
                 return;
@@ -163,6 +182,42 @@ class OnDemand {
         }
 
         client.send(msg.data);
+
+        const buffered = client.bufferedBytes;
+        if (buffered > BACKPRESSURE_HARD) {
+            client.terminate();
+            this.onClientClosed(client);
+        } else if (buffered > BACKPRESSURE_HIGH && !this.paused.has(client.uuid)) {
+            this.paused.add(client.uuid);
+            this.worker?.postMessage({ type: 'pause', clientId: client.uuid });
+            this.watchDrain();
+        }
+    }
+
+    private watchDrain() {
+        if (this.drainTimer) {
+            return;
+        }
+
+        this.drainTimer = setInterval(() => {
+            for (const clientId of this.paused) {
+                const client = this.clients.get(clientId);
+                if (!client || client.state !== 2) {
+                    this.paused.delete(clientId);
+                    continue;
+                }
+
+                if (client.bufferedBytes < BACKPRESSURE_LOW) {
+                    this.paused.delete(clientId);
+                    this.worker?.postMessage({ type: 'resume', clientId });
+                }
+            }
+
+            if (this.paused.size === 0 && this.drainTimer) {
+                clearInterval(this.drainTimer);
+                this.drainTimer = null;
+            }
+        }, BACKPRESSURE_POLL_MS);
     }
 }
 

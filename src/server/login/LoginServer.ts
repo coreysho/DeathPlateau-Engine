@@ -13,7 +13,11 @@ import Environment from '#/util/Environment.js';
 import { toSafeName } from '#/util/JString.js';
 import { printInfo } from '#/util/Logger.js';
 import { startManagementWeb } from '#/web.js';
+import { createInternalServer } from '#/server/InternalServer.js';
 import InvType from '#/cache/config/InvType.js';
+
+const SAFE_PROFILE = /^[A-Za-z0-9_-]{1,32}$/;
+const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_autosave']);
 
 async function updateHiscores(account: { id: number; staffmodlevel: number; banned_until: string | null } | undefined, player: Player, profile: string) {
     if (!account) return;
@@ -145,7 +149,7 @@ export default class LoginServer {
 
         InvType.load('data/pack');
 
-        this.server = new WebSocketServer({ port: Environment.LOGIN_PORT, host: '0.0.0.0' }, () => {
+        this.server = createInternalServer('Login server', Environment.LOGIN_PORT, () => {
             printInfo(`Login server listening on port ${Environment.LOGIN_PORT}`);
         });
 
@@ -154,6 +158,18 @@ export default class LoginServer {
                 try {
                     const msg = JSON.parse(data.toString());
                     const { type, nodeId, nodeTime, profile } = msg;
+
+                    // custom (2026-09-27) - profile and username go straight into data/players/<profile>/<username>.sav.
+                    // A world only ever sends a plain profile and a safe name; anything else is someone
+                    // trying to write outside the saves folder.
+                    if (profile !== undefined && (typeof profile !== 'string' || !SAFE_PROFILE.test(profile))) {
+                        console.error(`[Login]: rejected ${type} with invalid profile`);
+                        return;
+                    }
+                    if (SAVE_FILE_MESSAGES.has(type) && (typeof msg.username !== 'string' || msg.username.length === 0 || msg.username !== toSafeName(msg.username))) {
+                        console.error(`[Login]: rejected ${type} with invalid username`);
+                        return;
+                    }
 
                     if (type === 'world_startup') {
                         await db

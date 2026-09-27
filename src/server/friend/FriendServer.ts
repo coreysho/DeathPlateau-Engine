@@ -3,6 +3,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { db, toDbDate } from '#/db/query.js';
 import { FriendServerRepository } from '#/server/friend/FriendServerRepository.js';
 import InternalClient from '#/server/InternalClient.js';
+import { createInternalServer } from '#/server/InternalServer.js';
 import { ChatModePrivate } from '#/engine/entity/ChatModes.js';
 import Environment from '#/util/Environment.js';
 import { fromBase37, toBase37 } from '#/util/JString.js';
@@ -71,7 +72,7 @@ export class FriendServer {
     private socketByWorld: Record<number, WebSocket> = {};
 
     constructor() {
-        this.server = new WebSocketServer({ port: Environment.FRIEND_PORT, host: '0.0.0.0' }, () => {
+        this.server = createInternalServer('Friend server', Environment.FRIEND_PORT, () => {
             printInfo(`Friend server listening on port ${Environment.FRIEND_PORT}`);
         });
 

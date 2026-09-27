@@ -12,6 +12,16 @@ export default {
 
     // management server
     WEB_MANAGEMENT_PORT: tryParseInt(process.env.WEB_MANAGEMENT_PORT, 8898),
+    // custom (2026-09-27) - loopback by default: /prometheus is not for the internet. Set to 0.0.0.0
+    // only if something on another machine scrapes it, and firewall the port to that machine.
+    WEB_MANAGEMENT_HOST: tryParseString(process.env.WEB_MANAGEMENT_HOST, '127.0.0.1'),
+
+    /// internal servers (login, friend, logger) - see server/InternalServer.ts
+    // What they listen on. Loopback keeps them off the network; a world on another machine needs
+    // this set to a LAN address AND INTERNAL_SECRET set, or they refuse to start.
+    INTERNAL_BIND_HOST: tryParseString(process.env.INTERNAL_BIND_HOST, '127.0.0.1'),
+    // Shared by every process (world, login, friend, logger). Empty = no check, loopback only.
+    INTERNAL_SECRET: tryParseString(process.env.INTERNAL_SECRET, ''),
 
     /// game server
     // Build handshake, NOT the RS protocol revision. The client sends this in its login
@@ -23,9 +33,12 @@ export default {
     //         ArrayIndexOutOfBounds on eat-while-walking with a godsword.
     //   379 = P_DIALOGPROMPT (server prot 9, 2026-09-21). An older client has no length for it and
     //         would read its text as the next packets.
+    //   380 = the login RSA key rotation (2026-09-27). An older client encrypts with the old, public key,
+    //         which the server no longer has - it could not log in anyway, this says why.
     // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
-    // without a rebuild, if a cutover has to be rolled back in a hurry.
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 379),
+    // without a rebuild, if a cutover has to be rolled back in a hurry. (Not across 380: the
+    // old clients' key is gone, so rolling back past it also means LOGIN_RSA_KEY_PATH=the old pem.)
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 380),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),
@@ -58,6 +71,11 @@ export default {
     // entities cap
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),
+    // custom (2026-09-27) - open sockets (game + ondemand, TCP + WebSocket), see server/ConnectionLimiter.ts.
+    // 0 = no limit. Behind a proxy that does not pass the real address on, every player shares the
+    // proxy's address - set NODE_MAX_SOCKETS_PER_IP=0 there, or everyone is capped together.
+    NODE_MAX_SOCKETS: tryParseInt(process.env.NODE_MAX_SOCKETS, 2048),
+    NODE_MAX_SOCKETS_PER_IP: tryParseInt(process.env.NODE_MAX_SOCKETS_PER_IP, 16),
     NODE_MAX_NPCS: tryParseInt(process.env.NODE_MAX_NPCS, 16383),
     NODE_DEBUGPROC_CHAR: tryParseString(process.env.NODE_DEBUGPROC_CHAR, '~'),
     NODE_WS_ONDEMAND: tryParseBoolean(process.env.NODE_WS_ONDEMAND, false),
@@ -65,6 +83,8 @@ export default {
     // limit login attempts
     NODE_RATELIMIT_ADDRESS_LOGIN: tryParseInt(process.env.NODE_RATELIMIT_ADDRESS_LOGIN, 30), // ip (60s)
     NODE_RATELIMIT_DEVICE_LOGIN: tryParseInt(process.env.NODE_RATELIMIT_DEVICE_LOGIN, 5), // uid+ip (15s)
+    // the private half of the login RSA key - made by `npm run rsa`, never committed (World.ts)
+    LOGIN_RSA_KEY_PATH: tryParseString(process.env.LOGIN_RSA_KEY_PATH, 'data/config/login-rsa.pem'),
 
     /// login server
     LOGIN_SERVER: tryParseBoolean(process.env.LOGIN_SERVER, false),

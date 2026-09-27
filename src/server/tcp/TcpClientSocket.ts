@@ -12,6 +12,10 @@ export default class TcpClientSocket extends ClientSocket {
         this.remoteAddress = remoteAddress;
     }
 
+    get bufferedBytes(): number {
+        return this.socket.writableLength;
+    }
+
     send(src: Uint8Array): void {
         this.socket.write(src);
     }

@@ -5,12 +5,13 @@ import { SessionLog } from '#/engine/entity/tracking/SessionLog.js';
 import { WealthTransactionEvent } from '#/engine/entity/tracking/WealthEvent.js';
 import Environment from '#/util/Environment.js';
 import { printInfo } from '#/util/Logger.js';
+import { createInternalServer } from '#/server/InternalServer.js';
 
 export default class LoggerServer {
     private server: WebSocketServer;
 
     constructor() {
-        this.server = new WebSocketServer({ port: Environment.LOGGER_PORT, host: '0.0.0.0' }, () => {
+        this.server = createInternalServer('Logger server', Environment.LOGGER_PORT, () => {
             printInfo(`Logger server listening on port ${Environment.LOGGER_PORT}`);
         });
 

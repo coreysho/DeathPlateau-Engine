@@ -106,6 +106,11 @@ export class NetworkPlayer extends Player {
             this.client.waiting = packetType.length;
         }
 
+        // the length can arrive in a later TCP segment than the opcode - wait for it (the opcode is kept)
+        if ((this.client.waiting === -1 && this.client.available < 1) || (this.client.waiting === -2 && this.client.available < 2)) {
+            return false;
+        }
+
         if (this.client.waiting === -1) {
             NetworkPlayer.inBuf.pos = 0;
             this.client.read(NetworkPlayer.inBuf.data, 0, 1);
@@ -145,6 +150,10 @@ export class NetworkPlayer extends Player {
                 } else {
                     this.clientLimit++;
                 }
+            } else {
+                // custom (2026-09-27) - packets with no decoder (NO_TIMEOUT, MAP_BUILD_COMPLETE, the anticheat
+                // ones) used to count toward no limit at all, so a client could send thousands a tick
+                this.clientLimit++;
             }
         }
 
