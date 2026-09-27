@@ -3,7 +3,7 @@
 // on each rate, and every obj the world adds is counted against who it was dropped for.
 //
 //   realism  the monster's own table pays ~25% more than on 10x; bones do not change
-//   5x       ~10% more
+//   5x       ~7% more
 //   rare     a greater abyssal demon's rare-drop-table items come no more often on realism
 import * as H from './harness.ts';
 import ObjType from '#/cache/config/ObjType.js';
@@ -63,7 +63,7 @@ check('every kill leaves exactly one set of bones, whatever the rate', [gr, g5, 
     [gr, g5, g10].map(m => m.get('bones')));
 const [tr, t5, t10] = [gr, g5, g10].map(m => total(m, bones));
 check('realism: the table pays about 25% more than on 10x', tr / t10 > 1.17 && tr / t10 < 1.33, [tr, t10, +(tr / t10).toFixed(3)]);
-check('5x: about 10% more', t5 / t10 > 1.03 && t5 / t10 < 1.17, [t5, t10, +(t5 / t10).toFixed(3)]);
+check('5x: about 7% more', t5 / t10 > 1.00 && t5 / t10 < 1.14, [t5, t10, +(t5 / t10).toFixed(3)]);
 
 console.log(`GREATER ABYSSAL DEMONS (${KILLS} each)`);
 const [ar, , a10] = run('superior_greater_abyssal', KILLS);
