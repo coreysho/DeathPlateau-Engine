@@ -130,10 +130,10 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             player.addSessionLog(LoggerEventType.MODERATOR, 'Ran cheat', cheat);
         }
 
-        if (!Environment.NODE_PRODUCTION && player.staffModLevel >= 4) {
-            // developer commands - never on live: ::speed, ::snapshot, ::reload and the rest can stop or
-            // wreck the world, so one stolen staff password must not reach them. (The 2026 unlock for
-            // scouting quest content with ::fly was reverted 2026-09-27 - do that on a dev server.)
+        if (player.staffModLevel >= 5 || (!Environment.NODE_PRODUCTION && player.staffModLevel >= 4)) {
+            // developer commands. On live only the owners have them (5, red crown; 6, blue and gold) -
+            // ::speed, ::snapshot, ::reload and the rest can stop or wreck the world, so a developer (4)
+            // gets them on a dev server only, and an owner's password is the one that has to be strong.
 
             if (cmd[0] === Environment.NODE_DEBUGPROC_CHAR) {
                 // debugprocs are NOT allowed on live ;)
