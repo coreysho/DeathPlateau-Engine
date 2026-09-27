@@ -7,12 +7,21 @@
  *
  *   npx tsx tools/server/copy-staff.ts /opt/deathplateau/engine/db.sqlite
  *   npx tsx tools/server/copy-staff.ts /opt/deathplateau/engine/db.sqlite --min 3
+ *   npx tsx tools/server/copy-staff.ts /opt/deathplateau/engine/db.sqlite --saves /opt/deathplateau/engine/data/players/main
+ *   npx tsx tools/server/copy-staff.ts /opt/deathplateau/engine/db.sqlite --saves <dir> --refresh-saves
  *
  * --min defaults to this world's NODE_MIN_STAFF_LEVEL (3 if that is 0). Every account at or above it in
  * the source is written here - its password hash, staff level, members flag and ban - added if new,
  * updated if not. An account here that the source has since demoted below --min is demoted here too, so
  * taking someone off the staff on live takes them off the dev world at the next deploy. Nothing else is
- * copied: not the other accounts, not saves, friends or logs. The source is opened read-only.
+ * copied: not the other accounts, friends or logs. The source is opened read-only.
+ *
+ * --saves <dir> also brings each copied account's CHARACTER - <dir>/<username>.sav, live's save - into
+ * this world's data/players/<NODE_PROFILE>, so staff land on the dev world as they are on live instead
+ * of on Tutorial Island. Only where this world has no save of its own for them yet: what somebody has
+ * done on the dev world is never overwritten, unless --refresh-saves asks for live's copy again (the
+ * old one is kept beside it as <username>.sav.bak). Written through a temporary file and a rename, so
+ * a save live is writing at that moment is never half-copied into place.
  *
  * Only DB_BACKEND=sqlite. deploy.sh --dev and --dev-setup run it.
  */
@@ -24,10 +33,16 @@ import Environment from '#/util/Environment.js';
 
 let source: string | undefined;
 let min = Environment.NODE_MIN_STAFF_LEVEL > 0 ? Environment.NODE_MIN_STAFF_LEVEL : 3;
+let savesFrom: string | undefined;
+let refreshSaves = false;
 const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--min') {
         min = parseInt(args[++i], 10);
+    } else if (args[i] === '--saves') {
+        savesFrom = args[++i];
+    } else if (args[i] === '--refresh-saves') {
+        refreshSaves = true;
     } else {
         source = args[i];
     }
@@ -39,7 +54,14 @@ function fail(msg: string): never {
 }
 
 if (!source || isNaN(min) || min < 1) {
-    fail('usage: npx tsx tools/server/copy-staff.ts <source db.sqlite> [--min N]   (N at least 1)');
+    fail('usage: npx tsx tools/server/copy-staff.ts <source db.sqlite> [--min N] [--saves <dir> [--refresh-saves]]   (N at least 1)');
+}
+if (refreshSaves && !savesFrom) {
+    fail('--refresh-saves needs --saves <dir>');
+}
+const savesTo = `data/players/${Environment.NODE_PROFILE}`;
+if (savesFrom && path.resolve(savesFrom) === path.resolve(savesTo)) {
+    fail('--saves is this world\'s own save folder');
 }
 if (Environment.DB_BACKEND !== 'sqlite') {
     fail(`DB_BACKEND is ${Environment.DB_BACKEND} - this copies between sqlite databases only`);
@@ -105,5 +127,35 @@ try {
 }
 
 console.log(`${staff.length} staff account(s) at level ${min}+ copied from ${source}`);
+
+if (savesFrom) {
+    if (!fs.existsSync(savesFrom)) {
+        console.log(`  no save folder at ${savesFrom} - characters not copied`);
+    } else {
+        fs.mkdirSync(savesTo, { recursive: true });
+        let copied = 0;
+        for (const a of staff) {
+            const src = path.join(savesFrom, `${a.username}.sav`);
+            const dst = path.join(savesTo, `${a.username}.sav`);
+            if (!fs.existsSync(src)) {
+                console.log(`  ${a.username}: no character on live yet`);
+                continue;
+            }
+            const had = fs.existsSync(dst);
+            if (had && !refreshSaves) {
+                continue; // their dev character is theirs to keep
+            }
+            if (had) {
+                fs.copyFileSync(dst, `${dst}.bak`);
+            }
+            const tmp = `${dst}.tmp`;
+            fs.copyFileSync(src, tmp);
+            fs.renameSync(tmp, dst);
+            copied++;
+            console.log(`  ${a.username}: character ${had ? 're-copied from live (old one kept as .sav.bak)' : 'copied from live'}`);
+        }
+        console.log(`${copied} character(s) copied into ${savesTo}`);
+    }
+}
 from.close();
 to.close();
