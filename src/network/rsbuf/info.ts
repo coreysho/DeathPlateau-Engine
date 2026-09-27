@@ -17,9 +17,11 @@ export class PlayerInfoEncoder {
 
     private readonly buf = new Packet(5000);
     private readonly updates = new Packet(5000);
+    private legacyHitmarks = false; // the observer's client predates hitsplats 5-7 (ClientSocket.legacyHitmarks)
 
-    encode(pos: number, renderer: PlayerRenderer, players: Array<Player | null>, map: ZoneMap, grid: Map<number, number[]>, player: Player, dx: number, dz: number, rebuild: boolean): Uint8Array {
+    encode(pos: number, renderer: PlayerRenderer, players: Array<Player | null>, map: ZoneMap, grid: Map<number, number[]>, player: Player, dx: number, dz: number, rebuild: boolean, legacyHitmarks = false): Uint8Array {
         const build = player.build;
+        this.legacyHitmarks = legacyHitmarks;
 
         if (rebuild || dx > build.viewDistance || dz > build.viewDistance) {
             build.rebuildPlayers(players, grid, player.pid, player.coord.x(), player.coord.y(), player.coord.z());
@@ -258,13 +260,13 @@ export class PlayerInfoEncoder {
             renderer.write(this.updates, other.pid, PlayerInfoProt.APPEARANCE);
         }
         if ((masks & PlayerInfoProt.DAMAGE) !== 0) {
-            renderer.write(this.updates, other.pid, PlayerInfoProt.DAMAGE);
+            renderer.write(this.updates, other.pid, PlayerInfoProt.DAMAGE, this.legacyHitmarks);
         }
         if ((masks & PlayerInfoProt.CHAT) !== 0) {
             renderer.write(this.updates, other.pid, PlayerInfoProt.CHAT);
         }
         if ((masks & PlayerInfoProt.DAMAGE2) !== 0) {
-            renderer.write(this.updates, other.pid, PlayerInfoProt.DAMAGE2);
+            renderer.write(this.updates, other.pid, PlayerInfoProt.DAMAGE2, this.legacyHitmarks);
         }
     }
 
@@ -281,9 +283,11 @@ export class NpcInfoEncoder {
 
     private readonly buf = new Packet(5000);
     private readonly updates = new Packet(5000);
+    private legacyHitmarks = false; // as PlayerInfoEncoder's
 
-    encode(pos: number, renderer: NpcRenderer, npcs: Array<Npc | null>, map: ZoneMap, player: Player, dx: number, dz: number, rebuild: boolean): Uint8Array {
+    encode(pos: number, renderer: NpcRenderer, npcs: Array<Npc | null>, map: ZoneMap, player: Player, dx: number, dz: number, rebuild: boolean, legacyHitmarks = false): Uint8Array {
         const build = player.build;
+        this.legacyHitmarks = legacyHitmarks;
         if (rebuild || dx > BuildArea.PREFERRED_VIEW_DISTANCE || dz > BuildArea.PREFERRED_VIEW_DISTANCE) {
             build.rebuildNpcs();
         }
@@ -453,7 +457,7 @@ export class NpcInfoEncoder {
             renderer.write(this.updates, nid, NpcInfoProt.FACE_ENTITY);
         }
         if ((masks & NpcInfoProt.DAMAGE) !== 0) {
-            renderer.write(this.updates, nid, NpcInfoProt.DAMAGE);
+            renderer.write(this.updates, nid, NpcInfoProt.DAMAGE, this.legacyHitmarks);
         }
         if ((masks & NpcInfoProt.SPOT_ANIM) !== 0) {
             renderer.write(this.updates, nid, NpcInfoProt.SPOT_ANIM);
@@ -468,7 +472,7 @@ export class NpcInfoEncoder {
             renderer.write(this.updates, nid, NpcInfoProt.ANIM);
         }
         if ((masks & NpcInfoProt.DAMAGE2) !== 0) {
-            renderer.write(this.updates, nid, NpcInfoProt.DAMAGE2);
+            renderer.write(this.updates, nid, NpcInfoProt.DAMAGE2, this.legacyHitmarks);
         }
     }
 

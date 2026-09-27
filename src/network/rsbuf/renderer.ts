@@ -23,6 +23,7 @@ import { NpcInfoProt, PlayerInfoProt, npcInfoProtIndex, playerInfoProtIndex } fr
 import { Packet } from './packet.js';
 import { Npc } from './npc.js';
 import { Player } from './player.js';
+import { legacyHitType } from '#/engine/entity/HitType.js';
 
 function encodeInfo(messages: Array<Uint8Array | null>, id: number, message: InfoMessage): number {
     const buf = new Packet(message.test());
@@ -33,6 +34,8 @@ function encodeInfo(messages: Array<Uint8Array | null>, id: number, message: Inf
 
 export class PlayerRenderer {
     private readonly caches: Array<Array<Uint8Array | null>> = Array.from({ length: 9 }, () => Array<Uint8Array | null>(2048).fill(null));
+    // DAMAGE and DAMAGE2 as a client from before hitsplats 5-7 is sent them - only where the type differs
+    private readonly legacyDamage: Array<Array<Uint8Array | null>> = Array.from({ length: 2 }, () => Array<Uint8Array | null>(2048).fill(null));
     private readonly highs = new Uint16Array(2048);
     private readonly lows = new Uint16Array(2048);
 
@@ -64,10 +67,18 @@ export class PlayerRenderer {
             highs += this.cache(pid, new PlayerInfoSay(player.say), PlayerInfoProt.SAY);
         }
         if ((masks & PlayerInfoProt.DAMAGE) !== 0) {
-            highs += this.cache(pid, new PlayerInfoDamage(player.damageTaken, player.damageType, player.currentHitpoints, player.baseHitpoints), PlayerInfoProt.DAMAGE);
+            const length = this.cache(pid, new PlayerInfoDamage(player.damageTaken, player.damageType, player.currentHitpoints, player.baseHitpoints), PlayerInfoProt.DAMAGE);
+            if (length > 0 && legacyHitType(player.damageType) !== player.damageType) {
+                encodeInfo(this.legacyDamage[0], pid, new PlayerInfoDamage(player.damageTaken, legacyHitType(player.damageType), player.currentHitpoints, player.baseHitpoints));
+            }
+            highs += length;
         }
         if ((masks & PlayerInfoProt.DAMAGE2) !== 0) {
-            highs += this.cache(pid, new PlayerInfoDamage2(player.damageTaken2, player.damageType2, player.currentHitpoints, player.baseHitpoints), PlayerInfoProt.DAMAGE2);
+            const length = this.cache(pid, new PlayerInfoDamage2(player.damageTaken2, player.damageType2, player.currentHitpoints, player.baseHitpoints), PlayerInfoProt.DAMAGE2);
+            if (length > 0 && legacyHitType(player.damageType2) !== player.damageType2) {
+                encodeInfo(this.legacyDamage[1], pid, new PlayerInfoDamage2(player.damageTaken2, legacyHitType(player.damageType2), player.currentHitpoints, player.baseHitpoints));
+            }
+            highs += length;
         }
         if ((masks & PlayerInfoProt.FACE_COORD) !== 0) {
             const length = this.cache(pid, new PlayerInfoFaceCoord(player.faceX, player.faceZ), PlayerInfoProt.FACE_COORD);
@@ -107,7 +118,14 @@ export class PlayerRenderer {
         return encodeInfo(cache, id, message);
     }
 
-    write(buf: Packet, id: number, prot: PlayerInfoProt): void {
+    write(buf: Packet, id: number, prot: PlayerInfoProt, legacyHitmarks = false): void {
+        if (legacyHitmarks && (prot === PlayerInfoProt.DAMAGE || prot === PlayerInfoProt.DAMAGE2)) {
+            const legacy = this.legacyDamage[prot === PlayerInfoProt.DAMAGE ? 0 : 1][id];
+            if (legacy) {
+                buf.pdata(legacy, 0, legacy.length); // the same length as the block it stands in for
+                return;
+            }
+        }
         const bytes = this.caches[playerInfoProtIndex(prot)][id];
         if (!bytes) {
             throw new Error('[PlayerRenderer] Tried to write a buf not cached!');
@@ -132,6 +150,8 @@ export class PlayerRenderer {
         for (const prot of [PlayerInfoProt.ANIM, PlayerInfoProt.FACE_ENTITY, PlayerInfoProt.SAY, PlayerInfoProt.DAMAGE, PlayerInfoProt.DAMAGE2, PlayerInfoProt.FACE_COORD, PlayerInfoProt.CHAT, PlayerInfoProt.SPOT_ANIM]) {
             this.caches[playerInfoProtIndex(prot)].fill(null);
         }
+        this.legacyDamage[0].fill(null);
+        this.legacyDamage[1].fill(null);
     }
 
     removePermanent(id: number): void {
@@ -151,6 +171,8 @@ export class PlayerRenderer {
 
 export class NpcRenderer {
     private readonly caches: Array<Array<Uint8Array | null>> = Array.from({ length: 8 }, () => Array<Uint8Array | null>(16384).fill(null));
+    // DAMAGE and DAMAGE2 for a client from before hitsplats 5-7, as PlayerRenderer.legacyDamage
+    private readonly legacyDamage: Array<Array<Uint8Array | null>> = Array.from({ length: 2 }, () => Array<Uint8Array | null>(16384).fill(null));
     private readonly highs = new Uint16Array(16384);
     private readonly lows = new Uint16Array(16384);
 
@@ -177,10 +199,18 @@ export class NpcRenderer {
             highs += this.cache(nid, new NpcInfoSay(npc.say), NpcInfoProt.SAY);
         }
         if ((masks & NpcInfoProt.DAMAGE) !== 0) {
-            highs += this.cache(nid, new NpcInfoDamage(npc.damageTaken, npc.damageType, npc.currentHitpoints, npc.baseHitpoints), NpcInfoProt.DAMAGE);
+            const length = this.cache(nid, new NpcInfoDamage(npc.damageTaken, npc.damageType, npc.currentHitpoints, npc.baseHitpoints), NpcInfoProt.DAMAGE);
+            if (length > 0 && legacyHitType(npc.damageType) !== npc.damageType) {
+                encodeInfo(this.legacyDamage[0], nid, new NpcInfoDamage(npc.damageTaken, legacyHitType(npc.damageType), npc.currentHitpoints, npc.baseHitpoints));
+            }
+            highs += length;
         }
         if ((masks & NpcInfoProt.DAMAGE2) !== 0) {
-            highs += this.cache(nid, new NpcInfoDamage2(npc.damageTaken2, npc.damageType2, npc.currentHitpoints, npc.baseHitpoints), NpcInfoProt.DAMAGE2);
+            const length = this.cache(nid, new NpcInfoDamage2(npc.damageTaken2, npc.damageType2, npc.currentHitpoints, npc.baseHitpoints), NpcInfoProt.DAMAGE2);
+            if (length > 0 && legacyHitType(npc.damageType2) !== npc.damageType2) {
+                encodeInfo(this.legacyDamage[1], nid, new NpcInfoDamage2(npc.damageTaken2, legacyHitType(npc.damageType2), npc.currentHitpoints, npc.baseHitpoints));
+            }
+            highs += length;
         }
         if ((masks & NpcInfoProt.CHANGE_TYPE) !== 0) {
             highs += this.cache(nid, new NpcInfoChangeType(npc.ntype), NpcInfoProt.CHANGE_TYPE);
@@ -212,7 +242,14 @@ export class NpcRenderer {
         return encodeInfo(cache, id, message);
     }
 
-    write(buf: Packet, id: number, prot: NpcInfoProt): void {
+    write(buf: Packet, id: number, prot: NpcInfoProt, legacyHitmarks = false): void {
+        if (legacyHitmarks && (prot === NpcInfoProt.DAMAGE || prot === NpcInfoProt.DAMAGE2)) {
+            const legacy = this.legacyDamage[prot === NpcInfoProt.DAMAGE ? 0 : 1][id];
+            if (legacy) {
+                buf.pdata(legacy, 0, legacy.length);
+                return;
+            }
+        }
         const bytes = this.caches[npcInfoProtIndex(prot)][id];
         if (!bytes) {
             throw new Error('[NpcRenderer] Tried to write a buf not cached!');
@@ -237,6 +274,8 @@ export class NpcRenderer {
         for (const prot of [NpcInfoProt.ANIM, NpcInfoProt.FACE_ENTITY, NpcInfoProt.SAY, NpcInfoProt.DAMAGE, NpcInfoProt.DAMAGE2, NpcInfoProt.CHANGE_TYPE, NpcInfoProt.SPOT_ANIM, NpcInfoProt.FACE_COORD]) {
             this.caches[npcInfoProtIndex(prot)].fill(null);
         }
+        this.legacyDamage[0].fill(null);
+        this.legacyDamage[1].fill(null);
     }
 
     removePermanent(id: number): void {

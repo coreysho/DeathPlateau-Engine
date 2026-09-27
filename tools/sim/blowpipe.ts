@@ -238,7 +238,7 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     p.clearInteraction(); H.tick(6);
     const shots = shotsOf(p, a0).length;
     const usedScales = 5000 - v(p, 'blowpipe_scales'), usedDarts = 5000 - v(p, 'blowpipe_darts');
-    const damaging = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type === 1 && h.damage > 0).length;
+    const damaging = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && (h.type === 1 || h.type === 7) && h.damage > 0).length;
     console.log(`    ${shots} shots: ${usedScales} scales, ${usedDarts} darts; ${damaging} damaging hits, ${venoms} envenomed`);
     if (shots < 590) console.log('    DEBUG', p.x, p.z, npc.x, npc.z, npc.isActive, p.levels[HP], JSON.stringify(mes(p).slice(-6)), JSON.stringify(H.says.filter(s => s.tick > World.currentTick - 1300).slice(0, 5)));
     check('  ~600 shots in 1,200 ticks on Rapid', shots >= 590 && shots <= 601, true);
@@ -290,7 +290,7 @@ console.log('VENOM');
     H.runNpcProc(npc, '[proc,npc_venom_start]', host);
     const h0 = H.npcHits.length;
     for (let i = 0; i < 30 * 10 + 2; i++) H.tick(1);
-    const venomHits = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type === 2).map(h => h.damage);
+    const venomHits = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type === 5).map(h => h.damage);
     check('a monster: 6, 8, ... 20, then 20, one every 30 ticks', venomHits, [6, 8, 10, 12, 14, 16, 18, 20, 20, 20]);
     H.setNpcVar(npc, 'npc_venom', 0);
     World.removeNpc(npc, -1);
@@ -309,7 +309,7 @@ console.log('VENOM');
     H.tick(1);
     check('a player: envenomed at 6', [v(p, 'venom'), lastMes(p)], [6, 'You have been envenomed!']);
     for (let i = 0; i < 61; i++) { topUp(p); H.tick(1); }
-    check('  hits 6 then 8, green', H.hits.slice(hp0).filter(h => h.who === p.username).map(h => [h.damage, h.type]), [[6, 2], [8, 2]]);
+    check('  hits 6 then 8, with the venom splat', H.hits.slice(hp0).filter(h => h.who === p.username).map(h => [h.damage, h.type]), [[6, 5], [8, 5]]);
     H.give(p, '4doseantipoison');
     H.opheld(p, '4doseantipoison', 1);
     H.tick(1);
@@ -419,7 +419,7 @@ console.log('PVP');
         a.clearInteraction(); b.clearInteraction(); H.tick(4);
         const ts = shotsOf(a, a0);
         check(`${['Accurate', 'Rapid'][mode]}: a shot every ${rate} ticks at a player`, gaps(ts), [rate]);
-        check('  and it hits them', H.hits.slice(h0).some(h => h.who === b.username && h.type === 1 && h.damage > 0), true);
+        check('  and it hits them', H.hits.slice(h0).some(h => h.who === b.username && (h.type === 1 || h.type === 7) && h.damage > 0), true);
         for (let i = 0; i < 20; i++) { a.clearInteraction(); b.clearInteraction(); H.setVar(a, 'lastcombat_pvp', 0); H.setVar(b, 'lastcombat_pvp', 0); H.tick(1); }
     }
     // a quarter of the damaging hits envenom a player too
@@ -433,7 +433,7 @@ console.log('PVP');
         if (!a.target && !a.delayed) H.attack(a, b);
     }
     a.clearInteraction(); b.clearInteraction(); H.tick(4);
-    const damaging = H.hits.slice(h1).filter(h => h.who === b.username && h.type === 1 && h.damage > 0).length;
+    const damaging = H.hits.slice(h1).filter(h => h.who === b.username && (h.type === 1 || h.type === 7) && h.damage > 0).length;
     console.log(`    ${damaging} damaging hits on a player, ${envenomed} envenomed`);
     check('  a quarter of the damaging hits envenom the player (within 4 sd)', Math.abs(envenomed - damaging / 4) <= 4 * Math.sqrt(damaging * 3 / 16) && envenomed > 0, true);
     // the special against a player

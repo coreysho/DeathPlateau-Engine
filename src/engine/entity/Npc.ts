@@ -247,9 +247,10 @@ export default class Npc extends PathingEntity {
         }
     }
 
-    enqueueScript(queueId: number, delay = 0, arg: number = 0) {
+    enqueueScript(queueId: number, delay = 0, arg: number = 0, maxHit = false) {
         const request = new NpcQueueRequest(queueId, [], delay);
         request.lastInt = arg;
+        request.maxHit = maxHit;
         this.queue.addTail(request);
     }
 
@@ -576,6 +577,7 @@ export default class Npc extends PathingEntity {
                 if (script) {
                     const state = ScriptRunner.init(script, this, null, request.args);
                     state.lastInt = request.lastInt;
+                    state.maxHitDamage = request.maxHit ? request.lastInt : -1;
                     this.executeScript(state);
                 }
             }

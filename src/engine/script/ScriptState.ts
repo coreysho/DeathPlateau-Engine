@@ -132,6 +132,11 @@ export default class ScriptState {
     objIterator: IterableIterator<Obj> | null = null;
 
     lastInt: number = 0;
+    // custom (2026-09-27) - set when this script is an ai_queue queued by npc_queue_maxhit: the one
+    // npc_damage of the damage type for exactly this amount is sent as the max hit splat. Every
+    // [ai_queue2,...] handler - the default and the npcs' own - gets it without knowing it exists, and
+    // one that changes the damage (a cap, a resistance) simply gets the ordinary splat.
+    maxHitDamage: number = -1;
     lastString: string = ''; // custom (2026-09-21) - the answer to p_namedialog
 
     constructor(script: ScriptFile, args: ScriptArgument[] | null = []) {
