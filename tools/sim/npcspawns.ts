@@ -1,7 +1,7 @@
 // Map npc spawns against the real engine - `npx tsx tools/sim/npcspawns.ts`
 // (content maps/*.jm2 NPC sections; the audit is scratchpad feat/npcaudit/npc_audit.md):
 //
-//   the cow field  Lumbridge's east cow field holds cows, calves, Gillie and the wandering guides -
+//   the cow field  Lumbridge's east cow field holds cows, calves and Gillie (Gee's second spawn is gone) -
 //                  no Elf warrior (a stray line in the upstream spawn dump, m50_50 59 57)
 //   by region      elves only in Tirannwn (and the Regicide/Mourning instances), Nardah's people only
 //                  in the desert and the Elid's cave, jackals only in the desert
@@ -43,7 +43,7 @@ check('the maps spawn their npcs', spawns.length > 12000, true);
 console.log('THE COW FIELD');
 const field = spawns.filter(s => s.npc.level === 0 && inBox(s, 3240, 3255, 3266, 3300)).map(s => s.name);
 check('no Elf warrior in Lumbridge\'s cow field', field.filter(n => n.includes('elf')), []);
-check('the field is cows, calves, Gillie and Gee', [...new Set(field)].filter(n => !/^(cow|cow2|cow3|cow2_calf|cow3_calf|calf|gillie_the_milkmaid|lumbridge_guide2_man)$/.test(n)), []);
+check('the field is cows, calves and Gillie', [...new Set(field)].filter(n => !/^(cow|cow2|cow3|cow2_calf|cow3_calf|calf|gillie_the_milkmaid)$/.test(n)), []);
 
 console.log('BY REGION');
 const overworld = (s: { npc: Npc }) => s.npc.startZ < 4400;
