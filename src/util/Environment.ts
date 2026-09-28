@@ -35,10 +35,12 @@ export default {
     //         would read its text as the next packets.
     //   380 = the login RSA key rotation (2026-09-27). An older client encrypts with the old, public key,
     //         which the server no longer has - it could not log in anyway, this says why.
+    //   381 = chat as typed (wordenc/ChatText, 2026-09-27). Public, private and clan lines are their
+    //         characters now, not 377 WordPack nibbles; an older client would read every line as noise.
     // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
     // without a rebuild, if a cutover has to be rolled back in a hurry. (Not across 380: the
     // old clients' key is gone, so rolling back past it also means LOGIN_RSA_KEY_PATH=the old pem.)
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 380),
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 381),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),

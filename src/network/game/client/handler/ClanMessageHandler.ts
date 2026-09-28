@@ -1,9 +1,8 @@
 import ClanChat from '#/engine/clan/ClanChat.js';
 import Player from '#/engine/entity/Player.js';
-import Packet from '#/io/Packet.js';
 import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHandler.js';
 import ClanMessage from '#/network/game/client/model/ClanMessage.js';
-import WordPack from '#/wordenc/WordPack.js';
+import ChatText from '#/wordenc/ChatText.js';
 
 export default class ClanMessageHandler extends ClientGameMessageHandler<ClanMessage> {
     handle(message: ClanMessage, player: Player): boolean {
@@ -17,11 +16,10 @@ export default class ClanMessageHandler extends ClientGameMessageHandler<ClanMes
             return false;
         }
 
-        const buf: Packet = Packet.alloc(0);
-        buf.pdata(input, 0, input.length);
-        buf.pos = 0;
-        const text = WordPack.unpack(buf, input.length);
-        buf.release();
+        const text = ChatText.decode(input);
+        if (text.length === 0) {
+            return false;
+        }
 
         ClanChat.message(player, text);
 

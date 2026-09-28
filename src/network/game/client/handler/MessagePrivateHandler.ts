@@ -1,10 +1,9 @@
 import Player from '#/engine/entity/Player.js';
 import World from '#/engine/World.js';
-import Packet from '#/io/Packet.js';
 import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHandler.js';
 import MessagePrivate from '#/network/game/client/model/MessagePrivate.js';
 import { fromBase37 } from '#/util/JString.js';
-import WordPack from '#/wordenc/WordPack.js';
+import ChatText from '#/wordenc/ChatText.js';
 
 export default class MessagePrivateHandler extends ClientGameMessageHandler<MessagePrivate> {
     handle(message: MessagePrivate, player: Player): boolean {
@@ -24,11 +23,11 @@ export default class MessagePrivateHandler extends ClientGameMessageHandler<Mess
             return false;
         }
 
-        const buf: Packet = Packet.alloc(0);
-        buf.pdata(input, 0, input.length);
-        buf.pos = 0;
-        World.sendPrivateMessage(player, username, WordPack.unpack(buf, input.length));
-        buf.release();
+        const text = ChatText.decode(input);
+        if (text.length === 0) {
+            return false;
+        }
+        World.sendPrivateMessage(player, username, text);
 
         player.socialProtect = true;
         return true;

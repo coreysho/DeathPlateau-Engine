@@ -103,6 +103,10 @@ export default class FontType {
         } else {
             this.charAdvance[32] = this.charAdvance[105];
         }
+
+        // custom (2026-09-27) - ChatText.LITERAL_AT (0x7f) is a player's '@' in a line read for tags
+        // (a ::yell); the client draws it as '@', so it is measured as one
+        this.charAdvance[0x7f] = this.charAdvance[64];
     }
 
     // "@cr1@".."@cr9@" is an ICON in a chatbox line - a rank crown or an XP-mode badge, drawn by the
