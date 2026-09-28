@@ -506,6 +506,127 @@ say('THE REWARD');
 }
 
 
+
+// ================================================================ Dream Mentor
+say('DREAM MENTOR: THE FALLEN MAN');
+const CYRISUS = [2345, 10335];
+const dmStage = () => H.getVar(P, 'dreammentor');
+{
+    H.setVar(P, 'eadgar_quest', 0);
+    H.clearInv(P);
+    H.give(P, 'lunar_seal_of_passage');
+    tp(P, [CYRISUS[0] + 1, CYRISUS[1]], 2);
+    talk(P, 'cyrisus_fallen');
+    check('Cyrisus will not be helped by someone who has not done Eadgar\'s Ruse', dmStage(), 0);
+    H.setVar(P, 'eadgar_quest', 100);
+    talk(P, 'cyrisus_fallen');
+    check('with both quests behind you he lets you try', dmStage(), 10);
+}
+
+say('DREAM MENTOR: THE THREE BARS');
+{
+    const FOOD = ['shark', 'lobster', 'tuna'];
+    H.clearInv(P);
+    H.give(P, 'lunar_seal_of_passage');
+    H.give(P, 'pestle_and_mortar');
+    for (const f of FOOD) H.give(P, f, 8);
+    // the same food twice running is refused
+    useOnNpc(P, 'cyrisus_fallen', 'shark');
+    const before = H.getVarBit(P, 'dm_health');
+    useOnNpc(P, 'cyrisus_fallen', 'shark');
+    check('he will not eat the same thing twice running', H.getVarBit(P, 'dm_health'), before);
+    for (let i = 0; i < 40 && H.getVarBit(P, 'dm_health') < 20; i++) {
+        useOnNpc(P, 'cyrisus_fallen', FOOD[i % 3]);
+    }
+    check('twenty pieces of three kinds fills him up', H.getVarBit(P, 'dm_health'), 20);
+
+    // his own equipment, out of his own bank, keyed to your best combat skill
+    tp(P, [2093, 3925]);
+    // the same test ~dm_cyrisus_set makes: whichever of Attack, Ranged and Magic you are best at
+    const att = P.baseLevels[0], rng = P.baseLevels[4], mag = P.baseLevels[6];
+    const set = (rng > att && rng >= mag) ? 1 : ((mag > att && mag > rng) ? 2 : 0);
+    const OPTS = [['Dragon med', 'Splitbark', 'Robin'],
+                  ['robetop', 'leathertop', 'chainbody'],
+                  ['skirt', 'platelegs', 'chaps'],
+                  ['Ranger', 'Adamant', 'Infinity'],
+                  ['whip', 'shortbow', 'staff']];
+    // every slot wrong: he finds nothing
+    talk(P, 'birdseye_jack', OPTS.map(o => o[(set + 1) % 3]), 3);
+    check('wrong guesses at his equipment get nothing', H.getVarBit(P, 'dm_armament'), 0);
+    talk(P, 'birdseye_jack', OPTS.map(o => o[set]), 3);
+    check('the five right answers empty his account', H.getVarBit(P, 'dm_armament'), 31);
+
+    tp(P, [CYRISUS[0] + 1, CYRISUS[1]], 2);
+    for (let i = 0; i < 14 && dmStage() < 20; i++) {
+        talk(P, 'cyrisus_fallen', [1]);
+    }
+    check('ten kind words and he tells you who he is', dmStage(), 20);
+}
+
+say('DREAM MENTOR: THE POTION');
+{
+    tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
+    talk(P, 'oneiromancer');
+    check('the Oneiromancer hands over a dream vial', H.invCount(P, 'dream_vial_empty'), 1);
+    check('  and the quest moves on', dmStage(), 30);
+    tp(P, [2086, 3896]);
+    useOn(P, 2086, 3895, 'loc474_16643', 'dream_vial_empty');
+    check('  filled with water', H.invCount(P, 'dream_vial_water'), 1);
+    H.give(P, 'eadgar_goutweed_herb');
+    useHeld(P, 'eadgar_goutweed_herb', 'dream_vial_water');
+    check('  goutweed in', H.invCount(P, 'dream_vial_herb'), 1);
+    H.give(P, 'astralrune');
+    H.give(P, 'hammer');
+    useHeld(P, 'hammer', 'astralrune');
+    check('  the astral rune smashes', H.invCount(P, 'astral_rune_shards'), 1);
+    useHeld(P, 'pestle_and_mortar', 'astral_rune_shards');
+    check('  and grinds', H.invCount(P, 'ground_astral_rune'), 1);
+    useHeld(P, 'ground_astral_rune', 'dream_vial_herb');
+    check('  the potion of shared dreaming is made', H.invCount(P, 'dream_potion'), 1);
+    check('  and the quest moves on', dmStage(), 40);
+}
+
+say('DREAM MENTOR: THE DREAM');
+{
+    tp(P, [2076, 3912]);
+    useOnNpc(P, 'cyrisus', 'dream_potion');
+    check('Cyrisus puts the potion on the brazier', H.getVarBit(P, 'dm_brazier'), 1);
+    talk(P, 'cyrisus', ['go.']);
+    check('lighting it takes you both into his dream', [P.x, P.z, P.level], [1824, 5153, 2]);
+    check('  and the quest moves on', dmStage(), 50);
+    check('  Cyrisus is watching', H.npcNear('cyrisus_dream', P.x, P.z, 2) !== null, true);
+    const FEARS = ['the_inadequacy', 'the_everlasting', 'the_untouchable', 'the_illusive'];
+    for (let i = 0; i < 4; i++) {
+        drive(P);
+        H.tick(4);
+        const boss = H.npcNear(FEARS[i], P.x, P.z, 2);
+        check(`  ${FEARS[i]} is on its feet`, boss !== null, true);
+        if (!boss) break;
+        P.baseLevels[3] = 99;
+        P.levels[3] = 99;
+        A.fight(P, boss, 900);
+        drive(P);
+    }
+    check('all four fears beaten', dmStage(), 60);
+    tp(P, [1824, 5164], 2);
+    op(P, 1824, 5166, 'loc474_11398', 1, ['Read and return']);
+    check('the book at the north end wakes you up', [P.x, P.z, P.level], [2072, 3911, 0]);
+}
+
+say('DREAM MENTOR: THE REWARD');
+{
+    A.runProcProtected(P, '[proc,update_questpoints]');
+    const qp0 = H.getVar(P, 'qp');
+    const hp0 = P.stats[3], magic0 = P.stats[6];
+    tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
+    talk(P, 'oneiromancer');
+    check('the quest completes', dmStage(), 70);
+    check('  two quest points', H.getVar(P, 'qp') - qp0, 2);
+    check('  15,000 Hitpoints xp', P.stats[3] - hp0, 150000);
+    check('  10,000 Magic xp', P.stats[6] - magic0, 100000);
+    check('  and a dreamy lamp', H.invCount(P, 'dreamy_lamp'), 1);
+}
+
 // ================================================================ the journal
 say('THE QUEST JOURNAL');
 {
@@ -525,6 +646,228 @@ say('THE QUEST JOURNAL');
     check('every stage writes a journal page', blank, 0);
     check('  and no two stages read the same', seen.size, STAGES.length);
     H.setVar(P, 'lunar_quest', 150);
+}
+
+
+// ================================================================ every spell on the book
+//
+// Forty spells. Each is cast once with the runes and the level it asks for, and the cast is only
+// counted as working if nothing came back saying the level was too low, the runes were missing, the
+// quest was not done, or that nothing interesting happened.
+say('THE LUNAR SPELLBOOK');
+const RUNES = ['astralrune', 'cosmicrune', 'lawrune', 'naturerune', 'deathrune', 'bloodrune',
+               'soulrune', 'mindrune', 'bodyrune', 'airrune', 'waterrune', 'earthrune',
+               'firerune', 'chaosrune'];
+const REFUSALS = ['Magic level is not high enough', 'do not have enough', 'not learnt the magic',
+                  'completed Dream Mentor', 'Nothing interesting happens', 'do not know where the Ourania'];
+function stock(p: Player, extra: string[] = []) {
+    H.clearInv(p);
+    for (const r of RUNES) H.give(p, r, 1000);
+    for (const e of extra) H.give(p, e, 5);
+}
+/** Cast a spell and report what stopped it, or '' if nothing did. */
+function cast(p: Player, fire: () => void, picks: (number | string)[] = []): string {
+    const from = A.mark();
+    fire();
+    drive(p, picks);
+    H.tick(20);
+    const said = A.mesSince(p, from);
+    for (const bad of REFUSALS) {
+        const hit = said.find(m => m.includes(bad));
+        if (hit) return hit;
+    }
+    return '';
+}
+const Q = mk('lunarfriend');
+H.setVar(Q, 'lunar_quest', 150);
+H.setVar(Q, 'lunar_unlocked', 1);
+H.setVar(Q, 'dreammentor', 70);
+H.setVar(Q, 'spellbook', 2);
+H.setVar(P, 'spellbook', 2);
+H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') | (1 << 13));   // Baba Yaga's Ourania unlock
+H.tick(1);
+
+// ---- the eighteen teleports
+{
+    const TELES = ['lunar_home_teleport', 'moonclan_teleport', 'ourania_teleport',
+                   'waterbirth_teleport', 'barbarian_teleport', 'khazard_teleport',
+                   'fishing_guild_teleport', 'catherby_teleport', 'ice_plateau_teleport',
+                   'tele_group_moonclan', 'tele_group_waterbirth', 'tele_group_barbarian',
+                   'tele_group_khazard', 'tele_group_fishing_guild', 'tele_group_catherby',
+                   'tele_group_ice_plateau'];
+    const moved: string[] = [];
+    const stuck: string[] = [];
+    for (const t of TELES) {
+        stock(P);
+        tp(P, [2072, 3911]);
+        H.setVar(P, 'home_teleport_last', 0);
+        const why = cast(P, () => H.ifButton(P, 'lunar_magic:' + t));
+        H.tick(30);
+        if (why) stuck.push(t + ': ' + why);
+        else if (P.x === 2072 && P.z === 3911) stuck.push(t + ': did not move');
+        else moved.push(t);
+    }
+    check('every Lunar teleport moves you', stuck, []);
+    check('  sixteen of them', moved.length, 16);
+}
+
+// ---- the spells that need nothing but runes
+{
+    const PLAIN: [string, string[], string][] = [
+        ['bake_pie', ['uncooked_apple_pie'], 'apple_pie'],
+        ['humidify', ['bucket_empty'], 'bucket_water'],
+        ['superglass_make', ['bucket_sand', 'soda_ash'], 'molten_glass'],
+        ['string_jewellery', ['unstrung_gold_amulet'], ''],
+        ['hunter_kit', [], 'hunter_kit'],
+        ['cure_me', [], ''],
+        ['cure_group', [], ''],
+        ['npc_contact', [], ''],
+        ['dream', [], ''],
+        ['magic_imbue', [], ''],
+        ['vengeance', [], ''],
+        ['heal_group', [], ''],
+        ['spellbook_swap', [], ''],
+    ];
+    const broken: string[] = [];
+    const made: string[] = [];
+    for (const [name, items, want] of PLAIN) {
+        stock(P, items);
+        H.setVar(P, 'spellbook', 2);
+        const why = cast(P, () => H.ifButton(P, 'lunar_magic:' + name),
+            name === 'spellbook_swap' ? ['normal'] : []);
+        if (why) broken.push(name + ': ' + why);
+        else if (want && !H.invCount(P, want)) broken.push(name + ': no ' + want);
+        else made.push(name);
+    }
+    check('the thirteen spells that need only runes all cast', broken, []);
+}
+
+// ---- the ones cast on something
+{
+    const broken: string[] = [];
+    // on another player
+    for (const name of ['cure_other', 'stat_spy', 'energy_transfer', 'heal_other', 'vengeance_other']) {
+        stock(P);
+        tp(P, [2072, 3911]);
+        Q.teleport(2073, 3911, 0);
+        H.tick(1);
+        const why = cast(P, () => H.castOnPlayer(P, Q, 'lunar_magic:' + name));
+        if (why) broken.push(name + ': ' + why);
+    }
+    // on an npc
+    stock(P);
+    tp(P, [2085, 3930]);
+    const target = H.npcNear('suqah', 2100, 3944, 0) ?? H.npcNear('meteora', P.x, P.z, 0);
+    if (target) {
+        P.teleport(target.x + 1, target.z, target.level);
+        H.tick(1);
+        const why = cast(P, () => H.castOnNpc(P, target, 'lunar_magic:monster_examine'));
+        if (why) broken.push('monster_examine: ' + why);
+    }
+    // on something held
+    for (const [name, item] of [['plank_make', 'logs'], ['boost_potion_share', '3dose1attack'],
+                                ['stat_restore_pot_share', '3dosestatrestore']] as [string, string][]) {
+        stock(P, [item]);
+        if (!H.invCount(P, item)) { broken.push(name + ': no ' + item + ' to test with'); continue; }
+        const why = cast(P, () => H.castOnHeld(P, item, 'lunar_magic:' + name));
+        if (why) broken.push(name + ': ' + why);
+    }
+    check('the spells cast on a player, an npc or an item all cast', broken, []);
+}
+
+
+// ---- the two cast at a farming patch
+{
+    const broken: string[] = [];
+    const patch = A.locsNamed('farming_belladonna_patch', 3080, 3348, 3092, 3360)[0];
+    if (!patch) broken.push('no farming patch found to cast at');
+    else {
+        for (const name of ['cure_plant', 'fertile_soil']) {
+            stock(P, ['bucket_empty']);
+            H.setVar(P, 'spellbook', 2);
+            tp(P, [patch[0], patch[1] + 2]);
+            const why = cast(P, () => H.castOnLoc(P, patch[0], patch[1], 'farming_belladonna_patch', 'lunar_magic:' + name));
+            if (why) broken.push(name + ': ' + why);
+        }
+    }
+    check('Cure Plant and Fertile Soil reach a farming patch', broken, []);
+}
+
+// ---- the quest gates
+{
+    stock(P);
+    H.setVar(P, 'dreammentor', 0);
+    const locked: string[] = [];
+    const suqah = H.npcNear('suqah', 2100, 3944, 0);
+    for (const name of ['monster_examine', 'humidify', 'hunter_kit', 'stat_spy', 'dream',
+                        'plank_make', 'spellbook_swap']) {
+        stock(P, ['logs']);
+        H.setVar(P, 'spellbook', 2);
+        const from = A.mark();
+        if (name === 'monster_examine') {
+            if (!suqah) { locked.push(name); continue; }
+            P.teleport(suqah.x + 1, suqah.z, suqah.level);
+            H.tick(1);
+            H.castOnNpc(P, suqah, 'lunar_magic:' + name);
+        } else if (name === 'stat_spy') {
+            tp(P, [2072, 3911]);
+            Q.teleport(2073, 3911, 0);
+            H.tick(1);
+            H.castOnPlayer(P, Q, 'lunar_magic:' + name);
+        } else if (name === 'plank_make') {
+            H.castOnHeld(P, 'logs', 'lunar_magic:' + name);
+        } else {
+            H.ifButton(P, 'lunar_magic:' + name);
+        }
+        drive(P);
+        if (A.mesSince(P, from).some(m => m.includes('completed Dream Mentor'))) locked.push(name);
+    }
+    check('the seven Dream Mentor spells are locked without it', locked.sort(), ['dream','humidify','hunter_kit','monster_examine','plank_make','spellbook_swap','stat_spy']);
+    H.setVar(P, 'dreammentor', 70);
+
+    H.setVar(P, 'lunar_unlocked', 0);
+    H.setVar(P, 'spellbook', 2);
+    const from = A.mark();
+    H.ifButton(P, 'lunar_magic:moonclan_teleport');
+    drive(P);
+    check('and the whole book is locked without Lunar Diplomacy',
+        A.mesSince(P, from).some(m => m.includes('not learnt the magic')), true);
+    H.setVar(P, 'lunar_unlocked', 1);
+
+    H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') & ~(1 << 13));
+    H.setVar(P, 'spellbook', 2);
+    const from2 = A.mark();
+    H.ifButton(P, 'lunar_magic:ourania_teleport');
+    drive(P);
+    check('Ourania Teleport waits for Baba Yaga',
+        A.mesSince(P, from2).some(m => m.includes('Ourania')), true);
+    H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') | (1 << 13));
+}
+
+// ---- the level gate
+{
+    stock(P);
+    H.setVar(P, 'spellbook', 2);
+    P.baseLevels[6] = 1;
+    P.levels[6] = 1;
+    const from = A.mark();
+    H.ifButton(P, 'lunar_magic:moonclan_teleport');
+    drive(P);
+    check('a spell above your Magic level is refused',
+        A.mesSince(P, from).some(m => m.includes('Magic level is not high enough')), true);
+    P.baseLevels[6] = 99;
+    P.levels[6] = 99;
+}
+
+// ---- the rune gate
+{
+    H.clearInv(P);
+    H.setVar(P, 'spellbook', 2);
+    const from = A.mark();
+    H.ifButton(P, 'lunar_magic:moonclan_teleport');
+    drive(P);
+    check('a spell with no runes is refused',
+        A.mesSince(P, from).some(m => m.includes('do not have enough')), true);
 }
 
 // ================================================================ summary
