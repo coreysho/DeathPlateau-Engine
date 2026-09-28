@@ -275,6 +275,7 @@ export const enum ScriptOpcode {
     NPC_WALKTRIGGER, // official
     PROJANIM_NPC, // official
     SPOTANIM_NPC,
+    NPC_CANREACH, // custom (2026-09-27) - could the npc op (melee) the active player from where it stands
 
     // Loc ops (3000-3499)
     LOC_ADD = 3000, // official
@@ -801,6 +802,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['NPC_WALK', ScriptOpcode.NPC_WALK],
     ['NPC_WALKTRIGGER', ScriptOpcode.NPC_WALKTRIGGER],
     ['SPOTANIM_NPC', ScriptOpcode.SPOTANIM_NPC],
+    ['NPC_CANREACH', ScriptOpcode.NPC_CANREACH],
 
     ['LOC_ADD', ScriptOpcode.LOC_ADD],
     ['LOC_ANGLE', ScriptOpcode.LOC_ANGLE],

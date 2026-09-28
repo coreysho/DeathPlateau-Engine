@@ -577,6 +577,14 @@ const NpcOps: CommandHandlers = {
         state.pushInt(state.activeNpc.targetWithinMaxRange() ? 1 : 0);
     },
 
+    // npc_canreach: could the npc, from where it stands, op the active player - the reach an
+    // [ai_opplayerN] trigger waits for (Npc.inOperableDistance): beside the player's tile, never
+    // diagonally, and no wall or fence on the edge between. npc_range(coord) <= 1 is not that: it is
+    // 1 across a corner and across a fence. For a boss that picks melee from its [ai_applayerN].
+    [ScriptOpcode.NPC_CANREACH]: state => {
+        state.pushInt(state.activeNpc.inOperableDistance(state.activePlayer) ? 1 : 0);
+    },
+
     [ScriptOpcode.NPC_DESTINATION]: state => {
         if (!state.activeNpc.hasWaypoints()) {
             state.pushInt(state.activeNpc.coord);
