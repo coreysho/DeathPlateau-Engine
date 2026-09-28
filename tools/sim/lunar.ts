@@ -359,10 +359,32 @@ function platform(locName: string, x: number, z: number) {
     platform('loc474_16633', 1768, 5080);
     check('the Numerator platform lands you on the numbers island', [P.x, P.z], [1787, 5067]);
     talk(P, 'ethereal_numerator');
-    for (let guard = 0; guard < 40 && ((dream() >>> 9) & 1) === 0; guard++) {
-        const want = SEQ[vb('lunar_seq_id')][vb('lunar_seq_step')];
+    // The first of his sixteen sequences is numbered ZERO, and "has he started" used to be inferred
+    // from the sequence, the step and the score all being zero - so a player who drew it could not
+    // answer a single digit. Forced here rather than waited for: it is one roll in sixteen.
+    H.setVarBit(P, 'lunar_seq_id', 0);
+    H.setVarBit(P, 'lunar_seq_step', 0);
+    {
+        const want = SEQ[0][0];
         tp(P, [NUMS[want][0] + 1, NUMS[want][1]], 2);
         op(P, NUMS[want][0], NUMS[want][1], 'loc474_' + (16619 + want), 1);
+        check('  the first sequence, the one numbered zero, can be answered', vb('lunar_seq_step'), 1);
+    }
+    // Press the number he is waiting for and then check that SOMETHING moved - the step, the score,
+    // or the sequence he is reciting. A press that changes none of them means the digits are not
+    // listening, which is the thing this is here to catch; counting attempts would only report it
+    // as "he never finished".
+    for (let guard = 0; guard < 60 && ((dream() >>> 9) & 1) === 0; guard++) {
+        const id = vb('lunar_seq_id'), step = vb('lunar_seq_step'), score = vb('lunar_seq_score');
+        const want = SEQ[id][step];
+        tp(P, [NUMS[want][0] + 1, NUMS[want][1]], 2);
+        op(P, NUMS[want][0], NUMS[want][1], 'loc474_' + (16619 + want), 1);
+        const moved = vb('lunar_seq_id') !== id || vb('lunar_seq_step') !== step
+            || vb('lunar_seq_score') !== score || ((dream() >>> 9) & 1) === 1;
+        if (!moved) throw new Error(`the Numerator ignored ${want}: sequence ${id} `
+            + `("${['0,1,3,4', '1,1,1,2,1,3,1,4', '1,1,2,2,3', '1,1,2,3,1,1,4', '1,2,3', '1,3,5', '1,4,2,5',
+                   '1,6,2,5', '1,9,2,8', '2,3,5,6', '2,6,3,7', '3,4,2,5', '7,3,6,2', '8,6,4', '9,7,5',
+                   '9,8,7,6'][id]}"), step ${step}, score ${score} - "${A.lastMes(P)}"`);
     }
     check('five sequences finishes the numbers', (dream() >>> 9) & 1, 1);
     talk(P, 'ethereal_being');
