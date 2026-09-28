@@ -740,6 +740,21 @@ H.tick(1);
         else made.push(name);
     }
     check('the thirteen spells that need only runes all cast', broken, []);
+
+    // a few of them checked by what they left behind rather than by what they did not say
+    stock(P);
+    H.setVar(P, 'spellbook', 2);
+    H.setVar(P, 'vengeance', 0);
+    H.setVar(P, 'vengeance_cooldown', 0);
+    cast(P, () => H.ifButton(P, 'lunar_magic:vengeance'));
+    check('  Vengeance is on you afterwards', H.getVar(P, 'vengeance'), 1);
+    stock(P);
+    H.setVar(P, 'spellbook', 2);
+    H.setVar(P, 'spellbook_swapped', 0);
+    cast(P, () => H.ifButton(P, 'lunar_magic:spellbook_swap'), ['normal']);
+    check('  Spellbook Swap lends you the normal book', [H.getVar(P, 'spellbook'), H.getVar(P, 'spellbook_swapped')], [0, 1]);
+    H.setVar(P, 'spellbook', 2);
+    H.setVar(P, 'spellbook_swapped', 0);
 }
 
 // ---- the ones cast on something
