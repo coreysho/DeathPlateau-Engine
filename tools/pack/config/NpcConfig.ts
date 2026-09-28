@@ -31,7 +31,7 @@ export function parseNpcConfig(key: string, value: string): ConfigValue | null |
     // prettier-ignore
     const booleanKeys = [
         'minimap', 'members', 'givechase', 'alwaysontop',
-        'active'
+        'active', 'follower'
     ];
 
     if (stringKeys.includes(key)) {
@@ -425,6 +425,14 @@ export function packNpcConfigs(configs: Map<string, ConfigLine[]>, modelFlags: n
                     if (value === false) {
                         client.p1(107);
                         active = false;
+                    }
+                } else if (key === 'follower') {
+                    // This npc is somebody's pet. The client is told so it can treat it as Old School
+                    // does a follower: no yellow dot on the minimap, and the right-click options only
+                    // on the one npc the player's own follower slot points at. See the client's
+                    // NpcType opcode 108 and Client.addNpcOptions.
+                    if (value === true) {
+                        client.p1(108);
                     }
                 } else if (key === 'huntrange') {
                     server.p1(202);

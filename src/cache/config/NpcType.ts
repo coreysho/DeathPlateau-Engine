@@ -98,6 +98,8 @@ export default class NpcType extends ConfigType {
     multivarp = -1;
     multinpc: number[] = [];
     active = true;
+    // a pet: no minimap dot, and its ops belong to whoever it is following (client opcode 108)
+    follower = false;
 
     // server-side
     regenrate = 100;
@@ -237,6 +239,9 @@ export default class NpcType extends ConfigType {
             }
         } else if (code === 107) {
             this.active = false;
+        } else if (code === 108) {
+            this.follower = true;
+            this.minimap = false;
         } else if (code === 202) {
             this.huntrange = dat.g1();
         } else if (code === 203) {

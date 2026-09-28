@@ -176,6 +176,8 @@ export function unpackNpcConfig(config: ConfigIdx, id: number): string[] {
             }
         } else if (code === 107) {
             def.push('active=no');
+        } else if (code === 108) {
+            def.push('follower=yes');
         } else {
             printWarning(`unknown npc code ${code}`);
         }
