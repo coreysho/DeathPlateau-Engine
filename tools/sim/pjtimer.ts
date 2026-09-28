@@ -17,6 +17,14 @@
 //   logging out      the leaver's lock is dropped, so whoever was holding them is free at once
 //   unsigned uids    a uid of 2^31 or more is negative in a varp; the lock is compared as a signed
 //                    int on both sides, so the run below uses names that land in that half
+//
+// NOTHING HERE COUNTS TICKS BY HAND. A swing can miss and a hit can roll 0 damage, and a click made
+// while the player is delayed is thrown away, so every step waits for the state it needs rather
+// than assuming a fixed number of ticks got it there: ~engage swings until the fight has actually
+// started, ~killOutright pins the victim at 1 hitpoint and swings until the death script has run
+// (and says so plainly if it never did), and ~lapse walks to the timer's own boundary read off
+// %lastcombat_pvp instead of ticking a count. The logout hold is likewise read off the engine's
+// preventLogoutUntil. Before that this run failed about one time in three.
 import * as H from './harness.ts';
 import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
@@ -95,6 +103,53 @@ const clickAttack = (p: Player, target: Player): string[] => {
     return H.mesgs.filter(m => m.who === p.username).map(m => m.text);
 };
 
+/**
+ * Start a fight and do not come back until it has actually started. A single click can be thrown
+ * away - H.attack refuses one made while the player is delayed - so the click is repeated until the
+ * engine has run ~set_pk_vars, which is what every assertion after this reads.
+ */
+const engage = (p: Player, target: Player) => {
+    for (let t = 0; t < 20; t++) {
+        if (varp(target, 'lastcombat_pvp') > 0 && varp(target, 'pvp_opponent') === uidOf(p)) return;
+        H.attack(p, target);
+        H.tick(1);
+    }
+    check(`${p.username} never got a swing in on ${target.username}`, false, true);
+};
+
+/**
+ * Kill a player for certain. A swing can miss, and a hit can roll 0 damage, so this keeps the
+ * victim pinned at 1 hitpoint and the killer topped up (they are being retaliated on) and swings
+ * until the death script has run - then says so plainly if it never did, instead of letting every
+ * assertion after it fall over with a mystery value.
+ */
+const killOutright = (killer: Player, victim: Player) => {
+    const deaths = varp(victim, 'player_deaths');
+    let died = false;
+    for (let t = 0; t < 200 && varp(killer, 'pvp_opponent') !== -1; t++) {
+        (victim as any).levels[3] = 1;
+        (killer as any).levels[3] = 99;
+        H.attack(killer, victim);
+        H.tick(1);
+        if (varp(victim, 'player_deaths') > deaths) died = true;
+    }
+    check(`  ${victim.username} is killed outright`, died, true);
+};
+
+/**
+ * Walk the clock to the last tick of a player's PJ timer and then one over it, so the boundary is
+ * read off the timer itself rather than counted from wherever the fight happened to end.
+ * ~pj_timer_pvp_running is `%lastcombat_pvp + 20 > map_clock`: covered at until - 1, free at until.
+ */
+const lapse = (holder: Player, jumper: Player, what: string) => {
+    const until = varp(holder, 'lastcombat_pvp') + PJ;
+    check(`${what} - the timer still has ticks to run`, World.currentTick < until, true);
+    while (World.currentTick < until - 1) H.tick(1);
+    check("  still covered on the timer's last tick", gate(jumper, holder).allowed, false);
+    H.tick(1);
+    check('  and open the moment it lapses', gate(jumper, holder).allowed, true);
+};
+
 console.log('THE MAP AND THE UIDS');
 {
     const p = spawn(SINGLE, 8);
@@ -114,8 +169,7 @@ console.log('A AND B FIGHT, C TRIES TO JUMP IN (single-way)');
 
     check('before anything, C may attack either of them', [gate(c, a).allowed, gate(c, b).allowed], [true, true]);
 
-    clickAttack(a, b);
-    H.tick(2);
+    engage(a, b);
     check('A swings at B: both PJ timers are set', [varp(a, 'lastcombat_pvp') > 0, varp(b, 'lastcombat_pvp') > 0], [true, true]);
     check('  and they are locked to each other (signed uids)', [varp(a, 'pvp_opponent') === uidOf(b), varp(b, 'pvp_opponent') === uidOf(a)], [true, true]);
 
@@ -147,8 +201,7 @@ console.log('THE TIMER IS 20 TICKS, NOT 8');
     const a = spawn(SINGLE, 0);
     const b = spawn(SINGLE, 1);
     const c = spawn(SINGLE, 3);
-    clickAttack(a, b);
-    H.tick(1);
+    engage(a, b);
     const struck = varp(b, 'lastcombat_pvp');
     // A runs off so nothing refreshes the clock, and we watch the tick C gets in
     breakOff(a, b);
@@ -159,7 +212,7 @@ console.log('THE TIMER IS 20 TICKS, NOT 8');
         if (gate(c, b).allowed) firstIn = World.currentTick - struck;
     }
     check('C is held out for the full 20 ticks (12 seconds), not the old 8', firstIn, PJ);
-    check('  and gets in the moment it lapses', gate(c, b).allowed, true);
+    check('  and nothing refreshed the clock while A was away', varp(b, 'lastcombat_pvp'), struck);
     H.despawn(a, b, c);
     H.tick(2);
 }
@@ -169,8 +222,7 @@ console.log('MULTIWAY: NO RESTRICTION');
     const a = spawn(MULTI, 0);
     const b = spawn(MULTI, 1);
     const c = spawn(MULTI, 3);
-    clickAttack(a, b);
-    H.tick(2);
+    engage(a, b);
     check('the fight is on', [varp(a, 'pvp_opponent') === uidOf(b), varp(b, 'pvp_opponent') === uidOf(a)], [true, true]);
     check('C attacks the defender on the spot', gate(c, b).allowed, true);
     check('  and the attacker too', gate(c, a).allowed, true);
@@ -184,8 +236,7 @@ console.log('ONE OF THEM RUNS OFF OR TELEPORTS');
     const a = spawn(SINGLE, 0);
     const b = spawn(SINGLE, 1);
     const c = spawn(SINGLE, 3);
-    clickAttack(a, b);
-    H.tick(2);
+    engage(a, b);
     // A teleports out of the wilderness entirely
     breakOff(a, b);
     a.teleport(3222, 3218, 0);
@@ -194,8 +245,8 @@ console.log('ONE OF THEM RUNS OFF OR TELEPORTS');
     check('A teleports away: B is still held for the rest of the timer', [onB.allowed, onB.said], [false, 'Someone else is already fighting your opponent.']);
     const bOnC = gate(b, c);
     check('  and B may not start on C either', [bOnC.allowed, bOnC.said], [false, "I'm already under attack."]);
-    H.tick(PJ);
-    check('  once the 20 ticks are up, both are free', [gate(c, b).allowed, gate(b, c).allowed], [true, true]);
+    lapse(b, c, '  the clock was not cut short');
+    check('  and B may start a new fight once it has', gate(b, c).allowed, true);
     H.despawn(a, b, c);
     H.tick(2);
 }
@@ -205,27 +256,36 @@ console.log('ONE OF THEM LOGS OUT');
     const a = spawn(SINGLE, 0);
     const b = spawn(SINGLE, 1);
     const c = spawn(SINGLE, 3);
-    clickAttack(a, b);
-    H.tick(2);
+    engage(a, b);
     check('B is locked to A', varp(b, 'pvp_opponent') === uidOf(a), true);
+    // ~.combat_preventlogout is p_preventlogout(..., 16), and it is set on whoever TAKES a hit - so
+    // A is only held once B has hit back. Trade until that happens rather than assuming it has, and
+    // read the boundary off the engine's own preventLogoutUntil instead of counting ticks by hand.
+    let held = false;
+    for (let t = 0; t < 40 && !held; t++) {
+        H.attack(a, b);
+        H.tick(1);
+        held = (a as any).preventLogoutUntil > World.currentTick;
+    }
+    // B's swing sets both of these on A in the one script path (~set_pk_vars and ~.pvp_damage_max ->
+    // ~.combat_preventlogout), so the 16 is read off the engine's own two numbers, not off a count
+    check('  B hits back, so A is held in the world for 16 ticks', [held, (a as any).preventLogoutUntil - varp(a, 'lastcombat_pvp')], [true, 16]);
+    const heldUntil = (a as any).preventLogoutUntil as number;
     // the real logout path: request it and let World.processLogouts run the [logout,_] trigger
     breakOff(a, b);
-    const struck = varp(b, 'lastcombat_pvp');
     let gone = -1;
-    for (let t = 0; t < 30 && gone === -1; t++) {
+    for (let t = 0; t < 40 && gone === -1; t++) {
         (a as any).requestLogout = true; // the click, held down until the engine lets it through
         H.tick(1);
-        if (a.slot === -1) gone = World.currentTick - struck;
+        if (a.slot === -1) gone = World.currentTick;
     }
-    // ~.combat_preventlogout is p_preventlogout(..., 16), counted from the tick the hit landed; the
-    // logout itself goes through on the tick after that runs out
-    check('A is held in the world by the 16-tick logout delay, then goes', [gone !== -1, gone], [true, 17]);
-    check('  and B is not locked to a ghost any more', varp(b, 'pvp_opponent'), -1);
+    check('  and goes on the tick after that runs out', [gone !== -1, gone - heldUntil], [true, 1]);
+    check('  B is not locked to a ghost any more', varp(b, 'pvp_opponent'), -1);
+    check("  while B's own timer is still running - the 16-tick hold ends inside the 20", varp(b, 'lastcombat_pvp') + PJ > World.currentTick, true);
     check('  so B may start on C', gate(b, c).allowed, true);
     const onB = gate(c, b);
     check('  but C still may not jump B - their own 12 seconds are their own', [onB.allowed, onB.said], [false, 'Someone else is already fighting your opponent.']);
-    H.tick(PJ);
-    check('  until they lapse', gate(c, b).allowed, true);
+    lapse(b, c, '  and they are B\'s own to run down');
     H.despawn(b, c);
     H.tick(2);
 }
@@ -235,20 +295,13 @@ console.log('A KILL FREES THE KILLER');
     const a = spawn(SINGLE, 0);
     const b = spawn(SINGLE, 1);
     const c = spawn(SINGLE, 3);
-    clickAttack(a, b);
-    H.tick(2);
+    engage(a, b);
     check('A is locked to B', varp(a, 'pvp_opponent') === uidOf(b), true);
-    // kill B outright
-    (b as any).levels[3] = 1;
-    for (let t = 0; t < 30 && varp(a, 'pvp_opponent') !== -1; t++) {
-        H.attack(a, b);
-        H.tick(1);
-    }
+    killOutright(a, b);
     check('B dies: the killer is no longer locked to them', varp(a, 'pvp_opponent'), -1);
     check('  so A may turn on C right away', gate(a, c).allowed, true);
     check('  while C still cannot touch A - the killer keeps their 12 seconds', gate(c, a).allowed, false);
-    H.tick(PJ);
-    check('  until it lapses', gate(c, a).allowed, true);
+    lapse(a, c, '  the killer keeps the rest of the timer');
     H.despawn(a, b, c);
     H.tick(2);
 }
