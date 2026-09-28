@@ -68,7 +68,8 @@ Rub menus that now share the teleports still work.
 - **Warm up past tick 8.** Half the combat guards in the content read
   `if (add(%lastcombat, 8) > map_clock)`. On a world that has only just started `map_clock` is 0-4,
   so an untouched player reads as "in combat two seconds ago" and monsters refuse to engage.
-  `boot()` runs 30 ticks for this reason.
+  `boot()` runs 30 ticks for this reason. The PvP half of that rule is the 20-tick PJ timer on
+  `%lastcombat_pvp`, which only counts once it has actually been set (`pjtimer.ts`).
 - **A sim player has no socket.** To the engine it lost its connection the tick it was made, and
   `World.processLogouts` idle-logs it out 50 ticks later. `tick()` marks every player heard from
   each tick so a longer scenario keeps its players; without that, a click after tick 50 lands on a
