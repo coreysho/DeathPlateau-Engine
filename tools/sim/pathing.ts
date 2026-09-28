@@ -15,6 +15,10 @@
 //                  reach that!" - never stared at forever, never swung through
 //   npcs           an npc chasing a player ends beside it (a big one too) and never hits through a
 //                  fence
+//   bosses         the bosses that pick melee or a ranged/magic attack themselves (Kalphite Queen,
+//                  skeletal wyvern, marble gargoyle, the Dagannoth mother, the Soulbane heads,
+//                  Tok-Xil, Ket-Zek, Jad) melee only where the swing reaches (npc_canreach) - not
+//                  from across a corner, not over a fence - and shoot or cast from there instead
 //   still works    a bow still shoots over a fence, a moving target is caught, PvP fights close up,
 //                  "Bank" on a banker behind the counter still opens the bank
 //
@@ -27,6 +31,8 @@ import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
 import ObjType from '#/cache/config/ObjType.js';
+import NpcType from '#/cache/config/NpcType.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
@@ -73,7 +79,28 @@ const origNpcExec = (Npc.prototype as any).executeScript;
     if (t && name.startsWith('[ai_opplayer')) {
         swings.push({ tick: World.currentTick, who: 'npc', px: this.x, pz: this.z, tx: t.x, tz: t.z, reach: reachedEntity(this.level, this.x, this.z, t.x, t.z, t.width, t.length, this.width), los: true });
     }
-    return origNpcExec.call(this, state);
+    const was = runningNpc;
+    runningNpc = this;
+    try {
+        return origNpcExec.call(this, state);
+    } finally {
+        runningNpc = was;
+    }
+};
+// A boss that picks its style in an [ai_applayerN] trigger swings in melee by calling
+// ~npc_meleeattack: every call, with where the npc and its target stood at that moment.
+type Melee = { tick: number; npc: string; nx: number; nz: number; px: number; pz: number; reach: boolean };
+const melees: Melee[] = [];
+let runningNpc: Npc | null = null;
+const origGet = ScriptProvider.get.bind(ScriptProvider);
+(ScriptProvider as any).get = (id: number) => {
+    const script = origGet(id);
+    const npc = runningNpc;
+    const t = npc ? opponent.get(npc) : undefined;
+    if (npc && t && script?.name === '[proc,npc_meleeattack]') {
+        melees.push({ tick: World.currentTick, npc: NpcType.get(npc.type).debugname ?? '', nx: npc.x, nz: npc.z, px: t.x, pz: t.z, reach: reachedEntity(npc.level, npc.x, npc.z, t.x, t.z, t.width, t.length, npc.width) });
+    }
+    return script;
 };
 
 // ---- the clicks, as a 377 client makes them
@@ -404,6 +431,66 @@ scenario('pvp  two players attacking each other, both running', () => {
     check('never on the same tile as the other', ticks.filter(t => t.under).length, 0);
     check('they close up and swing from beside each other', [playerSwings(a).length > 0 && playerSwings(a).every(s => s.reach), playerSwings(b).length > 0 && playerSwings(b).every(s => s.reach)], [true, true]);
     cleanup(a, b);
+});
+
+// ------------------------------------------------------------------------------------------------
+// Bosses that choose melee or a ranged/magic attack in their [ai_applayer2] trigger. Melee is only
+// where a swing reaches (npc_canreach, the same rule as an opplayer2 swing): never from across one of
+// their corners, never over a fence. Anywhere else they shoot, breathe or cast instead.
+//
+// Each boss is put in ap mode on a player standing still, first diagonally off its north-east corner
+// (npc_range 1, no reach), then straight against its east face (reach). Hitpoints are topped up every
+// tick; the player never attacks (auto retaliate is off).
+
+function bossRound(name: string, x: number, z: number, px: number, pz: number, ticks: number) {
+    const p = player(px, pz, false);
+    H.setVar(p, 'option_nodef', 1); // auto retaliate off: the player stays on its tile
+    const npc = npcAt(name, x, z, false);
+    H.setNpcMode(npc, 'APPLAYER2', p);
+    opponent.set(npc, p);
+    const m0 = melees.length;
+    const h0 = H.hits.filter(h => h.who === p.username).length;
+    run(p, npc, ticks, () => {
+        p.levels[3] = 99;
+        if (!npc.target) H.setNpcMode(npc, 'APPLAYER2', p);
+    });
+    const m = melees.slice(m0);
+    const hits = H.hits.filter(h => h.who === p.username).length - h0;
+    log.push(`    ${name} at ${x},${z} (${npc.width}x${npc.width}), player ${px},${pz}: ${hits} attacks landed, ${m.length} melee swings (${m.filter(x => !x.reach).length} without reach)`);
+    cleanup(p, npc);
+    return { melee: m, hits };
+}
+
+const BOSSES: { name: string; key: string; meleeAlways?: boolean }[] = [
+    { name: 'kalphite_queen', key: 'kq' },
+    { name: 'kalphite_flyingqueen', key: 'kq2' },
+    { name: 'skeletal_wyvern1', key: 'wyvern' },
+    { name: 'superior_marble_gargoyle', key: 'gargoyle' },
+    { name: 'horror_dagganoth_melee', key: 'dagmother', meleeAlways: true },
+    { name: 'soulbane_final_tolna1', key: 'tolna', meleeAlways: true },
+    { name: 'tzhaar_fightcave_swarm_3a', key: 'tokxil', meleeAlways: true },
+    { name: 'tzhaar_fightcave_swarm_5a', key: 'ketzek', meleeAlways: true },
+    { name: 'tzhaar_fightcave_swarm_boss', key: 'jad' }
+];
+for (const b of BOSSES) {
+    scenario(`${b.key}  ${b.name}: melee only where the swing reaches`, () => {
+        const size = NpcType.get(NpcType.getId(b.name)).size;
+        const x = 3268,
+            z = 3278;
+        // diagonal off the north-east corner: npc_range(coord) is 1 here, and no melee swing reaches
+        const diag = bossRound(b.name, x, z, x + size, z + size, 16);
+        check('from the diagonal: attacks, and never in melee', [diag.hits > 0, diag.melee.length], [true, 0]);
+        // against the east face: melee reaches
+        const face = bossRound(b.name, x, z, x + size, z, 16);
+        check('against its face: every melee swing reaches', face.melee.every(m => m.reach), true);
+        if (b.meleeAlways) check('  and it does swing in melee there', face.melee.length > 0, true);
+    });
+}
+
+scenario('wyvernfence  a skeletal wyvern (3x3) against the cow-field fence, the player just the other side', () => {
+    // the fence runs between x 3265 and 3266; the wyvern's west face is on it, the player across it
+    const r = bossRound('skeletal_wyvern1', 3266, 3270, 3265, 3271, 20);
+    check('never bites over the fence, and still attacks (ranged or breath)', [r.melee.length, r.hits > 0], [0, true]);
 });
 
 console.log(`\n${ok} ok, ${bad} failed`);

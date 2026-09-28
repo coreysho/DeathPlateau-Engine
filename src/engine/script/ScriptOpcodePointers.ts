@@ -791,6 +791,9 @@ const ScriptOpcodePointers: {
         require: ['active_npc'],
         require2: ['active_npc2']
     },
+    [ScriptOpcode.NPC_CANREACH]: {
+        require: ['active_npc', 'active_player']
+    },
     [ScriptOpcode.NPC_DESTINATION]: {
         require: ['active_npc'],
         require2: ['active_npc2']
