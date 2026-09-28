@@ -93,6 +93,15 @@ export function sameUid(varpValue: number, uid: number): boolean {
     return (varpValue | 0) === (uid | 0);
 }
 
+/**
+ * Old School's PJ timer, mirrored from content (skill_combat/configs/pvp.constant): two players who
+ * have traded blows in single-way combat are closed to everyone else for 20 ticks (12 seconds) from
+ * the last hit between them; a monster's hit holds a player for 8.
+ * https://oldschool.runescape.wiki/w/PJ_timer
+ */
+const PJ_TIMER_PVP = 20;
+const PJ_TIMER_NPC = 8;
+
 /** Beyond this a bot runs after its target rather than clicking it (see fightPlayer). */
 const CHASE_DISTANCE = 10;
 
@@ -311,18 +320,18 @@ export class BotBrain {
         if (until !== undefined && until > World.currentTick) return false;
         const wl = Math.min(this.wildy(), this.wildy(other));
         if (wl < 1 || Math.abs(bot.combatLevel - other.combatLevel) > wl) return false;
+        // ~pvp_in_combat_check, the PJ timer. Each half is judged on that player's own tile.
+        const now = World.currentTick;
+        const pjRunning = (p: Player) => getVarp(p, 'lastcombat_pvp') > 0 && getVarp(p, 'lastcombat_pvp') + PJ_TIMER_PVP > now;
+        if (!World.gameMap.isMulti(CoordGrid.packCoord(bot.level, bot.x, bot.z))) {
+            const mine = getVarp(bot, 'pvp_opponent');
+            if (pjRunning(bot) && !sameUid(mine, other.uid) && mine !== -1 && mine !== 0) return false;
+            if (getVarp(bot, 'lastcombat') + PJ_TIMER_NPC > now && World.getNpcByUid(getVarp(bot, 'aggressive_npc'))) return false;
+        }
         if (!World.gameMap.isMulti(CoordGrid.packCoord(other.level, other.x, other.z))) {
-            const now = World.currentTick;
-            if (getVarp(bot, 'lastcombat') + 8 > now) {
-                const mine = getVarp(bot, 'pk_predator1');
-                if (!sameUid(mine, other.uid) && mine !== -1 && mine !== 0) return false;
-                if (World.getNpcByUid(getVarp(bot, 'aggressive_npc'))) return false;
-            }
-            if (getVarp(other, 'lastcombat') + 8 > now) {
-                const theirs = getVarp(other, 'pk_predator1');
-                if (!sameUid(theirs, bot.uid) && theirs !== -1 && theirs !== 0) return false;
-                if (World.getNpcByUid(getVarp(other, 'aggressive_npc'))) return false;
-            }
+            // their own timer covers them whoever they were fighting, so no `!== -1` here
+            if (pjRunning(other) && !sameUid(getVarp(other, 'pvp_opponent'), bot.uid)) return false;
+            if (getVarp(other, 'lastcombat') + PJ_TIMER_NPC > now && World.getNpcByUid(getVarp(other, 'aggressive_npc'))) return false;
         }
         return true;
     }
