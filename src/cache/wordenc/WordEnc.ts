@@ -64,20 +64,27 @@ export default class WordEnc {
         this.decodeTldList(tldlist);
     }
 
+    // Chat censor disabled per Corey's request (2026-09-01) - swear words, URLs, and domains are no
+    // longer masked with "****" in public chat, private messages or clan chat. The word-filter
+    // algorithm and data are left in place, so turning this back on is this one line.
+    static censor = false;
+
+    // custom (2026-09-27) - THE LINE KEEPS ITS TYPED CASE. The censor reads a lower-cased copy, so
+    // "BaDwOrD" is caught like "badword", and what comes back is the typed line with only the masked
+    // characters changed to '*'. The 377 filter instead rebuilt the line from that copy and put back
+    // capitals only at the start of a word - "PvP" came out "Pvp".
     static filter(input: string): string {
         const characters = [...input];
         this.format(characters);
         const trimmed = characters.join('').trim();
         const lowercase = trimmed.toLowerCase();
         const filtered = [...lowercase];
-        // Chat censor disabled per Corey's request (2026-09-01) - swear words, URLs, and domains are
-        // no longer masked with "****" in public chat or private messages. The underlying word-filter
-        // algorithm/data is left in place below (just not called), so it's a one-line revert if this
-        // is ever wanted back - just uncomment the four lines below.
-        // this.wordEncTlds.filter(filtered);
-        // this.wordEncBadWords.filter(filtered);
-        // this.wordEncDomains.filter(filtered);
-        // this.wordEncFragments.filter(filtered);
+        if (this.censor) {
+            this.wordEncTlds.filter(filtered);
+            this.wordEncBadWords.filter(filtered);
+            this.wordEncDomains.filter(filtered);
+            this.wordEncFragments.filter(filtered);
+        }
         for (let index = 0; index < this.whitelist.length; index++) {
             let offset = -1;
             while ((offset = lowercase.indexOf(this.whitelist[index], offset + 1)) !== -1) {
@@ -87,9 +94,11 @@ export default class WordEnc {
                 }
             }
         }
-        this.replaceUppercases(filtered, [...trimmed]);
-        this.formatUppercases(filtered);
-        return filtered.join('').trim();
+        const typed = [...trimmed];
+        return typed
+            .map((char, index) => (filtered[index] === '*' ? '*' : char))
+            .join('')
+            .trim();
     }
 
     static isSymbol(char: string): boolean {
@@ -239,27 +248,4 @@ export default class WordEnc {
         return (char >= ' ' && char <= '\u007f') || char == ' ' || char == '\n' || char == '\t' || char == '£' || char == '€';
     }
 
-    private static replaceUppercases(chars: string[], comparison: string[]): void {
-        for (let index = 0; index < comparison.length; index++) {
-            if (chars[index] !== '*' && this.isUppercaseAlpha(comparison[index])) {
-                chars[index] = comparison[index];
-            }
-        }
-    }
-
-    private static formatUppercases(chars: string[]): void {
-        let flagged = true;
-        for (let index = 0; index < chars.length; index++) {
-            const char = chars[index];
-            if (!this.isAlpha(char)) {
-                flagged = true;
-            } else if (flagged) {
-                if (this.isLowercaseAlpha(char)) {
-                    flagged = false;
-                }
-            } else if (this.isUppercaseAlpha(char)) {
-                chars[index] = String.fromCharCode(char.charCodeAt(0) + 'a'.charCodeAt(0) - 65);
-            }
-        }
-    }
 }

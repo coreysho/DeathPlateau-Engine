@@ -2,17 +2,16 @@ import { PlayerInfoProt } from '#/network/rsbuf/index.js';
 
 import WordEnc from '#/cache/wordenc/WordEnc.js';
 import Player from '#/engine/entity/Player.js';
-import Packet from '#/io/Packet.js';
 import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHandler.js';
 import MessagePublic from '#/network/game/client/model/MessagePublic.js';
-import WordPack from '#/wordenc/WordPack.js';
+import ChatText from '#/wordenc/ChatText.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
 
 export default class MessagePublicHandler extends ClientGameMessageHandler<MessagePublic> {
     handle(message: MessagePublic, player: Player): boolean {
         const { colour, effect, input } = message;
 
-        if (player.socialProtect || colour < 0 || colour > 11 || effect < 0 || effect > 2 || input.length > 100) {
+        if (player.socialProtect || colour < 0 || colour > 11 || effect < 0 || effect > 5 || input.length > 100) {
             return false;
         }
 
@@ -21,23 +20,19 @@ export default class MessagePublicHandler extends ClientGameMessageHandler<Messa
             return false;
         }
 
-        const buf: Packet = Packet.alloc(0);
-        buf.pdata(input, 0, input.length);
-        buf.pos = 0;
-        const unpack: string = WordPack.unpack(buf, input.length);
-        buf.release();
+        // the line as typed (ChatText) - case, '@', '<', '_' and all. Effects 3-5 are the client's
+        // shake, scroll and slide; the 225-era bound of 2 threw those lines away.
+        const unpack: string = ChatText.decode(input);
+        if (unpack.length === 0) {
+            return false;
+        }
 
         player.chatColour = colour;
         player.chatEffect = effect;
         player.chatRights = chatCrown(player.staffModLevel);
         player.logMessage = unpack;
 
-        const out: Packet = Packet.alloc(0);
-        WordPack.pack(out, WordEnc.filter(unpack));
-        player.chatMessage = new Uint8Array(out.pos);
-        out.pos = 0;
-        out.gdata(player.chatMessage, 0, player.chatMessage.length);
-        out.release();
+        player.chatMessage = ChatText.encode(WordEnc.filter(unpack));
         player.masks |= PlayerInfoProt.CHAT;
 
         player.socialProtect = true;

@@ -37,6 +37,7 @@ import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
+import ChatText from '#/wordenc/ChatText.js';
 
 // custom (2026-09-27) - ::yell reaches every player on the world, so a player gets one every
 // YELL_COOLDOWN_TICKS (10 seconds). Staff (2+) are not held to it. Keyed weakly so a logged-out
@@ -206,13 +207,10 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
             // No markup from players. A chat line's colours and icons are all "@xxx@" tags, so what a
             // player typed would otherwise be drawn: "@cr2@" in a yell put the administrator's gold
-            // crown in front of whatever followed it. Whole tags go first, so "@cr2@@red@hi" reads
-            // "hi" rather than "cr2redhi", then any '@' left over, so no tag can be put back together.
-            const text = cheat
-                .substring(cmd.length + 1)
-                .replace(/@[a-z0-9]{3}@/gi, '')
-                .replaceAll('@', '')
-                .trim();
+            // crown in front of whatever followed it. (2026-09-27) The yell is chat, so it takes chat's
+            // characters and case (ChatText.format), and every '@' is sent as ChatText.LITERAL_AT, which
+            // the client draws as '@' but never reads as a tag - "@cr2@" now prints as typed.
+            const text = ChatText.literal(ChatText.format(cheat.substring(cmd.length + 1)));
             if (text.length <= 0 || text.length > 100) {
                 return false;
             }
