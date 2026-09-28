@@ -115,7 +115,7 @@ export const PlayerStatValid: ScriptValidator<number, PlayerStat> = new ScriptIn
 export const QueueValid: ScriptValidator<number, number> = new ScriptInputRangeValidator(0, 19, 'AIQueue');
 export const HuntTypeValid: ScriptValidator<number, HuntType> = new ScriptInputConfigTypeValidator(HuntType.get, (input: number) => input >= 0 && input < HuntType.count, 'Hunt');
 export const NpcModeValid: ScriptValidator<number, NpcMode> = new ScriptInputRangeValidator(NpcMode.NULL, NpcMode.APNPC5, 'NpcMode');
-export const HitTypeValid: ScriptValidator<number, HitType> = new ScriptInputRangeValidator(HitType.BLOCK, HitType.POISON, 'Hit');
+export const HitTypeValid: ScriptValidator<number, HitType> = new ScriptInputRangeValidator(HitType.BLOCK, HitType.MAX_HIT, 'Hit');
 export const SpotAnimTypeValid: ScriptValidator<number, SpotanimType> = new ScriptInputConfigTypeValidator(SpotanimType.get, (input: number) => input >= 0 && input < SpotanimType.count, 'Spotanim');
 export const EnumTypeValid: ScriptValidator<number, EnumType> = new ScriptInputConfigTypeValidator(EnumType.get, (input: number) => input >= 0 && input < EnumType.count, 'Enum');
 export const ObjTypeValid: ScriptValidator<number, ObjType> = new ScriptInputConfigTypeValidator(ObjType.get, (input: number) => input >= 0 && input < ObjType.count, 'Obj');

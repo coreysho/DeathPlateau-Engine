@@ -24,6 +24,12 @@ export default abstract class ClientSocket {
     out = Packet.alloc(2);
 
     opcode = -1; // current opcode being read
+
+    // A client that did not set 0x2 in the login info byte predates hitsplats 5-7 (venom, heal, max hit)
+    // and has no sprites for them - it would draw nothing, or fail. The player/npc info encoders send it
+    // the nearest old splat instead (HitType.legacyHitType). A socketless player (a bot, a sim) has no
+    // client to draw with, so it is never legacy.
+    legacyHitmarks = false;
     waiting = 0; // bytes to wait for (if any)
 
     buffer(data: Buffer) {

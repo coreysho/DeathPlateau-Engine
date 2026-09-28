@@ -125,7 +125,7 @@ export function computePlayer(
     }
 }
 
-export function playerInfo(pos: number, pid: number, dx: number, dz: number, rebuild: boolean): Uint8Array {
+export function playerInfo(pos: number, pid: number, dx: number, dz: number, rebuild: boolean, legacyHitmarks = false): Uint8Array {
     if (pid === -1) {
         return new Uint8Array(0);
     }
@@ -135,7 +135,7 @@ export function playerInfo(pos: number, pid: number, dx: number, dz: number, reb
         return new Uint8Array(0);
     }
 
-    return PLAYER_INFO.encode(pos, PLAYER_RENDERER, PLAYERS, ZONE_MAP, PLAYER_GRID, player, dx, dz, rebuild);
+    return PLAYER_INFO.encode(pos, PLAYER_RENDERER, PLAYERS, ZONE_MAP, PLAYER_GRID, player, dx, dz, rebuild, legacyHitmarks);
 }
 
 export function addPlayer(pid: number): void {
@@ -247,7 +247,7 @@ export function computeNpc(
     NPC_RENDERER.computeInfo(npc);
 }
 
-export function npcInfo(pos: number, pid: number, dx: number, dz: number, rebuild: boolean): Uint8Array {
+export function npcInfo(pos: number, pid: number, dx: number, dz: number, rebuild: boolean, legacyHitmarks = false): Uint8Array {
     if (pid === -1) {
         return new Uint8Array(0);
     }
@@ -257,7 +257,7 @@ export function npcInfo(pos: number, pid: number, dx: number, dz: number, rebuil
         return new Uint8Array(0);
     }
 
-    return NPC_INFO.encode(pos, NPC_RENDERER, NPCS, ZONE_MAP, player, dx, dz, rebuild);
+    return NPC_INFO.encode(pos, NPC_RENDERER, NPCS, ZONE_MAP, player, dx, dz, rebuild, legacyHitmarks);
 }
 
 export function addNpc(nid: number, ntype: number): void {

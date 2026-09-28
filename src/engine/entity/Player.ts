@@ -1424,10 +1424,12 @@ export default class Player extends PathingEntity {
         stream.p1(this.gender);
 
         // this.headicons bit layout (see player/configs/headicon.constant): 0=skull, 1=multicombat, 2=hint,
-        // 3=protect from melee, 4=protect from missiles, 5=protect from magic, 6=duel, 7=hint2.
+        // 3=protect from melee, 4=protect from missiles, 5=protect from magic, 6=duel, 7=hint2,
+        // 8=retribution, 9=smite, 10=redemption.
         // The client reads two separate overhead-icon slots here (ClientPlayer.method574): the first byte
         // indexes the "headicons_pk" sprite sheet (skull), the second indexes "headicons_prayer" (the
-        // three protect prayers) - multicombat/hint/duel/hint2 aren't shown through this packet.
+        // three protect prayers and retribution/smite/redemption) - multicombat/hint/duel/hint2 aren't shown
+        // through this packet.
         let pkIcon = 0xff;
         if (this.headicons & 0x1) {
             pkIcon = 0;
@@ -1440,7 +1442,14 @@ export default class Player extends PathingEntity {
             prayerIcon = 1; // protect from missiles
         } else if (this.headicons & 0x20) {
             prayerIcon = 2; // protect from magic
+        } else if (this.headicons & 0x100) {
+            prayerIcon = 3; // retribution (headicon bit 8)
+        } else if (this.headicons & 0x200) {
+            prayerIcon = 4; // smite (bit 9)
+        } else if (this.headicons & 0x400) {
+            prayerIcon = 5; // redemption (bit 10)
         }
+        // 3-5 were in 377's headicons_prayer all along - the client just never got sent them
 
         stream.p1(pkIcon);
         stream.p1(prayerIcon);

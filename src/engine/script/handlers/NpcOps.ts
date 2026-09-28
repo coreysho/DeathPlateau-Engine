@@ -4,6 +4,7 @@ import ParamType from '#/cache/config/ParamType.js';
 import SpotanimType from '#/cache/config/SpotanimType.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import Entity from '#/engine/entity/Entity.js';
+import { HitType } from '#/engine/entity/HitType.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import { HuntVis } from '#/engine/entity/hunt/HuntVis.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
@@ -277,9 +278,22 @@ const NpcOps: CommandHandlers = {
 
     [ScriptOpcode.NPC_DAMAGE]: state => {
         const amount = check(state.popInt(), NumberNotNull);
-        const type = check(state.popInt(), HitTypeValid);
+        let type: number = check(state.popInt(), HitTypeValid);
+
+        if (type === HitType.DAMAGE && amount > 0 && amount === state.maxHitDamage) {
+            type = HitType.MAX_HIT;
+            state.maxHitDamage = -1; // the one hit
+        }
 
         state.activeNpc.applyDamage(amount, type);
+    },
+
+    [ScriptOpcode.NPC_QUEUE_MAXHIT]: state => {
+        const delay = check(state.popInt(), NumberNotNull);
+        const arg = state.popInt();
+        const queueId = check(state.popInt(), QueueValid);
+
+        state.activeNpc.enqueueScript(ServerTriggerType.AI_QUEUE1 + queueId - 1, delay, arg, true);
     },
 
     [ScriptOpcode.NPC_NAME]: state => {

@@ -276,6 +276,7 @@ export const enum ScriptOpcode {
     PROJANIM_NPC, // official
     SPOTANIM_NPC,
     NPC_CANREACH, // custom (2026-09-27) - could the npc op (melee) the active player from where it stands
+    NPC_QUEUE_MAXHIT, // custom (2026-09-27) - npc_queue for a hit that rolled the attacker's max: its damage splat is the max hit one
 
     // Loc ops (3000-3499)
     LOC_ADD = 3000, // official
@@ -803,6 +804,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['NPC_WALKTRIGGER', ScriptOpcode.NPC_WALKTRIGGER],
     ['SPOTANIM_NPC', ScriptOpcode.SPOTANIM_NPC],
     ['NPC_CANREACH', ScriptOpcode.NPC_CANREACH],
+    ['NPC_QUEUE_MAXHIT', ScriptOpcode.NPC_QUEUE_MAXHIT],
 
     ['LOC_ADD', ScriptOpcode.LOC_ADD],
     ['LOC_ANGLE', ScriptOpcode.LOC_ANGLE],

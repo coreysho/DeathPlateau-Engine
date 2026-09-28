@@ -774,6 +774,10 @@ const ScriptOpcodePointers: {
         require: ['active_npc'],
         require2: ['active_npc2']
     },
+    [ScriptOpcode.NPC_QUEUE_MAXHIT]: {
+        require: ['active_npc'],
+        require2: ['active_npc2']
+    },
     [ScriptOpcode.NPC_WALK]: {
         require: ['active_npc'],
         require2: ['active_npc2']

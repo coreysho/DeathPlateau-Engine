@@ -2432,6 +2432,7 @@ class World {
 
             const info = World.loginBuf.g1();
             const lowMemory = (info & 0x1) !== 0;
+            client.legacyHitmarks = (info & 0x2) === 0;
 
             const crcs = new Uint8Array(9 * 4);
             World.loginBuf.gdata(crcs, 0, crcs.length);

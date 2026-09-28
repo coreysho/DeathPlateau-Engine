@@ -16,6 +16,12 @@ export class NpcQueueRequest extends Linkable {
 
     lastInt: number = 0;
 
+    /**
+     * Queued by npc_queue_maxhit: the hit (lastInt) is the attacker's max hit, so the damage splat the
+     * queued script deals for exactly that amount is drawn as the max hit one (HitType.MAX_HIT).
+     */
+    maxHit: boolean = false;
+
     constructor(queueId: number, args: ScriptArgument[], delay: number) {
         super();
         this.queueId = queueId;
