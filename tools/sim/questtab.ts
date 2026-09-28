@@ -125,6 +125,8 @@ console.log('COUNTERS');
 H.ifButton(a, 'questtab_summary:tab_pstats');
 check('a fresh account: no deaths, kills or tasks', ['deaths', 'pvp', 'npcs', 'slayer'].map(k => text(a, `questtab_pstats:${k}`)), ['0', '0', '0', '0']);
 check('  XP locked: No, in green', text(a, 'questtab_pstats:locked'), '@gre@No');
+check('  Drop rates: the never-chosen mode reads as Realism, +25% in green', text(a, 'questtab_pstats:drops'), '@gre@+25%');
+check('  right-aligned in the value column', pos(a, 'questtab_pstats:drops'), [84 - p12.stringWidth('+25%'), 0]);
 // b dies to a: a's hero points on b, then the death queue
 H.maxOut(b);
 b.heroPoints.addHero(a.hash64, 10);
