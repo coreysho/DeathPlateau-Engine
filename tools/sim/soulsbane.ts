@@ -449,9 +449,13 @@ H.tick(1);
 // A sim player has no client, so no npc "observes" it and aggressive hunts never fire here
 // (World: rsbuf.getNpcObservers). Put the heads onto the player the way their hunt would.
 H.hits.length = 0;
+// auto retaliate off while they come at you: since players walk up to a big npc instead of getting
+// stuck under it, retaliating (one-hitting, here) would finish a head before its position is read
+H.setVar(a, 'option_nodef', 1);
 for (const h of heads) for (const n of liveNpcs(h, 2976, 5212, 1)) H.setNpcMode(n, 'APPLAYER2', a);
 H.tick(15);
 const headPos = heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => [n.x, n.z])[0]);
+H.setVar(a, 'option_nodef', 0);
 truthy('  the heads attack at once, in multicombat, without moving (hits in 15 ticks)', H.hitsFor(a.username).length >= 4, H.hitsFor(a.username).map(h => h.damage));
 check('  still where they were put', headPos, [[2973, 5205], [2981, 5213], [2973, 5220]]);
 for (const h of heads) {
