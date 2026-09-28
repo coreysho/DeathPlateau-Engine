@@ -9,7 +9,7 @@
 //               on a monster, a monster's melee on a player, and player against player - and a hit under
 //               the max is the plain one (1); a monster's own [ai_queue2] handler draws it too
 //   old client  a client from before hitsplats 5-7 is sent poison for venom and damage for a max hit
-//   dig         the Barrows dig: human_dig_barrows, and five ticks from the spade to the crypt (was six)
+//   dig         the Barrows dig: the ordinary human_dig_long, and three ticks from the spade to the crypt (was six)
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import World from '#/engine/World.js';
@@ -217,15 +217,12 @@ console.log('THE BARROWS DIG');
         H.tick(1);
         if (p.level === 3) landed = World.currentTick;
     }
-    const DIG = SeqType.getId('human_dig_barrows');
+    const DIG = SeqType.getId('human_dig_long');
     const digAnims = H.anims.filter(a => a.who === p.username && a.seq === DIG);
-    check('the dig plays human_dig_barrows', digAnims.length > 0, true);
-    // from the tick the spade goes in (the anim) to the tick the player is in the crypt: p_delay(1) then
-    // p_delay(1), two ticks each, and the telejump lands the tick after. It was p_delay(2), p_delay(1): six.
-    check('  and the player is in Ahrim\'s crypt five ticks after the spade goes in (it was six)', [digAnims.length ? landed - digAnims[0].tick : -1, p.level, p.x, p.z], [5, 3, 3557, 9703]);
-    const seq = SeqType.get(DIG);
-    const long = SeqType.get(SeqType.getId('human_dig_long'));
-    check('  human_dig_barrows: human_dig_long\'s frames, 29 client ticks a stroke', [seq.frames?.join(), seq.loops, (seq.delay as number[] | undefined)?.reduce((x, y) => x + y, 0)], [long.frames?.join(), long.loops, 29]);
+    check('the dig plays the ordinary human_dig_long', digAnims.length > 0, true);
+    // from the tick the spade goes in (the anim) to the tick the player is in the crypt: p_delay(0) twice,
+    // a tick each, and the telejump lands the tick after. It was p_delay(2), p_delay(1): six.
+    check('  and the player is in Ahrim\'s crypt three ticks after the spade goes in (it was six)', [digAnims.length ? landed - digAnims[0].tick : -1, p.level, p.x, p.z], [3, 3, 3557, 9703]);
     H.despawn(p);
 }
 
