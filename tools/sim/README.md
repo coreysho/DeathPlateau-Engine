@@ -60,6 +60,21 @@ WEAROP packet) to the real `WearOpHandler`: every item with a worn option has a
 worn, a ring or necklace uses its charge on the finger or neck, bad ops are refused, and the backpack
 Rub menus that now share the teleports still work.
 
+`npx tsx tools/sim/packs.ts` covers item packs (content `scripts/item_packs`). Half of it is the
+shops: for each of the nine that stock the water-filled vial pack it reads the stock row back out of
+the **built** cache and out of the live `Inventory.fromType` container, because a shop that reads
+right in `all.inv` and packs wrong is a real failure mode here - a gap in the stock numbering packs
+as obj 65535 and shows as a blank square in the shop window. The other half is opening: the pack
+gives 100 noted vials of water and takes one slot doing it, a completely full 28/28 inventory still
+opens one (the pack's own slot is what the contents go into, so there is no "not enough space" case
+to hit), a stack of packs opens itself one every 2 ticks without pinning the player, and walking away
+stops the run.
+
+Read its verdict off the printed `N ok, M FAIL` line and not off the exit code: this one makes six
+players, and any sim here that makes three or more dies in V8's teardown after `process.exit` and
+reports 3 whatever it found. That is the harness, not the scenario - a sim that makes three plain
+players and touches nothing else does it too, while the same sim with two does not.
+
 `npx tsx tools/sim/bughunt.ts` is the script fault reporter
 (`src/engine/script/ScriptFaults.ts`) against the real engine. It poisons a skeleton to death - the
 one way a monster dies with an aggressive player and no hero, which is what the live
