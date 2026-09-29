@@ -18,6 +18,9 @@
 //                that turned them off, and no blowpipe in a no-ranged duel
 //   relog        the scales, darts and dart kind survive a save and load
 //   pvp          it fights in the Wilderness, hits and envenoms another player
+//   anti-venom   the antidote++ chain from a coconut, anti-venom and anti-venom+ made out of it,
+//                the tree roots that feed it, decanting, and what each cure does to %venom and
+//                %poison - with the immunity window MEASURED in ticks, not read off the varp
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import World from '#/engine/World.js';
@@ -481,6 +484,218 @@ console.log('DUEL ARENA');
     a.clearInteraction(); H.tick(2);
     check('with ranged allowed it fires in the arena', shotsOf(a, a0).length > 0, true);
     H.despawn(a, b);
+}
+
+// ------------------------------------------------------------------ anti-venom
+// content antivenom/scripts/antivenom.rs2, skill_herblore (the antidote++ chain),
+// player/.../anti_poison.rs2 (drinking), toxic_blowpipe/scripts/venom.rs2 (~venom_cure_immune).
+console.log('ANTI-VENOM');
+{
+    const HERB = 15, FARM = 19;
+    const herb = (p: any, level: number) => p.setLevel(HERB, level);
+    const herbXp = (p: any) => p.stats[HERB];
+    const brewer = (level = 99) => {
+        const p = fresh();
+        H.setVar(p, 'druidquest', 4); // Druidic Ritual, which every Herblore action is gated on
+        herb(p, level);
+        return p;
+    };
+    const inv = (p: any, name: string) => H.invCount(p, name);
+
+    // -------------------------------------------------- the chain that leads to an anti-venom
+    {
+        const p = brewer(79);
+        H.give(p, 'coconut'); H.give(p, 'hammer'); H.give(p, 'vial_empty'); H.give(p, 'irit_leaf');
+        H.give(p, 'magic_roots');
+        A.useHeld(p, 'hammer', 'coconut');
+        check('a hammer cracks a coconut open', [inv(p, 'coconut'), inv(p, 'coconut_half')], [0, 1]);
+        A.useHeld(p, 'coconut_half', 'vial_empty');
+        check('  the half coconut fills a vial, leaving the shell',
+            [inv(p, 'vial_coconut_milk'), inv(p, 'coconut_shell'), inv(p, 'vial_empty')], [1, 1, 0]);
+        let x0 = herbXp(p);
+        A.useHeld(p, 'irit_leaf', 'vial_coconut_milk');
+        check('  irit in coconut milk is an antidote++ (unf), for no xp',
+            [inv(p, 'unfinished_antidote++'), herbXp(p) - x0], [1, 0]);
+        x0 = herbXp(p);
+        A.useHeld(p, 'magic_roots', 'unfinished_antidote++');
+        check('  magic roots finish it: antidote++(4) and 177.5 xp at 79 Herblore',
+            [inv(p, 'antidote++4'), herbXp(p) - x0], [1, 1775]);
+        H.despawn(p);
+    }
+    {
+        const p = brewer(78);
+        H.give(p, 'unfinished_antidote++'); H.give(p, 'magic_roots');
+        A.useHeld(p, 'magic_roots', 'unfinished_antidote++');
+        check('78 Herblore cannot: antidote++ wants 79', inv(p, 'antidote++4'), 0);
+        H.despawn(p);
+    }
+
+    // -------------------------------------------------- anti-venom: 5 scales a dose, 30 xp a dose
+    const doses: [number, string, string][] = [[4, 'antidote++4', 'antivenom4'], [3, 'antidote++3', 'antivenom3'],
+                                               [2, 'antidote++2', 'antivenom2'], [1, 'antidote++1', 'antivenom1']];
+    for (const [dose, antidote, antivenom] of doses) {
+        const p = brewer(87);
+        H.give(p, antidote); H.give(p, 'zulrahs_scales', dose * 5);
+        const x0 = herbXp(p);
+        A.useHeld(p, 'zulrahs_scales', antidote);
+        check(`${dose} doses: ${dose * 5} scales, ${dose * 30} xp`,
+            [inv(p, antivenom), inv(p, antidote), inv(p, 'zulrahs_scales'), herbXp(p) - x0],
+            [1, 0, 0, dose * 300]);
+        H.despawn(p);
+    }
+    {
+        const p = brewer(87);
+        H.give(p, 'antidote++4'); H.give(p, 'zulrahs_scales', 19);
+        A.useHeld(p, 'zulrahs_scales', 'antidote++4');
+        check('19 scales is not enough for a four-dose',
+            [inv(p, 'antivenom4'), inv(p, 'zulrahs_scales'), lastMes(p)],
+            [0, 19, "You need 20 Zulrah's scales to make that."]);
+        herb(p, 86);
+        H.give(p, 'zulrahs_scales', 1);
+        A.useHeld(p, 'zulrahs_scales', 'antidote++4');
+        check('  and 86 Herblore is not enough either', inv(p, 'antivenom4'), 0);
+        H.despawn(p);
+    }
+
+    // -------------------------------------------------- anti-venom+: torstol, and only on the four-dose
+    for (const secondary of ['torstol', 'torstolvial']) {
+        const p = brewer(94);
+        H.give(p, 'antivenom4'); H.give(p, secondary);
+        const x0 = herbXp(p);
+        A.useHeld(p, secondary, 'antivenom4');
+        check(`${secondary} on an anti-venom(4): anti-venom+(4) and 125 xp`,
+            [inv(p, 'antivenom+4'), inv(p, secondary), herbXp(p) - x0], [1, 0, 1250]);
+        H.despawn(p);
+    }
+    {
+        const p = brewer(94);
+        H.give(p, 'antivenom3'); H.give(p, 'torstol');
+        A.useHeld(p, 'torstol', 'antivenom3');
+        check('a 3-dose anti-venom has no recipe, as OSRS has none',
+            [inv(p, 'antivenom+3'), inv(p, 'antivenom+4'), lastMes(p)], [0, 0, 'Nothing interesting happens.']);
+        herb(p, 93);
+        H.give(p, 'antivenom4');
+        A.useHeld(p, 'torstol', 'antivenom4');
+        check('  and 93 Herblore cannot make one', inv(p, 'antivenom+4'), 0);
+        H.despawn(p);
+    }
+    {
+        // Declaring [opheldu,<potion>] takes that potion out of the decanting category trigger,
+        // so every one of them has to be checked to still decant.
+        const p = brewer();
+        H.give(p, 'antivenom2'); H.give(p, 'antivenom1');
+        A.useHeld(p, 'antivenom1', 'antivenom2');
+        check('two anti-venoms still decant into a three-dose',
+            [inv(p, 'antivenom3'), inv(p, 'vial_empty')], [1, 1]);
+        H.clearInv(p);
+        H.give(p, 'antidote++2'); H.give(p, 'antidote++3');
+        A.useHeld(p, 'antidote++3', 'antidote++2');
+        check('  and so do two antidote++s, into a four and a one',
+            [inv(p, 'antidote++4'), inv(p, 'antidote++1')], [1, 1]);
+        H.despawn(p);
+    }
+
+    // -------------------------------------------------- the roots, which nothing gave out before
+    {
+        const p = fresh();
+        const roots = ObjType.getId('magic_roots');
+        const sapling = ObjType.getId('plantpot_magic_tree_sapling');
+        const table: [number, number][] = [[75, 1], [82, 1], [83, 2], [91, 3], [98, 3], [99, 4]];
+        for (const [level, want] of table) {
+            p.setLevel(FARM, level); H.clearInv(p);
+            H.runProc(p, '[proc,farming_dig_roots]', [roots, sapling]);
+            check(`a magic stump at ${level} Farming gives ${want} root(s)`, H.invCount(p, 'magic_roots'), want);
+        }
+        p.setLevel(FARM, 15); H.clearInv(p);
+        H.runProc(p, '[proc,farming_dig_roots]', [ObjType.getId('oak_roots'), ObjType.getId('plantpot_oak_sapling')]);
+        check('an oak stump at 15 Farming gives 1 oak root', H.invCount(p, 'oak_roots'), 1);
+        H.despawn(p);
+    }
+
+    // -------------------------------------------------- drinking them
+    // %venom is the next venom hit while positive and the immunity countdown while negative; one
+    // step of that countdown is ^venom_interval, 30 ticks.
+    const envenom = (p: any) => { A.enqueue(p, '[queue,venom_player]', [0]); H.tick(1); };
+    // Three ticks, not one: %potion_delay is map_clock + 2, so two sips in a row inside that
+    // window would silently drop the second (player/scripts/consumption/consume.rs2).
+    const drink = (p: any, potion: string) => { H.give(p, potion); H.opheld(p, potion, 1); H.tick(3); };
+    {
+        const p = fresh();
+        drink(p, 'antidote++4');
+        check('antidote++ on a clean player: 12 minutes of poison, 2 ticks of venom',
+            [v(p, 'poison'), v(p, 'venom'), H.invCount(p, 'antidote++3')], [-40, -2, 1]);
+        H.despawn(p);
+    }
+    {
+        const p = fresh();
+        envenom(p);
+        for (let i = 0; i < 31; i++) { topUp(p); H.tick(1); } // one venom hit lands: 6, so the next is 8
+        drink(p, 'antidote++4');
+        check('antidote++ on a venomed player: a poison of the same strength and no immunity',
+            [v(p, 'venom'), v(p, 'poison')], [0, 36]);
+        drink(p, 'antidote++3');
+        check('  the second dose is the one that cures and protects', [v(p, 'venom'), v(p, 'poison')], [-2, -40]);
+        H.despawn(p);
+    }
+    {
+        const p = fresh();
+        envenom(p);
+        drink(p, 'antivenom4');
+        check('anti-venom cures venom outright in one dose, with both immunities',
+            [v(p, 'venom'), v(p, 'poison')], [-3, -40]);
+        H.despawn(p);
+    }
+    {
+        const p = fresh();
+        envenom(p);
+        drink(p, 'antivenom+4');
+        check('anti-venom+ likewise, for longer', [v(p, 'venom'), v(p, 'poison')], [-12, -50]);
+        drink(p, 'antivenom4');
+        check('  and a weaker dose under it shortens neither immunity', [v(p, 'venom'), v(p, 'poison')], [-12, -50]);
+        H.despawn(p);
+    }
+    {
+        // The window MEASURED rather than asserted: how many ticks the envenoming is actually refused
+        // for, counted by trying to re-apply it every tick until one takes.
+        const windowOf = (potion: string) => {
+            const p = fresh();
+            // one tick, not drink()'s three: every tick after the sip has to be counted
+            H.give(p, potion); H.opheld(p, potion, 1); H.tick(1);
+            let refused = 0;
+            for (let t = 0; t < 600; t++) {
+                envenom(p);
+                if (v(p, 'venom') > 0) break;
+                refused++;
+            }
+            H.despawn(p);
+            return refused;
+        };
+        const windows: [string, number][] = [['macro_triffidfruit', 30], ['antidote++4', 60], ['antivenom4', 90], ['antivenom+4', 360]];
+        for (const [potion, ticks] of windows) {
+            const got = windowOf(potion);
+            console.log(`    ${potion}: envenoming refused for ${got} ticks (${got * 0.6}s)`);
+            check(`  ${potion} keeps venom off for ${ticks} ticks`, got, ticks);
+        }
+    }
+    {
+        const p = fresh();
+        envenom(p);
+        for (let i = 0; i < 31; i++) { topUp(p); H.tick(1); }
+        H.setVar(p, 'spellbook', 2); // the Lunar spellbook, and the quest that unlocks it
+        H.setVar(p, 'lunar_unlocked', 1);
+        H.setVar(p, 'lunar_quest', 150);
+        p.setLevel(6, 99); // Magic, for Cure Me's level 71
+        H.give(p, 'astralrune', 100); H.give(p, 'cosmicrune', 100); H.give(p, 'lawrune', 100);
+        H.ifButton(p, 'lunar_magic:cure_me');
+        H.tick(1);
+        check('Cure Me reduces venom to poison, as the wiki groups it with the antipoisons',
+            [v(p, 'venom'), v(p, 'poison')], [0, 36]);
+        H.ifButton(p, 'lunar_magic:cure_me');
+        H.tick(1);
+        check('  and the second cast clears the poison it left, still with no immunity',
+            [v(p, 'venom'), v(p, 'poison')], [0, 0]);
+        H.despawn(p);
+    }
 }
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
