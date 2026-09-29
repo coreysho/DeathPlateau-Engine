@@ -2011,6 +2011,16 @@ class World {
 
     broadcastMes(message: string): void {
         for (const player of this.playerLoop.all()) {
+            // Not to anyone with a tutorial lesson open. The lesson covers the chatbox, so the client
+            // turns every game message that arrives into a modal "Click to continue" over the top of it
+            // (Client.addMessage, guarded by stickyChatInterfaceId) - which is right for a message meant
+            // for that player, and wrong for a yell or a rare drop from the other side of the world. A
+            // player on Tutorial Island was getting one of those boxes per broadcast, each eating a mouse
+            // click. modalTutorial is the server's side of the same interface, so this is exactly the set
+            // of players the client would have modalled.
+            if (player.modalTutorial !== -1) {
+                continue;
+            }
             if (message.includes('\n')) {
                 message.split('\n').forEach(wrap => player.wrappedMessageGame(wrap));
             } else {
