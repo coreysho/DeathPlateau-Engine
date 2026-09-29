@@ -43,6 +43,7 @@
  *   npx tsx tools/server/account.ts set bob 'save.stats.*' 99
  *   npx tsx tools/server/account.ts set bob account.members true
  *   npx tsx tools/server/account.ts give bob abyssal_whip 1 --inv bank
+ *   npx tsx tools/server/account.ts rename bob robert
  *   npx tsx tools/server/account.ts password bob hunter2
  *
  * --profile <name> picks the world profile (default: NODE_PROFILE, or "main").
@@ -66,6 +67,7 @@ import Player, { getExpByLevel, getLevelByExp } from '#/engine/entity/Player.js'
 import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
 import { PLAYER_STAT_COUNT, PlayerStatMap, PlayerStatNameMap } from '#/engine/entity/PlayerStat.js';
 import Packet from '#/io/Packet.js';
+import { toBase37, toSafeName } from '#/util/JString.js';
 import Environment from '#/util/Environment.js';
 
 // ChatModePublic and friends are const enums, so they are erased at build time and cannot be
@@ -647,6 +649,58 @@ async function cmdGive(username: string) {
     console.log(`  gave ${count} x ${obj} to ${invName}`);
 }
 
+async function cmdRename(from: string, to: string) {
+    const oldName = toSafeName(from);
+    const newName = toSafeName(to);
+    // toBase37 is the real test, NOT the length of what comes back. A name with nothing usable in it
+    // encodes to 0, and fromBase37(0) is the string "invalid_name" - twelve perfectly ordinary
+    // characters, so a length check passes and the account is quietly renamed to that. Caught by
+    // trying to rename an account to "!!!" and watching it succeed.
+    if (toBase37(to) === 0n) fail(`"${to}" is not a name: the game keeps letters, digits, spaces and underscores, and that leaves nothing.`);
+    if (toBase37(from) === 0n) fail(`"${from}" is not a name.`);
+    // Silently keeping the first 12 characters of a longer name would rename somebody to something
+    // they did not ask for, so say so instead.
+    if (newName !== to.trim().toLowerCase().replaceAll(' ', '_')) {
+        console.log(`  note: "${to}" is stored as "${newName}" - that is the name the game can hold`);
+    }
+    if (oldName === newName) fail(`${oldName} is already called that.`);
+
+    const account = await getAccount(oldName);
+    if (!account) fail(`no account row for ${oldName}.`);
+    if ((await isOnline(account.id)) && args.force !== true) {
+        fail(`${oldName} is logged in. The server holds the character in memory and rewrites the save at logout, so this rename would be undone.
+Log them out first, or pass --force if the server crashed and left them marked online.`);
+    }
+    if (await getAccount(newName)) fail(`${newName} is taken.`);
+
+    const oldFile = savePath(oldName);
+    const newFile = savePath(newName);
+    if (fs.existsSync(newFile)) fail(`${newFile} already exists, even though no account row holds that name. Move it aside first.`);
+    if (!fs.existsSync(oldFile)) console.log(`  note: ${oldFile} does not exist - renaming the account row only`);
+
+    // THE DATABASE FIRST, because it is the half that can be rolled back. If the file move fails
+    // after it, the name is reported below and can be moved by hand; if the file moved first and the
+    // update failed, the server would look for a save that is no longer there.
+    await db.updateTable('account').set({ username: newName }).where('id', '=', account.id).execute();
+
+    // FRIENDS AND IGNORES ARE STORED BY NAME, not by account id (prisma schema: friendlist
+    // .friend_username, ignorelist.value), so everyone who has this player on either list points at
+    // the old name and would silently lose them. This is the part a rename is really made of.
+    const friends = await db.updateTable('friendlist').set({ friend_username: newName }).where('friend_username', '=', oldName).where('profile', '=', profile).executeTakeFirst();
+    const ignores = await db.updateTable('ignorelist').set({ value: newName }).where('value', '=', oldName).where('profile', '=', profile).executeTakeFirst();
+
+    if (fs.existsSync(oldFile)) {
+        fs.copyFileSync(oldFile, `${oldFile}.bak-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+        fs.renameSync(oldFile, newFile);
+    }
+
+    console.log(`  ${oldName} -> ${newName}`);
+    console.log(`  save   ${fs.existsSync(newFile) ? newFile : '(none)'}`);
+    console.log(`  friend lists updated: ${Number(friends?.numUpdatedRows ?? 0)}`);
+    console.log(`  ignore lists updated: ${Number(ignores?.numUpdatedRows ?? 0)}`);
+    console.log('  hiscores follow on their next logout - they are recomputed from the save, not stored by name.');
+}
+
 async function cmdPassword(username: string) {
     const plain = args._[2];
     if (!plain) fail('usage: password <user> <newpassword>');
@@ -714,6 +768,11 @@ async function main() {
         case 'give':
             if (!username) fail('usage: give <user> <obj> [count] [--inv inv|bank]');
             await cmdGive(username);
+            break;
+
+        case 'rename':
+            if (!username || !args._[2]) fail('usage: rename <user> <newname>');
+            await cmdRename(username, String(args._[2]));
             break;
 
         case 'password':
