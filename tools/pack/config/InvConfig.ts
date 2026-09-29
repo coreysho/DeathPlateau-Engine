@@ -123,6 +123,14 @@ export function packInvConfigs(configs: Map<string, ConfigLine[]>): { client: Pa
                     server.p2(value as number);
                 } else if (key.startsWith('stock')) {
                     const index = parseInt(key.substring(5)) - 1;
+                    // Stock lines are numbered from stock1, and a bad number used to cost a shop its
+                    // item in silence: stock[-1] (from stock0) or stock[NaN] sets a PROPERTY on the
+                    // array rather than an element, so it leaves stock.length alone and the write loop
+                    // below never sees it. Castle Wars' ticket shop was missing its med helm and two
+                    // size=1 shops stocked nothing at all, none of which said a word at pack time.
+                    if (isNaN(index) || index < 0) {
+                        throw packStepError(debugname, `${key} - stock lines are numbered from stock1, and this one would be dropped without a word`);
+                    }
                     if (typeof stock[index] !== 'undefined') {
                         throw packStepError(debugname, `Duplicate stock${index + 1} lines, one will overwrite the other.`);
                     }
