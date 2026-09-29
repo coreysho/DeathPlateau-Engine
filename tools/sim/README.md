@@ -60,6 +60,14 @@ WEAROP packet) to the real `WearOpHandler`: every item with a worn option has a
 worn, a ring or necklace uses its charge on the finger or neck, bad ops are refused, and the backpack
 Rub menus that now share the teleports still work.
 
+`npx tsx tools/sim/bughunt.ts` is the script fault reporter
+(`src/engine/script/ScriptFaults.ts`) against the real engine. It poisons a skeleton to death - the
+one way a monster dies with an aggressive player and no hero, which is what the live
+`.npc_findhero` fault needed - and asserts the death runs clean and the corpse is deleted, then
+checks the reporter's own rules: off unless asked for, one signature per distinct fault however
+often it fires, a full backtrace, a JSONL file, and a clear that empties both. Revert content
+`d2f9bc2a4` and it prints the live backtrace instead, once.
+
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 

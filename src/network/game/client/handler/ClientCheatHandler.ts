@@ -35,6 +35,7 @@ import { queueBugReport } from '#/server/tickets/TicketInbox.js';
 
 import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
+import handleFaultsCommand from '#/engine/script/ScriptFaultCommands.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
 import ChatText from '#/wordenc/ChatText.js';
@@ -379,6 +380,13 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // where NODE_BOTS=true, the dev world; anywhere else these say so.
             if (cmd === 'bots' || cmd === 'bot') {
                 return handleBotCommand(player, cmd, args);
+            }
+
+            // custom (2026-09-29) - the script fault reporter (engine/script/ScriptFaults.ts). A
+            // script error aborts the whole trigger stack, so a fault buried in a gosub can eat a
+            // drop table in silence; this is how staff read what has been thrown without journalctl.
+            if (cmd === 'faults') {
+                return handleFaultsCommand(player, args);
             }
 
             if (cmd === 'bank') {

@@ -22,6 +22,7 @@ import StringOps from '#/engine/script/handlers/StringOps.js';
 import StructOps from '#/engine/script/handlers/StructOps.js';
 import TradingPostOps from '#/engine/script/handlers/TradingPostOps.js';
 import ClanOps from '#/engine/script/handlers/ClanOps.js';
+import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import ScriptFile from '#/engine/script/ScriptFile.js';
 import { ScriptOpcode, ScriptOpcodeNameMap } from '#/engine/script/ScriptOpcode.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
@@ -228,6 +229,14 @@ export default class ScriptRunner {
                 const frame = state.debugFrames[i];
                 console.error(`    ${++trace}: ${frame.script.name} - ${frame.script.fileName}:${frame.script.lineNumber(frame.pc)}`);
             }
+
+            // custom (2026-09-29) - the same fault, kept rather than only printed. One call rather
+            // than one in each of the two branches above: the reporter reads state.self for itself,
+            // and this way it also sees a fault with no player and no npc behind it (a loc, an obj,
+            // or a script the engine ran with no self at all) - which the two branches above print
+            // to the console and nothing else notices. Off unless NODE_SCRIPT_FAULTS is set, and it
+            // never throws, so nothing here can turn a content bug into an engine crash.
+            ScriptFaults.record(state, err);
 
             state.execution = ScriptState.ABORTED;
         }

@@ -11,6 +11,7 @@ import { printError, printInfo, printWarning } from '#/util/Logger.js';
 import { startManagementWeb, startWeb } from '#/web.js';
 import OnDemand from '#/engine/OnDemand.js';
 import BotManager from '#/engine/bot/BotManager.js';
+import ScriptFaults from '#/engine/script/ScriptFaults.js';
 
 if (OnDemand.cache.count(0) !== 9 || OnDemand.cache.count(2) === 0 || !fs.existsSync('data/pack/server/script.dat')) {
     printInfo('Packing cache, please wait until you see the world is ready.');
@@ -44,6 +45,11 @@ if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
     printInfo(`Staff-only world: accounts below staff level ${Environment.NODE_MIN_STAFF_LEVEL} are refused at login (NODE_MIN_STAFF_LEVEL).`);
 }
 
+// custom (2026-09-29) - the script fault reporter (engine/script/ScriptFaults.ts). Before
+// World.start, because the login and startup scripts run inside it and a fault there is exactly the
+// kind nobody is watching for. Does nothing at all unless NODE_SCRIPT_FAULTS is set.
+ScriptFaults.init();
+
 await World.start();
 
 // custom (2026-09-27) - server-side bots, only where asked for (the dev world). Never on live.
@@ -67,6 +73,9 @@ function safeExit() {
     }
 
     exiting = true;
+    // Anything recorded since the last five-second flush would otherwise be lost on a restart, and
+    // the fault that took the world down is the one most worth keeping.
+    ScriptFaults.flush();
     World.rebootTimer(0);
 }
 

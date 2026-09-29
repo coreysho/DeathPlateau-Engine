@@ -164,6 +164,16 @@ export default {
     // used for unpacking/custom development
     BUILD_SRC_DIR: tryParseString(process.env.BUILD_SRC_DIR, '../content'),
 
+    // custom (2026-09-29) - the script fault reporter (engine/script/ScriptFaults.ts). A RuneScript
+    // error aborts the whole trigger stack, so one bad line inside a gosub can silently eat a drop
+    // table; this collects every fault by signature instead of leaving them in journalctl. OFF
+    // unless NODE_SCRIPT_FAULTS is set, and off it costs one boolean read per error.
+    // NODE_SCRIPT_FAULTS_WEBHOOK is a Discord webhook URL and is a SECRET: keep it in .env, never
+    // in a commit. It is never printed - not on startup, not in an error, not in the JSONL file.
+    NODE_SCRIPT_FAULTS: tryParseBoolean(process.env.NODE_SCRIPT_FAULTS, false),
+    NODE_SCRIPT_FAULTS_FILE: tryParseString(process.env.NODE_SCRIPT_FAULTS_FILE, 'data/faults.jsonl'),
+    NODE_SCRIPT_FAULTS_WEBHOOK: tryParseString(process.env.NODE_SCRIPT_FAULTS_WEBHOOK, ''),
+
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.
     DISCORD_TOKEN: tryParseString(process.env.DISCORD_TOKEN, ''),
