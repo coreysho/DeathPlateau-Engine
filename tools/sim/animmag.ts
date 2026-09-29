@@ -11,6 +11,9 @@
 //   journal       every stage's entry, and the quest point / xp / device reward at the end
 //   the device    the attractor at 60% and the accumulator at 72% over 20,000 shots, arrows off a
 //                 bow, thrown knives, blowpipe darts, the metal attraction and its interference rule
+//   the max cape  an accumulator fused onto a Max cape, and the knife that undoes it - and then
+//                 every one of those six measurements again, because the Accumulator max cape IS
+//                 an accumulator, while a god max cape saves and attracts nothing
 //   dead clicks   every op on everything the quest adds answers something
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
@@ -488,6 +491,53 @@ const gotPlate = attract(magnet, 'avas_accumulator', 'rune_platebody');
 check('a rune platebody interferes', gotPlate, []);
 const gotStud = attract(magnet, 'avas_accumulator', 'studded_body');
 truthy('studded leather does not interfere', gotStud.length > 0, gotStud);
+
+// =============================================================== the Accumulator max cape
+//
+// OSRS: using Ava's accumulator on a Max cape, with the Max hood in the inventory too, fuses all
+// three into the Accumulator max cape and its own hood - free, and a knife gives the three back.
+// What it keeps is the whole of what the device did, the ammunition saving AND the 3.5-minute
+// steel attraction, so every measurement above is made again here with the cape on the back.
+// (oldschool.runescape.wiki/w/Accumulator_max_cape)
+console.log('\n-- fusing the accumulator into a Max cape');
+const fuser = A.player('fuser', 3230, 3230);
+const held = (p: Player, ...names: string[]) => names.map(n => H.invCount(p, n));
+H.clearInv(fuser);
+H.give(fuser, 'max_cape');
+H.give(fuser, 'avas_accumulator');
+A.useHeld(fuser, 'avas_accumulator', 'max_cape');
+check('without the Max hood nothing is fused', held(fuser, 'accumulator_max_cape', 'max_cape', 'avas_accumulator'), [0, 1, 1]);
+truthy('...and it says which piece is missing', A.lastMes(fuser).includes('Max hood'), A.lastMes(fuser));
+H.give(fuser, 'max_hood');
+A.useHeld(fuser, 'avas_accumulator', 'max_cape');
+check('accumulator + Max cape + Max hood = the Accumulator max cape and its own hood',
+    held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'),
+    [1, 1, 0, 0, 0]);
+H.give(fuser, 'knife');
+A.useHeld(fuser, 'knife', 'accumulator_max_cape');
+check('and a knife takes it apart again, losing nothing',
+    held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'),
+    [0, 0, 1, 1, 1]);
+
+console.log('\n-- and then it is an accumulator');
+const accMax = saveRate(bare, 'accumulator_max_cape');
+truthy('the Accumulator max cape saves 72% of shots, exactly as the device does', Math.abs(accMax - 72) < 2, accMax);
+// THE CONTROL. A god max cape is a variant too and must save nothing: the saving comes from the
+// device fused in, not from being a variant, and not from the Max cape's skillcape perks either -
+// ~skillcape_worn answers false for ranged on every variant.
+check('a Saradomin max cape saves nothing, so it is the device and not the fusing', saveRate(bare, 'saradomin_max_cape'), 0);
+const plainMax = saveRate(bare, 'max_cape');
+truthy('...while the plain Max cape still saves 72% as the Ranging cape it also is', Math.abs(plainMax - 72) < 2, plainMax);
+const spentAccMax = quiverLeft('accumulator_max_cape');
+truthy('arrows stay in the quiver with it on', spentAccMax * 2 < spentNone, { none: spentNone, accumulator_max_cape: spentAccMax });
+const knivesAccMax = thrown('accumulator_max_cape');
+truthy('thrown knives are saved with it on', knivesAccMax * 2 < knivesNone, { none: knivesNone, accumulator_max_cape: knivesAccMax });
+const bpAccMax = bpDarts('accumulator_max_cape');
+truthy('the toxic blowpipe spends 28% of its darts with it on', Math.abs(bpAccMax - 28) < 3, bpAccMax);
+const steelMax = attract(magnet, 'accumulator_max_cape');
+truthy('and it attracts steel like the device it was made from', steelMax.some(n => n.startsWith('steel_')), steelMax);
+check('with the same metal interference rule', attract(magnet, 'accumulator_max_cape', 'rune_platebody'), []);
+check('and a god max cape attracts nothing at all', attract(magnet, 'saradomin_max_cape'), []);
 
 // =============================================================== dead clicks
 
