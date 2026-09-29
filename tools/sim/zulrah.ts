@@ -444,6 +444,55 @@ console.log('THE FIGHT ENDS');
     H.despawn(p);
 }
 
+// ------------------------------------------------------------------ where it surfaces
+// THE FOUR PLACES, AGAINST THE MAP RATHER THAN AGAINST A LIST. zulrah.constant states the rule that
+// picked them - "the four 5x5 blocks of open water NEAREST the walkway in each of those
+// directions" - and two of the four did not obey it: west and east sat one tile off the walkway,
+// which is as close as a 5x5 block of water gets before it overlaps the walkway itself, while
+// middle and south sat at two. Nothing in the old checks looked at the map at all; they compared the
+// enum against itself.
+console.log('WHERE ZULRAH SURFACES');
+{
+    const BX = 36 * 64, BZ = 79 * 64;
+    const plat: [number, number][] = [];
+    for (let x = 16; x < 48; x++) {
+        for (let z = 16; z < 48; z++) {
+            if (A.walkable(0, BX + x, BZ + z)) plat.push([x, z]);
+        }
+    }
+    check('the shrine has a walkway to stand on', plat.length > 0, true);
+    // Zulrah is 5x5 and moverestrict=nomove, so a block with a walkable tile in it would drop the
+    // snake onto the walkway and block the player's own path round it.
+    const allWater = (sx: number, sz: number) => {
+        for (let x = sx; x < sx + 5; x++) {
+            for (let z = sz; z < sz + 5; z++) {
+                if (A.walkable(0, BX + x, BZ + z)) return false;
+            }
+        }
+        return true;
+    };
+    // The shortest distance from the 5x5 block to a tile a player can stand on.
+    const gap = (sx: number, sz: number) => {
+        let best = 99;
+        for (const [px, pz] of plat) {
+            best = Math.min(best, Math.max(Math.max(sx - px, 0, px - (sx + 4)), Math.max(sz - pz, 0, pz - (sz + 4))));
+        }
+        return best;
+    };
+    // Read out of the shipped constants the way the fight reads them, so a coord that moves here
+    // moves the check with it.
+    const SPOT = ['zulrah_pos_middle', 'zulrah_pos_south', 'zulrah_pos_west', 'zulrah_pos_east'];
+    const local = SPOT.map(name => {
+        const c = enumVal('zulrah_pos_coord', SPOT.indexOf(name));
+        return [((c >> 14) & 0x3fff) - BX, (c & 0x3fff) - BZ];
+    });
+    check('all four are 5x5 blocks of water, so the snake never lands on the walkway',
+        local.map(([x, z]) => allWater(x, z)), [true, true, true, true]);
+    check('  and all four are as close to the walkway as a block of water gets',
+        local.map(([x, z]) => gap(x, z)), [1, 1, 1, 1]);
+    check('  and they are four different places', new Set(local.map(c => c.join(','))).size, 4);
+}
+
 // ------------------------------------------------------------------ the venom clouds, on screen
 // A CLOUD IS ONLY REAL IF THE CLIENT IS TOLD ABOUT IT. The old check proved a barrage HURT - that
 // standing in one costs hitpoints - which the queue does whether or not anything is ever drawn. It
