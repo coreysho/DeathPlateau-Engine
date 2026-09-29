@@ -64,7 +64,12 @@ Rub menus that now share the teleports still work.
 shops: for each of the nine that stock the water-filled vial pack it reads the stock row back out of
 the **built** cache and out of the live `Inventory.fromType` container, because a shop that reads
 right in `all.inv` and packs wrong is a real failure mode here - a gap in the stock numbering packs
-as obj 65535 and shows as a blank square in the shop window. The other half is opening: the pack
+as obj 65535 and shows as a blank square in the shop window. It also prices the pack through the
+engine's own `calc_shop_value`: no price is written for the item anywhere, so what it checks is that
+each shop's existing multiplier applied to cost 201 lands on the price that shop's OSRS wiki page
+prints. Eight of the nine do. Jossik's does not and is meant not to - his store has always sold at
+1300 where Old School's sells at 1100, and repricing his 24 lines of 2006 stock to chase one 2014
+item is the thing the era rule forbids. The other half is opening: the pack
 gives 100 noted vials of water and takes one slot doing it, a completely full 28/28 inventory still
 opens one (the pack's own slot is what the contents go into, so there is no "not enough space" case
 to hit), a stack of packs opens itself one every 2 ticks without pinning the player, and walking away

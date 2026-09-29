@@ -94,6 +94,36 @@ for (const [shop, [slot, stock, restock]] of Object.entries(SHOPS)) {
     check(`${shop} live container has no blank square`, [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535), false);
 }
 
+// ---------------------------------------------------------------- what it costs
+// No price is written anywhere for this item: shop.rs2 works one out from the obj's cost and the
+// shop's own multiplier, so the check is that the multiplier each shop ALREADY had, applied to
+// cost 201, lands on the price Old School charges. Right-hand column is the price the shop's own
+// OSRS wiki page prints. calc_shop_value is the engine's own proc, called here with a price_mod of
+// 0, which is what it gets at full stock.
+console.log('\nwhat a player pays');
+{
+    const p = fresh();
+    // shop, its sell multiplier as this build already had it, the OSRS wiki's price
+    const PRICED: [string, number, number, number][] = [
+        ['Aemad-s', 1300, 20, 261],
+        ['Jatix-s', 1000, 30, 201],
+        ['Frincos-', 1000, 20, 201],
+        ['Grud-s', 1300, 30, 261],
+        ['Jiminua-s', 1500, 20, 301],
+        ['Obli-s', 1500, 20, 301],
+        ['Sigmund-s', 1300, 30, 261],
+        ['Razmire-s', 1300, 30, 261]
+    ];
+    for (const [who, sell, haggle, want] of PRICED) {
+        check(`${who} charges`, H.runProc(p, '[proc,calc_shop_value]', [201, haggle, sell, 0])[0], want);
+    }
+    // The one that does not match, and is deliberately left alone. Old School's Lighthouse store
+    // sells at 1100 and would charge 221; this build's Jossik has always sold at 1300, so he
+    // charges 261. Changing it would reprice all 24 of his other lines - every one of them 2006
+    // stock - to chase one 2014 item, which is exactly what the era rule forbids.
+    check('Jossik charges (his own 1300, not OSRS-s 1100)', H.runProc(p, '[proc,calc_shop_value]', [201, 15, 1300, 0])[0], 261);
+}
+
 // ---------------------------------------------------------------- opening one
 console.log('\nopening one pack');
 {
