@@ -13,6 +13,8 @@
 //   dying there     everything goes to Priestess Zul-Gwenwynig, free for the first fifty kills and
 //                   100,000 after; dying in the world afterwards loses the lot
 //   the drops       20,000 kills against the wiki's own rates, uniques included
+//   the trackers    a real kill in each of the three colours counting once each, to the player the
+//                   loot went to, and its uniques landing on the collection log's Zulrah page
 //   the pet         through ~bosspet_roll and the follower slot, put down and picked back up
 //   the blowpipe    the four objs tools/nosourcespec.json used to excuse now have a source
 //   the helm        52 Crafting to carve, 75 Defence to wear, scales to charge, ten a fight, and
@@ -454,6 +456,106 @@ console.log('THE TABLE THE GAME SHOWS');
     check('  and the four uniques at 1 in 512 each',
         ['tanzanite_fang', 'magic_fang', 'serpentine_visage', 'uncut_onyx']
             .every(o => row.includes(`data=drop,${o},`) && row.includes('1/512')), true);
+}
+
+// ------------------------------------------------------------------ the two trackers
+// THE KILL COUNT AND THE COLLECTION LOG, the two player-facing trackers Zulrah was missing.
+//
+// WHY THIS IS A REAL KILL AND NOT A PROC CALL. Zulrah is the one boss whose [ai_queue3] is its own
+// death script rather than an engine drop table, and the only thing that carries the kill to
+// ~boss_kill_record is the gosub(npc_death) that script opens with. Calling ~boss_kill_record
+// directly would pass whatever that line does or does not do, so every kill here goes through
+// ::~debug_kill_active - hero points, damage to zero, npc_queue(3) - which is the same path a
+// player's last hit takes.
+//
+// AND ONCE PER KILL, NOT ONCE PER COLOUR. Zulrah wears three npc records and the fight moves
+// between them with npc_changetype_keepall, so all three map to the one slot in boss_kill_index.
+// Three kills in three colours must read three, which is the number a mapping that double-counted
+// a colour change could not produce.
+console.log('THE KILL COUNT AND THE COLLECTION LOG');
+{
+    const ZULRAH_SLOT = 13;
+    const COLOURS = ['zulrah', 'zulrah_magma', 'zulrah_tanzanite'];
+    // The log is a perm inv of stackall slots, one per distinct item ever obtained
+    // (content/scripts/collection_log/configs/collection_log.inv).
+    const logCount = (who: any, name: string) => {
+        const inv = who.getInventory(InvType.getId('collection_log'));
+        if (!inv) return 0;
+        const id = ObjType.getId(name);
+        let c = 0;
+        for (let s = 0; s < inv.capacity; s++) {
+            const o = inv.get(s);
+            if (o && o.id === id) c += o.count;
+        }
+        return c;
+    };
+    const p = fresh();
+    // A second player standing beside the fight who never lands a hit. The count is credited on
+    // npc_findhero, not on who was nearby, so this one must end on nothing.
+    const bystander = fresh();
+    const killOne = (colour: string, at: number) => {
+        const snake = H.addNpc(colour, p.x + at, p.z + 6);
+        H.runNpcProc(snake, '[proc,debug_kill_active]', p);
+        // npc_death spends an npc_arrivedelay of up to two ticks and an npc_delay(1) of its own,
+        // and the kill count's message is a player queue on top of that.
+        H.tick(8);
+    };
+    const said = A.mark();
+    COLOURS.forEach((c, i) => killOne(c, 2 + i * 8));
+    check('three kills, one in each of Zulrah\'s three colours, count three',
+        H.getVar(p, 'boss_kc_zulrah'), 3);
+    check('  and the window\'s own read-back agrees, on slot 13',
+        H.runProc(p, '[proc,boss_kill_get]', [ZULRAH_SLOT]), [3]);
+    check('  the player who never hit it is credited with none',
+        H.getVar(bystander, 'boss_kc_zulrah'), 0);
+    // One message per kill, counting up - two for one kill would be the double count showing.
+    check('  and the player is told the running count once per kill, by name',
+        A.mesSince(p, said).filter(m => m.startsWith('Your Zulrah kill count is:')),
+        ['Your Zulrah kill count is: 1.', 'Your Zulrah kill count is: 2.',
+         'Your Zulrah kill count is: 3.']);
+    // The three colours are three npc records against the ONE slot - read back off the shipped
+    // enum, which is what the game reads.
+    const idx = EnumType.getByName('boss_kill_index')!;
+    check('all three colours map to that one slot in boss_kill_index',
+        COLOURS.map(c => (idx as any).values?.get?.(NpcType.getId(c))), [13, 13, 13]);
+
+    // THE COLLECTION LOG. ~zulrah_unique is the real unique path - it picks one of the four, drops
+    // it through ~zulrah_rare_at and announces it, and ~broadcast_drop is where ~collection_log_add
+    // hangs. Forty rolls of a one-in-four leaves any one item out about four times in a hundred
+    // thousand, which is far below the rate of anything else here going wrong.
+    const snake = H.addNpc('zulrah', p.x + 2, p.z + 12);
+    const at = (p.level << 28) | (p.x << 14) | p.z;
+    for (let i = 0; i < 40; i++) {
+        if (i % 10 === 0) H.clearLogs();
+        H.runNpcProc(snake, '[proc,zulrah_unique]', p, [at]);
+    }
+    H.runNpcProc(snake, '[proc,zulrah_rare_at]', p, [at, ObjType.getId('jar_of_swamp'), 1]);
+    H.tick(2);
+    check('every unique Zulrah drops lands in the collection log',
+        ['tanzanite_fang', 'magic_fang', 'serpentine_visage', 'uncut_onyx']
+            .map(o => logCount(p, o) > 0), [true, true, true, true]);
+    check('  and so does the jar of swamp', logCount(p, 'jar_of_swamp'), 1);
+    // The pet comes through ~broadcast_pet rather than ~broadcast_drop, so it is its own path.
+    A.runProcProtected(p, '[proc,bosspet_roll]', [ObjType.getId('bosspet_snakeling_item'), 1]);
+    H.tick(3);
+    check('  and the snakeling, which arrives through the pet system', logCount(p, 'bosspet_snakeling_item'), 1);
+
+    // THE PAGE ITSELF is a dbrow written by tools/gencollectionlog.py, and the window reads that
+    // and nothing else - so the shipped dbrow is where to read what the page carries.
+    const page = fs.readFileSync('../content/scripts/collection_log/configs/collection_log.dbrow', 'utf8')
+        .split(/\[collection_log_/).find(b => b.startsWith('zulrah]')) ?? '';
+    check('the log has a Zulrah page', page.includes('data=name,"Zulrah"'), true);
+    check('  carrying its six collectables and nothing common',
+        (page.match(/^data=items,(\S+)$/gm) ?? []).map(l => l.split(',')[1]),
+        ['bosspet_snakeling_item', 'tanzanite_fang', 'magic_fang', 'serpentine_visage',
+         'uncut_onyx', 'jar_of_swamp']);
+    check('  no clue on it - a clue belongs to the Clues tab by its tier, as every other boss page here has it',
+        /clue/i.test(page), false);
+    check('  and the kill count on it is Zulrah\'s slot',
+        page.includes(`data=counters,"Zulrah kills",${ZULRAH_SLOT}`), true);
+    check('  which the log reads back as the three kills above',
+        H.runProc(p, '[proc,collection_log_counter_get]', [ZULRAH_SLOT]), [3]);
+    H.despawn(p, bystander);
 }
 
 
