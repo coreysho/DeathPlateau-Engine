@@ -44,6 +44,7 @@
  *   npx tsx tools/server/account.ts set bob account.members true
  *   npx tsx tools/server/account.ts give bob abyssal_whip 1 --inv bank
  *   npx tsx tools/server/account.ts rename bob robert
+ *   npx tsx tools/server/account.ts delete bob
  *   npx tsx tools/server/account.ts password bob hunter2
  *
  * --profile <name> picks the world profile (default: NODE_PROFILE, or "main").
@@ -701,6 +702,70 @@ Log them out first, or pass --force if the server crashed and left them marked o
     console.log('  hiscores follow on their next logout - they are recomputed from the save, not stored by name.');
 }
 
+/**
+ * Remove an account entirely, so its name is free for somebody else.
+ *
+ * DELETING THE .sav IS NOT ENOUGH, which is the trap this exists to close: the account row still
+ * holds the username, so the name stays taken - `rename` refuses it, and the old owner can still log
+ * in and be handed a brand new character on the same name. Both halves have to go.
+ *
+ * It takes a full JSON export first, always, without being asked, and moves the save aside rather
+ * than unlinking it. A rename can be undone by running it backwards; this cannot.
+ *
+ * BE CLEAR ABOUT WHAT THAT BACKUP IS, because it is not a full undo: `import` writes the SAVE back,
+ * and it does not recreate the account row - there is no password in the export to recreate it with,
+ * deliberately. Putting a deleted player back means restoring the character from the JSON (or moving
+ * the .deleted- file back) and then making the login again with `password`.
+ *
+ * Other people's lists are cleaned too. friendlist.friend_username and ignorelist.value hold a NAME,
+ * so rows naming this account would otherwise survive it - and if the name is then given to someone
+ * else, which is exactly why a name gets freed, those strangers would find the new owner sitting on
+ * their friends list.
+ */
+async function cmdDelete(username: string) {
+    const name = toSafeName(username);
+    const account = await getAccount(name);
+    const file = savePath(name);
+    if (!account && !fs.existsSync(file)) fail(`${name} has neither an account row nor a save file - nothing to remove.`);
+    if (account && (await isOnline(account.id)) && args.force !== true) {
+        fail(`${name} is logged in. Log them out first, or pass --force if the server crashed and left them marked online.`);
+    }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const dump = typeof args.out === 'string' ? args.out : `${name}.deleted-${stamp}.json`;
+    fs.writeFileSync(dump, JSON.stringify(await fullExport(name), null, 4));
+    console.log(`  backup   ${dump}`);
+
+    if (fs.existsSync(file)) {
+        const aside = `${file}.deleted-${stamp}`;
+        fs.renameSync(file, aside);
+        console.log(`  save     moved to ${aside}`);
+    } else {
+        console.log('  save     (none)');
+    }
+
+    let theirs = 0;
+    let others = 0;
+    if (account) {
+        for (const table of ['friendlist', 'ignorelist'] as const) {
+            const r = await db.deleteFrom(table).where('account_id', '=', account.id).where('profile', '=', profile).executeTakeFirst();
+            theirs += Number(r?.numDeletedRows ?? 0);
+        }
+        const f = await db.deleteFrom('friendlist').where('friend_username', '=', name).where('profile', '=', profile).executeTakeFirst();
+        const i = await db.deleteFrom('ignorelist').where('value', '=', name).where('profile', '=', profile).executeTakeFirst();
+        others = Number(f?.numDeletedRows ?? 0) + Number(i?.numDeletedRows ?? 0);
+        await db.deleteFrom('account_login').where('account_id', '=', account.id).where('profile', '=', profile).execute();
+        await db.deleteFrom('account').where('id', '=', account.id).execute();
+        console.log(`  account  row #${account.id} removed`);
+    } else {
+        console.log('  account  (no row)');
+    }
+    console.log(`  their own friend/ignore entries removed: ${theirs}`);
+    console.log(`  entries OTHER players held naming them:  ${others}`);
+    console.log(`  "${name}" is now free.`);
+    console.log('  to put them back: import the JSON (or move the .deleted- save back), then set a password - the account row is not in the backup.');
+}
+
 async function cmdPassword(username: string) {
     const plain = args._[2];
     if (!plain) fail('usage: password <user> <newpassword>');
@@ -773,6 +838,11 @@ async function main() {
         case 'rename':
             if (!username || !args._[2]) fail('usage: rename <user> <newname>');
             await cmdRename(username, String(args._[2]));
+            break;
+
+        case 'delete':
+            if (!username) fail('usage: delete <user> [--out backup.json]');
+            await cmdDelete(username);
             break;
 
         case 'password':
