@@ -11,6 +11,7 @@ import { printError, printInfo, printWarning } from '#/util/Logger.js';
 import { startManagementWeb, startWeb } from '#/web.js';
 import OnDemand from '#/engine/OnDemand.js';
 import BotManager from '#/engine/bot/BotManager.js';
+import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 
 if (OnDemand.cache.count(0) !== 9 || OnDemand.cache.count(2) === 0 || !fs.existsSync('data/pack/server/script.dat')) {
@@ -51,6 +52,11 @@ if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
 ScriptFaults.init();
 
 await World.start();
+
+// custom (2026-09-29) - trigger coverage (engine/script/ScriptCoverage.ts). AFTER World.start,
+// unlike the reporter above: it counts the build's triggers, and ScriptProvider has not loaded them
+// until the world has started.
+ScriptCoverage.init();
 
 // custom (2026-09-27) - server-side bots, only where asked for (the dev world). Never on live.
 if (Environment.NODE_BOTS) {

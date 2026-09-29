@@ -11,9 +11,12 @@ import Loc from '#/engine/entity/Loc.js';
 import Npc from '#/engine/entity/Npc.js';
 import Obj from '#/engine/entity/Obj.js';
 import { isMapBlocked } from '#/engine/GameMap.js';
+import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
+import type ScriptFile from '#/engine/script/ScriptFile.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
+import { printWarning } from '#/util/Logger.js';
 
 // custom (2026-09-29) - the fuzzing bot's brain.
 //
@@ -55,12 +58,21 @@ class Rng {
     }
 }
 
+/**
+ * Knobs a run can turn, kept here rather than in Environment because they exist to be A/B'd:
+ * tools/sim/fuzz.ts runs the same seed with coverageGuided on and off to show what the guidance is
+ * actually worth. Nothing in the server changes them.
+ */
+export const fuzzTuning = { coverageGuided: true };
+
 /** How far it looks for something to click. A client's own view is 15; this is inside it. */
 const REACH = 10;
 /** How many actions it takes in one tick. More than one, because a player clicks faster than 0.6s. */
 const ACTIONS_PER_TICK = 2;
 /** How many actions are kept for a replay trail. Enough to see the run-up to a finding. */
 const TRAIL = 24;
+/** How long a bot goes without running a script nothing had run before, before it walks somewhere else. */
+const BORED_TICKS = 150;
 
 /**
  * The one op index a loc, npc or obj actually has at `op` (1-based), or 0 - the same check
@@ -91,6 +103,9 @@ export class FuzzBrain {
     /** Where it is heading while it has nothing better to do. */
     private dest: { x: number; z: number } | null = null;
     private destUntil = 0;
+    /** Coverage boredom: the last time anything new ran, and what the count was then. See wander(). */
+    private boredSince = 0;
+    private lastSeenCount = -1;
 
     constructor(
         readonly s: BotState,
@@ -112,7 +127,22 @@ export class FuzzBrain {
         this.s.lastAction = what;
     }
 
+    /**
+     * A bot's tick is called from World.processClientsIn, so a throw in here is a throw in the
+     * server's own loop. The fuzzer is the thing most likely to find an engine state nothing else
+     * reaches, so it is also the thing most likely to trip over one - and a crashed world reports
+     * nothing at all. It logs and carries on instead; the first run of this found a real one (a
+     * recipe consuming the slots whose names the trail was about to read).
+     */
     tick(): void {
+        try {
+            this.tickInner();
+        } catch (err) {
+            printWarning(`fuzz: ${this.bot.username} threw and skipped a tick (seed ${this.seed}, last: ${this.s.lastAction}) - ${String((err as { message?: unknown })?.message ?? err)}`);
+        }
+    }
+
+    private tickInner(): void {
         const bot = this.bot;
         this.did = [];
 
@@ -120,8 +150,9 @@ export class FuzzBrain {
             return;
         }
 
-        // Closed every tick it is in one, so the "a modal that will not close" watcher means what it
-        // says: the bot asked, and the modal stayed.
+        // Every tick it is in a modal it tries to get out of one: answer the options, click through,
+        // press one of its buttons, or close it. So the "a modal that will not close" watcher means
+        // what it says - over a hundred ticks the bot has asked many times and it is still there.
         if (bot.containsModalInterface()) {
             const before = bot.modalState;
             // A dialogue with options is answered rather than shut, because shutting it tests
@@ -187,6 +218,22 @@ export class FuzzBrain {
         this.wander();
     }
 
+    /**
+     * COVERAGE GUIDANCE. Given some candidates and the trigger each would fire, prefer the ones
+     * nothing in this process has ever run. Without it a fuzzer spends the night re-testing the
+     * Lumbridge cows, because that is where the density is; with it, it goes looking for the content
+     * nobody has touched. Not ALL the time - a fifth of the picks stay uniform, so it still reaches
+     * the second and third op on a loc it has already opened once, and so a build with no coverage
+     * turned on behaves exactly as before.
+     */
+    private preferUncovered<T>(candidates: T[], triggerFor: (c: T) => ScriptFile | undefined): T[] {
+        if (!fuzzTuning.coverageGuided || !ScriptCoverage.enabled || candidates.length === 0 || this.rng.next() < 0.2) {
+            return candidates;
+        }
+        const fresh = candidates.filter(c => !ScriptCoverage.covered(triggerFor(c)));
+        return fresh.length ? fresh : candidates;
+    }
+
     /** Everything of a kind within REACH, from the nine zones around the bot. */
     private nearby<T>(collect: (zoneX: number, zoneZ: number) => Iterable<T>, at: (t: T) => { x: number; z: number }): T[] {
         const bot = this.bot;
@@ -210,19 +257,23 @@ export class FuzzBrain {
             (x, z) => World.gameMap.getZone(x, z, bot.level).getAllLocsSafe(),
             l => l
         );
+        const choices: { loc: Loc; op: number }[] = [];
+        for (const loc of locs) {
+            for (const op of validOps(LocType.get(loc.type)?.op ?? null)) {
+                choices.push({ loc, op });
+            }
+        }
+        const chosen = this.preferUncovered(choices, c => {
+            const type = LocType.get(c.loc.type);
+            return ScriptProvider.getByTrigger(ServerTriggerType.OPLOC1 + (c.op - 1), type.id, type.category);
+        });
         for (let tries = 0; tries < 4; tries++) {
-            const loc = this.rng.pick(locs);
-            if (!loc) {
+            const pick = this.rng.pick(chosen);
+            if (!pick) {
                 return false;
             }
-            const type = LocType.get(loc.type);
-            const ops = validOps(type?.op ?? null);
-            const op = this.rng.pick(ops);
-            if (op === undefined) {
-                continue;
-            }
-            if (Input.opLoc(bot, loc, op)) {
-                this.note(`oploc ${type.debugname ?? loc.type} op${op} @${loc.x},${loc.z},${loc.level}`, 'oploc');
+            if (Input.opLoc(bot, pick.loc, pick.op)) {
+                this.note(`oploc ${LocType.get(pick.loc.type).debugname ?? pick.loc.type} op${pick.op} @${pick.loc.x},${pick.loc.z},${pick.loc.level}`, 'oploc');
                 return true;
             }
         }
@@ -235,19 +286,23 @@ export class FuzzBrain {
             (x, z) => World.gameMap.getZone(x, z, bot.level).getAllNpcsSafe(),
             n => n
         );
+        const choices: { npc: Npc; op: number }[] = [];
+        for (const npc of npcs) {
+            for (const op of validOps(NpcType.get(npc.type)?.op ?? null)) {
+                choices.push({ npc, op });
+            }
+        }
+        const chosen = this.preferUncovered(choices, c => {
+            const type = NpcType.get(c.npc.type);
+            return ScriptProvider.getByTrigger(ServerTriggerType.OPNPC1 + (c.op - 1), type.id, type.category);
+        });
         for (let tries = 0; tries < 4; tries++) {
-            const npc = this.rng.pick(npcs);
-            if (!npc) {
+            const pick = this.rng.pick(chosen);
+            if (!pick) {
                 return false;
             }
-            const type = NpcType.get(npc.type);
-            const ops = validOps(type?.op ?? null);
-            const op = this.rng.pick(ops);
-            if (op === undefined) {
-                continue;
-            }
-            if (Input.opNpc(bot, npc, op)) {
-                this.note(`opnpc ${type.debugname ?? npc.type} op${op} @${npc.x},${npc.z}`, 'opnpc');
+            if (Input.opNpc(bot, pick.npc, pick.op)) {
+                this.note(`opnpc ${NpcType.get(pick.npc.type).debugname ?? pick.npc.type} op${pick.op} @${pick.npc.x},${pick.npc.z}`, 'opnpc');
                 return true;
             }
         }
@@ -294,18 +349,27 @@ export class FuzzBrain {
                 slots.push(i);
             }
         }
+        const choices: { slot: number; op: number }[] = [];
+        for (const slot of slots) {
+            for (const op of validOps(ObjType.get(inv.get(slot)!.id)?.iop ?? null)) {
+                choices.push({ slot, op });
+            }
+        }
+        const chosen = this.preferUncovered(choices, c => {
+            const type = ObjType.get(inv.get(c.slot)!.id);
+            return ScriptProvider.getByTrigger(ServerTriggerType.OPHELD1 + (c.op - 1), type.id, type.category);
+        });
         for (let tries = 0; tries < 4; tries++) {
-            const slot = this.rng.pick(slots);
-            if (slot === undefined) {
+            const choice = this.rng.pick(chosen);
+            if (choice === undefined) {
                 return false;
             }
-            const item = inv.get(slot)!;
-            const type = ObjType.get(item.id);
-            const ops = validOps(type?.iop ?? null);
-            const op = this.rng.pick(ops);
-            if (op === undefined) {
+            const { slot, op } = choice;
+            const item = inv.get(slot);
+            if (!item) {
                 continue;
             }
+            const type = ObjType.get(item.id);
             if (Input.heldOpSlot(bot, slot, op)) {
                 const name = type.iop?.[op - 1] ?? '';
                 // Wielding and wearing only move an item between two of its own inventories, so
@@ -335,10 +399,16 @@ export class FuzzBrain {
         }
         const a = this.rng.pick(slots)!;
         const b = this.rng.pick(slots)!;
-        if (a === b || !Input.heldUse(bot, a, b)) {
+        if (a === b) {
             return false;
         }
-        this.note(`use ${ObjType.get(inv.get(a)!.id)?.debugname} on ${ObjType.get(inv.get(b)!.id)?.debugname}`, 'heldu');
+        // Read the names BEFORE the click. A recipe consumes both slots, so reading them afterwards
+        // for the trail is reading an empty slot - which is how the first long run crashed.
+        const what = `use ${ObjType.get(inv.get(a)!.id)?.debugname} on ${ObjType.get(inv.get(b)!.id)?.debugname}`;
+        if (!Input.heldUse(bot, a, b)) {
+            return false;
+        }
+        this.note(what, 'heldu');
         return true;
     }
 
@@ -434,13 +504,31 @@ export class FuzzBrain {
      */
     private wander(): void {
         const bot = this.bot;
+        // BOREDOM. A fuzzer left alone spends the night on one street, because there is always
+        // something in reach to click and clicking it is cheap. So: if nothing this bot has done for
+        // BORED_TICKS has run a script that had not run before, it stops poking at what is here and
+        // walks a long way - which is the only legal way a player gets to new content. This is what
+        // turns "re-tests Lumbridge all night" into "goes and finds the next town".
+        const seen = ScriptCoverage.enabled ? ScriptCoverage.seenCount() : 0;
+        if (seen !== this.lastSeenCount) {
+            this.lastSeenCount = seen;
+            this.boredSince = World.currentTick;
+        }
+        const bored = ScriptCoverage.enabled && World.currentTick - this.boredSince > BORED_TICKS;
+
         if (!this.dest || World.currentTick > this.destUntil || (bot.x === this.dest.x && bot.z === this.dest.z)) {
-            for (let i = 0; i < 20; i++) {
-                const x = bot.x + this.rng.int(-24, 24);
-                const z = bot.z + this.rng.int(-24, 24);
+            const radius = bored ? 160 : 24;
+            for (let i = 0; i < 30; i++) {
+                const x = bot.x + this.rng.int(-radius, radius);
+                const z = bot.z + this.rng.int(-radius, radius);
                 if (!isMapBlocked(x, z, bot.level)) {
                     this.dest = { x, z };
-                    this.destUntil = World.currentTick + 60;
+                    this.destUntil = World.currentTick + (bored ? 300 : 60);
+                    if (bored) {
+                        // Give it a fresh chance before it decides it is bored again, or one long
+                        // walk through empty ground would keep it in boredom mode for good.
+                        this.boredSince = World.currentTick;
+                    }
                     break;
                 }
             }

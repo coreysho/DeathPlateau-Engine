@@ -187,6 +187,12 @@ export default {
     NODE_SCRIPT_FAULTS: tryParseBoolean(process.env.NODE_SCRIPT_FAULTS, false),
     NODE_SCRIPT_FAULTS_FILE: tryParseString(process.env.NODE_SCRIPT_FAULTS_FILE, 'data/faults.jsonl'),
     NODE_SCRIPT_FAULTS_WEBHOOK: tryParseString(process.env.NODE_SCRIPT_FAULTS_WEBHOOK, ''),
+    // custom (2026-09-29) - which of the build's triggers have ever run (engine/script/
+    // ScriptCoverage.ts), and the file ::coverage write puts the never-reached list in. Off unless
+    // asked for, and off it is one boolean read per script execution. The list is the point: a
+    // trigger nothing has ever reached is content nobody has ever played.
+    NODE_SCRIPT_COVERAGE: tryParseBoolean(process.env.NODE_SCRIPT_COVERAGE, false),
+    NODE_SCRIPT_COVERAGE_FILE: tryParseString(process.env.NODE_SCRIPT_COVERAGE_FILE, 'data/coverage.txt'),
 
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.

@@ -23,6 +23,8 @@ import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import { fuzzTuning } from '#/engine/bot/BotFuzzer.js';
+import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 
 const argv = process.argv.slice(2);
@@ -30,6 +32,9 @@ const TICKS = parseInt(argv[0] ?? '') || 2000;
 const COUNT = parseInt(argv[1] ?? '') || 4;
 const SEED = parseInt(argv[2] ?? '') || 20260929;
 const AT = (argv[3] ?? '3222,3218,0').split(',').map(n => parseInt(n));
+// `noguide` as the fifth argument turns the coverage steering off, so the same seed can be run both
+// ways and the difference measured rather than asserted.
+fuzzTuning.coverageGuided = argv[4] !== 'noguide';
 
 let ok = 0,
     bad = 0;
@@ -46,6 +51,9 @@ const check = (what: string, got: unknown, want: unknown) => {
 const faultsFile = path.join(os.tmpdir(), `fuzz_faults_${process.pid}.jsonl`);
 const findingsFile = path.join(os.tmpdir(), `fuzz_findings_${process.pid}.jsonl`);
 ScriptFaults.enableForTesting(faultsFile);
+// Coverage is what steers the run (BotFuzzer.preferUncovered) as well as what it is judged by, so
+// it goes on before the world boots - the login and startup scripts count too.
+ScriptCoverage.enable();
 
 await H.boot();
 
@@ -91,12 +99,12 @@ for (let t = 0; t < TICKS; t++) {
     }
     if (t - lastPrint >= 500) {
         lastPrint = t;
-        console.log(`  t${World.currentTick}: ${findings.size()} findings, ${ScriptFaults.size()} script faults`);
+        console.log(`  t${World.currentTick}: ${findings.size()} findings, ${ScriptFaults.size()} script faults, ${ScriptCoverage.summary().executed} triggers reached`);
     }
 }
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
-console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT.join(',')})`);
+console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT.join(',')}, coverage-guided: ${fuzzTuning.coverageGuided})`);
 for (const [kind, n] of [...actions.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${String(n).padStart(6)}  ${kind}`);
 }
@@ -125,6 +133,12 @@ if (ScriptFaults.size() === 0) {
         }
     }
 }
+
+console.log('\nTRIGGER COVERAGE');
+const cov = ScriptCoverage.summary();
+console.log(`  ${cov.executed}/${cov.total} of this build's triggers have run in this process (${((cov.executed / Math.max(1, cov.total)) * 100).toFixed(1)}%)`);
+console.log(`  ${cov.total - cov.executed} have never run - nothing in the world, no sim and no player has reached them`);
+console.log(`  full list: ${ScriptCoverage.write(path.join(os.tmpdir(), `fuzz_coverage_${process.pid}.txt`))}`);
 
 fs.rmSync(faultsFile, { force: true });
 fs.rmSync(findingsFile, { force: true });

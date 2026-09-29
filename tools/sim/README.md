@@ -75,6 +75,13 @@ safety guard first every time - the fuzzer refuses on a production world and ref
 who is not staff - because that is the part that must never rot. A run that finds nothing prints the
 action histogram anyway: if it is all `idle` and `walk`, the finding is about the fuzzer.
 
+The same run prints trigger coverage: how many of the build's triggers have ever run in that
+process and how many never have. Pass `noguide` as the fifth argument to turn the coverage steering
+off, so the same seed can be run both ways and the difference measured rather than asserted. On a
+dev world the same numbers come from `NODE_SCRIPT_COVERAGE=true` and `::coverage` / `::coverage
+write`, which is worth doing on its own: the never-reached list is a to-do list, and clearing it
+before testing one thing says exactly which triggers that one thing touched.
+
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 

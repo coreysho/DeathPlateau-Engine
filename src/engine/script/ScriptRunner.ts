@@ -22,6 +22,7 @@ import StringOps from '#/engine/script/handlers/StringOps.js';
 import StructOps from '#/engine/script/handlers/StructOps.js';
 import TradingPostOps from '#/engine/script/handlers/TradingPostOps.js';
 import ClanOps from '#/engine/script/handlers/ClanOps.js';
+import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import ScriptFile from '#/engine/script/ScriptFile.js';
 import { ScriptOpcode, ScriptOpcodeNameMap } from '#/engine/script/ScriptOpcode.js';
@@ -127,6 +128,12 @@ export default class ScriptRunner {
         if (!state || !state.script || !state.script.info) {
             return ScriptState.ABORTED;
         }
+
+        // custom (2026-09-29) - which triggers have ever actually run (ScriptCoverage.ts). Here
+        // rather than in init() because a queued or paused script resumes through execute without
+        // going through init again, and a trigger that only ever runs as a resume would otherwise
+        // read as never reached. Off unless NODE_SCRIPT_COVERAGE is set: one boolean read.
+        ScriptCoverage.mark(state.script);
 
         try {
             if (state.execution !== ScriptState.RUNNING) {

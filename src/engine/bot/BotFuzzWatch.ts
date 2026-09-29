@@ -194,8 +194,9 @@ export function watchSoftLock(bot: BotPlayer, w: WatchState, seed: number, trail
         findings.add('softlock', `no effect from any input for ${SOFTLOCK_TICKS} ticks at ${bot.x},${bot.z},${bot.level}`, bot, seed, trail);
     }
 
-    // A modal it cannot close. The brain calls closeModal every tick it is in one (BotFuzzer.tick),
-    // so this is a dialogue that refuses, not a dialogue it has not got round to.
+    // A modal it cannot get out of. Every tick it is in one the brain answers it, clicks through it,
+    // presses one of its buttons or closes it (BotFuzzer.tickInner), so a hundred ticks of the same
+    // modal is a dialogue that refuses, not one the bot has not got round to.
     if (bot.containsModalInterface()) {
         if (w.modalSince === -1) {
             w.modalSince = now;
@@ -345,6 +346,12 @@ function ownedItems(bot: BotPlayer): Map<number, number> {
     }
     // The ground it can see. Its own drops are still its property until they go public, and a drop
     // that never lands (or lands twice) is exactly the kind of thing worth catching.
+    //
+    // KNOWN WAY TO GET A FALSE POSITIVE, so it does not have to be rediscovered: a drop goes public
+    // on the lootdrop timer, and if another player takes it the total goes down through nobody's
+    // action. The timer is around a hundred ticks against a twenty-five tick window, so it is rare -
+    // but a finding that is only a LOSS, with somebody else standing there, is worth checking before
+    // it is believed. A GAIN never has that excuse.
     for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
             const zone = World.gameMap.getZone(bot.x + dx * 8, bot.z + dz * 8, bot.level);

@@ -4,6 +4,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
 import { FuzzBrain } from '#/engine/bot/BotFuzzer.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
@@ -441,6 +442,10 @@ class BotManager implements BotHooks {
         if (!ScriptFaults.enabled) {
             ScriptFaults.enableForTesting(Environment.NODE_SCRIPT_FAULTS_FILE);
         }
+        // And coverage, which is what steers it: told which triggers nothing has ever run, it goes
+        // looking for those instead of re-testing the Lumbridge cows all night (BotFuzzer
+        // .preferUncovered). Also the number the run is judged by afterwards.
+        ScriptCoverage.enable();
 
         const start = at ?? this.fuzzStart();
         let made = 0;
@@ -449,10 +454,40 @@ class BotManager implements BotHooks {
             if (typeof result === 'string') {
                 return `only ${made} of ${count} started: ${result}`;
             }
+            this.stockFuzzer(result);
             made++;
         }
         printInfo(`bots: ${made} fuzzers at ${start.x},${start.z},${start.level}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
         return '';
+    }
+
+    /**
+     * A fuzzer's toolbox. A combat kit alone gives it a weapon, some armour and food, and after ten
+     * minutes it has eaten the food and there is nothing left to right-click - the first run of this
+     * spent 4000 ticks on 113 inventory ops. These are the everyday tools and materials that most of
+     * the skilling, crafting and item-on-item content in the game asks for, plus a bank with a copy
+     * of each so deposit and withdraw have something to move. Anything the content has renamed is
+     * skipped rather than crashing the spawn, exactly as the kits do.
+     */
+    private stockFuzzer(bot: BotPlayer): void {
+        const inv = ['coins', 'tinderbox', 'knife', 'bronze_axe', 'bronze_pickaxe', 'hammer', 'chisel', 'needle', 'thread', 'net', 'bucket_empty', 'jug_empty', 'pot_empty', 'vial_empty', 'spade', 'logs', 'bones', 'raw_shrimp', 'bread', 'bucket_water', 'airrune', 'mindrune', 'grain', 'clay'];
+        const counts: Record<string, number> = { coins: 100000, airrune: 500, mindrune: 500, lawrune: 100, naturerune: 100, logs: 10, bones: 5, clay: 5 };
+        for (const name of inv) {
+            const id = ObjType.getId(name);
+            if (id !== -1) {
+                bot.invAdd(InvType.INV, id, counts[name] ?? 1);
+            }
+        }
+        const bank = InvType.getId('bank');
+        if (bank === -1) {
+            return;
+        }
+        for (const name of [...inv, 'iron_ore', 'copper_ore', 'tin_ore', 'raw_chicken', 'feather', 'leather', 'ball_of_wool', 'uncut_sapphire', 'lawrune', 'naturerune']) {
+            const id = ObjType.getId(name);
+            if (id !== -1) {
+                bot.invAdd(bank, id, counts[name] ?? 10);
+            }
+        }
     }
 
     /** NODE_BOTS_FUZZ_AT as "x,z,level", or Lumbridge - the most content per tile in the game. */

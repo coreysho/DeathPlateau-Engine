@@ -98,6 +98,15 @@ export default class ScriptProvider {
     }
 
     /**
+     * How many script ids this build has - the array is dense, with a hole where a script failed to
+     * decode. custom (2026-09-29): added so ScriptCoverage can walk every script in the build
+     * without guessing where the ids stop.
+     */
+    static get count(): number {
+        return this.scripts.length;
+    }
+
+    /**
      * Finds a script by `name`.
      * @param name The script name to find.
      * @returns The script.

@@ -35,6 +35,7 @@ import { queueBugReport } from '#/server/tickets/TicketInbox.js';
 
 import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
+import handleCoverageCommand from '#/engine/script/ScriptCoverageCommands.js';
 import handleFaultsCommand from '#/engine/script/ScriptFaultCommands.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
@@ -387,6 +388,14 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // drop table in silence; this is how staff read what has been thrown without journalctl.
             if (cmd === 'faults') {
                 return handleFaultsCommand(player, args);
+            }
+
+            // custom (2026-09-29) - which of the build's triggers have ever run
+            // (engine/script/ScriptCoverage.ts). The never-reached list is a to-do list nobody can
+            // write by hand: there is no way to read off the source which triggers a player can
+            // actually get to.
+            if (cmd === 'coverage') {
+                return handleCoverageCommand(player, args);
             }
 
             if (cmd === 'bank') {
