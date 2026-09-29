@@ -127,6 +127,11 @@ export class WatchState {
     /** Item conservation: the running total per obj id, and the tick the baseline was taken. */
     baseline: Map<number, number> | null = null;
     baselineTick = 0;
+    /** Item moves since the baseline, and when the last one was - see watchItemConservation. */
+    moves = 0;
+    lastMoveTick = 0;
+    /** After a tainting action, the tick a new baseline may be taken. */
+    settleUntil = 0;
     /** An action this window that is a known source or sink, so the window does not count. */
     tainted = true;
     lastXpTotal = 0;
@@ -144,8 +149,11 @@ const MODAL_STUCK_TICKS = 100;
 // How long after its hitpoints reach zero an npc is allowed to stand there. The death script's own
 // arrivedelay is two ticks and the drop table follows; ten is generous.
 const CORPSE_TICKS = 10;
-// A conservation window has to be long enough that a slow script has finished moving items about.
-const CONSERVE_WINDOW = 25;
+/** The mark in WatchState.dying for a corpse already reported, so it is not reported on every pass. */
+const REPORTED = -1;
+// How long after the last move the totals are compared, so a script with a delay in it has finished
+// putting things where they go before anyone counts them.
+const SETTLE_TICKS = 8;
 
 /**
  * A fingerprint of everything the bot's own input is supposed to be able to change. If this is the
@@ -240,8 +248,11 @@ export function watchCorpses(bot: BotPlayer, w: WatchState, seed: number, trail:
                 const since = w.dying.get(npc.nid);
                 if (since === undefined) {
                     w.dying.set(npc.nid, now);
-                } else if (now - since === CORPSE_TICKS) {
-                    findings.add('corpse', `${NpcType.get(npc.type)?.debugname ?? npc.type} was still in the world ${CORPSE_TICKS} ticks after its hitpoints reached 0 (npc_del never ran)`, bot, seed, trail);
+                } else if (since !== REPORTED && now - since >= CORPSE_TICKS) {
+                    findings.add('corpse', `${NpcType.get(npc.type)?.debugname ?? npc.type} was still in the world ${now - since} ticks after its hitpoints reached 0 (npc_del never ran)`, bot, seed, trail);
+                    // Reported once. This runs every few ticks, so without the mark a corpse that
+                    // genuinely never goes away would be reported again on every pass.
+                    w.dying.set(npc.nid, REPORTED);
                 }
             }
         }
@@ -328,6 +339,8 @@ export function watchVarps(bot: BotPlayer, seed: number, trail: string[]): void 
 
 /** Actions that only ever MOVE items. Everything else voids the window. */
 export const CONSERVING_ACTIONS: ReadonlySet<string> = new Set(['walk', 'invop', 'wornop', 'drop', 'equip', 'takeobj', 'closemodal', 'idle']);
+/** The subset of those that actually move something, so a window of pure walking asserts nothing. */
+export const MOVING_ACTIONS: ReadonlySet<string> = new Set(['invop', 'wornop', 'drop', 'equip', 'takeobj']);
 
 /** Every obj the bot owns, across every inventory of its own, plus what it has dropped nearby. */
 function ownedItems(bot: BotPlayer): Map<number, number> {
@@ -383,19 +396,45 @@ export function watchItemConservation(bot: BotPlayer, w: WatchState, seed: numbe
     const xp = totalXp(bot);
 
     let taint = xp !== w.lastXpTotal;
+    let moves = 0;
     for (const action of didThisTick) {
         if (!CONSERVING_ACTIONS.has(action)) {
             taint = true;
+        } else if (MOVING_ACTIONS.has(action)) {
+            moves++;
         }
     }
     w.lastXpTotal = xp;
 
-    if (taint || w.baseline === null) {
-        w.baseline = ownedItems(bot);
-        w.baselineTick = now;
+    // Tainted: throw the window away, and do not start a new one until the tainting action's own
+    // scripts have had time to finish - a cooked fish arrives a tick after the click.
+    if (taint) {
+        w.baseline = null;
+        w.settleUntil = now + SETTLE_TICKS;
+        w.moves = 0;
         return;
     }
-    if (now - w.baselineTick < CONSERVE_WINDOW) {
+
+    if (w.baseline === null) {
+        if (now >= w.settleUntil) {
+            w.baseline = ownedItems(bot);
+            w.baselineTick = now;
+            w.moves = 0;
+        }
+        return;
+    }
+
+    if (moves > 0) {
+        w.moves += moves;
+        w.lastMoveTick = now;
+    }
+
+    // COUNTED IN MOVES, NOT TICKS, and this matters: the fuzzer takes two actions a tick and most of
+    // them are an op on a loc or an npc, so twenty-five CONSECUTIVE ticks of nothing but item moves
+    // never happens and a tick-based window would simply never fire. One move is enough - a single
+    // deposit, withdraw or equip must conserve on its own. The settle wait after the last move is
+    // what gives a script with a delay in it time to finish before the totals are compared.
+    if (w.moves === 0 || now - w.lastMoveTick < SETTLE_TICKS) {
         return;
     }
 
@@ -409,17 +448,24 @@ export function watchItemConservation(bot: BotPlayer, w: WatchState, seed: numbe
         }
     }
     if (drifts.length) {
-        findings.add('items', `items changed over ${CONSERVE_WINDOW} ticks of moving things about and nothing else: ${drifts.join(', ')}`, bot, seed, trail);
+        findings.add('items', `items changed over ${w.moves} move${w.moves === 1 ? '' : 's'} and nothing else (no xp, nothing but bank/equipment/ground/backpack): ${drifts.join(', ')}`, bot, seed, trail);
     }
     w.baseline = after;
     w.baselineTick = now;
+    w.moves = 0;
 }
 
 /** Everything, once a tick. Wrapped: a watcher must never be why the world went down. */
 export function runWatchers(bot: BotPlayer, w: WatchState, seed: number, trail: string[], didThisTick: string[]): void {
     try {
         watchSoftLock(bot, w, seed, trail);
-        watchCorpses(bot, w, seed, trail);
+        // Every fourth tick, staggered by slot so the bots do not all scan on the same one. The
+        // corpse check walks the nine zones around the bot, and with eight bots in a town that was
+        // measurably the most expensive thing in the loop. A corpse is given ten ticks of grace
+        // anyway, so looking every fourth misses nothing.
+        if ((World.currentTick + bot.slot) % 4 === 0) {
+            watchCorpses(bot, w, seed, trail);
+        }
         watchImpossibleState(bot, seed, trail);
         // Every varp of every bot every tick would be a real cost for a check that can only change
         // when something writes one, so it is spread out: once every 50 ticks per bot.
