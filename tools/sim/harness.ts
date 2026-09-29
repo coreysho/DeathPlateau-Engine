@@ -337,11 +337,13 @@ export function setVar(p: Player, varpName: string, value: number) {
 }
 
 /** Run a script with an npc as the active npc and a player as the active player. */
-export function runNpcProc(npc: Npc, name: string, player: Player | null = null, args: any[] = []) {
+/** As runProc, but with the npc active - and it hands back what the proc returned, as runProc does. */
+export function runNpcProc(npc: Npc, name: string, player: Player | null = null, args: any[] = []): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
     const state = ScriptRunner.init(script, npc, player, args);
     ScriptRunner.execute(state);
+    return (state as any).intStack.slice(0, (state as any).isp);
 }
 
 /** What clicking a component does: IfButtonHandler, minus the visibility check. */

@@ -12,6 +12,7 @@ import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import Loc from '#/engine/entity/Loc.js';
 import Npc from '#/engine/entity/Npc.js';
 import Obj from '#/engine/entity/Obj.js';
+import InstanceMap, { Instance } from '#/engine/InstanceMap.js';
 import World from '#/engine/World.js';
 import Zone from '#/engine/zone/Zone.js';
 import ZoneGrid from '#/engine/zone/ZoneGrid.js';
@@ -99,8 +100,32 @@ export default class GameMap {
         printDebug(`${World.getTotalNpcs()}/16383 static NPCs added`);
     }
 
+    /**
+     * Multi-way combat, asked of a tile.
+     *
+     * AN INSTANCE ASKS ON BEHALF OF ITS TEMPLATE. maps/multiway.csv is a list of real map-square
+     * zones, and an instance is a copy of some of those zones sitting at x/z 6400+ where no map
+     * square exists (InstanceMap) - so a literal lookup can never match one, and every instanced
+     * arena is single-way however its source square is marked. That is what left Zulrah's shrine
+     * single-way: its snakelings could not attack while Zulrah held the player, and the player was
+     * refused a re-attack on Zulrah ("I'm already under attack") for eight ticks after anything
+     * whose uid was not Zulrah's current one touched them - which includes Zulrah itself, because
+     * npc_changetype_keepall gives it a new uid on every phase change.
+     *
+     * So an instance tile is answered by the zone it was copied FROM: mark the template square in
+     * multiway.csv and every copy of it is multi-way too.
+     */
     isMulti(coord: number): boolean {
         const pos: CoordGrid = CoordGrid.unpackCoord(coord);
+        const inst = InstanceMap.at(pos.x, pos.z);
+        if (inst) {
+            const code = inst.templates.get(Instance.packKey(pos.level, (pos.x - inst.baseX) >> 3, (pos.z - inst.baseZ) >> 3));
+            if (code === undefined) {
+                return false;
+            }
+            const { srcLevel, srcX, srcZ } = Instance.decodeTemplate(code);
+            return this.multimap.has(ZoneMap.zoneIndex(srcX, srcZ, srcLevel));
+        }
         return this.multimap.has(ZoneMap.zoneIndex(pos.x, pos.z, pos.level));
     }
 
