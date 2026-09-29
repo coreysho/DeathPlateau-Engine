@@ -88,6 +88,20 @@ export default {
     NODE_BOTS_PRAYER: tryParseString(process.env.NODE_BOTS_PRAYER, ''),
     // every N ticks, one log line per bot: what it is doing and why (0 = off)
     NODE_BOTS_TRACE: tryParseInt(process.env.NODE_BOTS_TRACE, 0),
+    // custom (2026-09-29) - the fuzzing bots (src/engine/bot/BotFuzzer.ts): bots that wander and
+    // then click everything in reach, with watchers that decide something is wrong without knowing
+    // what the content meant. DEV WORLDS ONLY - BotManager.startFuzzers refuses to start unless
+    // NODE_PRODUCTION is false as well, because a fuzzer on a live world is a griefing tool: it
+    // would drop things, fire quest triggers and pull every monster in sight, under an account
+    // nobody is holding. That check is in the code, not only in this comment.
+    NODE_BOTS_FUZZ: tryParseBoolean(process.env.NODE_BOTS_FUZZ, false),
+    NODE_BOTS_FUZZ_COUNT: tryParseInt(process.env.NODE_BOTS_FUZZ_COUNT, 4),
+    // the seed every fuzzer's choices come from (its own is this plus its index), so a run repeats.
+    // 0 = a fresh one each boot, printed on startup so it can be pinned afterwards.
+    NODE_BOTS_FUZZ_SEED: tryParseInt(process.env.NODE_BOTS_FUZZ_SEED, 0),
+    // where they start, "x,z,level" - empty = Lumbridge, which is where the most content per tile is
+    NODE_BOTS_FUZZ_AT: tryParseString(process.env.NODE_BOTS_FUZZ_AT, ''),
+    NODE_BOTS_FUZZ_FILE: tryParseString(process.env.NODE_BOTS_FUZZ_FILE, 'data/fuzz-findings.jsonl'),
     // entities cap
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),

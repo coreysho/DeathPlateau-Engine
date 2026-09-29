@@ -11,13 +11,24 @@ import Player from '#/engine/entity/Player.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
 import IfButtonHandler from '#/network/game/client/handler/IfButtonHandler.js';
+import InvButtonHandler from '#/network/game/client/handler/InvButtonHandler.js';
 import MoveClickHandler from '#/network/game/client/handler/MoveClickHandler.js';
 import OpHeldHandler from '#/network/game/client/handler/OpHeldHandler.js';
+import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
+import OpLocHandler from '#/network/game/client/handler/OpLocHandler.js';
 import OpObjHandler from '#/network/game/client/handler/OpObjHandler.js';
+import ResumePauseButtonHandler from '#/network/game/client/handler/ResumePauseButtonHandler.js';
+import WearOpHandler from '#/network/game/client/handler/WearOpHandler.js';
 import IfButton from '#/network/game/client/model/IfButton.js';
+import InvButton from '#/network/game/client/model/InvButton.js';
 import MoveClick from '#/network/game/client/model/MoveClick.js';
 import OpHeld from '#/network/game/client/model/OpHeld.js';
+import OpHeldU from '#/network/game/client/model/OpHeldU.js';
+import OpLoc from '#/network/game/client/model/OpLoc.js';
 import OpObj from '#/network/game/client/model/OpObj.js';
+import ResumePauseButton from '#/network/game/client/model/ResumePauseButton.js';
+import WearOp from '#/network/game/client/model/WearOp.js';
+import Loc from '#/engine/entity/Loc.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 
@@ -30,8 +41,13 @@ import { CoordGrid } from '#/engine/CoordGrid.js';
 
 const moveClick = new MoveClickHandler();
 const opHeld = new OpHeldHandler();
+const opHeldU = new OpHeldUHandler();
 const opObj = new OpObjHandler();
+const opLocHandler = new OpLocHandler();
 const ifButton = new IfButtonHandler();
+const invButton = new InvButtonHandler();
+const wearOp = new WearOpHandler();
+const resumePause = new ResumePauseButtonHandler();
 
 const VIEW_DISTANCE = 15;
 
@@ -195,4 +211,96 @@ export function button(p: BotPlayer, comName: string): boolean {
         return false;
     }
     return ifButton.handle(new IfButton(id), p);
+}
+
+// ------------------------------------------------------------------------------------------------
+// custom (2026-09-29) - the rest of a client's hands, added for the fuzzer (BotFuzzer.ts). A fuzzer
+// that could only walk, attack and eat would only ever test walking, attacking and eating; these are
+// the clicks that reach the other several thousand triggers. Every one of them goes through the
+// handler a real packet reaches, for the same reason the ones above do: a bug the fuzzer finds has
+// to be a bug a player can reach.
+
+/** Click a button by id, for a component the fuzzer found rather than named. */
+export function buttonById(p: BotPlayer, comId: number): boolean {
+    return ifButton.handle(new IfButton(comId), p);
+}
+
+/**
+ * An op on a loc: OpLocHandler, called outright. Unlike op npc and op player above, this one needs
+ * no mirroring - its "is it on your screen" check reads player.originX/originZ, which BuildArea
+ * .rebuildNormal sets for every player in the loop, bots included.
+ */
+export function opLoc(p: BotPlayer, loc: Loc, op: number): boolean {
+    opClickRoute(p, loc.x, loc.z, loc.width, loc.length);
+    return opLocHandler.handle(new OpLoc(op, loc.x, loc.z, loc.type), p as unknown as NetworkPlayer);
+}
+
+/** Any op on a ground obj, not just Take: OpObjHandler. */
+export function opObjAt(p: BotPlayer, obj: Obj, op: number): boolean {
+    const path = clientPath(findPath(p.level, p.x, p.z, obj.x, obj.z));
+    if (path.length > 0) {
+        moveClick.handle(new MoveClick(path, 0, true), p as unknown as NetworkPlayer);
+    }
+    return opObj.handle(new OpObj(op, obj.x, obj.z, obj.type), p as unknown as NetworkPlayer);
+}
+
+/** An op on the backpack slot at `slot` (Eat, Wield, Drop, whatever the obj has): OpHeldHandler. */
+export function heldOpSlot(p: BotPlayer, slot: number, op: number): boolean {
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const com = backpackCom(p);
+    if (!item || com === -1) {
+        return false;
+    }
+    return opHeld.handle(new OpHeld(op, item.id, slot, com), p);
+}
+
+/** One backpack item used on another: OpHeldUHandler. The classic way to find a missing recipe. */
+export function heldUse(p: BotPlayer, slot: number, useSlot: number): boolean {
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const useItem = inv?.get(useSlot);
+    const com = backpackCom(p);
+    if (!item || !useItem || com === -1 || slot === useSlot) {
+        return false;
+    }
+    return opHeldU.handle(new OpHeldU(item.id, slot, com, useItem.id, useSlot, com), p);
+}
+
+/**
+ * An op on an item in ANY inventory the client has been sent - the bank, a shop, a trade window.
+ * This is the one that exercises deposit, withdraw and the rest, which is where a dupe lives.
+ */
+export function invOp(p: BotPlayer, comId: number, slot: number, op: number): boolean {
+    const listener = p.invListeners.find(l => l.com === comId);
+    const inv = p.getInventoryFromListener(listener);
+    const item = inv?.get(slot);
+    if (!item) {
+        return false;
+    }
+    return invButton.handle(new InvButton(op, item.id, slot, comId), p);
+}
+
+/** A worn item's own option (WEAROP): the glory's teleports, a ring's charge. */
+export function wornOp(p: BotPlayer, comId: number, slot: number, op: number): boolean {
+    const listener = p.invListeners.find(l => l.com === comId);
+    const inv = p.getInventoryFromListener(listener);
+    const item = inv?.get(slot);
+    if (!item) {
+        return false;
+    }
+    return wearOp.handle(new WearOp(op, item.id, slot, comId), p);
+}
+
+/** "Click here to continue", and any other script paused on a button with no options offered. */
+export function resumeDialogue(p: BotPlayer): boolean {
+    return resumePause.handle(new ResumePauseButton(), p);
+}
+
+/** Pick one of the options a p_choice put on screen. The com must be one the script is waiting on. */
+export function chooseDialogue(p: BotPlayer, comId: number): boolean {
+    if (p.resumeButtons.indexOf(comId) === -1) {
+        return false;
+    }
+    return ifButton.handle(new IfButton(comId), p);
 }

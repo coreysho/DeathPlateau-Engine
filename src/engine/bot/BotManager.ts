@@ -2,6 +2,9 @@ import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
+import { FuzzBrain } from '#/engine/bot/BotFuzzer.js';
+import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
 import { type BotKind, type BotKit, BOT_KITS, kitById, kitsFor } from '#/engine/bot/BotKits.js';
@@ -17,8 +20,8 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 // their deaths (the small drop, never the kit) and their trips out to restock, and takes them away
 // again. Started by app.ts only when NODE_BOTS=true; World.bots points here while it runs.
 
-type Entry = { state: BotState; brain: BotBrain; removeBy: number; respawn: boolean; loggedIn: boolean };
-type Respawn = { kind: BotKind; bracket: BotBracket; name: string; kitId: string | null; at: number; manual: boolean };
+type Entry = { state: BotState; brain: BotBrain | FuzzBrain; removeBy: number; respawn: boolean; loggedIn: boolean };
+type Respawn = { kind: BotKind; bracket: BotBracket; name: string; kitId: string | null; at: number; manual: boolean; fuzzSeed?: number };
 
 const NAME_PREFIX = 'bot_'; // base37 of "Bot " - the display name reads "Bot Grimlock"
 
@@ -129,7 +132,11 @@ class BotManager implements BotHooks {
                 if (bot.slot === -1 || !bot.isActive) {
                     this.entries.delete(bot);
                     if (entry.respawn && !this.paused) {
-                        this.queueRespawn(s.kind, s.kit.bracket, bot.username.slice(NAME_PREFIX.length), s.manual ? s.kit.id : null, s.manual);
+                        // A fuzzer that died comes back a fuzzer, with the seed it had. Without this
+                        // it would come back as an ordinary roamer and the run would quietly stop
+                        // fuzzing without anyone noticing.
+                        const fuzzSeed = entry.brain instanceof FuzzBrain ? (this.fuzzRunning ? entry.brain.seed : undefined) : undefined;
+                        this.queueRespawn(s.kind, s.kit.bracket, bot.username.slice(NAME_PREFIX.length), s.manual ? s.kit.id : null, s.manual, fuzzSeed);
                     }
                 } else if (now >= entry.removeBy) {
                     World.removePlayer(bot); // it had its chance to log out properly
@@ -169,7 +176,7 @@ class BotManager implements BotHooks {
                 continue;
             }
             this.respawns.splice(i--, 1);
-            this.spawn(r.kind, { name: r.name, kitId: r.kitId ?? undefined, bracket: r.bracket, manual: r.manual });
+            this.spawn(r.kind, { name: r.name, kitId: r.kitId ?? undefined, bracket: r.bracket, manual: r.manual, fuzzSeed: r.fuzzSeed, at: r.fuzzSeed === undefined ? undefined : this.fuzzStart() });
         }
 
         if (Environment.NODE_BOTS_TRACE > 0 && now % Environment.NODE_BOTS_TRACE === 0) {
@@ -208,9 +215,9 @@ class BotManager implements BotHooks {
         return n;
     }
 
-    private queueRespawn(kind: BotKind, bracket: BotBracket, name: string, kitId: string | null, manual: boolean): void {
+    private queueRespawn(kind: BotKind, bracket: BotBracket, name: string, kitId: string | null, manual: boolean, fuzzSeed?: number): void {
         const [min, max] = this.config.respawnTicks;
-        this.respawns.push({ kind, bracket, name, kitId, manual, at: World.currentTick + rand(min, max) });
+        this.respawns.push({ kind, bracket, name, kitId, manual, fuzzSeed, at: World.currentTick + rand(min, max) });
     }
 
     // ------------------------------------------------------------------ spawning
@@ -248,7 +255,7 @@ class BotManager implements BotHooks {
      * Put a bot in the world. It logs in next tick like anyone (the login script sets its tabs up
      * around the kit it is wearing). Returns the bot, or why it could not.
      */
-    spawn(kind: BotKind, opts: { name?: string; kitId?: string; bracket?: BotBracket; at?: { x: number; z: number; level: number }; manual?: boolean } = {}): BotPlayer | string {
+    spawn(kind: BotKind, opts: { name?: string; kitId?: string; bracket?: BotBracket; at?: { x: number; z: number; level: number }; manual?: boolean; fuzzSeed?: number } = {}): BotPlayer | string {
         let kit: BotKit | undefined;
         if (opts.kitId) {
             kit = kitById(opts.kitId);
@@ -286,7 +293,8 @@ class BotManager implements BotHooks {
 
         const state = new BotState(bot, kind, kit, hotspot);
         state.manual = opts.manual ?? false;
-        this.entries.set(bot, { state, brain: new BotBrain(state, this.config), removeBy: 0, respawn: false, loggedIn: false });
+        const brain = opts.fuzzSeed === undefined ? new BotBrain(state, this.config) : new FuzzBrain(state, opts.fuzzSeed);
+        this.entries.set(bot, { state, brain, removeBy: 0, respawn: false, loggedIn: false });
         World.newPlayers.add(bot);
         return bot;
     }
@@ -385,6 +393,94 @@ class BotManager implements BotHooks {
         entry.state.bot.loggingOut = true;
     }
 
+    // ------------------------------------------------------------------ fuzzers
+    //
+    // custom (2026-09-29) - see BotFuzzer.ts for what these do. Everything about them is the same as
+    // an ordinary bot except the brain: same login, same kit, same death, same removal.
+
+    /** The seed the run was started with, so a finding can name it and ::bot fuzz can print it. */
+    fuzzSeed = 0;
+    fuzzRunning = false;
+
+    /**
+     * THE GUARD. A fuzzer clicks everything in reach: it drops items, fires quest triggers, pulls
+     * every monster it can see and answers dialogue at random, all under an account nobody is
+     * holding. On a live world that is not a test, it is griefing, and there is no way to tell the
+     * difference from the inside. So it refuses to start anywhere but a development world, and it is
+     * STRICTER than the ordinary bots, which ask only for NODE_BOTS:
+     *
+     *   - NODE_BOTS_FUZZ must be set, deliberately, on top of NODE_BOTS;
+     *   - NODE_PRODUCTION must be false. The live world sets it true, and that is the one flag the
+     *     deploy always sets;
+     *   - no real player may be in the world who is not staff. A dev world with a visitor on it is
+     *     somebody's world for the moment they are on it.
+     *
+     * Returns an empty string on success, or why it refused.
+     */
+    startFuzzers(count: number, seed: number, at?: { x: number; z: number; level: number }): string {
+        if (!Environment.NODE_BOTS_FUZZ) {
+            return 'fuzzers are off on this world (NODE_BOTS_FUZZ).';
+        }
+        if (Environment.NODE_PRODUCTION) {
+            return 'refusing: NODE_PRODUCTION is true. The fuzzer only runs on a development world.';
+        }
+        if (!this.running) {
+            return 'bots are not running (NODE_BOTS).';
+        }
+        for (const player of World.playerLoop.all()) {
+            if (!player.isBot && player.staffModLevel < 3) {
+                return `refusing: ${player.displayName} is in the world and is not staff. The fuzzer is not run around players.`;
+            }
+        }
+
+        this.fuzzSeed = seed || (Date.now() & 0x7fffffff);
+        this.fuzzRunning = true;
+        findings.setFile(Environment.NODE_BOTS_FUZZ_FILE);
+        // The fuzzer's whole point is to find script errors, so it turns the reporter on for itself
+        // if the world has not. Same file, same signatures, same ::faults.
+        if (!ScriptFaults.enabled) {
+            ScriptFaults.enableForTesting(Environment.NODE_SCRIPT_FAULTS_FILE);
+        }
+
+        const start = at ?? this.fuzzStart();
+        let made = 0;
+        for (let i = 0; i < count; i++) {
+            const result = this.spawn('roamer', { at: start, manual: true, fuzzSeed: this.fuzzSeed + i });
+            if (typeof result === 'string') {
+                return `only ${made} of ${count} started: ${result}`;
+            }
+            made++;
+        }
+        printInfo(`bots: ${made} fuzzers at ${start.x},${start.z},${start.level}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
+        return '';
+    }
+
+    /** NODE_BOTS_FUZZ_AT as "x,z,level", or Lumbridge - the most content per tile in the game. */
+    private fuzzStart(): { x: number; z: number; level: number } {
+        const parts = Environment.NODE_BOTS_FUZZ_AT.split(',').map(n => parseInt(n.trim()));
+        if (parts.length >= 2 && parts.every(n => Number.isFinite(n))) {
+            return { x: parts[0], z: parts[1], level: parts[2] ?? 0 };
+        }
+        return { x: 3222, z: 3218, level: 0 };
+    }
+
+    stopFuzzers(): number {
+        this.fuzzRunning = false;
+        let n = 0;
+        for (const entry of this.entries.values()) {
+            if (entry.brain instanceof FuzzBrain) {
+                this.remove(entry, false);
+                entry.removeBy = World.currentTick;
+                n++;
+            }
+        }
+        return n;
+    }
+
+    isFuzzer(bot: BotPlayer): boolean {
+        return this.entries.get(bot)?.brain instanceof FuzzBrain;
+    }
+
     // ------------------------------------------------------------------ staff commands
 
     despawn(bot: BotPlayer): void {
@@ -427,7 +523,8 @@ class BotManager implements BotHooks {
         const hp = `${b.levels[PlayerStat.HITPOINTS]}/${b.baseLevels[PlayerStat.HITPOINTS]}`;
         const wl = b.slot === -1 ? 0 : wildernessLevel(b, b.x, b.z, b.level);
         const target = s.pvpTarget ? s.pvpTarget.displayName : s.npcTarget ? 'npc' : '-';
-        return `${b.displayName} ${s.kind} ${s.kit.id} cb${b.combatLevel} hp${hp} wl${wl} ${s.phase} tgt:${target} k${s.kills}/d${s.deaths}${s.manual ? ' manual' : ''}`;
+        const kind = this.isFuzzer(b) ? 'fuzzer' : s.kind;
+        return `${b.displayName} ${kind} ${s.kit.id} cb${b.combatLevel} hp${hp} wl${wl} ${s.phase} tgt:${target} k${s.kills}/d${s.deaths}${s.manual ? ' manual' : ''}`;
     }
 
     pendingRespawns(): number {

@@ -68,6 +68,13 @@ checks the reporter's own rules: off unless asked for, one signature per distinc
 often it fires, a full backtrace, a JSONL file, and a clear that empties both. Revert content
 `d2f9bc2a4` and it prints the live backtrace instead, once.
 
+`npx tsx tools/sim/fuzz.ts [ticks] [bots] [seed] [x,z,level]` puts fuzzing bots
+(`src/engine/bot/BotFuzzer.ts`) into the real world and lets them click everything in reach, then
+prints what the watchers and the fault reporter caught and what the bots actually did. It checks the
+safety guard first every time - the fuzzer refuses on a production world and refuses around a player
+who is not staff - because that is the part that must never rot. A run that finds nothing prints the
+action histogram anyway: if it is all `idle` and `walk`, the finding is about the fuzzer.
+
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 

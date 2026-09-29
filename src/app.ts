@@ -55,6 +55,16 @@ await World.start();
 // custom (2026-09-27) - server-side bots, only where asked for (the dev world). Never on live.
 if (Environment.NODE_BOTS) {
     BotManager.start();
+
+    // custom (2026-09-29) - the fuzzers (src/engine/bot/BotFuzzer.ts). startFuzzers refuses on
+    // anything but a development world and says why, so this is safe to leave in app.ts: on live it
+    // is one boolean read that is false.
+    if (Environment.NODE_BOTS_FUZZ) {
+        const why = BotManager.startFuzzers(Environment.NODE_BOTS_FUZZ_COUNT, Environment.NODE_BOTS_FUZZ_SEED);
+        if (why) {
+            printWarning(`bots: fuzzers not started - ${why}`);
+        }
+    }
 }
 
 const tcpServer = new TcpServer();

@@ -1,5 +1,6 @@
 import BotManager from '#/engine/bot/BotManager.js';
 import { BOT_KITS, type BotKind } from '#/engine/bot/BotKits.js';
+import { findings } from '#/engine/bot/BotFuzzWatch.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import Player from '#/engine/entity/Player.js';
 import Environment from '#/util/Environment.js';
@@ -15,6 +16,11 @@ import Environment from '#/util/Environment.js';
 //   ::bot goto <name>              teleport to a bot
 //   ::bot info <name>              one bot, and what it last heard and did
 //   ::bot kits                     the kit ids
+//   ::bot fuzz [count] [seed=N] [here]
+//                                  fuzzing bots (BotFuzzer.ts): they wander and click everything in
+//                                  reach, and the watchers say when something is wrong. Development
+//                                  worlds only - it refuses anywhere else, and says why
+//   ::bot fuzz findings | clear | off
 export default function handleBotCommand(player: Player, cmd: string, args: string[]): boolean {
     if (!Environment.NODE_BOTS || !BotManager.running) {
         player.messageGame('Bots are off on this world (NODE_BOTS).');
@@ -47,6 +53,48 @@ export default function handleBotCommand(player: Player, cmd: string, args: stri
         for (const kit of BOT_KITS) {
             player.messageGame(`${kit.id}: ${kit.kinds.join('/')}`);
         }
+        return true;
+    }
+
+    // custom (2026-09-29) - the fuzzers (BotFuzzer.ts). `at` is where you are standing, which is the
+    // whole point: point them at the content you are working on.
+    if (sub === 'fuzz') {
+        const what = args[0];
+        if (what === 'off' || what === 'stop') {
+            player.messageGame(`${BotManager.stopFuzzers()} fuzzers taken out.`);
+            return true;
+        }
+        if (what === 'findings') {
+            const all = findings.all();
+            if (!all.length) {
+                player.messageGame('No fuzz findings. (Script errors are under ::faults.)');
+                return true;
+            }
+            player.messageGame(`${all.length} fuzz finding${all.length === 1 ? '' : 's'}:`);
+            for (const f of all.slice(0, 10)) {
+                player.messageGame(`  ${f.sig} [${f.kind}] x${f.count} ${f.detail}`);
+                player.messageGame(`     seed ${f.seed}, ${f.bot}: ${f.trail.slice(-4).join(' -> ')}`);
+            }
+            return true;
+        }
+        if (what === 'clear') {
+            player.messageGame(`Cleared ${findings.clear()} fuzz findings.`);
+            return true;
+        }
+        let count = 4;
+        let seed = 0;
+        let here = false;
+        for (const arg of args) {
+            if (arg === 'here') here = true;
+            else if (/^seed=\d+$/.test(arg)) seed = parseInt(arg.slice(5));
+            else if (/^\d+$/.test(arg)) count = Math.min(20, Math.max(1, parseInt(arg)));
+        }
+        const why = BotManager.startFuzzers(count, seed, here ? { x: player.x, z: player.z, level: player.level } : undefined);
+        if (why) {
+            player.messageGame(why);
+            return false;
+        }
+        player.messageGame(`${count} fuzzers started, seed ${BotManager.fuzzSeed}. ::bot fuzz findings | ::faults | ::bot fuzz off`);
         return true;
     }
 
@@ -117,5 +165,6 @@ export default function handleBotCommand(player: Player, cmd: string, args: stri
     }
 
     player.messageGame('::bots [on|off] | ::bot spawn <roamer|pker> [kit] [count] | ::bot despawn <name|all> | ::bot goto <name> | ::bot info <name> | ::bot kits');
+    player.messageGame('::bot fuzz [count] [seed=N] [here] | ::bot fuzz findings | ::bot fuzz clear | ::bot fuzz off');
     return false;
 }
