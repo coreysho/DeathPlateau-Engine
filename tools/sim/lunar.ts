@@ -573,9 +573,13 @@ say('DREAM MENTOR: THE THREE BARS');
                   ['Ranger', 'Adamant', 'Infinity'],
                   ['whip', 'shortbow', 'staff']];
     // every slot wrong: he finds nothing
-    talk(P, 'birdseye_jack', OPTS.map(o => o[(set + 1) % 3]), 3);
+    // Op 1, not 3. Jack's npc record declares op1=Talk-to and nothing else, so the [opnpc3] this
+    // used to drive was a trigger the client can never send - dead for every real player, which is
+    // why Dream Mentor could not be finished at all. The armament questions hang off his ordinary
+    // Talk-to now, behind ~dm_jack_wants, so this drives what a player drives.
+    talk(P, 'birdseye_jack', OPTS.map(o => o[(set + 1) % 3]), 1);
     check('wrong guesses at his equipment get nothing', H.getVarBit(P, 'dm_armament'), 0);
-    talk(P, 'birdseye_jack', OPTS.map(o => o[set]), 3);
+    talk(P, 'birdseye_jack', OPTS.map(o => o[set]), 1);
     check('the five right answers empty his account', H.getVarBit(P, 'dm_armament'), 31);
 
     tp(P, [CYRISUS[0] + 1, CYRISUS[1]], 2);
