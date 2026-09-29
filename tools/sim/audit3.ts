@@ -730,6 +730,10 @@ if (run('dt')) {
     sv(p, 'troll_quest', 50);
     sv(p, 'priestperil', 60);
     sv(p, 'waterfall_quest', 10);
+    // The Tourist Trap, the sixth prerequisite ~dt_quest_requirements now checks. It was always one
+    // of Desert Treasure's requirements; the proc had a note claiming the quest was not implemented,
+    // and it is - it is %desertrescue.
+    sv(p, 'desertrescue', 30);
     talk(p, 'fourdiamonds_indiana', [1]);
     check('the Archaeologist starts it: etchings, stage 1', [st(), H.invCount(p, 'four_diamonds_etchings')], [1, 1]);
     const expert = nearest('archaeological_expert', p);
