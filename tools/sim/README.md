@@ -75,7 +75,16 @@ opens one (the pack's own slot is what the contents go into, so there is no "not
 to hit), a stack of packs opens itself one every 2 ticks without pinning the player, and walking away
 stops the run.
 
-Read its verdict off the printed `N ok, M FAIL` line and not off the exit code: this one makes six
+The five elemental rune packs (air, water, earth, fire, mind) are covered the same way across the
+eight shops that sell them, with three differences worth knowing. Their contents come out **unnoted**
+- a rune already stacks, so it has no noted form at all, which the sim asserts rather than assumes.
+Tutab's on Ape Atoll gets four packs and no mind one, because that is what Old School stocks there.
+And there is a check that the **chaos rune pack does not exist**: Old School sells one beside these
+five everywhere, and it was left out on purpose because 100 chaos runes for one click is a lever on
+a 2006 rune economy that five cheap elementals are not. That check exists so the decision cannot be
+reversed by accident - if the obj reappears, it fails and points at `item_packs.obj`.
+
+Read its verdict off the printed `N ok, M FAIL` line and not off the exit code: this one makes many
 players, and any sim here that makes three or more dies in V8's teardown after `process.exit` and
 reports 3 whatever it found. That is the harness, not the scenario - a sim that makes three plain
 players and touches nothing else does it too, while the same sim with two does not.

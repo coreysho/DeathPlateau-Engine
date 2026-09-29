@@ -197,5 +197,168 @@ console.log('\nwalking away mid-run');
     check('packs left unopened', H.invCount(p, 'water_filled_vial_pack') > 0, true);
 }
 
+// ================================================================ the rune packs
+// Five elemental rune packs, added after the vial pack. They differ from it in one way that is
+// worth holding down: their contents are UNNOTED. The OSRS wiki's Item pack page says a pack opens
+// noted "unless the item is already stackable", and runes stack, so these hand over real runes
+// while the vial pack hands over a note.
+console.log('\nthe five rune packs, the objs');
+const RUNE_PACKS: [string, string, number, string][] = [
+    // pack, examine noun, cost from the cache, the rune it becomes
+    ['air_rune_pack', 'air', 430, 'airrune'],
+    ['water_rune_pack', 'water', 430, 'waterrune'],
+    ['earth_rune_pack', 'earth', 430, 'earthrune'],
+    ['fire_rune_pack', 'fire', 430, 'firerune'],
+    ['mind_rune_pack', 'mind', 330, 'mindrune']
+];
+{
+    const contents = ParamType.getId('item_pack_contents');
+    const amount = ParamType.getId('item_pack_amount');
+    const models = new Set<number>();
+    for (const [pack, noun, cost, rune] of RUNE_PACKS) {
+        const id = ObjType.getId(pack);
+        const o = ObjType.get(id);
+        check(`${pack} name/examine`, [o.name, o.desc], [`${noun[0].toUpperCase()}${noun.slice(1)} rune pack`, `A pack containing 100 ${noun} runes.`]);
+        check(`${pack} cost`, o.cost, cost);
+        check(`${pack} weight (grams)`, o.weight, 4535);
+        check(`${pack} free, tradeable, unstackable`, [o.members, o.tradeable, o.stackable], [false, true, false]);
+        check(`${pack} inventory ops`, o.iop?.filter(x => x), ['Open', 'Drop']);
+        check(`${pack} noted form links back`, ObjType.get(ObjType.getId('cert_' + pack)).certlink, id);
+        check(`${pack} obj id in range`, id >= 10732 && id <= 10769, true);
+        check(`${pack} model id in range`, o.model >= 24601 && o.model <= 24699, true);
+        check(`${pack} opens into 100 UNNOTED ${rune}`, [ObjType.get(o.params!.get(contents) as number).debugname, o.params!.get(amount)], [rune, 100]);
+        models.add(o.model);
+    }
+    // They are five different sacks, not one sack five times - the glyph on the front is the only
+    // way a player tells them apart in the inventory.
+    check('five distinct models', models.size, 5);
+}
+
+// The sixth pack is absent ON PURPOSE. Old School sells a chaos rune pack beside these five in
+// every shop below; the owner left it out because 100 chaos runes for one click is a lever on a
+// 2006 rune economy that five cheap elementals are not. This check is here so that decision cannot
+// be undone by accident - if someone adds the obj without reading item_packs.obj, this fails and
+// tells them where to look.
+console.log('\nthe chaos rune pack, which is deliberately not here');
+{
+    check('no chaos_rune_pack obj', ObjType.getId('chaos_rune_pack'), -1);
+    const packIds = new Set(RUNE_PACKS.map(([p]) => ObjType.getId(p)));
+    packIds.add(ObjType.getId('water_filled_vial_pack'));
+    const strayPacks: string[] = [];
+    for (let i = 0; i < ObjType.count; i++) {
+        const o = ObjType.get(i);
+        if (o?.category === ObjType.get(ObjType.getId('air_rune_pack')).category && !packIds.has(i)) strayPacks.push(o.debugname ?? String(i));
+    }
+    check('and nothing else has crept into the item_pack category', strayPacks, []);
+}
+
+// ---------------------------------------------------------------- the rune shops
+// shop -> first pack row (1-based), then fire/water/air/earth stock+restock, then mind's. Old
+// School lists them fire, water, air, earth, mind in every one of these shops. Numbers are off
+// each shop's own OSRS wiki Stock table.
+console.log('\nshops that stock the rune packs');
+{
+    const RUNE_SHOPS: [string, number, number, number, number, number][] = [
+        // shop, first row, elem stock, elem restock, mind stock, mind restock
+        ['runeshop', 9, 80, 10, 40, 10], // Aubury's Rune Shop, Varrock
+        ['magicshop', 9, 80, 10, 40, 10], // Betty's Magic Emporium, Port Sarim
+        ['magicguildshop', 13, 80, 10, 40, 10], // Magic Guild Store, Wizards' Guild
+        ['pest_rune_store', 9, 80, 10, 40, 10], // Void Knight Magic Store
+        ['magearena_runeshop', 12, 5, 40, 4, 40], // Lundail's, the Mage Arena
+        ['darkruneshop_uber', 9, 50, 2, 35, 5], // Battle Runes, after Enter the Abyss
+        ['darkruneshop_crap', 9, 35, 15, 25, 25] // Battle Runes, before it
+    ];
+    const ORDER = ['fire_rune_pack', 'water_rune_pack', 'air_rune_pack', 'earth_rune_pack', 'mind_rune_pack'];
+    for (const [shop, first, es, er, ms, mr] of RUNE_SHOPS) {
+        const t = InvType.getByName(shop)!;
+        const got = ORDER.map((_, k) => {
+            const i = first - 1 + k;
+            return [ObjType.get(t.stockobj![i]).debugname, t.stockcount![i], t.stockrate![i]];
+        });
+        const want = ORDER.map(p => [p, p === 'mind_rune_pack' ? ms : es, p === 'mind_rune_pack' ? mr : er]);
+        check(`${shop} rows ${first}-${first + 4}`, got, want);
+        const live = Inventory.fromType(InvType.getId(shop));
+        check(`${shop} live container, no blank square`, [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535), false);
+        check(`${shop} sells no chaos pack`, [...Array(live.capacity).keys()].some(s => (ObjType.get(live.get(s)?.id ?? 0).debugname ?? '').includes('chaos_rune_pack')), false);
+    }
+    // Tutab's is the odd one and is meant to be: Old School stocks only the four elementals on Ape
+    // Atoll, with no mind pack, matching the loose runes the shop carries.
+    const tutab = InvType.getByName('mm_magic_shop')!;
+    check('mm_magic_shop rows 6-9 are the four elementals', [0, 1, 2, 3].map(k => [ObjType.get(tutab.stockobj![5 + k]).debugname, tutab.stockcount![5 + k], tutab.stockrate![5 + k]]), [
+        ['fire_rune_pack', 40, 10],
+        ['water_rune_pack', 40, 10],
+        ['air_rune_pack', 40, 10],
+        ['earth_rune_pack', 40, 10]
+    ]);
+    const tutabLive = Inventory.fromType(InvType.getId('mm_magic_shop'));
+    check('mm_magic_shop has no mind pack, as OSRS has it', tutabLive.getItemCount(ObjType.getId('mind_rune_pack')), 0);
+    check('mm_magic_shop live container, no blank square', [...Array(tutabLive.capacity).keys()].some(s => tutabLive.get(s)?.id === 65535), false);
+    // The TzHaar rune store takes the TzHaar variants in Old School, not these, so it gets none.
+    const tz = Inventory.fromType(InvType.getId('tzhaar_shop_rune'));
+    check('tzhaar_shop_rune got none of them', RUNE_PACKS.map(([p]) => tz.getItemCount(ObjType.getId(p))), [0, 0, 0, 0, 0]);
+}
+
+// ---------------------------------------------------------------- what they cost
+// Every one of these shops sells at multiplier 1000 except the worse of the Zamorak mage's two
+// tables, so the price is just the cache's cost - which is the point: nothing here sets a price.
+console.log('\nwhat a player pays for a rune pack');
+{
+    const p = fresh();
+    check('430 at a 1000-multiplier rune shop', H.runProc(p, '[proc,calc_shop_value]', [430, 1, 1000, 0])[0], 430);
+    check('330 for the mind pack there', H.runProc(p, '[proc,calc_shop_value]', [330, 1, 1000, 0])[0], 330);
+    // darkruneshop_crap is the pre-Abyss table and sells at 1300, so it is dearer, as OSRS has it.
+    check('559 at the Zamorak mage-s worse table', H.runProc(p, '[proc,calc_shop_value]', [430, 30, 1300, 0])[0], 559);
+}
+
+// ---------------------------------------------------------------- opening them
+console.log('\nopening a rune pack');
+{
+    // A rune has no noted form at all - it stacks, so it never needed one. That is the whole reason
+    // item_pack_contents names the rune itself here where the vial pack names a cert, and it is
+    // also why "did it come out noted?" cannot be asked the way it was asked of the vial pack.
+    check('a rune has no noted form to come out as', RUNE_PACKS.map(([, , , rune]) => ObjType.getId('cert_' + rune)), [-1, -1, -1, -1, -1]);
+    for (const [pack, , , rune] of RUNE_PACKS) {
+        const p = fresh();
+        H.give(p, pack, 1);
+        H.opheld(p, pack, 1);
+        const inv = p.getInventory(InvType.INV)!;
+        const used = [...Array(inv.capacity).keys()].filter(s => inv.get(s)).length;
+        check(`${pack} -> 100 ${rune} in one slot, pack gone`, [H.invCount(p, rune), H.invCount(p, pack), used], [100, 0, 1]);
+    }
+}
+
+// A full inventory opens one all the same, for the same reason the vial pack does - except here
+// the runes stack, so a player who already carries that rune just gets a bigger pile.
+console.log('\nopening a rune pack with a completely full inventory');
+{
+    const p = fresh();
+    H.give(p, 'fire_rune_pack', 1);
+    H.fillInv(p);
+    check('inventory really is full first', p.getInventory(InvType.INV)!.freeSlotCount, 0);
+    H.opheld(p, 'fire_rune_pack', 1);
+    check('it still opened', [H.invCount(p, 'firerune'), H.invCount(p, 'fire_rune_pack')], [100, 0]);
+}
+{
+    const p = fresh();
+    H.give(p, 'airrune', 7);
+    H.give(p, 'air_rune_pack', 1);
+    H.fillInv(p);
+    H.opheld(p, 'air_rune_pack', 1);
+    check('merged into the runes already carried', H.invCount(p, 'airrune'), 107);
+}
+
+// The auto-run is the shared trigger's, so it works for these too without a line of its own.
+console.log('\nthree rune packs, one click');
+{
+    const p = fresh();
+    H.give(p, 'earth_rune_pack', 3);
+    H.opheld(p, 'earth_rune_pack', 1);
+    check('the clicked one opens at once', [H.invCount(p, 'earth_rune_pack'), H.invCount(p, 'earthrune')], [2, 100]);
+    H.tick(3);
+    check('the second follows on its own', [H.invCount(p, 'earth_rune_pack'), H.invCount(p, 'earthrune')], [1, 200]);
+    H.tick(2);
+    check('and the last', [H.invCount(p, 'earth_rune_pack'), H.invCount(p, 'earthrune')], [0, 300]);
+}
+
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);
