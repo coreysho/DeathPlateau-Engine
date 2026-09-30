@@ -1,4 +1,4 @@
-// ZULRAH, on the real engine - run with `npx tsx tools/sim/zulrah.ts`. Content:
+﻿// ZULRAH, on the real engine - run with `npx tsx tools/sim/zulrah.ts`. Content:
 // content/scripts/areas/area_zulrah/**.
 //
 //   getting there   Regicide gates the High Priestess; volunteering opens the boat; the boat builds
@@ -432,7 +432,13 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     H.tick(1);
 
     // THE MAGMA TAIL. Rotation 1's phase 2 (index 1) is "melee twice".
+    // Auto-retaliate ON (^player_auto_retaliate_on = 0), and the target cleared, so that what the
+    // tail provokes can be seen: the tail lands in a queue on the PLAYER, a beat after the swing,
+    // and it has to carry the snake's uid there for [queue,playerhit_n_retaliate] to have anything
+    // to hit back at.
+    H.setVar(p, 'option_nodef', 0);
     s = park(1, 1);
+    (p as any).clearInteraction();
     run(1);
     check('the magma form swings its tail (OSRS seq 5807), and does not spit',
         [anims.some(a => a.seq === SeqType.getId('zulrah_tail_swipe')),
@@ -440,13 +446,22 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
         [true, false]);
     check('  and throws nothing - a tail is not a projectile', projs.length, 0);
     // Stand still and it lands; the damage is queued a beat ahead, not dealt on the swing.
+    // WITHOUT clearPendingAction this time, which run() does every tick: auto-retaliation IS a
+    // pending action, so clearing one every tick would wipe the thing being measured a tick after
+    // it appeared.
     H.clearLogs();
-    run(5, false);
+    let retaliated = false;
+    for (let i = 0; i < 5; i++) {
+        H.tick(1);
+        if ((p as any).target === s) retaliated = true;
+    }
     const tail = H.hitsFor(p.username);
     // TYPELESS, so it always lands on someone who did not move - there is no accuracy roll to fail.
     // A melee roll off Zulrah's own 1 Attack, which is what this used to be, missed a geared player
     // almost every time and made the red phase free.
     check('  a player who stays where the tail is aimed is always hit', tail.length > 0, true);
+    check('  and it provokes auto-retaliation, like every other attack the snake makes',
+        retaliated, true);
     check('  for 20 to 30, the wiki\'s own spread, and never the green form\'s 41',
         tail.every(h => h.damage >= 20 && h.damage <= 30), true);
     // Now step out of it. "Can be avoided by moving two tiles away."
@@ -474,7 +489,15 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     const under = levels.filter(l => l !== 0).length;
     check('between phases the snake leaves the floor entirely, so the client cannot draw it',
         under > 0, true);
-    check('  for the submerged window and no longer', under, 2);
+    // READ OUT OF THE CONSTANT FILE, not hard-coded: ^zulrah_submerged_ticks is the one number the
+    // owner is most likely to ask to be turned up ("disappears quickly and respawns quickly" was
+    // his), and a test that pins it to 2 would fail on the very change it is meant to survive. A
+    // constant is compile-time in RuneScript and reaches no cache, so this reads the source the way
+    // the drop-table and collection-log checks below read theirs.
+    const submergedTicks = Number(/\^zulrah_submerged_ticks\s*=\s*(\d+)/
+        .exec(fs.readFileSync('../content/scripts/areas/area_zulrah/configs/zulrah.constant', 'utf8'))![1]);
+    check(`  for the submerged window (^zulrah_submerged_ticks = ${submergedTicks}) and no longer`,
+        under, submergedTicks);
     // It regenerates a point or two over forty ticks like anything else; what matters is that a
     // phase change is not a heal. npc_changetype_keepall is what carries it, and the fight was
     // unkillable once because something in here did not.
@@ -927,6 +950,129 @@ console.log('THE TRIDENT OF THE SWAMP');
     check('  and spending one comes off the swamp trident',
         [H.getVar(p, 'swamp_trident_charges'), H.getVar(p, 'trident_charges')], [29, 0]);
     H.despawn(p);
+}
+
+// ------------------------------------------------------------------ killing it for real
+// THE ONE CHECK THIS SIM DID NOT HAVE, AND THE REASON THE BOSS SHIPPED UNKILLABLE ONCE WITH EVERY
+// TEST GREEN. Every other fight check in this file either tops Zulrah's hitpoints back up every
+// tick or kills it with [proc,debug_kill_active] on a snake spawned in the open world. Neither of
+// those can ever fail the way a real fight failed: the first cut of this boss healed itself back to
+// 500 on every colour change, and nothing here would have noticed.
+//
+// So this is a player, with a bow, standing in the shrine, shooting the snake from 500 to 0 across
+// a whole rotation - through the dives, through the colour changes, through the submerged window -
+// with NOTHING touching its hitpoints but the arrows. It has to pass for the boss to be finishable
+// at all, and it is deliberately the loudest check in the file.
+//
+// WHAT IS STILL ARTIFICIAL, said plainly: the PLAYER's hitpoints are restored each tick. A maxed
+// player has 99 to Zulrah's 500 and no food in this loop, so without that the test would measure
+// how long a player survives rather than whether the snake dies. Nothing else is helped - the
+// player re-clicks the snake after every dive exactly as a person has to, walks to it when it
+// surfaces out of range, and every point of damage on the snake came out of ~player_projectile.
+console.log('KILLING IT, WITH A BOW, AND NOTHING HELPING');
+{
+    const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1]);
+    H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
+    H.setVar(p, 'zulrah_volunteered', 1);
+    H.setVar(p, 'zulrah_kills', 0);
+    H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });
+    p.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 30000, 13);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], DOCK_BOAT_LOC, 1);
+    H.tick(8);
+    // THIS PLAYER'S SNAKE, not theSnake(). theSnake() takes the first Zulrah in World.npcs, and by
+    // the time this section runs the drop-table loop has left snakes standing in the open world at
+    // Lumbridge - so a global lookup finds one of those, watches it do nothing for four thousand
+    // ticks, and reports that the boss cannot be killed. The instance is 32 by 32 from the corner
+    // %zulrah_instance packs, and it is the only place this fight happens.
+    const inst = H.getVar(p, 'zulrah_instance') as number;
+    const [ix, iz] = [(inst >> 14) & 0x3fff, inst & 0x3fff];
+    const mySnake = () => npcsOfType('zulrah', 'zulrah_magma', 'zulrah_tanzanite')
+        .find(s => s.x >= ix && s.x < ix + 32 && s.z >= iz && s.z < iz + 32) ?? null;
+    check('the boat puts a snake in the water with all 500 of its hitpoints',
+        mySnake()?.levels[HP] ?? null, 500);
+
+    // What the death table drops, caught where it lands - the proof that the kill went all the way
+    // through [ai_queue3] and not just to zero hitpoints.
+    const dropped: string[] = [];
+    const origAdd = (World as any).addObj.bind(World);
+    (World as any).addObj = (obj: Obj, ...rest: unknown[]) => {
+        dropped.push(ObjType.get(obj.type).debugname!);
+        return origAdd(obj, ...rest);
+    };
+
+    const hpTrace: number[] = [];
+    const colours = new Set<string>();
+    const places = new Set<string>();
+    let dives = 0, wasUnder = false, died = false, ticks = 0;
+    // ACROSS A DIVE is the measurement that matters, and it is measured across the dive itself, not
+    // tick by tick: an npc in this engine regenerates a hitpoint every NpcType.regenrate ticks like
+    // any other (Npc.ts:530), so a tick-by-tick "it never went up" would be failing on the world's
+    // own trickle rather than on a phase change. What shipped broken healed it to FULL on a colour
+    // change, which is what these two numbers would catch at any size.
+    let hpEnteringDive = 500, worstDiveHeal = 0, diveHeals = 0, regenTrickle = 0, prevHp = 500;
+    for (; ticks < 4000; ticks++) {
+        const s = mySnake();
+        if (!s) { died = true; break; }
+        if (s.level === 0) {
+            colours.add(colourOf(s));
+            places.add(s.x + ',' + s.z);
+            // RE-CLICK IT, exactly as a person has to: npc_changetype_keepall gives the snake a new
+            // uid every phase and the engine drops an interaction with anything that is not on your
+            // level, so the target is lost on every dive. Only when it has been lost, though -
+            // re-issuing the click every tick would clear the pending action mid-swing.
+            if ((p as any).target !== s) H.attackNpc(p, s);
+            if (wasUnder) {
+                // First tick back on the floor. This is the comparison.
+                const healed = s.levels[HP] - hpEnteringDive;
+                if (healed > 0) { diveHeals++; worstDiveHeal = Math.max(worstDiveHeal, healed); }
+            } else if (s.levels[HP] > prevHp) {
+                regenTrickle += s.levels[HP] - prevHp;
+            }
+            prevHp = s.levels[HP];
+            hpTrace.push(s.levels[HP]);
+        } else {
+            if (!wasUnder) { dives++; hpEnteringDive = prevHp; }
+        }
+        wasUnder = s.level !== 0;
+        H.tick(1);
+        p.levels[HP] = p.baseLevels[HP];        // the player, and ONLY the player
+        if (ticks % 64 === 0) H.clearLogs();
+    }
+    (World as any).addObj = origAdd;
+
+    check('a player with a bow kills Zulrah - 500 hitpoints to 0, no debug kill, no topping up',
+        died, true);
+    check('  and it took a real fight to do it, not a stray tick',
+        ticks > 60 && ticks < 4000, true);
+    // THE REGRESSION GUARD FOR WHAT SHIPPED. npc_changetype_keepall is the only thing standing
+    // between this boss and the version that could not be killed. The tolerance is one hitpoint and
+    // it is the world's, not a fudge: a submerged snake regenerates on NpcType.regenrate like every
+    // other npc (Npc.ts:530), and the submerged window is long enough to catch one of those ticks.
+    // What shipped broken healed it to FIVE HUNDRED on a colour change.
+    check('  and no phase change healed it by more than the world\'s own regen tick',
+        worstDiveHeal <= 1, true);
+    // The sharp version of the same thing, and the one that would have caught the original fault on
+    // its own: once it is properly wounded it never climbs back anywhere near full.
+    const afterFirstWound = hpTrace.slice(hpTrace.findIndex(h => h < 450));
+    check('  once wounded it never climbs back towards 500 - that is the fault that shipped',
+        Math.max(...afterFirstWound) < 460, true);
+    check('  and all it got back over the whole fight was that trickle',
+        regenTrickle + worstDiveHeal * dives < 60, true);
+    check('  the fight went through at least one full rotation of dives',
+        dives >= 10, true);
+    check('  in all three colours', [...colours].sort(), ['blue', 'green', 'red']);
+    check('  over more than one of its four surfacing places', places.size > 1, true);
+    check('  and the lowest it reached was zero', Math.min(...hpTrace), 0);
+    check('  the death table ran and its 100% drop landed',
+        dropped.includes('zulrahs_scales'), true);
+    check('  and the kill was counted', H.getVar(p, 'zulrah_kills'), 1);
+    console.log(`  (killed in ${ticks} ticks, ${dives} dives, ${dropped.length} objs dropped)`);
+
+    // No despawn: every other section leaves its player logged in, and taking one out of the world
+    // mid-run frees a slot that the next H.makePlayer reuses.
+    A.runProcProtected(p, '[proc,zulrah_end]');
+    H.tick(2);
+    p.clearPendingAction();
 }
 
 console.log(`\n${ok + bad} checks: ${ok} ok, ${bad} FAILED`);
