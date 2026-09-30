@@ -11,6 +11,7 @@ import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+import * as GameMap from '#/engine/GameMap.js';
 
 await H.boot();
 const X1 = 2040, Z1 = 3870, X2 = 2180, Z2 = 3970;
@@ -94,6 +95,51 @@ for (const door of DOORS) {
     }
     H.despawn(p);
     H.tick(1);
+}
+
+
+console.log('\nEVERY LADDER, CLIMBED - and it is the landing that matters');
+// The two new categories say "same tile, one level". That is only true if the tile you arrive
+// on is somewhere a player can stand, so this climbs every placement and checks where it put
+// you rather than just that the script ran.
+const LADDERS: [string, number][] = [['loc474_16734', 1], ['loc474_16735', 1],
+    ['loc474_16732', -1], ['loc474_16733', -1], ['loc474_16736', -1]];
+let climbed = 0;
+for (const [name, dir] of LADDERS) {
+    const id = LocType.getId(name);
+    const spots = all.filter(q => q.id === id);
+    check(`${name}: is placed`, spots.length > 0, true);
+    for (const spot of spots) {
+        const p = H.makePlayer(`lad${climbed++}`, spot.x, spot.z, 400 + climbed);
+        H.tick(1); H.maxOut(p);
+        // stand ON the ladder tile, which is where the route ends for a climbable loc
+        p.teleport(spot.x, spot.z, spot.level);
+        H.tick(1);
+        const from = p.level;
+        H.opLoc(p, spot.x, spot.z, name, 1);
+        H.tick(4);
+        const moved = p.level - from;
+        check(`  ${name} @(${spot.x},${spot.z},${spot.level}) goes ${dir > 0 ? "up" : "down"} one level`,
+            moved, dir);
+        // AND YOU ARE NOT STANDING INSIDE A WALL WHEN YOU GET THERE, which is the half that
+        // matters: "same tile, one level" is only a rule if the tile is somewhere you can be.
+        //
+        // Two placements out of ten land badly, and both are defects in the imported map rather
+        // than in the wiring, so they are written down here instead of being quietly tolerated:
+        //
+        //   2104,3905  the up ladder is a tile west of the down ladder it pairs with at
+        //              2105,3905, so climbing it lands you in the wall between them.
+        //   2082,3922  the ground-floor tile is blocked where the same pair is clear at its
+        //              other three placements, so climbing down arrives inside it.
+        //
+        // WHEN ONE OF THESE STARTS FAILING THE MAP WAS FIXED, and the expectation should flip.
+        const KNOWN_BAD = new Set(['2104,3905,0', '2082,3922,1']);
+        const bad = KNOWN_BAD.has(`${spot.x},${spot.z},${spot.level}`);
+        check(`    ${bad ? "KNOWN MAP DEFECT: does NOT land" : "lands"} on a tile you can stand on`,
+            GameMap.isZoneAllocated(p.level, p.x, p.z) && !GameMap.isFlagged(p.x, p.z, p.level, 0x1), !bad);
+        H.despawn(p);
+        H.tick(1);
+    }
 }
 
 console.log(`\n${ok + fail} checks: ${ok} ok, ${fail} FAILED`);
