@@ -49,7 +49,16 @@ const near = (what: string, got: number, want: number, tol: number) => {
 const HP = 3, DEF = 1, CRAFT = 12, MAGIC = 6;
 const REGICIDE_COMPLETE = 15;
 // The Sacrificial boat on the Zul-Andra shore: m34_47 local (31,47).
-const DOCK_BOAT = [34 * 64 + 31, 47 * 64 + 47];
+// The sacrificial boat, on the end of Zul-Andra's own pier: OSRS places multi-loc 10068 at
+// m34_47 local (38,48) and its default child is 46242, which is what the importer takes.
+// NOT 46241 at (31,47): that was a second boat beached on the shore by hand, on the mistaken
+// belief that the pier deck was blocked terrain, and it walled off the mouth of the pier. It is
+// gone (content 5b258b34f). 46241 still exists as the shrine's own return boat on m36_79.
+// The dock and the village tile both moved when Zul-Andra's placements were corrected against
+// OSRS (content 5b258b34f): ^zulandra_dock 29,48 -> 37,48, the deck tile the boat actually lands
+// you on, and ^zulandra_village 26,53 -> 20,48. 26,53 was the High Priestess's OWN tile reused as
+// the arrival point, which is why she stood on top of everybody who teleported in.
+const DOCK_BOAT = [34 * 64 + 38, 47 * 64 + 48];
 
 const fresh = (x = 3222 + (n % 8) * 4, z = 3218 + Math.floor(n / 8) * 4) => {
     const p: any = H.makePlayer('zul' + n, x, z, 90 + n); n++;
@@ -125,9 +134,9 @@ let shrinePlayer: any = null;
     lines = A.talk(p, 'zulandra_high_priestess', ['I want to face Zulrah.', 'Then give me to it.']);
     check('with Regicide done you can volunteer', H.getVar(p, 'zulrah_volunteered'), 1);
 
-    // The boat itself - OSRS loc 46241, "Sacrificial boat", placed on the Zul-Andra shore at
-    // m34_47 (31,47). Boarding it is the only way out to the shrine.
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    // The boat itself - "Sacrificial boat", on the end of the pier. Boarding it is the only way
+    // out to the shrine.
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(8);
     const snake = theSnake();
     check('the boat builds the shrine and Zulrah is in it', snake !== null, true);
@@ -144,14 +153,14 @@ let shrinePlayer: any = null;
     A.op(p, base[0] + 11, base[1] + 9, 'osrsloc_46241', 1);
     H.tick(8);
     check('rowing back empties the instance', theSnake(), null);
-    check('  and puts you on the dock at Zul-Andra', [p.x, p.z], [2176 + 29, 3008 + 48]);
+    check('  and puts you on the dock at Zul-Andra', [p.x, p.z], [2176 + 37, 3008 + 48]);
     check('  with %zulrah_instance cleared', H.getVar(p, 'zulrah_instance'), -1);
 
     // The teleport scroll, which is 15/249 of the table and the way most people get back.
     H.give(p, 'zul_andra_teleport', 4);
     A.held(p, 'zul_andra_teleport', 1);
     H.tick(6);
-    check('the Zul-andra teleport lands in the village', [p.x, p.z], [2176 + 26, 3008 + 53]);
+    check('the Zul-andra teleport lands in the village', [p.x, p.z], [2176 + 20, 3008 + 48]);
     check('  and one scroll of the four is gone', H.invCount(p, 'zul_andra_teleport'), 3);
     shrinePlayer = p;
 }
@@ -164,7 +173,7 @@ console.log('THE FIGHT');
 {
     const p = shrinePlayer;
     H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(10);
     const snake = theSnake()!;
     p.levels[HP] = 990; p.baseLevels[HP] = 990;
@@ -319,7 +328,7 @@ console.log('THE FIGHT ENDS');
     const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
     H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
     H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(10);
     p.levels[HP] = 990; p.baseLevels[HP] = 990;
     const snake = theSnake()!;
@@ -398,7 +407,7 @@ console.log('THE FIGHT ENDS');
     const AI_QUEUE2 = ServerTriggerType.AI_QUEUE1 + 1;
     const rebuild = () => {
         A.runProcProtected(p, '[proc,zulrah_end]'); H.tick(2);
-        A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1); H.tick(10);
+        A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1); H.tick(10);
         p.levels[HP] = 990; H.clearLogs(); park();
     };
     const emptyIt = (colour: string) => {
@@ -505,7 +514,7 @@ console.log('THE VENOM CLOUDS ARE DRAWN');
     const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
     H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
     H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(10);
     p.levels[HP] = 990; p.baseLevels[HP] = 990;
     // Park the snake and let every cloud its opening phase already dropped burn out: phase 1 of
@@ -554,7 +563,7 @@ console.log('EVERY DROP LANDS WHERE THE PLAYER CAN STAND');
     const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
     H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
     H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(10);
     p.levels[HP] = 990; p.baseLevels[HP] = 990;
     const snake = theSnake()!;
@@ -600,7 +609,7 @@ console.log('DYING AT THE SHRINE');
     H.give(p, 'shark', 10);
     H.give(p, 'coins', 200000);
     H.equip(p, { rhand: 'rune_scimitar' });
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46241', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
     H.tick(8);
     const carried = H.invCount(p, 'shark');
     // The real death path: the guard at the top of [queue,player_death_default] is what sends a
@@ -609,7 +618,7 @@ console.log('DYING AT THE SHRINE');
     H.tick(14);
     check('dying there drops nothing on the floor', H.invCount(p, 'shark'), 0);
     check('  the priestess is holding it', H.getVar(p, 'zulrah_items_held'), 1);
-    check('  and you are back on the dock', [p.x, p.z], [2176 + 29, 3008 + 48]);
+    check('  and you are back on the dock', [p.x, p.z], [2176 + 37, 3008 + 48]);
     check('  the shrine went with you', theSnake(), null);
 
     // Free for the first fifty kills.
