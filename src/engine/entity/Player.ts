@@ -745,6 +745,21 @@ export default class Player extends PathingEntity {
         if (this.delayed) {
             return;
         }
+        // UNLIMITED RUN (owner, 2026-09-29): nobody's energy drains, so nobody is ever forced to
+        // walk. Held AT the maximum rather than merely left alone, because a player who is part way
+        // down when this is switched on would otherwise keep that number for as long as they kept
+        // running, and the orb would sit at whatever they happened to have. The client is only told
+        // when the value crosses a whole percent (NetworkPlayer, lastRunEnergy), so pinning it costs
+        // one comparison a tick and no packets.
+        //
+        // The admin branch below is left exactly as it was: it is the same rule for staff and it
+        // should keep working if this is ever turned off again.
+        if (Environment.NODE_UNLIMITED_RUN) {
+            if (this.runenergy < 10000) {
+                this.runenergy = 10000;
+            }
+            return;
+        }
         if (this.stepsTaken < 2) {
             const natural = ((this.baseLevels[PlayerStat.AGILITY] / 6) | 0) + 8;
             // The energy_restore bonus applies to NATURAL recovery and nowhere else, which is why

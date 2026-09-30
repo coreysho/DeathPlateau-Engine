@@ -81,6 +81,11 @@ export default {
     // src/engine/bot/BotConfig.ts for every knob and its default); the two counts can also be set here,
     // -1 meaning "whatever the file (or the default) says".
     NODE_BOTS: tryParseBoolean(process.env.NODE_BOTS, false),
+    // custom (2026-09-29) - run energy never depletes, for everybody. Asked for by the owner as a
+    // server-wide rule, so it defaults ON: the world wants it, and a flag that had to be set
+    // before it did anything would not be the thing that was asked for. Set
+    // NODE_UNLIMITED_RUN=false to put the ordinary drain back without a code change.
+    NODE_UNLIMITED_RUN: tryParseBoolean(process.env.NODE_UNLIMITED_RUN, true),
     NODE_BOTS_CONFIG: tryParseString(process.env.NODE_BOTS_CONFIG, 'data/config/bots.json'),
     NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
     NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
