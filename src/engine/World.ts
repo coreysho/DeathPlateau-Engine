@@ -883,9 +883,11 @@ class World {
                 // world shutdown or x-logged / timed out for 60s: force logout
                 player.loggingOut = true;
                 force = true;
+                player.logoutReason = this.shutdown ? 'world shutdown' : 'no response for 60s';
             } else if (this.currentTick - player.lastConnected >= World.TIMEOUT_NO_CONNECTION) {
                 // connection lost for 30s: request idle logout
                 player.requestIdleLogout = true;
+                player.logoutReason = 'connection lost for 30s';
             }
 
             if (player.requestLogout || player.requestIdleLogout) {
@@ -1090,6 +1092,9 @@ class World {
 
             this.gameMap.getZone(player.x, player.z, player.level).enter(player);
             player.onLogin();
+            if (!player.isBot) {
+                printInfo(`login  ${player.username} at ${player.level},${player.x},${player.z}`);
+            }
             if (player.isBot) {
                 // no clan channel, no friends-list presence
                 continue;
@@ -1799,7 +1804,21 @@ class World {
 
         ClanChat.onLogout(player);
 
-        if (isClientConnected(player)) {
+        // ONE LINE PER DEPARTURE, because there were none. Nothing in the login, logout or
+        // socket-close paths printed anything, so a player reporting a crash left no trace at
+        // all and the only record was on their own machine. The reason matters more than the
+        // fact: "connection lost for 30s" is a dropped client, "no response for 60s" is one
+        // that stopped answering while its socket stayed open, and a bare "quit" is somebody
+        // using the logout button. Bots are skipped - a sim spawns hundreds.
+        const connected = isClientConnected(player);
+        if (!player.isBot) {
+            printInfo(
+                `logout ${player.username} at ${player.level},${player.x},${player.z}` +
+                    ` - ${player.logoutReason}${connected ? '' : ' (socket already gone)'}`
+            );
+        }
+
+        if (connected) {
             player.logout();
             player.client.close();
         }

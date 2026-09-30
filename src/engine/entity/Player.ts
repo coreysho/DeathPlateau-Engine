@@ -684,6 +684,16 @@ export default class Player extends PathingEntity {
         }
     }
 
+    /**
+     * WHY THIS PLAYER LEFT, for the one line World.removePlayer prints when they do.
+     *
+     * A player who says "I crashed and got disconnected" is indistinguishable from one who
+     * quit, unless the server wrote down which it was at the moment it decided. processLogouts
+     * knows - it is the code that tells a dropped socket from a timed-out one - and by the time
+     * removePlayer runs that knowledge is gone. So it is recorded here on the way past.
+     */
+    logoutReason: string = 'quit';
+
     addSessionLog(event_type: LoggerEventType, message: string, ...args: string[]): void {
         if (this.isBot) {
             // a bot has no session and no account for a moderator to look up
