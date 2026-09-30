@@ -1346,6 +1346,12 @@ console.log('KILLING IT, WITH A BOW, AND NOTHING HELPING');
     check('  and the lowest it reached was zero', Math.min(...hpTrace), 0);
     check('  the death table ran and its 100% drop landed',
         dropped.includes('zulrahs_scales'), true);
+    // AND A WAY HOME, EVERY TIME. The shrine has no boat: the Zul-andra teleport read where it
+    // lies is the only exit. It is on the drop table at 15/249, which left sixteen kills in
+    // seventeen with the snake dead and nobody able to leave, so one is now guaranteed on top of
+    // whatever the table rolls. This is the check that would have caught shipping it without one.
+    check('  and a Zul-andra teleport, which is the only way off the island',
+        dropped.includes('zul_andra_teleport'), true);
     check('  and the kill was counted', H.getVar(p, 'zulrah_kills'), 1);
     console.log(`  (killed in ${ticks} ticks, ${dives} dives, ${dropped.length} objs dropped)`);
 
