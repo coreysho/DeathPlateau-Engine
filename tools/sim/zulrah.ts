@@ -33,6 +33,9 @@ import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import EnumType from '#/cache/config/EnumType.js';
 import Obj from '#/engine/entity/Obj.js';
 import InvType from '#/cache/config/InvType.js';
+import InstanceMap, { Instance } from '#/engine/InstanceMap.js';
+import { isFlagged } from '#/engine/GameMap.js';
+import { CollisionFlag } from '#/engine/routefinder/index.js';
 import * as fs from 'fs';
 
 await H.boot();
@@ -147,6 +150,55 @@ let shrinePlayer: any = null;
     check('  the player is inside the instance, not on the dock', p.x > 6000 || p.z > 6000, true);
     const inst = H.getVar(p, 'zulrah_instance');
     check('  and %zulrah_instance points at it', inst > 0, true);
+
+    // ------------------------------------------------------------------ every zone of it
+    // THE SHRINE HAD A HOLE IN IT and this is the section that would have caught it. The owner's
+    // screenshot showed a chunk of the south lobe simply not drawn, and what was doing it was an
+    // instance zone on LEVEL 3 - the snake's hiding place between phases - laid directly over the
+    // arena. The client builds all four levels of an instanced scene from the templates the server
+    // sends (Client.buildScene, the sceneInstanced branch), and World.method15 turns any flat,
+    // opaque tile on a level above 0 into a floor occluder (field131 |= 0x924), which culls what is
+    // behind it. So a copy of the template's own open lake, hanging over the platform at the water's
+    // own height, deleted the platform underneath it.
+    //
+    // Reading it back off the live instance rather than off the script: InstanceMap.at is what
+    // BuildArea asks, and inst.templates is exactly the set of zones that will be sent.
+    {
+        const live = InstanceMap.at(p.x, p.z)!;
+        const laid = [...live.templates.keys()].map(k => Instance.unpackKey(k));
+        const want: string[] = [];
+        for (let zx = 0; zx < 4; zx++) for (let zz = 0; zz < 4; zz++) want.push(`0:${zx},${zz}`);
+        check('the shrine is laid whole - all sixteen of its level-0 zones',
+            laid.filter(t => t.level === 0).map(t => `0:${t.zx},${t.zz}`).sort(), want.sort());
+        // And nothing else on level 0: a seventeenth zone would be a floor nobody measured.
+        check('  and no level-0 zone beyond the four-by-four the template is',
+            laid.filter(t => t.level === 0).length, 16);
+        // THE RULE THE HOLE BROKE, asserted on the packet rather than on the map. BuildArea sends a
+        // 13x13 block of zones centred on the player's zone, on all four levels, and fills it from
+        // InstanceMap.templateAt - so this builds the same 4x13x13 the client would be handed, from
+        // every tile of the shrine a player could be standing on, and looks for anything above
+        // level 0 in it. One entry there is one 8x8 sheet hanging over the arena.
+        const upstairs = new Set<string>();
+        const [bx, bz] = [(inst >> 14) & 0x3fff, inst & 0x3fff];
+        for (let x = 0; x < 32; x++) for (let z = 0; z < 32; z++) {
+            if (isFlagged(bx + x, bz + z, 0, CollisionFlag.WALK_BLOCKED)) continue;
+            const zx = (bx + x) >> 3, zz = (bz + z) >> 3;
+            for (let level = 1; level < 4; level++) {
+                for (let dx = 0; dx < 13; dx++) for (let dz = 0; dz < 13; dz++) {
+                    if (InstanceMap.templateAt(level, zx - 6 + dx, zz - 6 + dz) !== -1) {
+                        upstairs.add(`${level}:${zx - 6 + dx},${zz - 6 + dz}`);
+                    }
+                }
+            }
+        }
+        check('  and from every tile of it, nothing above level 0 is in the scene the client is sent',
+            [...upstairs], []);
+        // The snake's hiding place is still a real, allocated zone, or ~zulrah_submerge would
+        // silently do nothing: PathingEntity.teleport checks isZoneAllocated and an npc gets no
+        // error when it fails.
+        check('  the submerged snake still has a zone to stand on, far out of the scene',
+            laid.filter(t => t.level === 3).map(t => `${t.zx},${t.zz}`), ['12,12']);
+    }
 
     // Out again. NOT the same loc: the shrine's return boat is OSRS 46241, hand-placed on m36_79,
     // while the one at Zul-Andra is the map's own 46242. Both handlers read where you are standing
@@ -394,29 +446,125 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     check('  so the magic attack has a graphic of its own (OSRS 1046), not the ranged one',
         MAGIC !== RANGED && order.includes('zulrah_magic'), true);
 
-    // THE VENOM CLOUDS. Rotation 1's phase 1 (index 0) is four venom cloud barrages and nothing
-    // else - every rotation opens with it.
+    // ------------------------------------------------------------------ THE VENOM CLOUDS
+    // THE CLOUDS BELONG TO THE SHRINE, NOT TO THE PLAYER, and until this round they did not: a
+    // barrage dropped one cloud on whatever tile the player was standing on. The owner reported it
+    // and the wiki rules it out - "Zulrah will fill the area with venom clouds, LEAVING THE TIPS ON
+    // THE EAST AND WEST SIDES CLEAR" is not something a cloud that follows you can ever do.
+    //
+    // Rotation 1's phase 1 (index 0) is four venom cloud barrages and nothing else, and every
+    // rotation opens with it, so it is both the phase the wiki describes and the only one that
+    // finishes a fill.
+    const instBase = () => {
+        const v = H.getVar(p, 'zulrah_instance') as number;
+        return [(v >> 14) & 0x3fff, v & 0x3fff];
+    };
+    // The nine tiles zulrah_clouds.enum holds for the MIDDLE, in this player's instance. The enum is
+    // template coordinates on m36_79 whose own corner is (16,16) - the same shift ~zulrah_at does.
+    const fillCount = 9, stride = 16;
+    const fillTiles = (posIndex: number) => {
+        const [bx, bz] = instBase();
+        const e = EnumType.getByName('zulrah_cloud_fill')!;
+        return [...Array(fillCount)].map((_, i) => {
+            const c = (e as any).values.get(posIndex * stride + i) as number;
+            return [((c >> 14) & 0x3fff) - (36 * 64 + 16) + bx, (c & 0x3fff) - (79 * 64 + 16) + bz];
+        });
+    };
+    // TWICE, FROM TWO DIFFERENT TILES. This is the check the whole section exists for: the same
+    // phase from two standing positions has to throw its orbs at the same nine tiles.
+    const barrageRun = (from: number[]) => {
+        s = park(1, 0);
+        // No tick between the teleport and the run: park() leaves %npc_action_delay at 0, so the
+        // very first tick of the run is barrage one, and a spare tick here would eat it.
+        p.teleport(from[0], from[1], p.level);
+        wipe();
+        run(12);                                    // four barrages, one every three ticks
+        return projs.filter(x => x.target === 0);
+    };
+    const [bx0, bz0] = instBase();
+    // Two tiles of walkway a long way apart: the south lobe the boat lands you on, and the far end
+    // of the west arm - the tip the wiki says stays clear.
+    const southLobe = [bx0 + 12, bz0 + 13];         // template (28,29), ^zulrah_entry
+    const westTip = [bx0 + 8, bz0 + 22];            // template (24,38), the west horn
+    const fromLobe = barrageRun(southLobe);
+    const fromTip = barrageRun(westTip);
+    const tilesOf = (ps: typeof fromLobe) =>
+        [...new Set(ps.map(x => x.dstX + ',' + x.dstZ))].sort();
+    check('a venom barrage throws its orbs at TILES the phase names, not at the player',
+        [fromLobe.length > 0, [...new Set(fromLobe.map(x => named(x.spotanim)))]],
+        [true, ['zulrah_venom_cloud']]);
+    check('  the same phase fought from two different tiles clouds the SAME nine tiles',
+        tilesOf(fromLobe), tilesOf(fromTip));
+    check('  and they are the nine zulrah_clouds.enum holds for the middle',
+        tilesOf(fromLobe), fillTiles(0).map(t => t[0] + ',' + t[1]).sort());
+    check('  none of which is a tile the player was standing on',
+        tilesOf(fromLobe).includes(southLobe.join(',')) || tilesOf(fromTip).includes(westTip.join(',')),
+        false);
+    check('  thrown two or three at a time - it is a barrage, not one orb',
+        [...new Set([...Array(4)].map((_, k) =>
+            fromLobe.filter(x => x.tick === fromLobe[0].tick + k * 3).length))].sort(),
+        [2, 3]);
+
+    // AND THE PHASE PICKS THE ORDER. Rotation 1's phase 7 (index 6) is "south, green, 3 venom cloud
+    // barrages, 4 snakeling orbs" - a different place and one barrage short of a fill, so it lays
+    // the south end of the platform first and never finishes covering it. This is the half of
+    // "the clouds belong to the rotation" that the two-positions check above cannot show.
+    {
+        s = park(1, 6);
+        wipe();
+        run(9);                                     // three barrages
+        const south = projs.filter(x => x.target === 0);
+        const want = fillTiles(1).slice(0, 6).map(t => t[0] + ',' + t[1]).sort();
+        check('a phase fought in the south clouds the south first, and three barrages is not a fill',
+            [tilesOf(south), tilesOf(south).length < fillCount], [want, true]);
+        // Four orderings of ONE set of tiles, not four sets: wherever the snake surfaces, a full
+        // four-barrage run covers the same platform, and only the order it gets covered in moves.
+        const sorted = (i: number) => fillTiles(i).map(t => t.join(',')).sort().join(' ');
+        const inOrder = (i: number) => fillTiles(i).map(t => t.join(',')).join(' ');
+        check('  and all four places cloud the same nine tiles, in four different orders',
+            [new Set([0, 1, 2, 3].map(sorted)).size, new Set([0, 1, 2, 3].map(inOrder)).size],
+            [1, 4]);
+    }
+
+    // "Zulrah will fill the area with venom clouds, LEAVING THE TIPS ON THE EAST AND WEST SIDES
+    // CLEAR" - read off the collision map of the live instance, so it is the tiles a player can
+    // actually stand on rather than a list copied out of the config being compared with itself.
+    {
+        const clouded = new Set<string>();
+        for (const t of fillTiles(0)) {
+            for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+                clouded.add((t[0] + dx) + ',' + (t[1] + dz));
+            }
+        }
+        const clear: string[] = [];
+        let standable = 0;
+        for (let x = 0; x < 32; x++) for (let z = 0; z < 32; z++) {
+            if (isFlagged(bx0 + x, bz0 + z, 0, CollisionFlag.WALK_BLOCKED)) continue;
+            standable++;
+            if (!clouded.has((bx0 + x) + ',' + (bz0 + z))) clear.push((x + 16) + ',' + (z + 16));
+        }
+        check('a full four-barrage fill covers the platform, bar the tips of the two arms',
+            [standable > 50, clear.sort()],
+            [true, ['23,37', '24,37', '24,38', '32,37', '32,38', '33,37', '34,37'].sort()]);
+    }
+
+    // AND THEN IT BURNS. One draw per tick, every tick, is the whole point - the graphic is one game
+    // tick long and the client drops a MapSpotAnim as soon as its sequence ends, so a gap is a cloud
+    // that flickers. Counting DISTINCT ticks rather than draws, because nine clouds burning at once
+    // put nine draws on one tick, which is fine.
     s = park(1, 0);
-    const standing = [p.x, p.z];
-    run(2);
-    const barrage = projs.filter(x => x.target === 0);
-    check('a venom barrage throws orbs at a TILE, not at the player',
-        [barrage.length > 0, barrage[0] ? named(barrage[0].spotanim) : null,
-         barrage[0] ? [barrage[0].dstX, barrage[0].dstZ] : null],
-        [true, 'zulrah_venom_cloud', standing]);
-    // and then the cloud burns on that tile, one draw per tick, for its whole life
+    const cloudTile = fillTiles(0)[0];               // the first tile the first barrage aims at
+    p.teleport(cloudTile[0], cloudTile[1], p.level);
     wipe();
-    run(24);
-    // ONE DRAW PER TICK, every tick, is the whole point - the graphic is one game tick long and the
-    // client drops a MapSpotAnim as soon as its sequence ends, so a gap is a cloud that flickers.
-    // Counting DISTINCT ticks rather than draws: the phase is four barrages and they all land on the
-    // same tile, so three clouds burning at once put three draws on one tick, which is fine.
-    const onTile = gfx.filter(g => g.x === standing[0] && g.z === standing[1] && g.spotanim === VENOM);
-    const ticksDrawn = new Set(onTile.map(g => g.tick)).size;
-    check('  and a cloud is re-drawn on it every tick, so it does not strobe', ticksDrawn, 24);
+    run(3);                                         // the barrage, and two ticks for the orbs to land
+    wipe();
+    run(20);
+    const onTile = gfx.filter(g => g.x === cloudTile[0] && g.z === cloudTile[1] && g.spotanim === VENOM);
+    check('  and a cloud is re-drawn on its tile every tick, so it does not strobe',
+        new Set(onTile.map(g => g.tick)).size, 20);
     check('  with the venom graphic, never the magic one (this was the fireball)',
         gfx.some(g => g.spotanim === MAGIC), false);
-    check('  and it burns the player who stands in it, with a venom hitsplat',
+    check('  and it burns whoever is standing in it, with a venom hitsplat',
         H.hitsFor(p.username).some(h => h.type === 5), true);
 
     // THE SNAKELING ORBS. Rotation 3's phase 11 (index 32) is four snakeling orbs and nothing else.
@@ -982,12 +1130,18 @@ console.log('KILLING IT, WITH A BOW, AND NOTHING HELPING');
     // THIS PLAYER'S SNAKE, not theSnake(). theSnake() takes the first Zulrah in World.npcs, and by
     // the time this section runs the drop-table loop has left snakes standing in the open world at
     // Lumbridge - so a global lookup finds one of those, watches it do nothing for four thousand
-    // ticks, and reports that the boss cannot be killed. The instance is 32 by 32 from the corner
-    // %zulrah_instance packs, and it is the only place this fight happens.
+    // ticks, and reports that the boss cannot be killed.
+    //
+    // THE BOX IS THE WHOLE INSTANCE SLOT, NOT THE SHRINE'S OWN 32x32. It was 32x32, and that was
+    // right only while a submerged Zulrah was parked on level 3 of the middle of the arena. It is
+    // now parked in the far corner of the slot instead, where the client is never told the zone
+    // exists (see ~zulrah_build for the hole in the floor that caused) - so a 32x32 box loses the
+    // snake on its first dive, and this section reported a boss that vanished after eleven ticks.
     const inst = H.getVar(p, 'zulrah_instance') as number;
     const [ix, iz] = [(inst >> 14) & 0x3fff, inst & 0x3fff];
+    const SLOT = InstanceMap.INSTANCE_ZONES * 8;
     const mySnake = () => npcsOfType('zulrah', 'zulrah_magma', 'zulrah_tanzanite')
-        .find(s => s.x >= ix && s.x < ix + 32 && s.z >= iz && s.z < iz + 32) ?? null;
+        .find(s => s.x >= ix && s.x < ix + SLOT && s.z >= iz && s.z < iz + SLOT) ?? null;
     check('the boat puts a snake in the water with all 500 of its hitpoints',
         mySnake()?.levels[HP] ?? null, 500);
 
@@ -1010,9 +1164,16 @@ console.log('KILLING IT, WITH A BOW, AND NOTHING HELPING');
     // own trickle rather than on a phase change. What shipped broken healed it to FULL on a colour
     // change, which is what these two numbers would catch at any size.
     let hpEnteringDive = 500, worstDiveHeal = 0, diveHeals = 0, regenTrickle = 0, prevHp = 500;
+    // THE LAST SNAKE SEEN, so the trace can end on a real zero. mySnake() goes null on the tick the
+    // death queue takes the npc out of the world, and whether the loop ever samples the tick between
+    // the killing blow and the removal is down to how big that blow happened to roll - it read 0
+    // before this round and 9 after it, on a fight that changed nowhere near the killing. The npc
+    // object outlives the lookup, so read the hitpoints off it rather than racing the tick.
+    let lastSeen: any = null;
     for (; ticks < 4000; ticks++) {
         const s = mySnake();
-        if (!s) { died = true; break; }
+        if (!s) { died = true; if (lastSeen) hpTrace.push(lastSeen.levels[HP]); break; }
+        lastSeen = s;
         if (s.level === 0) {
             colours.add(colourOf(s));
             places.add(s.x + ',' + s.z);
