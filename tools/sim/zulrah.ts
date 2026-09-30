@@ -273,6 +273,22 @@ console.log('THE FIGHT');
             H.setNpcVar(snake, 'npc_action_delay', (World as any).currentTick + settle + 5);
             run(settle);
         }
+        // AND IT IS BROUGHT BACK TO THE FLOOR FIRST, which it never used to need to be. This park
+        // reuses the ONE snake the boat put in the water - it does not build a fresh one the way the
+        // graphics section's park does - and between phases ~zulrah_submerge teleports that snake to
+        // level 3, out of the scene. Clearing %zulrah_submerged tells the state machine the dive is
+        // over; it does not move the snake back, because the thing that normally does that is
+        // ~zulrah_surface, which park() is standing in for. A phase change used to be twelve ticks
+        // and every window measured here was shorter than that, so the snake was never under when a
+        // park landed. It is eight now - 2 down, 2 under, 4 up, off the animations' own lengths -
+        // and the very first window, eighteen ticks of a five-beat phase, reaches into it. What that
+        // looked like was not a timing failure: it was a snake that spent a whole later section on
+        // level 3, spitting from three storeys up, and checks about colours and places reading
+        // nothing at all.
+        if (snake.level !== 0) {
+            const v = H.getVar(p, 'zulrah_instance') as number;
+            (snake as any).teleport(((v >> 14) & 0x3fff) + 10, (v & 0x3fff) + 15, 0);
+        }
         H.setNpcVar(snake, 'zulrah_rotation', rotation);
         H.setNpcVar(snake, 'zulrah_phase', phase);
         H.setNpcVar(snake, 'zulrah_run', enumVal('zulrah_phase_run_start', phase));
@@ -291,15 +307,37 @@ console.log('THE FIGHT');
     park(2, 17, 1, 0, 30);   // Protect from Missiles UP, and thirty ticks to burn off the cloud
                              // the snake's own opening phase dropped before it was parked
     check('Protect from Missiles stops the green form dead', tookOver(18), 0);
-    park(2, 17, 0, 1);       // the WRONG prayer
-    check('  Protect from Magic does not', tookOver(18) > 0, true);
+    // THE WRONG PRAYER, AND THREE GOES AT IT. One pass of this phase is five ranged attacks, each of
+    // which rolls for accuracy like every other attack in the build, and five misses in a row is a
+    // thing that happens - this check failed about one run in four on nothing but that. What it is
+    // asking is whether Protect from Magic stops a RANGED attack, which is a yes-or-no about the
+    // prayer and not about a dice roll, so it re-parks and asks again rather than resting the answer
+    // on one streak. The check above is the opposite shape and needs no such thing: Protect from
+    // Missiles must let NOTHING through, and one leak is one too many however lucky the rolls were.
+    let wrongPrayerTook = 0;
+    for (let attempt = 0; attempt < 3 && wrongPrayerTook === 0; attempt++) {
+        park(2, 17, 0, 1);
+        wrongPrayerTook = tookOver(18);
+    }
+    check('  Protect from Magic does not', wrongPrayerTook > 0, true);
 
     // Phase 1 of rotation 1 is four venom cloud barrages and nothing else.
     sawSnakelings = 0;
     park(1, 0, 1, 1);        // both prayers up: a cloud is not an attack and neither stops it
-    check('standing in a venom cloud burns you through both prayers', tookOver(20) > 0, true);
+    // EIGHTEEN TICKS, NOT TWENTY, AND THEN THE OTHER TWO - which is a smaller change than it looks.
+    // A phase change is eight ticks now (2 down, 2 under, 4 up, off the three animations' own
+    // lengths) where it used to be twelve, so the snake of the NEXT phase surfaces at tick 17 of
+    // this window and can land an attack on tick 21. That attack envenoms one time in four, which is
+    // exactly what the second check below says never happens, so a twenty-tick window began failing
+    // at random on a change that has nothing to do with clouds. Eighteen ticks is still fifteen
+    // ticks of cloud burning on the player - a barrage's clouds light two ticks after it is thrown
+    // and last twenty-five - and it ends three ticks before anything else can touch them. The two
+    // ticks come back straight afterwards so that every section below this one starts where it
+    // always did: this is a measurement moved, not a fight shortened.
+    check('standing in a venom cloud burns you through both prayers', tookOver(18) > 0, true);
     // "[the clouds] do not envenom players directly" - and nothing else in that window can.
     check('  and it does not envenom - the clouds never do', H.getVar(p, 'venom'), 0);
+    run(2);
     check('  no snakeling has been out yet, so nothing else was hitting', sawSnakelings, 0);
 
     // The whole of rotation 1, colour by colour and place by place.
@@ -351,7 +389,11 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     const snake = theSnake()!;
     const SP = (name: string) => SpotanimType.getId(name);
     const RANGED = SP('zulrah_ranged'), MAGIC = SP('zulrah_magic');
-    const VENOM = SP('zulrah_venom_cloud'), ORB = SP('zulrah_snakeling_orb');
+    // THE ORBS AND THE CLOUD ARE TWO GRAPHICS, and were one until this round: zulrah_venom_cloud
+    // used to be OSRS spotanim 1045, the barrage's two flying comets, drawn on the ground as well as
+    // thrown at it. What lies on the platform is its own spotanim now, so both names are held here
+    // and the checks below insist they are different.
+    const VENOM = SP('zulrah_venom_cloud'), ORBS = SP('zulrah_venom_orbs'), ORB = SP('zulrah_snakeling_orb');
     // target: 0 is projanim_map (a tile), negative is projanim_pl (homed on a player).
     type Proj = { tick: number; x: number; z: number; dstX: number; dstZ: number; target: number; spotanim: number };
     type Gfx = { tick: number; x: number; z: number; spotanim: number };
@@ -492,7 +534,9 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
         [...new Set(ps.map(x => x.dstX + ',' + x.dstZ))].sort();
     check('a venom barrage throws its orbs at TILES the phase names, not at the player',
         [fromLobe.length > 0, [...new Set(fromLobe.map(x => named(x.spotanim)))]],
-        [true, ['zulrah_venom_cloud']]);
+        [true, ['zulrah_venom_orbs']]);
+    check('  and what FLIES is not what LANDS - the orbs are a projectile, the cloud is not',
+        ORBS !== VENOM, true);
     check('  the same phase fought from two different tiles clouds the SAME nine tiles',
         tilesOf(fromLobe), tilesOf(fromTip));
     check('  and they are the nine zulrah_clouds.enum holds for the middle',
@@ -564,6 +608,10 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
         new Set(onTile.map(g => g.tick)).size, 20);
     check('  with the venom graphic, never the magic one (this was the fireball)',
         gfx.some(g => g.spotanim === MAGIC), false);
+    // ...and never the barrage's orbs either, which is what was on the floor for the whole of the
+    // last round. Nothing that is thrown at a tile may also be painted on one.
+    check('  and never the barrage\'s flying orbs, which is what used to lie there',
+        gfx.some(g => g.spotanim === ORBS), false);
     check('  and it burns whoever is standing in it, with a venom hitsplat',
         H.hitsFor(p.username).some(h => h.type === 5), true);
 
@@ -597,9 +645,14 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     // WITHOUT clearPendingAction this time, which run() does every tick: auto-retaliation IS a
     // pending action, so clearing one every tick would wipe the thing being measured a tick after
     // it appeared.
+    // THE WINDOW IS READ, NOT COUNTED. ^zulrah_melee_warning moved from 3 to 5 the round the tail
+    // animation was checked against the clock - OSRS seq 5807 does not strike until 4.67 ticks in -
+    // and a loop that counted five ticks of its own would have failed on exactly that change.
+    const warning = Number(/\^zulrah_melee_warning\s*=\s*(\d+)/
+        .exec(fs.readFileSync('../content/scripts/areas/area_zulrah/configs/zulrah.constant', 'utf8'))![1]);
     H.clearLogs();
     let retaliated = false;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < warning + 2; i++) {
         H.tick(1);
         if ((p as any).target === s) retaliated = true;
     }
@@ -607,7 +660,8 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     // TYPELESS, so it always lands on someone who did not move - there is no accuracy roll to fail.
     // A melee roll off Zulrah's own 1 Attack, which is what this used to be, missed a geared player
     // almost every time and made the red phase free.
-    check('  a player who stays where the tail is aimed is always hit', tail.length > 0, true);
+    check(`  a player who stays where the tail is aimed is always hit (after ^zulrah_melee_warning = ${warning})`,
+        tail.length > 0, true);
     check('  and it provokes auto-retaliation, like every other attack the snake makes',
         retaliated, true);
     check('  for 20 to 30, the wiki\'s own spread, and never the green form\'s 41',
@@ -617,23 +671,67 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     run(1);
     p.teleport(p.x + 4, p.z, p.level);
     H.clearLogs();
-    run(4, false);
+    run(warning + 1, false);
     check('  and a player who moves two tiles away is not', H.hitsFor(p.username).length, 0);
 
     // THE PHASE CHANGE. Rotation 2's phase 7 again - five ranged beats and then a dive.
+    //
+    // AND THIS TIME THE ANIMATIONS ARE ASSERTED, NOT JUST THE LEVELS. Every check that follows used
+    // to pass while the owner watched the snake "not have the animations of leaving one spot and
+    // appearing at the other" - because npc_anim WAS being called, with the wrong seqs. The rise was
+    // OSRS 5068, which is the spit; two of the three dives were OSRS 5071 and 5073, which are the
+    // RISE (5072 is the same 21 frames in reverse, and rendering the three says 5072 is the one that
+    // sinks). A snake whose dive starts on a frame where it is not there yet blinks out on the spot
+    // it is leaving, which is exactly what was reported.
+    //
+    // So: which seq, on which tick, and on which LEVEL the snake was standing when it played. An
+    // animation played while the snake is parked on level 3 is an animation nobody can see.
     s = park(2, 17);
+    wipe();
     const levels: number[] = [];
+    const levelAtTick = new Map<number, number>();
     let hpAcross: number[] = [];
     (s as any).levels[HP] = 400;              // a wound to carry through the dive
     for (let t = 0; t < 40; t++) {
         (p as any).clearPendingAction();
+        // ON THE SCRIPT'S CLOCK, NOT THE READER'S. World.currentTick has already moved on by the
+        // time H.tick returns, so a level filed under the number read here would be one ahead of the
+        // animations, which are recorded from inside the tick. Keying on the value from BEFORE the
+        // cycle files the snake's level under the tick the script that moved it ran in - and that is
+        // also the right question to ask, because an npc's position and its animation mask go out in
+        // the SAME npc-info block, built at the end of that tick. If it is on level 0 then, the
+        // client is told where it is and what it is playing together.
+        const scriptTick = (World as any).currentTick;
         H.tick(1);
         const cur = theSnake();
         if (!cur) break;
         levels.push(cur.level);
+        levelAtTick.set(scriptTick, cur.level);
         hpAcross.push(cur.levels[HP]);
         p.levels[HP] = 990;
     }
+    const DIVE = SeqType.getId('zulrah_dive_serpentine');
+    const RISE = SeqType.getId('zulrah_rise');
+    const SPIT = SeqType.getId('osrs_seq_5069');
+    const diveTicks = anims.filter(a => a.seq === DIVE).map(a => a.tick);
+    const riseTicks = anims.filter(a => a.seq === RISE).map(a => a.tick);
+    check('the dive and the rise are two different animations, and neither is the spit',
+        [DIVE !== RISE, DIVE !== SPIT, RISE !== SPIT], [true, true, true]);
+    check('  the snake plays its dive when a phase ends', diveTicks.length > 0, true);
+    check('  and plays its rise when the next one starts', riseTicks.length > 0, true);
+    // THE WHOLE POINT: both are played on a snake the client can still draw. The dive is played
+    // where the snake is standing and ^zulrah_dive_ticks pass before ~zulrah_submerge parks it on
+    // level 3; the rise is played after ~zulrah_surface has teleported it back onto level 0.
+    check('  the dive plays while the snake is still on the floor, where it can be seen',
+        diveTicks.every(t => levelAtTick.get(t) === 0), true);
+    check('  and the rise plays after it is back on the floor, not while it is parked out of sight',
+        riseTicks.every(t => levelAtTick.get(t) === 0), true);
+    // READ OUT OF THE CONSTANT FILE, like the submerged window below: the dive animation's own
+    // length is what the snake gets before it goes under, so the animation finishes on screen.
+    const diveHold = Number(/\^zulrah_dive_ticks\s*=\s*(\d+)/
+        .exec(fs.readFileSync('../content/scripts/areas/area_zulrah/configs/zulrah.constant', 'utf8'))![1]);
+    check(`  and it stays visible for the whole of it (^zulrah_dive_ticks = ${diveHold})`,
+        diveTicks.every(t => [...Array(diveHold)].every((_, i) => levelAtTick.get(t + i) === 0)), true);
     const under = levels.filter(l => l !== 0).length;
     check('between phases the snake leaves the floor entirely, so the client cannot draw it',
         under > 0, true);
