@@ -89,6 +89,36 @@ players, and any sim here that makes three or more dies in V8's teardown after `
 reports 3 whatever it found. That is the harness, not the scenario - a sim that makes three plain
 players and touches nothing else does it too, while the same sim with two does not.
 
+`npx tsx tools/sim/craftgaps.ts [smith|herb]` covers the anvil window and the Herblore bench.
+
+The smithing half exists because three playtest reports about the anvil window - a row with no
+icon, a row that could not be clicked, and a duplicate "Studs" - all describe what the server tells
+the client to *draw*, and reading `smithing.rs2` cannot tell those three apart. So it records
+IF_SETHIDE, reads each column off the player's own inventory listener (a sim player is a plain
+`Player`, so the UpdateInvFull packets are never written), and clicks the odd-one-out row through
+the engine's real `InvButtonHandler` - the one that refuses a click on a component the player was
+never shown. All six metals are checked, not just the three that were reported. It then follows the
+iron spit past the anvil: skewer a raw rabbit, be refused by a range, roast it on a fire, eat it,
+and be refused at Cooking 15.
+
+The Herblore half reads the recipes out of the **built** cache rather than naming them, so a row
+added or renamed later is swept the day it lands: every struct carrying `brew_potion_mixture` is
+tried in both click orders, because the engine takes the trigger off the target obj first and a
+recipe can be live one way round and dead the other - which is exactly how the agility and energy
+potions were broken. It then drinks everything the table makes, takes the agility potion from a
+grimy toadflax to a +3 boost, walks the coconut-milk chain from a whole coconut to anti-venom+,
+checks each antipoison actually clears `%poison`, and applies weapon poison to a weapon of each
+shape the applier handles.
+
+Poison itself is checked in two halves, because only one of them can be asserted: the severity the
+obj carries, fed to the proc the melee script feeds it to, must poison a fire giant and then
+damage it. The 1/4 roll is also driven as a real fight, but only reported - on a world with
+several players in it the synthetic fight gets few real swings in, and asserting on the roll made
+the sim flaky rather than strict.
+
+Two things it prints rather than asserts, because they are absent features and not faults:
+weapon poison(+) and (++) and antidote+ all have objs in the 377 cache and no recipe behind them.
+
 `npx tsx tools/sim/bughunt.ts` is the script fault reporter
 (`src/engine/script/ScriptFaults.ts`) against the real engine. It poisons a skeleton to death - the
 one way a monster dies with an aggressive player and no hero, which is what the live
