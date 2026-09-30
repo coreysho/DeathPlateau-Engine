@@ -11,14 +11,15 @@ import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
-import * as GameMap from '#/engine/GameMap.js';
+import { isFlagged, canTravel, isZoneAllocated } from '#/engine/GameMap.js';
+import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 const X1 = 2040, Z1 = 3870, X2 = 2180, Z2 = 3970;
 let ok = 0, fail = 0;
-const check = (what: string, got: unknown, want: unknown) => {
+const check = (what: string, got: unknown, want: unknown, note?: string) => {
     const good = JSON.stringify(got) === JSON.stringify(want);
-    console.log(`  ${good ? 'ok  ' : 'FAIL'} ${what}${good ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}`}`);
+    console.log(`  ${good ? 'ok  ' : 'FAIL'} ${what}${good ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}${note ? ' - ' + note : ''}`}`);
     good ? ok++ : fail++;
 };
 
@@ -32,6 +33,28 @@ function placed(): P[] {
     return out;
 }
 const nameOf = (id: number) => LocType.get(id).debugname ?? String(id);
+
+// HOW MUCH OF THE WORLD IS JOINED TO THIS TILE. Landing somewhere "not blocked" is not enough:
+// a one-tile ledge passes that and still strands you. This is the same flood fill npcspawns.ts
+// uses, and it takes CollisionFlag.WALK_BLOCKED - which is 0x240100. A bare 0x1, which this
+// file used to pass, is a bit nothing sets, so every tile on the map came back walkable and
+// the check was answering nothing.
+function reach(level: number, x: number, z: number, cap = 200): number {
+    if (!isZoneAllocated(level, x, z) || isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED)) return 0;
+    const seen = new Set([`${x},${z}`]);
+    const q: [number, number][] = [[x, z]];
+    while (q.length && seen.size < cap) {
+        const [cx, cz] = q.pop()!;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const k = `${cx + dx},${cz + dz}`;
+            if (!seen.has(k) && canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([cx + dx, cz + dz]);
+            }
+        }
+    }
+    return seen.size;
+}
 
 if (process.argv[2] === 'dead') {
     const seen = new Map<string, { n: number; ops: string; sample: string }>();
@@ -102,8 +125,10 @@ console.log('\nEVERY LADDER, CLIMBED - and it is the landing that matters');
 // The two new categories say "same tile, one level". That is only true if the tile you arrive
 // on is somewhere a player can stand, so this climbs every placement and checks where it put
 // you rather than just that the script ran.
-const LADDERS: [string, number][] = [['loc474_16734', 1], ['loc474_16735', 1],
-    ['loc474_16732', -1], ['loc474_16733', -1], ['loc474_16736', -1]];
+// Only the same-tile pair. loc474_16734/16732/16733 are deliberately unwired - their halves
+// sit a tile apart, in a direction that varies by placement, so they need an angle-aware
+// trigger rather than the "same tile, one level" categories. See lunar_isle.loc.
+const LADDERS: [string, number][] = [['loc474_16735', 1], ['loc474_16736', -1]];
 let climbed = 0;
 for (const [name, dir] of LADDERS) {
     const id = LocType.getId(name);
@@ -121,25 +146,65 @@ for (const [name, dir] of LADDERS) {
         const moved = p.level - from;
         check(`  ${name} @(${spot.x},${spot.z},${spot.level}) goes ${dir > 0 ? "up" : "down"} one level`,
             moved, dir);
-        // AND YOU ARE NOT STANDING INSIDE A WALL WHEN YOU GET THERE, which is the half that
-        // matters: "same tile, one level" is only a rule if the tile is somewhere you can be.
+        // WHERE YOU LAND, and the rule is narrower than "is the tile clear".
         //
-        // Two placements out of ten land badly, and both are defects in the imported map rather
-        // than in the wiring, so they are written down here instead of being quietly tolerated:
+        // A ladder blocks its own tile, and ~climb_ladder puts you on the matching tile one
+        // level away - which normally holds the OTHER half of the pair. So the landing tile
+        // being blocked is the ordinary case, not a fault: you stand on ladders in this game
+        // as in the real one. What is a fault is landing on a tile blocked by something that
+        // is not a ladder, because that is a wall.
         //
-        //   2104,3905  the up ladder is a tile west of the down ladder it pairs with at
-        //              2105,3905, so climbing it lands you in the wall between them.
-        //   2082,3922  the ground-floor tile is blocked where the same pair is clear at its
-        //              other three placements, so climbing down arrives inside it.
-        //
-        // WHEN ONE OF THESE STARTS FAILING THE MAP WAS FIXED, and the expectation should flip.
-        const KNOWN_BAD = new Set(['2104,3905,0', '2082,3922,1']);
-        const bad = KNOWN_BAD.has(`${spot.x},${spot.z},${spot.level}`);
-        check(`    ${bad ? "KNOWN MAP DEFECT: does NOT land" : "lands"} on a tile you can stand on`,
-            GameMap.isZoneAllocated(p.level, p.x, p.z) && !GameMap.isFlagged(p.x, p.z, p.level, 0x1), !bad);
+        // (An earlier version of this test asked isFlagged(..., 0x1). 0x1 is not WALK_BLOCKED,
+        // which is 0x240100, and nothing sets it - so every landing came back clear and the
+        // two "map defects" recorded here were the wrong bit talking. Both are withdrawn.)
+        const blocked = isFlagged(p.x, p.z, p.level, CollisionFlag.WALK_BLOCKED);
+        let ladderHere = false;
+        for (const q of placed()) {
+            if (q.x !== p.x || q.z !== p.z || q.level !== p.level) continue;
+            if ((LocType.get(q.id).op ?? []).some(o => o && o.startsWith('Climb'))) ladderHere = true;
+        }
+        check(`    lands on the other half of the pair, not in a wall`, !blocked || ladderHere, true,
+            blocked ? 'blocked, and no ladder on that tile' : undefined);
         H.despawn(p);
         H.tick(1);
     }
+}
+
+
+console.log('\nWHERE THE PEOPLE STAND');
+// Every coordinate here came off that npc's own OSRS wiki page, out of the {{Map|x=|y=}} in its
+// wikitext. They were all in a row at z=3930 before, which is what hand-placement looks like.
+//
+// Four are a tile or four off the wiki's number, and deliberately: a {{Map}} marker carries a
+// radius and names a place rather than a tile, and those four land on a wall. Each is the
+// nearest tile inside the marker that a player can stand on. They are spelled out rather than
+// rounded silently.
+const PEOPLE: [string, number, number, string][] = [
+    ['baba_yaga', 2088, 3931, ''],
+    ['selene', 2085, 3915, ''],
+    ['meteora', 2081, 3896, ''],
+    ['pauline_polaris', 2073, 3921, ''],
+    ['melana_moonlander', 2096, 3907, ''],
+    ['sirsal_banker', 2100, 3919, ''],
+    ['rimae_sirsalis', 2104, 3907, 'wiki 2105,3908 is a wall'],
+    ['bouquet_mac_hyacinth', 2102, 3919, 'wiki 2102,3920 is a wall'],
+    ['birdseye_jack', 2100, 3922, 'wiki 2100,3921 is a wall'],
+];
+for (const [name, x, z, why] of PEOPLE) {
+    const id = NpcType.getId(name);
+    const found = [...World.npcs].filter(n => n.type === id && n.x >= X1 && n.x <= X2);
+    check(`${name} spawns at ${x},${z}${why ? ` (${why})` : ''}`,
+        found.map(n => `${n.startX},${n.startZ}`), [`${x},${z}`]);
+}
+
+// LOKAR IS NOT ON LUNAR ISLE, but he is how you get there and he was on the wrong dock -
+// ten tiles east of the wiki's marker. His Pirates' Cove spawn was always right and is
+// untouched, so there are two of him and only one moved.
+{
+    const id = NpcType.getId('lokar_searunner');
+    const all = [...World.npcs].filter(n => n.type === id);
+    check('two Lokar spawns, Rellekka and the Cove',
+        all.map(n => `${n.startX},${n.startZ}`).sort(), ['2204,3806', '2625,3694'].sort());
 }
 
 console.log(`\n${ok + fail} checks: ${ok} ok, ${fail} FAILED`);
