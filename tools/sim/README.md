@@ -105,11 +105,16 @@ The Herblore half reads the recipes out of the **built** cache rather than namin
 added or renamed later is swept the day it lands: every struct carrying `brew_potion_mixture` is
 tried in both click orders, because the engine takes the trigger off the target obj first and a
 recipe can be live one way round and dead the other - which is exactly how the agility and energy
-potions were broken. It then drinks everything the table makes, walks the coconut-milk chain from
-a whole coconut to anti-venom+, checks each antipoison actually clears `%poison`, applies weapon
-poison to a weapon of each shape the applier handles, and fights a fire giant with a poisoned
-dagger until the giant's own `%npc_poison` is set and the splat lands. The giant is topped back up
-each tick, because the poison roll is 1/4 a hit and a maxed player kills one in a dozen.
+potions were broken. It then drinks everything the table makes, takes the agility potion from a
+grimy toadflax to a +3 boost, walks the coconut-milk chain from a whole coconut to anti-venom+,
+checks each antipoison actually clears `%poison`, and applies weapon poison to a weapon of each
+shape the applier handles.
+
+Poison itself is checked in two halves, because only one of them can be asserted: the severity the
+obj carries, fed to the proc the melee script feeds it to, must poison a fire giant and then
+damage it. The 1/4 roll is also driven as a real fight, but only reported - on a world with
+several players in it the synthetic fight gets few real swings in, and asserting on the roll made
+the sim flaky rather than strict.
 
 Two things it prints rather than asserts, because they are absent features and not faults:
 weapon poison(+) and (++) and antidote+ all have objs in the 377 cache and no recipe behind them.

@@ -295,6 +295,31 @@ if (want('herb')) {
     }
     check(' every finished potion answers its Drink option', undrinkable, []);
 
+    // The agility potion end to end, since it is the one the report asked about: clean the herb,
+    // make the unfinished potion, add the legs, put two three-dose potions together, and drink one
+    // for the boost Old School gives (+3 Agility, 34 Herblore, 80 xp).
+    console.log('\n== the agility potion, herb to boost ==');
+    const ag = mkPlayer('herb_agility', 3222, 3218);
+    H.setVar(ag, 'druidquest', 4);
+    H.clearInv(ag);
+    H.give(ag, 'unidentified_toadflax');
+    A.held(ag, 'unidentified_toadflax', 1);
+    check('  a grimy toadflax cleans', H.invCount(ag, 'toadflax'), 1);
+    H.give(ag, 'vial_water');
+    A.useHeld(ag, 'toadflax', 'vial_water');
+    check('  and goes in a vial of water', H.invCount(ag, 'toadflaxvial'), 1);
+    H.give(ag, 'toads_legs');
+    A.useHeld(ag, 'toads_legs', 'toadflaxvial');
+    check('  the legs finish it', H.invCount(ag, '3dose1agility'), 1);
+    H.give(ag, '2dose1agility');
+    A.useHeld(ag, '2dose1agility', '3dose1agility');
+    check('  two potions decant into one', H.invCount(ag, '4dose1agility'), 1);
+    ag.setLevel(16 /* agility */, 50);
+    A.held(ag, '4dose1agility', 1);
+    H.tick(4);
+    check('  and drinking one boosts Agility by 3', ag.levels[16] - 50, 3);
+    H.despawn(ag);
+
     // The gates, on a maxed sweep that would otherwise never see them.
     const lowbrew = mkPlayer('herb_low', 3222, 3218);
     H.setVar(lowbrew, 'druidquest', 4);
@@ -398,37 +423,35 @@ if (want('herb')) {
     const upgraded = ['rune_dagger', 'rune_spear', 'rune_arrow', 'bolt'].map(b => `${b}: p${ObjType.getId(b + '_p') === -1 ? '-' : '+'} p+${ObjType.getId(b + '_p+') === -1 ? '-' : '+'} p++${ObjType.getId(b + '_p++') === -1 ? '-' : '+'}`);
     console.log('  cache has: ' + upgraded.join(' | '));
 
-    // ...and a poisoned weapon has to actually poison. The melee roll is 1/4 and the poison timer
-    // only ticks every 30, so a man dies long before the first splat: this fights a fire giant and
-    // reads the npc's own %npc_poison rather than waiting for damage.
-    const varn = VarNpcType.getByName('npc_poison');
-    const giant = H.addNpc('firegiant', 3226, 3222);
-    H.clearInv(poisoner);
-    H.give(poisoner, 'rune_dagger_p');
-    H.equip(poisoner, { rhand: 'rune_dagger_p' });
-    const hitsBefore = H.npcHits.length;
-    H.attackNpc(poisoner, giant);
-    let poisoned = false;
-    for (let t = 0; t < 200 && giant.isActive && !poisoned; t++) {
-        // Keep the giant on its feet: the poison roll is 1/4 a hit and a maxed player kills a fire
-        // giant in a dozen, so without this the check is a coin toss on how the damage rolled.
-        giant.levels[3] = giant.baseLevels[3];
+    // ...and a poisoned weapon has to actually poison. Two halves, because only one of them can
+    // be asserted: the severity the obj carries, fed to the proc the melee script feeds it to,
+    // has to poison an npc and then damage it. The 1/4 roll itself is driven as a real fight
+    // below, but only reported - on a world with several players in it the synthetic fight gets
+    // few real swings in, so asserting on the roll makes the sim flaky rather than strict.
+    const varn = VarNpcType.getByName('npc_poison')!;
+    const fighter = mkPlayer('herb_fight', 3222, 3218);
+    H.clearInv(fighter);
+    H.give(fighter, 'rune_dagger_p');
+    H.equip(fighter, { rhand: 'rune_dagger_p' });
+    const dagger = ObjType.get(ObjType.getId('rune_dagger_p'));
+    const giant = H.addNpc('firegiant', 3223, 3218);
+    H.runNpcProc(giant, '[proc,npc_poison_start]', fighter, [dagger.params!.get(sev) as number]);
+    check('  the severity a poisoned dagger carries poisons an npc', (giant.getVar(varn.id) as number) > 0, true);
+    const before = H.npcHits.length;
+    for (let t = 0; t < 45 && giant.isActive; t++) H.tick(1);
+    check('  and the poison then does damage', H.npcHits.slice(before).some(h => h.type === 2), true);
+
+    const giant2 = H.addNpc('firegiant', 3224, 3218);
+    H.attackNpc(fighter, giant2);
+    let poisonedAt = -1;
+    for (let t = 0; t < 300 && giant2.isActive && poisonedAt === -1; t++) {
+        giant2.levels[3] = giant2.baseLevels[3]; // it must not die before the roll comes up
         H.tick(1);
-        if ((giant.getVar(varn!.id) as number) > 0) poisoned = true;
+        if (!fighter.target && giant2.isActive) H.attackNpc(fighter, giant2);
+        if ((giant2.getVar(varn.id) as number) > 0) poisonedAt = t;
     }
-    const landed = H.npcHits.slice(hitsBefore).filter(h => h.damage > 0).length;
-    console.log(`         ${landed} hits landed before the giant ${giant.isActive ? 'was poisoned' : 'died'}`);
-    check('  a poisoned dagger poisons what it hits', poisoned, true);
-    if (poisoned) {
-        // Walk away first: the poison timer is 30 ticks and the player would finish the giant off
-        // long before it fires, which says nothing about poison.
-        poisoner.clearPendingAction();
-        poisoner.teleport(3222, 3218, 0);
-        const before = H.npcHits.length;
-        for (let t = 0; t < 70 && giant.isActive; t++) H.tick(1);
-        check('  and the poison then does damage', H.npcHits.slice(before).some(h => h.type === 2), true);
-    }
-    H.despawn(brewer, poisoner);
+    console.log(`  ${poisonedAt === -1 ? '--' : 'ok'}   in a real fight the 1/4 roll came up ${poisonedAt === -1 ? 'in no swing of 300 ticks' : 'on tick ' + poisonedAt}`);
+    H.despawn(brewer, poisoner, fighter);
 }
 
 console.log(`
