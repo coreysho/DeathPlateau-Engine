@@ -16,6 +16,13 @@ BUILD_VERIFY=false BUILD_SRC_DIR=/path/to/content npx tsx tools/pack/Build.ts   
 npx tsx tools/sim/run.ts <scenario>
 ```
 
+That build line is not optional. A sim boots the world with `startCycle` off, and a world that does
+not run its own loop gets no dev thread: nothing here watches the content for changes and nothing
+rebuilds the cache for you, so a scenario reads whatever `data/pack` last had in it. That is
+deliberate - a rebuild landing mid-run used to fire `dev_reload` and swap every config out from
+under the scenario, and its file watcher was what made a sim's `process.exit` die in V8's teardown
+and report 3 whatever the run had just printed. Both are gone: **the exit code is the verdict**.
+
 Scenarios: `baseline`, `style`, `eat`, `eatmove`, `drink`, `drinkmove`, `stack2`, `stack3`,
 `stack4`, `trident`, `tridentsound`, `hitdelay`, `barrows:<npc>`, `pets:<item>`, `clues`, `ranges`,
 `vengeance[:<case>]`, `lunar`, `lunarspells[:<case>]`, `comborunes`, and `tools/sim/soak.ts` for a

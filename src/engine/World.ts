@@ -395,7 +395,16 @@ class World {
             });
         }, 2000);
 
-        if (!Environment.NODE_PRODUCTION) {
+        // custom (2026-09-29) - THE DEV THREAD BELONGS TO A SERVER, NOT TO A TOOL. It walks
+        // BUILD_SRC_DIR and puts an fs.watch on every directory under it (1200 of them for this
+        // content) so that saving a script rebuilds the cache. A tool that drives the ticks itself -
+        // tools/sim, tools/charter - wants neither half of that: a rebuild finishing mid-scenario
+        // fires dev_reload, which calls reload() and swaps every config out from under the run, and
+        // the watcher is still registering handles seconds after boot, so a tool that reaches its
+        // process.exit() in that window takes V8 down with it on the way out ("Check failed:
+        // (location_) != nullptr", exit code 3, whatever the run had just printed). startCycle is
+        // exactly the line between the two: a world that does not run its own loop is a tool.
+        if (!Environment.NODE_PRODUCTION && startCycle) {
             this.createDevThread();
 
             if (Environment.BUILD_STARTUP) {

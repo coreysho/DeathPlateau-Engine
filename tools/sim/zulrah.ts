@@ -25,12 +25,14 @@ import * as A from './a1lib.ts';
 import World from '#/engine/World.js';
 import ObjType from '#/cache/config/ObjType.js';
 import NpcType from '#/cache/config/NpcType.js';
+import SpotanimType from '#/cache/config/SpotanimType.js';
+import SeqType from '#/cache/config/SeqType.js';
+import ParamType from '#/cache/config/ParamType.js';
+import Npc from '#/engine/entity/Npc.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import EnumType from '#/cache/config/EnumType.js';
 import Obj from '#/engine/entity/Obj.js';
 import InvType from '#/cache/config/InvType.js';
-import SpotanimType from '#/cache/config/SpotanimType.js';
-import SeqType from '#/cache/config/SeqType.js';
-import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import * as fs from 'fs';
 
 await H.boot();
@@ -48,17 +50,15 @@ const near = (what: string, got: number, want: number, tol: number) => {
 };
 const HP = 3, DEF = 1, CRAFT = 12, MAGIC = 6;
 const REGICIDE_COMPLETE = 15;
-// The Sacrificial boat on the Zul-Andra shore: m34_47 local (31,47).
-// The sacrificial boat, on the end of Zul-Andra's own pier: OSRS places multi-loc 10068 at
-// m34_47 local (38,48) and its default child is 46242, which is what the importer takes.
-// NOT 46241 at (31,47): that was a second boat beached on the shore by hand, on the mistaken
-// belief that the pier deck was blocked terrain, and it walled off the mouth of the pier. It is
-// gone (content 5b258b34f). 46241 still exists as the shrine's own return boat on m36_79.
-// The dock and the village tile both moved when Zul-Andra's placements were corrected against
-// OSRS (content 5b258b34f): ^zulandra_dock 29,48 -> 37,48, the deck tile the boat actually lands
-// you on, and ^zulandra_village 26,53 -> 20,48. 26,53 was the High Priestess's OWN tile reused as
-// the arrival point, which is why she stood on top of everybody who teleported in.
+// THE SACRIFICIAL BOAT, and it moved: this used to be m34_47 local (31,47), the hand-placed second
+// boat that content 5b258b34f took out ("Zul-Andra: both priestesses off their tiles, and one boat
+// too many"). The boat the map has always carried is the cache's own - OSRS's l34_47 puts multi-loc
+// 10068 at local (38,48), shape 11 rot 1, and the importer resolved it to its default child 46242,
+// the Board/Quick-Board boat off the end of the pier. This sim was still clicking the deleted one
+// and died on its first fight, which is worth saying out loud: it had been green against a boat
+// nobody could board.
 const DOCK_BOAT = [34 * 64 + 38, 47 * 64 + 48];
+const DOCK_BOAT_LOC = 'osrsloc_46242';
 
 const fresh = (x = 3222 + (n % 8) * 4, z = 3218 + Math.floor(n / 8) * 4) => {
     const p: any = H.makePlayer('zul' + n, x, z, 90 + n); n++;
@@ -134,9 +134,9 @@ let shrinePlayer: any = null;
     lines = A.talk(p, 'zulandra_high_priestess', ['I want to face Zulrah.', 'Then give me to it.']);
     check('with Regicide done you can volunteer', H.getVar(p, 'zulrah_volunteered'), 1);
 
-    // The boat itself - "Sacrificial boat", on the end of the pier. Boarding it is the only way
-    // out to the shrine.
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
+    // The boat itself - OSRS loc 46241, "Sacrificial boat", placed on the Zul-Andra shore at
+    // m34_47 (31,47). Boarding it is the only way out to the shrine.
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], DOCK_BOAT_LOC, 1);
     H.tick(8);
     const snake = theSnake();
     check('the boat builds the shrine and Zulrah is in it', snake !== null, true);
@@ -148,19 +148,21 @@ let shrinePlayer: any = null;
     const inst = H.getVar(p, 'zulrah_instance');
     check('  and %zulrah_instance points at it', inst > 0, true);
 
-    // Out again, and it is the same loc with the same word on it: the handler reads where you are.
+    // Out again. NOT the same loc: the shrine's return boat is OSRS 46241, hand-placed on m36_79,
+    // while the one at Zul-Andra is the map's own 46242. Both handlers read where you are standing
+    // and send you the other way.
     const base = [p.x - 12, p.z - 13];
     A.op(p, base[0] + 11, base[1] + 9, 'osrsloc_46241', 1);
     H.tick(8);
     check('rowing back empties the instance', theSnake(), null);
-    check('  and puts you on the dock at Zul-Andra', [p.x, p.z], [2176 + 37, 3008 + 48]);
+    check('  and puts you on the dock at Zul-Andra', [p.x, p.z], [34 * 64 + 37, 47 * 64 + 48]);
     check('  with %zulrah_instance cleared', H.getVar(p, 'zulrah_instance'), -1);
 
     // The teleport scroll, which is 15/249 of the table and the way most people get back.
     H.give(p, 'zul_andra_teleport', 4);
     A.held(p, 'zul_andra_teleport', 1);
     H.tick(6);
-    check('the Zul-andra teleport lands in the village', [p.x, p.z], [2176 + 20, 3008 + 48]);
+    check('the Zul-andra teleport lands in the village', [p.x, p.z], [34 * 64 + 20, 47 * 64 + 48]);
     check('  and one scroll of the four is gone', H.invCount(p, 'zul_andra_teleport'), 3);
     shrinePlayer = p;
 }
@@ -173,7 +175,7 @@ console.log('THE FIGHT');
 {
     const p = shrinePlayer;
     H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], DOCK_BOAT_LOC, 1);
     H.tick(10);
     const snake = theSnake()!;
     p.levels[HP] = 990; p.baseLevels[HP] = 990;
@@ -262,8 +264,12 @@ console.log('THE FIGHT');
         H.tick(1);
         const s = theSnake();
         if (!s) break;
+        // ONLY WHAT A PLAYER COULD SEE. Between phases the snake is parked on level 3, where the
+        // client is never told about it, and that parking tile is the middle - so a submerged snake
+        // reads as "green, in the middle" and pushes a phase into this list that nobody in the
+        // shrine ever saw. The floor check is the whole of the difference.
         const tag = colourOf(s) + '@' + s.x + ',' + s.z;
-        if (seen[seen.length - 1] !== tag) { seen.push(tag); places.push([s.x, s.z]); }
+        if (s.level === 0 && seen[seen.length - 1] !== tag) { seen.push(tag); places.push([s.x, s.z]); }
         p.levels[HP] = 990;
         s.levels[HP] = s.baseLevels[HP];
         sawSnakelings = Math.max(sawSnakelings,
@@ -276,6 +282,220 @@ console.log('THE FIGHT');
     check('  over the three places rotation 1 uses, and no others',
         new Set(places.slice(0, 11).map(c => c.join(','))).size, 3);
     check('  and its orb runs put snakelings on the island', sawSnakelings > 0, true);
+}
+
+// ------------------------------------------------------------------ the attacks, by id
+// WHY THIS SECTION EXISTS. The section above passed, in full, while the owner was in game watching
+// venom clouds render as fireballs and neither the ranged nor the magic attack fire anything at
+// all. Every check up there asks whether damage happened; none of them asks what the player SAW.
+// So this one asserts the id of the graphic and the id of the projectile for every one of the five
+// things Zulrah throws, and the tile each one lands on - the things that were wrong.
+//
+// It hooks World.animMap and World.mapProjAnim, which is where spotanim_map and every projanim_*
+// end up, and Npc.playAnimation. Nothing else in tools/sim has hooked those before.
+console.log('WHAT THE PLAYER SEES: every attack by graphic id');
+{
+    const p = shrinePlayer;
+    const snake = theSnake()!;
+    const SP = (name: string) => SpotanimType.getId(name);
+    const RANGED = SP('zulrah_ranged'), MAGIC = SP('zulrah_magic');
+    const VENOM = SP('zulrah_venom_cloud'), ORB = SP('zulrah_snakeling_orb');
+    // target: 0 is projanim_map (a tile), negative is projanim_pl (homed on a player).
+    type Proj = { tick: number; x: number; z: number; dstX: number; dstZ: number; target: number; spotanim: number };
+    type Gfx = { tick: number; x: number; z: number; spotanim: number };
+    let projs: Proj[] = [], gfx: Gfx[] = [], anims: { tick: number; seq: number }[] = [];
+    const origProj = (World as any).mapProjAnim.bind(World);
+    (World as any).mapProjAnim = (level: number, x: number, z: number, dstX: number, dstZ: number, target: number, spotanim: number, ...rest: number[]) => {
+        projs.push({ tick: (World as any).currentTick, x, z, dstX, dstZ, target, spotanim });
+        return origProj(level, x, z, dstX, dstZ, target, spotanim, ...rest);
+    };
+    const origAnimMap = (World as any).animMap.bind(World);
+    (World as any).animMap = (level: number, x: number, z: number, spotanim: number, height: number, delay: number) => {
+        gfx.push({ tick: (World as any).currentTick, x, z, spotanim });
+        return origAnimMap(level, x, z, spotanim, height, delay);
+    };
+    // BY TYPE, NOT BY IDENTITY: park() puts a fresh snake in each time, so a hook that remembered
+    // one object would have gone quiet after the first phase and every animation check would have
+    // read "it never played anything".
+    const SNAKE_TYPES = new Set(['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => NpcType.getId(x)));
+    const origNpcAnim = (Npc.prototype as any).playAnimation;
+    (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
+        if (SNAKE_TYPES.has(this.type)) anims.push({ tick: (World as any).currentTick, seq });
+        return origNpcAnim.call(this, seq, delay);
+    };
+
+    // The middle of the shrine, in this player's instance. ^zulrah_pos_middle is template-local
+    // (26,31) and the template's own corner is (16,16), so the middle is the instance's own corner
+    // plus (10,15); the instance corner is what %zulrah_instance packs.
+    const middle = () => {
+        const v = H.getVar(p, 'zulrah_instance') as number;
+        return [((v >> 14) & 0x3fff) + 10, (v & 0x3fff) + 15];
+    };
+    const wipe = () => { projs = []; gfx = []; anims = []; };
+    const run = (ticks: number, topUpSnake = true) => {
+        for (let i = 0; i < ticks; i++) {
+            (p as any).clearPendingAction();
+            H.tick(1);
+            const s = theSnake();
+            if (s && topUpSnake) s.levels[HP] = s.baseLevels[HP];
+            p.levels[HP] = 990;
+        }
+    };
+    const park = (rotation: number, phase: number) => {
+        A.runProcProtected(p, '[proc,zulrah_clear_snakelings]');
+        // AND PUT OUT ANY CLOUD STILL BURNING. A cloud is a queue on the PLAYER that re-queues
+        // itself for twenty-five ticks, so it outlives the snake, the phase and the sweep - one left
+        // over from an earlier section drew on the floor all through the next one and read as the
+        // green form leaving clouds behind it. unlinkQueuedScript is what [command,clearqueue] calls.
+        (p as any).unlinkQueuedScript(ScriptProvider.getByName('[queue,zulrah_cloud]')!.id);
+        H.tick(1);
+        // The sweep takes the snake with it, so put one back where the fight expects it and give it
+        // the phase's own colour: ~zulrah_surface is what normally does both.
+        H.addNpcAt('zulrah', middle()[0], middle()[1], p.level);
+        const s = theSnake()!;
+        (s as any).changeType(enumVal('zulrah_phase_form', phase), 30000, false);
+        H.setNpcVar(s, 'zulrah_rotation', rotation);
+        H.setNpcVar(s, 'zulrah_phase', phase);
+        H.setNpcVar(s, 'zulrah_run', enumVal('zulrah_phase_run_start', phase));
+        H.setNpcVar(s, 'zulrah_run_at', 0);
+        H.setNpcVar(s, 'zulrah_submerged', 0);
+        H.setNpcVar(s, 'npc_action_delay', 0);
+        H.setVar(p, 'prayer13', 0); H.setVar(p, 'prayer12', 0); H.setVar(p, 'prayer11', 0);
+        H.setVar(p, 'venom', 0);
+        p.levels[HP] = 990;
+        H.clearLogs(); wipe();
+        return s;
+    };
+    const named = (id: number) => SpotanimType.get(id)?.debugname ?? String(id);
+
+    // THE GREEN FORM. Rotation 2's phase 7 (index 17) is the one phase in the four tables that is
+    // nothing but ranged - "East, Green, ranged 5 times".
+    let s = park(2, 17);
+    run(15);
+    const ranged = projs.filter(x => x.target < 0);
+    check('the green form fires a projectile at the player, every beat',
+        [ranged.length > 0, new Set(ranged.map(x => named(x.spotanim)))],
+        [true, new Set(['zulrah_ranged'])]);
+    check('  and it is OSRS spotanim 1044, not shared with anything else it throws',
+        projs.every(x => x.spotanim === RANGED), true);
+    check('  the snake plays its spit while it does (OSRS seq 5069)',
+        anims.some(a => a.seq === SeqType.getId('osrs_seq_5069')), true);
+    check('  and nothing is drawn on the floor - a ranged attack leaves no cloud', gfx.length, 0);
+
+    // THE JAD PHASE. Rotation 1's phase 9 (index 8) is "10 alternating ranged and magic, starting
+    // with ranged", which is the only place in the fight where both projectiles are guaranteed and
+    // their ORDER is stated. Ten beats is 30 ticks; the four venom barrages that follow are not.
+    s = park(1, 8);
+    run(29);
+    const order = projs.filter(x => x.target < 0).map(x => named(x.spotanim));
+    check('the Jad phase alternates the two projectiles, starting with ranged',
+        order.slice(0, 6),
+        ['zulrah_ranged', 'zulrah_magic', 'zulrah_ranged', 'zulrah_magic', 'zulrah_ranged', 'zulrah_magic']);
+    check('  so the magic attack has a graphic of its own (OSRS 1046), not the ranged one',
+        MAGIC !== RANGED && order.includes('zulrah_magic'), true);
+
+    // THE VENOM CLOUDS. Rotation 1's phase 1 (index 0) is four venom cloud barrages and nothing
+    // else - every rotation opens with it.
+    s = park(1, 0);
+    const standing = [p.x, p.z];
+    run(2);
+    const barrage = projs.filter(x => x.target === 0);
+    check('a venom barrage throws orbs at a TILE, not at the player',
+        [barrage.length > 0, barrage[0] ? named(barrage[0].spotanim) : null,
+         barrage[0] ? [barrage[0].dstX, barrage[0].dstZ] : null],
+        [true, 'zulrah_venom_cloud', standing]);
+    // and then the cloud burns on that tile, one draw per tick, for its whole life
+    wipe();
+    run(24);
+    // ONE DRAW PER TICK, every tick, is the whole point - the graphic is one game tick long and the
+    // client drops a MapSpotAnim as soon as its sequence ends, so a gap is a cloud that flickers.
+    // Counting DISTINCT ticks rather than draws: the phase is four barrages and they all land on the
+    // same tile, so three clouds burning at once put three draws on one tick, which is fine.
+    const onTile = gfx.filter(g => g.x === standing[0] && g.z === standing[1] && g.spotanim === VENOM);
+    const ticksDrawn = new Set(onTile.map(g => g.tick)).size;
+    check('  and a cloud is re-drawn on it every tick, so it does not strobe', ticksDrawn, 24);
+    check('  with the venom graphic, never the magic one (this was the fireball)',
+        gfx.some(g => g.spotanim === MAGIC), false);
+    check('  and it burns the player who stands in it, with a venom hitsplat',
+        H.hitsFor(p.username).some(h => h.type === 5), true);
+
+    // THE SNAKELING ORBS. Rotation 3's phase 11 (index 32) is four snakeling orbs and nothing else.
+    s = park(3, 32);
+    run(8);
+    const orbs = projs.filter(x => x.target === 0);
+    check('a snakeling orb is the WHITE orb (OSRS 1047), flown at the tile it lands on',
+        [orbs.length > 0, new Set(orbs.map(x => named(x.spotanim)))],
+        [true, new Set(['zulrah_snakeling_orb'])]);
+    check('  which is not the ranged attack\'s graphic',
+        orbs.every(x => x.spotanim !== RANGED && x.spotanim === ORB), true);
+    A.runProcProtected(p, '[proc,zulrah_clear_snakelings]');
+    H.tick(1);
+
+    // THE MAGMA TAIL. Rotation 1's phase 2 (index 1) is "melee twice".
+    s = park(1, 1);
+    run(1);
+    check('the magma form swings its tail (OSRS seq 5807), and does not spit',
+        [anims.some(a => a.seq === SeqType.getId('zulrah_tail_swipe')),
+         anims.some(a => a.seq === SeqType.getId('osrs_seq_5069'))],
+        [true, false]);
+    check('  and throws nothing - a tail is not a projectile', projs.length, 0);
+    // Stand still and it lands; the damage is queued a beat ahead, not dealt on the swing.
+    H.clearLogs();
+    run(5, false);
+    const tail = H.hitsFor(p.username);
+    // TYPELESS, so it always lands on someone who did not move - there is no accuracy roll to fail.
+    // A melee roll off Zulrah's own 1 Attack, which is what this used to be, missed a geared player
+    // almost every time and made the red phase free.
+    check('  a player who stays where the tail is aimed is always hit', tail.length > 0, true);
+    check('  for 20 to 30, the wiki\'s own spread, and never the green form\'s 41',
+        tail.every(h => h.damage >= 20 && h.damage <= 30), true);
+    // Now step out of it. "Can be avoided by moving two tiles away."
+    s = park(1, 1);
+    run(1);
+    p.teleport(p.x + 4, p.z, p.level);
+    H.clearLogs();
+    run(4, false);
+    check('  and a player who moves two tiles away is not', H.hitsFor(p.username).length, 0);
+
+    // THE PHASE CHANGE. Rotation 2's phase 7 again - five ranged beats and then a dive.
+    s = park(2, 17);
+    const levels: number[] = [];
+    let hpAcross: number[] = [];
+    (s as any).levels[HP] = 400;              // a wound to carry through the dive
+    for (let t = 0; t < 40; t++) {
+        (p as any).clearPendingAction();
+        H.tick(1);
+        const cur = theSnake();
+        if (!cur) break;
+        levels.push(cur.level);
+        hpAcross.push(cur.levels[HP]);
+        p.levels[HP] = 990;
+    }
+    const under = levels.filter(l => l !== 0).length;
+    check('between phases the snake leaves the floor entirely, so the client cannot draw it',
+        under > 0, true);
+    check('  for the submerged window and no longer', under, 2);
+    // It regenerates a point or two over forty ticks like anything else; what matters is that a
+    // phase change is not a heal. npc_changetype_keepall is what carries it, and the fight was
+    // unkillable once because something in here did not.
+    check('  and it comes back with the wound it went down with, not a fresh 500',
+        Math.max(...hpAcross) < 420, true);
+
+    // THE DEFENCES, which are three numbers per form and were one.
+    const def = (npc: string, param: string) =>
+        NpcType.get(NpcType.getId(npc)).params.get(ParamType.getId(param));
+    check('magic defence is -45 / 0 / +300 across green, red and blue',
+        ['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => def(x, 'magicdefence')), [-45, 0, 300]);
+    check('  and ranged defence is +50 / +300 / 0, which it was not - all three carried +50',
+        ['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => def(x, 'rangedefence')), [50, 300, 0]);
+
+    (World as any).mapProjAnim = origProj;
+    (World as any).animMap = origAnimMap;
+    (Npc.prototype as any).playAnimation = origNpcAnim;
+    A.runProcProtected(p, '[proc,zulrah_clear_snakelings]');
+    H.tick(1);
+    H.addNpcAt('zulrah', middle()[0], middle()[1], p.level);
+    H.tick(1);
 }
 
 console.log('WHAT A KILL CLEARS UP');
@@ -315,291 +535,6 @@ console.log('WHAT A KILL CLEARS UP');
     H.tick(2);
 }
 
-// ------------------------------------------------------------------ the fight ENDS
-// WHAT THE 125 CHECKS ABOVE COULD NOT SEE, and why the owner had to ::~kill a boss he had already
-// emptied. Every fight check in this file tops the snake back up to full on every tick
-// (s.levels[HP] = s.baseLevels[HP]), because they are measuring what the PLAYER loses; and the only
-// kills in it were ::~debug_kill_active on a freshly-added snake standing in the open world, never
-// on the one in the shrine and never with the rotation running. So a fight that could not be
-// finished in the shrine passed all of them. These do the opposite: nothing is topped up, and the
-// snake in the instance is the snake that has to die.
-console.log('THE FIGHT ENDS');
-{
-    const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
-    H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
-    H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
-    H.tick(10);
-    p.levels[HP] = 990; p.baseLevels[HP] = 990;
-    const snake = theSnake()!;
-    const packed = (who: any) => (who.level << 28) | (who.x << 14) | who.z;
-    // Hold the rotation still so nothing in this block is racing the snake's own beat.
-    const park = () => H.setNpcVar(theSnake()!, 'npc_action_delay', World.currentTick + 900);
-    park();
-
-    // THE SHRINE IS MULTI-WAY, and that is the whole of the unkillable boss. maps/multiway.csv is a
-    // list of real map-square zones and the shrine is an instance copied out of m36_79, so the
-    // lookup could never match it and the arena was single-way: [proc,npc_check_notcombat] refused
-    // every snakeling while Zulrah held the player, and [proc,player_in_combat_check] refused the
-    // player a re-attack on Zulrah for eight ticks whenever %aggressive_npc was not Zulrah's CURRENT
-    // uid - which is every phase change, because npc_changetype_keepall gives it a new one. Between
-    // the lockouts and ordinary npc stat regen the snake healed faster than it could be hit.
-    check('the shrine is multi-way combat, through the zone it was copied from',
-        World.gameMap.isMulti(packed(p)), true);
-    check('  and so is the water Zulrah surfaces in',
-        World.gameMap.isMulti(packed(snake)), true);
-    check('  the template square m36_79 is what carries it',
-        World.gameMap.isMulti((36 * 64 + 28) << 14 | (79 * 64 + 29)), true);
-    check('  and Lumbridge still is not', World.gameMap.isMulti(3222 << 14 | 3218), false);
-
-    // AND THAT IS WHAT LETS A SNAKELING BITE. ~npc_check_notcombat is the gate its attack proc opens
-    // with: asked as the snakeling on a tick when Zulrah already has the player, it has to say yes.
-    const ling = H.addNpc('zulrah_snakeling', p.x + 1, p.z + 1);
-    H.tick(1);
-    H.setVar(p, 'lastcombat', World.currentTick);
-    H.setVar(p, 'aggressive_npc', snake.uid);
-    check('a snakeling may attack while Zulrah already has you',
-        H.runNpcProc(ling, '[proc,npc_check_notcombat]', p), [1]);
-    // And the other half of the same gate, which is the half that stopped the boss dying: the player
-    // going back to Zulrah while something else has hit them. Single-way answered "I'm already under
-    // attack" and threw the click away.
-    H.setVar(p, 'aggressive_npc', ling.uid);
-    H.setVar(p, 'lastcombat', World.currentTick);
-    const said = A.mark();
-    (p as any).clearPendingAction();
-    H.attackNpc(p, theSnake()!);
-    H.tick(2);
-    check('  and you may still attack Zulrah while a snakeling has you',
-        A.mesSince(p, said).filter(m => m.includes('already under attack')), []);
-    World.removeNpc(ling, -1);
-    H.tick(1);
-    park();
-
-    // HITPOINTS DO NOT COME BACK ACROSS A PHASE CHANGE. npc_changetype_keepall is keep-all for
-    // exactly this reason, and a colour change that reset them would be a boss healing itself three
-    // times a rotation.
-    // Rotation 1's phase 1 is green and its phase 2 is red (zulrah.enum), so this dive is a colour
-    // change whichever way the dice fall - a phase picked at random can surface in the colour it
-    // went down in, which would prove nothing either way.
-    (theSnake() as any).changeType(NpcType.getId('zulrah'), 30000, false);
-    H.setNpcVar(theSnake()!, 'zulrah_rotation', 1);
-    H.setNpcVar(theSnake()!, 'zulrah_phase', 0);
-    theSnake()!.levels[HP] = 137;
-    H.setNpcVar(theSnake()!, 'zulrah_run', 9999);   // the run is spent: the next beat is the dive
-    H.setNpcVar(theSnake()!, 'zulrah_submerged', 0);
-    H.setNpcVar(theSnake()!, 'npc_action_delay', 0);
-    let wearing = '';
-    for (let i = 0; i < 25 && wearing !== 'zulrah_magma'; i++) {
-        H.tick(1); p.levels[HP] = 990;
-        const s = theSnake();
-        if (s) wearing = NpcType.get(s.type).debugname!;
-    }
-    check('it goes down green and comes back up red, as rotation 1 has it', wearing, 'zulrah_magma');
-    check('  with the hitpoints it went down with, not with 500',
-        theSnake() ? theSnake().levels[HP] : null, 137);
-    park();
-
-    // IT DIES AT ZERO, IN EACH OF ITS THREE COLOURS, in its own shrine with the rotation live.
-    // The last hit is queued the way every weapon in the game queues one - npc_queue(2, damage,
-    // delay), which is [ai_queue2,_] -> ~npc_default_damage -> npc_damage -> npc_queue(3) ->
-    // [ai_queue3,zulrah] -> @zulrah_death_table - so the whole death path runs, and it runs on the
-    // snake that is standing in the instance rather than on a fresh one added beside the player.
-    const AI_QUEUE2 = ServerTriggerType.AI_QUEUE1 + 1;
-    const rebuild = () => {
-        A.runProcProtected(p, '[proc,zulrah_end]'); H.tick(2);
-        A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1); H.tick(10);
-        p.levels[HP] = 990; H.clearLogs(); park();
-    };
-    const emptyIt = (colour: string) => {
-        const s = theSnake();
-        if (!s) return 'no snake to kill';
-        (s as any).changeType(NpcType.getId(colour), 30000, false);
-        (s as any).heroPoints.addHero(p.uid, 500);
-        s.levels[HP] = 9;
-        (s as any).enqueueScript(AI_QUEUE2, 0, 9);
-        for (let t = 0; t < 15; t++) {
-            H.tick(1); p.levels[HP] = 990;
-            if (!theSnake()) return 'dead';
-        }
-        return 'alive on ' + theSnake()!.levels[HP];
-    };
-    check('emptied as the green form, it dies', emptyIt('zulrah'), 'dead');
-    rebuild();
-    check('  as the red form, it dies', emptyIt('zulrah_magma'), 'dead');
-    rebuild();
-    check('  as the blue form, it dies', emptyIt('zulrah_tanzanite'), 'dead');
-    rebuild();
-
-    // AND ONCE THE WHOLE WAY WITH A REAL WEAPON AND NO STAFF COMMAND, which is the check the owner's
-    // report is actually about: a player, a bow and arrows, shooting until the snake is gone. Its
-    // hitpoints are cut first so this is a last stretch rather than a twenty-minute fight, but every
-    // roll from the bowstring to the drop table is the game's own, and the rotation is left running.
-    p.invSet(InvType.WORN, ObjType.getId('magic_shortbow'), 1, 3);
-    p.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 30000, 13);
-    H.tick(1);
-    H.setNpcVar(theSnake()!, 'npc_action_delay', 0);
-    theSnake()!.levels[HP] = 20;
-    let shotDead = false;
-    H.attackNpc(p, theSnake()!);
-    for (let t = 0; t < 600 && !shotDead; t++) {
-        if (t % 50 === 0) H.clearLogs();
-        H.tick(1); p.levels[HP] = 990;
-        const cur = theSnake();
-        if (!cur) { shotDead = true; break; }
-        if (!(p as any).target) H.attackNpc(p, cur);
-    }
-    check('and a player with a bow kills it outright, no staff command', shotDead, true);
-    if (theSnake()) { A.runProcProtected(p, '[proc,zulrah_end]'); H.tick(2); }
-    H.despawn(p);
-}
-
-// ------------------------------------------------------------------ where it surfaces
-// THE FOUR PLACES, AGAINST THE MAP RATHER THAN AGAINST A LIST. zulrah.constant states the rule that
-// picked them - "the four 5x5 blocks of open water NEAREST the walkway in each of those
-// directions" - and two of the four did not obey it: west and east sat one tile off the walkway,
-// which is as close as a 5x5 block of water gets before it overlaps the walkway itself, while
-// middle and south sat at two. Nothing in the old checks looked at the map at all; they compared the
-// enum against itself.
-console.log('WHERE ZULRAH SURFACES');
-{
-    const BX = 36 * 64, BZ = 79 * 64;
-    const plat: [number, number][] = [];
-    for (let x = 16; x < 48; x++) {
-        for (let z = 16; z < 48; z++) {
-            if (A.walkable(0, BX + x, BZ + z)) plat.push([x, z]);
-        }
-    }
-    check('the shrine has a walkway to stand on', plat.length > 0, true);
-    // Zulrah is 5x5 and moverestrict=nomove, so a block with a walkable tile in it would drop the
-    // snake onto the walkway and block the player's own path round it.
-    const allWater = (sx: number, sz: number) => {
-        for (let x = sx; x < sx + 5; x++) {
-            for (let z = sz; z < sz + 5; z++) {
-                if (A.walkable(0, BX + x, BZ + z)) return false;
-            }
-        }
-        return true;
-    };
-    // The shortest distance from the 5x5 block to a tile a player can stand on.
-    const gap = (sx: number, sz: number) => {
-        let best = 99;
-        for (const [px, pz] of plat) {
-            best = Math.min(best, Math.max(Math.max(sx - px, 0, px - (sx + 4)), Math.max(sz - pz, 0, pz - (sz + 4))));
-        }
-        return best;
-    };
-    // Read out of the shipped constants the way the fight reads them, so a coord that moves here
-    // moves the check with it.
-    const SPOT = ['zulrah_pos_middle', 'zulrah_pos_south', 'zulrah_pos_west', 'zulrah_pos_east'];
-    const local = SPOT.map(name => {
-        const c = enumVal('zulrah_pos_coord', SPOT.indexOf(name));
-        return [((c >> 14) & 0x3fff) - BX, (c & 0x3fff) - BZ];
-    });
-    check('all four are 5x5 blocks of water, so the snake never lands on the walkway',
-        local.map(([x, z]) => allWater(x, z)), [true, true, true, true]);
-    check('  and all four are as close to the walkway as a block of water gets',
-        local.map(([x, z]) => gap(x, z)), [1, 1, 1, 1]);
-    check('  and they are four different places', new Set(local.map(c => c.join(','))).size, 4);
-}
-
-// ------------------------------------------------------------------ the venom clouds, on screen
-// A CLOUD IS ONLY REAL IF THE CLIENT IS TOLD ABOUT IT. The old check proved a barrage HURT - that
-// standing in one costs hitpoints - which the queue does whether or not anything is ever drawn. It
-// was not: a MapSpotAnim plays its sequence once and is then dropped, the cloud's six frames came to
-// twelve 20ms client cycles (a quarter of a second) and the queue re-played it every fifth tick, so
-// a cloud was on screen for 8% of its life. This watches World.animMap, which is where spotanim_map
-// ends up.
-console.log('THE VENOM CLOUDS ARE DRAWN');
-{
-    const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
-    H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
-    H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
-    H.tick(10);
-    p.levels[HP] = 990; p.baseLevels[HP] = 990;
-    // Park the snake and let every cloud its opening phase already dropped burn out: phase 1 of
-    // every rotation is four barrages, and a cloud lives ^zulrah_cloud_ticks = 25 ticks.
-    H.setNpcVar(theSnake()!, 'npc_action_delay', World.currentTick + 900);
-    for (let t = 0; t < 40; t++) { (p as any).clearPendingAction(); H.tick(1); p.levels[HP] = 990; }
-    H.clearLogs();
-
-    const CLOUD = SpotanimType.getId('zulrah_venom_cloud');
-    const drawn: { tick: number; x: number; z: number }[] = [];
-    const origAnimMap = World.animMap.bind(World);
-    (World as any).animMap = (level: number, x: number, z: number, spotanim: number, height: number, delay: number) => {
-        if (spotanim === CLOUD) drawn.push({ tick: World.currentTick, x, z });
-        origAnimMap(level, x, z, spotanim, height, delay);
-    };
-    const where = [p.x, p.z];
-    H.runNpcProc(theSnake()!, '[proc,zulrah_venom_barrage]', p);
-    for (let t = 0; t < 30; t++) { (p as any).clearPendingAction(); H.tick(1); p.levels[HP] = 990; }
-    (World as any).animMap = origAnimMap;
-    check('a barrage draws a cloud', drawn.length > 0, true);
-    check('  on the tile the player was standing on', drawn.length ? [drawn[0].x, drawn[0].z] : null, where);
-    // ^zulrah_cloud_ticks is 25 and the re-timed graphic is one tick long, so a cloud that is
-    // continuously visible is 25 draws on 25 consecutive ticks. Five - which is what a draw every
-    // fifth tick gave - is the flicker the owner could not see.
-    check('  and on every tick it burns, so it is continuously on screen', drawn.length, 25);
-    const ticks = drawn.map(d => d.tick);
-    check('  with no gap between one graphic and the next',
-        ticks.every((t, i) => i === 0 || t === ticks[i - 1] + 1), true);
-    // The graphic itself has to cover a whole 600ms tick or the gaps come back: six frames of five
-    // 20ms client cycles each is thirty, which is one tick exactly.
-    check('  because the graphic is one tick long, not a quarter of a second',
-        [...(SeqType.get(SpotanimType.get(CLOUD).anim).delay ?? [])].reduce((a, b) => a + b, 0), 30);
-    A.runProcProtected(p, '[proc,zulrah_end]');
-    H.tick(2);
-    H.despawn(p);
-}
-
-// ------------------------------------------------------------------ where the loot lands
-console.log('EVERY DROP LANDS WHERE THE PLAYER CAN STAND');
-{
-    // "Zulrah dies in the water of its own pool, where nobody can walk", so its own table puts
-    // everything under the player - and it does, except for the one drop that is NOT in its table.
-    // [proc,droprate_bonus] hangs off [proc,npc_death] for every monster in the game and asks
-    // [proc,droprate_coord] where to put its item; that proc knew about the Kraken's two and not
-    // about Zulrah, so a boosted kill left one of its four items on npc_coord, out in the pool.
-    const p = fresh(DOCK_BOAT[0] - 2, DOCK_BOAT[1] + 1);
-    H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
-    H.setVar(p, 'zulrah_volunteered', 1);
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
-    H.tick(10);
-    p.levels[HP] = 990; p.baseLevels[HP] = 990;
-    const snake = theSnake()!;
-    H.setNpcVar(snake, 'npc_action_delay', World.currentTick + 900);
-    const at = (p.level << 28) | (p.x << 14) | p.z;
-    check('the bonus drop asks for the player\'s tile, not the water Zulrah died in',
-        H.runNpcProc(snake, '[proc,droprate_coord]', p), [at]);
-    check('  and the snake itself is standing somewhere nobody can walk',
-        A.walkable(0, snake.x, snake.z), false);
-
-    // And then the whole table, through a real kill, every obj checked against the collision map.
-    const landed: { name: string; x: number; z: number }[] = [];
-    const origAdd = World.addObj.bind(World);
-    (World as any).addObj = (obj: Obj, receiver: unknown, duration: number) => {
-        landed.push({ name: ObjType.get(obj.type).debugname!, x: obj.x, z: obj.z });
-        origAdd(obj as any, receiver as any, duration);
-    };
-    // THE PLAYER IS HELD STILL FOR THE DEATH, and it has to be for this to mean anything.
-    // [proc,npc_death] spends an npc_arrivedelay and an npc_delay before the table reads `coord`,
-    // and [proc,droprate_coord] reads it again a moment later, so a player who retaliates and walks
-    // two steps towards the pool in that window leaves the pile spread over the tiles they crossed.
-    // That is the player moving, not the table choosing badly, and it is not what is under test.
-    const stood = [p.x, p.z];
-    H.runNpcProc(snake, '[proc,debug_kill_active]', p);
-    for (let t = 0; t < 8; t++) { (p as any).clearPendingAction(); p.x = stood[0]; p.z = stood[1]; H.tick(1); }
-    (World as any).addObj = origAdd;
-    check('a kill drops something', landed.length > 0, true);
-    check('  and every last item of it is on a tile the player can walk on',
-        landed.filter(o => !A.walkable(0, o.x, o.z)).map(o => o.name + '@' + o.x + ',' + o.z), []);
-    check('  all of it on the one tile, the one the player was standing on',
-        landed.filter(o => o.x !== stood[0] || o.z !== stood[1]).map(o => o.name + '@' + o.x + ',' + o.z), []);
-    A.runProcProtected(p, '[proc,zulrah_end]');
-    H.tick(2);
-    H.despawn(p);
-}
-
 // ------------------------------------------------------------------ dying there
 console.log('DYING AT THE SHRINE');
 {
@@ -609,7 +544,7 @@ console.log('DYING AT THE SHRINE');
     H.give(p, 'shark', 10);
     H.give(p, 'coins', 200000);
     H.equip(p, { rhand: 'rune_scimitar' });
-    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], 'osrsloc_46242', 1);
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], DOCK_BOAT_LOC, 1);
     H.tick(8);
     const carried = H.invCount(p, 'shark');
     // The real death path: the guard at the top of [queue,player_death_default] is what sends a
@@ -618,7 +553,7 @@ console.log('DYING AT THE SHRINE');
     H.tick(14);
     check('dying there drops nothing on the floor', H.invCount(p, 'shark'), 0);
     check('  the priestess is holding it', H.getVar(p, 'zulrah_items_held'), 1);
-    check('  and you are back on the dock', [p.x, p.z], [2176 + 37, 3008 + 48]);
+    check('  and you are back on the dock', [p.x, p.z], [34 * 64 + 37, 47 * 64 + 48]);
     check('  the shrine went with you', theSnake(), null);
 
     // Free for the first fifty kills.
