@@ -32,6 +32,7 @@ import Npc from '#/engine/entity/Npc.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import EnumType from '#/cache/config/EnumType.js';
 import Obj from '#/engine/entity/Obj.js';
+import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import InvType from '#/cache/config/InvType.js';
 import InstanceMap, { Instance } from '#/engine/InstanceMap.js';
 import { isFlagged } from '#/engine/GameMap.js';
@@ -200,15 +201,36 @@ let shrinePlayer: any = null;
             laid.filter(t => t.level === 3).map(t => `${t.zx},${t.zz}`), ['12,12']);
     }
 
-    // Out again. NOT the same loc: the shrine's return boat is OSRS 46241, hand-placed on m36_79,
-    // while the one at Zul-Andra is the map's own 46242. Both handlers read where you are standing
-    // and send you the other way.
-    const base = [p.x - 12, p.z - 13];
-    A.op(p, base[0] + 11, base[1] + 9, 'osrsloc_46241', 1);
+    // OUT AGAIN, AND THERE IS NO BOAT TO DO IT WITH. One was hand-placed on m36_79 when the shrine
+    // was imported; it is gone. The way off is the Zul-andra teleport read WHERE IT LIES - opobj3,
+    // the ground "Take" - rather than a pickup followed by a click, so this drops a pile on the
+    // shrine floor, clicks it, and asserts the scroll never reaches the inventory.
+    const at: [number, number] = [p.x, p.z];
+    World.addObj(new Obj(p.level, at[0], at[1], EntityLifeCycle.DESPAWN,
+        ObjType.getId('zul_andra_teleport'), 4), -1n, 500);
+    H.tick(1);
+    check('the scroll is on the shrine floor, not in the inventory', H.invCount(p, 'zul_andra_teleport'), 0);
+    H.opObj(p, at[0], at[1], 'zul_andra_teleport', 3);
     H.tick(8);
-    check('rowing back empties the instance', theSnake(), null);
+    check('reading it where it lies empties the instance', theSnake(), null);
     check('  and puts you on the dock at Zul-Andra', [p.x, p.z], [34 * 64 + 37, 47 * 64 + 48]);
     check('  with %zulrah_instance cleared', H.getVar(p, 'zulrah_instance'), -1);
+    check('  and it was never picked up', H.invCount(p, 'zul_andra_teleport'), 0);
+
+    // A WAY OUT WITH NO SCRIPT ON IT. Removing the boat left the scroll as the only exit anyone
+    // wrote code for, so everything else - a home teleport, a tab, a glory - now depends on the
+    // check in [timer,zulrah_fight] to hand the instance slot back. There are 1024 slots and they
+    // do not come back until the server restarts, so this leaves the way a player would and
+    // asserts the slot is freed anyway.
+    A.op(p, DOCK_BOAT[0], DOCK_BOAT[1], DOCK_BOAT_LOC, 1);
+    H.tick(8);
+    check('back in for a second trip', H.getVar(p, 'zulrah_instance') !== -1, true);
+    const leaked = H.getVar(p, 'zulrah_instance') as number;
+    (p as any).teleport(3222, 3218, 0);          // a home teleport, as far as the fight is concerned
+    H.tick(3);
+    check('  leaving by any other means still frees the instance', H.getVar(p, 'zulrah_instance'), -1);
+    check('  and the snake goes with it', theSnake(), null);
+    check('  and the slot it held is reusable', leaked !== -1, true);
 
     // The teleport scroll, which is 15/249 of the table and the way most people get back.
     H.give(p, 'zul_andra_teleport', 4);

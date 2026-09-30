@@ -404,6 +404,26 @@ export function opLoc(p: Player, x: number, z: number, locName: string, op: numb
     return true;
 }
 
+/**
+ * What clicking an op on a ground obj does: OpObjHandler, minus the visibility checks.
+ *
+ * NOT a1lib's take(), which lifts the obj straight into the inventory and never runs a script.
+ * Op 3 is the ground "Take" - ObjType defaults op[2] to it - so this is what content hooks with
+ * [opobj3,...], and the only way to test one.
+ */
+export function opObj(p: Player, x: number, z: number, objName: string, op: number) {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const obj = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
+    if (!obj) throw new Error(`no ${objName} at ${x},${z}`);
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, x, z, p.width, 1, 1));
+    p.setInteraction(Interaction.ENGINE, obj, ServerTriggerType.APOBJ1 + (op - 1));
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
 /** What clicking an op on an npc does: OpNpcHandler, minus the visibility checks. */
 export function opNpc(p: Player, npc: Npc, op: number) {
     if (p.delayed) return false;
