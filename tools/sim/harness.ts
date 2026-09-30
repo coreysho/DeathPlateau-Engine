@@ -19,6 +19,7 @@ import Component from '#/cache/config/Component.js';
 import SynthSound from '#/network/game/server/model/SynthSound.js';
 import IfOpenMain from '#/network/game/server/model/IfOpenMain.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
+import IfSetInvOp from '#/network/game/server/model/IfSetInvOp.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import fs from 'fs';
 import Environment from '#/util/Environment.js';
@@ -33,7 +34,10 @@ import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
 export type Hit = { tick: number; who: string; damage: number; type: number };
 export type Say = { tick: number; who: string; text: string };
 export type Sound = { tick: number; who: string; synth: string; loops: number; delay: number };
-export type Iface = { tick: number; who: string; kind: 'open' | 'text'; com: number; text?: string };
+// 'invop' is an if_setinvop: the server rewriting one right-click option of a server-side
+// inventory grid. Only the bank and the trading post use it, and it is the only way to see
+// from the server side which options a grid is actually offering.
+export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'; com: number; text?: string; op?: number };
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
@@ -108,6 +112,9 @@ export async function boot() {
         }
         if (message instanceof IfSetText) {
             ifaces.push({ tick: World.currentTick, who: this.username, kind: 'text', com: message.component, text: message.text });
+        }
+        if (message instanceof IfSetInvOp) {
+            ifaces.push({ tick: World.currentTick, who: this.username, kind: 'invop', com: message.component, op: message.op, text: message.text });
         }
         if (message instanceof SynthSound) {
             sounds.push({
