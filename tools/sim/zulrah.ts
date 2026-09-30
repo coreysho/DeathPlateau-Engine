@@ -614,20 +614,28 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
             [true, ['23,37', '24,37', '24,38', '32,37', '32,38', '33,37', '34,37'].sort()]);
     }
 
-    // AND THEN IT BURNS. One draw per tick, every tick, is the whole point - the graphic is one game
-    // tick long and the client drops a MapSpotAnim as soon as its sequence ends, so a gap is a cloud
-    // that flickers. Counting DISTINCT ticks rather than draws, because nine clouds burning at once
-    // put nine draws on one tick, which is fine.
+    // AND THEN IT BURNS, FROM ONE DRAW. This asserted the opposite until the client harness was
+    // pointed at it: the cloud used to be re-drawn every tick, on the reasoning that its sequence
+    // is exactly one tick long so each play would meet the next. What the client actually did was
+    // hold TWO overlapping copies on each tile for part of every tick - the harness counted nine
+    // cloud centres reading 18, 15, 9, 18, 16, 9 - and restart the animation 25 times over the
+    // cloud's life, which is what the owner was seeing as a flicker.
+    //
+    // zulrah_venom_cloud now runs the full 25 ticks itself, so the contract is ONE draw on the
+    // tick it lands and none afterwards. A second draw on that tile is the strobe coming back.
     s = park(1, 0);
     const cloudTile = fillTiles(0)[0];               // the first tile the first barrage aims at
     p.teleport(cloudTile[0], cloudTile[1], p.level);
     wipe();
+    // NO SECOND WIPE. The one draw happens on the tick the cloud LANDS, which is inside these
+    // three ticks - wiping after them threw away the very thing being counted and the check read
+    // zero. The orbs in flight are a different spotanim (zulrah_venom_orbs), so nothing else on
+    // this tile answers to VENOM.
     run(3);                                         // the barrage, and two ticks for the orbs to land
-    wipe();
-    run(20);
+    run(20);                                        // and the rest of the cloud burning
     const onTile = gfx.filter(g => g.x === cloudTile[0] && g.z === cloudTile[1] && g.spotanim === VENOM);
-    check('  and a cloud is re-drawn on its tile every tick, so it does not strobe',
-        new Set(onTile.map(g => g.tick)).size, 20);
+    check('  and the cloud is drawn ONCE on its tile, not restarted every tick',
+        onTile.length, 1);
     check('  with the venom graphic, never the magic one (this was the fireball)',
         gfx.some(g => g.spotanim === MAGIC), false);
     // ...and never the barrage's orbs either, which is what was on the floor for the whole of the
