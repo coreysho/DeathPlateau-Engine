@@ -1204,6 +1204,20 @@ class World {
         }
 
         for (const npc of this.npcs) {
+            // THE HEALTH BAR IS ONE BYTE EACH WAY. Client.java reads current and max with g1
+            // and draws current * 30 / max, so an npc with more than 255 hitpoints wraps on the
+            // wire. Zulrah's 500 arrives as 244 and its current health arrives as hp & 255,
+            // which means the bar EMPTIES as the snake is taken from 500 down to 256 and springs
+            // back to full the instant it crosses 255. That is exactly the "I drop it to zero,
+            // it heals to full and carries on" this boss was reported for twice - the fight was
+            // right the whole time and the bar was lying. Scale the pair into a byte instead,
+            // which is all the bar wants: it only ever draws the two as a fraction of thirty
+            // pixels. ceil so the scaled value never rounds a live boss down to zero - though
+            // a thirty-pixel bar still draws nothing below a thirtieth of full, as it always did.
+            const hp = npc.levels[NpcStat.HITPOINTS];
+            const hpMax = npc.baseLevels[NpcStat.HITPOINTS];
+            const barMax = hpMax > 255 ? 255 : hpMax;
+            const barHp = hpMax > 255 ? Math.min(barMax, Math.ceil((hp * 255) / hpMax)) : hp;
             // facing (reorientEntity/reorient) runs in Npc.turn(), not here.
             rsbuf.computeNpc(
                 npc.x,
@@ -1226,8 +1240,8 @@ class World {
                 npc.hitmarkType,
                 npc.hitmark2Damage,
                 npc.hitmark2Type,
-                npc.levels[NpcStat.HITPOINTS],
-                npc.baseLevels[NpcStat.HITPOINTS],
+                barHp,
+                barMax,
                 npc.animId,
                 npc.animDelay,
                 npc.sayMessage,
