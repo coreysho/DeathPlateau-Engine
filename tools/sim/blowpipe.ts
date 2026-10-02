@@ -248,7 +248,11 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     check('  a dart every shot, none saved without a cape', usedDarts, shots);
     check('  two scales in three shots (within 4 sd)', Math.abs(usedScales - shots * 2 / 3) <= 4 * Math.sqrt(shots * 2 / 9), true);
     check('  a quarter of the damaging hits envenom (within 4 sd)', Math.abs(venoms - damaging / 4) <= 4 * Math.sqrt(damaging * 3 / 16), true);
-    check('  no dart ever lands on the floor', World.getObj(npc.x, npc.z, 0, ObjType.getId('rune_dart'), p.hash64), null);
+    // THE DARTS DO LAND, which this asserted the opposite of. Old School: "Using an Ava's device
+    // OR PICKING UP USED AMMO will reduce the number of darts needed" - so a fired dart is on the
+    // floor unless it broke, and destroying every one of them doubled what the weapon costs to run.
+    check('  a fired dart lands at the target to be picked up',
+        World.getObj(npc.x, npc.z, 0, ObjType.getId('rune_dart'), p.hash64) !== null, true);
     // the Ranging cape keeps 72% of them
     H.equip(p, { back: 'ranging_cape' });
     charge(p, 5000, 5000);
