@@ -46,6 +46,31 @@ console.log('RING OF RECOIL');
 }
 
 // ------------------------------------------------------------------ Ava's attract toggle
+// ------------------------------------------------------------------ Break
+console.log('BREAKING THE RING');
+{
+    const p = player('recoil2', 3202, 3200);
+    H.give(p, 'ring_of_recoil', 2);
+    A.runProcProtected(p, '[proc,ring_of_recoil_lose_charge]', [33]);
+    // The warning is a ~mesbox: an interface, not a chat line, so A.said cannot see it. drive() reads
+    // interface text but only from where IT starts, and opheld has already put the box up by then -
+    // so take the mark before the click.
+    const from = H.ifaces.length;
+    H.opheld(p, 'ring_of_recoil', 4);   // Break
+    A.drive(p, [2]);                    // "Keep it."
+    const shown = H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!);
+    check('  keeping it changes nothing', [H.invCount(p, 'ring_of_recoil'), v(p, 'ring_of_recoil')], [2, 33]);
+    check('  and it says what you would lose first', A.saw(shown, 'recoil 7 more damage'), true);
+
+    H.opheld(p, 'ring_of_recoil', 4);
+    A.drive(p, [1]);                    // "Break the ring of recoil."
+    check('  breaking one takes exactly one ring', H.invCount(p, 'ring_of_recoil'), 1);
+    check('  and the charge is reset to full', v(p, 'ring_of_recoil'), 0);
+    A.runProcProtected(p, '[proc,ring_of_recoil_check]');
+    check('  the one left reads 40 again', last(p), 'Your Ring of Recoil can recoil 40 more damage before it shatters.');
+    H.despawn(p);
+}
+
 console.log("AVA'S DEVICE");
 {
     const p = player('ava', 3200, 3210);
@@ -63,10 +88,20 @@ console.log("AVA'S DEVICE");
 
     // the thing that must NOT change: the ammo saving
     H.equip(p, { back: 'avas_accumulator' });
-    const saved = () => H.runProc(p, '[proc,ranged_ammo_saved]')[0];
-    const onSaves = saved();
+    // ~ranged_ammo_saved is a ROLL, not a state - an accumulator keeps about 72% of shots. Comparing
+    // two single calls compares two coin flips, which is what the first version of this did and why
+    // it passed by luck. Measure the rate on both sides of the toggle instead.
+    const rate = () => {
+        let kept = 0;
+        for (let i = 0; i < 2000; i++) kept += H.runProc(p, '[proc,ranged_ammo_saved]')[0];
+        return kept / 2000;
+    };
+    setv(p, 'avas_attract_off', 0);
+    const on = rate();
     setv(p, 'avas_attract_off', 1);
-    check('  switching attraction off does not switch ammo saving off', [onSaves, saved()], [1, 1]);
+    const off = rate();
+    check(`  the device saves ammo either way (${(on * 100).toFixed(0)}% on, ${(off * 100).toFixed(0)}% off)`,
+        on > 0.6 && off > 0.6 && Math.abs(on - off) < 0.08, true);
 
     // and the thing that must: no metal arrives while it is off
     H.clearInv(p);
