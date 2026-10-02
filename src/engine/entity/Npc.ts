@@ -1009,7 +1009,12 @@ export default class Npc extends PathingEntity {
                 continue;
             }
 
-            if (hunt.checkAfk && player.zonesAfk()) {
+            // THE WILDERNESS HAS NO TOLERANCE. Stand in one place for 1000 ticks and zonesAfk()
+            // turns true, after which nothing hunts you - which is right for Al Kharid warriors and
+            // wrong everywhere north of the ditch. Old School has never let you outlast wilderness
+            // aggression; the whole point of the place is that it does not get bored of you. The
+            // player's own position decides it, the same way the not-too-strong rule below does.
+            if (hunt.checkAfk && player.zonesAfk() && !player.isInWilderness()) {
                 continue;
             }
 
