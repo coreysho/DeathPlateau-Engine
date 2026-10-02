@@ -33,7 +33,10 @@ for (const port of PORTS) {
     if (packed === -1 || packed === null) { check(`  ${NAME[port]} has a landing coord`, packed, 'a coord'); continue; }
     const level = (packed >> 28) & 0x3, x = (packed >> 14) & 0x3fff, z = packed & 0x3fff;
     arrive.set(port, { level, x, z });
-    const blocked = isFlagged(level, x, z, CollisionFlag.WALK_BLOCKED);
+    // isFlagged takes (x, z, level) - NOT (level, x, z). Passed the wrong way round it reads a tile
+    // nobody asked about, which here answered "not blocked" for every landing and made this assert
+    // nothing at all.
+    const blocked = isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
     check(`  ${NAME[port].padEnd(14)} ${level}_${x >> 6}_${z >> 6}_${x & 63}_${z & 63} is standable`, blocked, false);
 }
 
