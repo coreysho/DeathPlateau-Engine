@@ -305,5 +305,70 @@ console.log('\nTHE WAY IN');
 check('  the Trollheim plateau is still crossable past the boulder',
     A.connected(0, 2890, 3722, 2905, 3730, 60), true);
 
+// ---------------------------------------------------------------- into the encampments
+// Four obstacles, one level-70 skill each, and before these the dungeon was four islands: you
+// could get in and reach one faction, and no further on foot.
+console.log('\nINTO THE ENCAMPMENTS');
+{
+    const p = player('gwdcross', 2880, 5310, 2);
+    const go = (x: number, z: number, lvl: number, loc: string) => {
+        p.teleport(x, z, lvl); H.tick(1);
+        const m = A.mark();
+        H.opLoc(p, ...(LOCAT[loc] as [number, number]), loc, 1);
+        H.tick(12);
+        return A.mesSince(p, m);
+    };
+    const LOCAT: Record<string, [number, number]> = {
+        gwd_pillar_grapple: [2871, 5270], gwd_door_bang: [2851, 5333],
+        gwd_ice_bridge: [2885, 5333], gwd_rock_tierope_upper: [2913, 5300],
+        gwd_rock_tierope_lower: [2920, 5274],
+    };
+
+    // Armadyl - 70 Ranged, crossbow, grapple
+    H.maxOut(p); H.clearInv(p);
+    p.setLevel(PlayerStat.RANGED, 69);
+    go(2871, 5279, 2, 'gwd_pillar_grapple');
+    check('  Armadyl   69 Ranged cannot make the shot', p.z > 5275, true);
+    p.setLevel(PlayerStat.RANGED, 70);
+    go(2871, 5279, 2, 'gwd_pillar_grapple');
+    check('  Armadyl   70 Ranged but no crossbow is refused', p.z > 5275, true);
+    H.equip(p, { rhand: 'rune_crossbow' }); H.give(p, 'mith_grapple', 1);
+    go(2871, 5279, 2, 'gwd_pillar_grapple');
+    check('  Armadyl   70 Ranged + crossbow + grapple crosses the chasm', [p.x, p.z, p.level], [2871, 5269, 2]);
+
+    // Bandos - 70 Strength and a hammer
+    H.clearInv(p); p.setLevel(PlayerStat.STRENGTH, 70);
+    go(2852, 5333, 2, 'gwd_door_bang');
+    // "refused" means NOT ON THE FAR SIDE. Where the walk left you standing on the near side is
+    // the router's business, and asserting x > 2851 was asserting that instead.
+    check('  Bandos    no hammer is refused', p.x !== 2850, true);
+    H.give(p, 'hammer', 1);
+    go(2852, 5333, 2, 'gwd_door_bang');
+    check('  Bandos    70 Strength + hammer opens the gong door', [p.x, p.z, p.level], [2850, 5333, 2]);
+
+    // Zamorak - 70 Hitpoints, and it costs your prayer
+    H.maxOut(p);
+    p.setLevel(PlayerStat.PRAYER, 70);
+    go(2885, 5332, 2, 'gwd_ice_bridge');
+    check('  Zamorak   70 Hitpoints crosses the ice bridge', [p.x, p.z, p.level], [2885, 5345, 2]);
+    check('  Zamorak   and the crossing empties your prayer', p.levels[PlayerStat.PRAYER], 0);
+
+    // Saradomin - 70 Agility, not boostable, and two ropes
+    H.maxOut(p); H.clearInv(p);
+    H.setVar(p, 'gwd_rope_upper', 0); H.setVar(p, 'gwd_rope_lower', 0);
+    go(2912, 5300, 2, 'gwd_rock_tierope_upper');
+    check('  Saradomin no rope, no way down', p.level, 2);
+    H.give(p, 'rope', 2);
+    go(2912, 5300, 2, 'gwd_rock_tierope_upper');
+    check('  Saradomin the first rope drops you a floor', [p.x, p.z, p.level], [2915, 5300, 1]);
+    check('  Saradomin and it was spent', H.invCount(p, 'rope'), 1);
+    go(2921, 5274, 1, 'gwd_rock_tierope_lower');
+    check('  Saradomin the second lands you in the encampment', [p.x, p.z, p.level], [2919, 5274, 0]);
+    // and a second visit costs nothing, because the ropes stay tied
+    go(2912, 5300, 2, 'gwd_rock_tierope_upper');
+    check('  Saradomin the ropes stay tied for next time', [p.level, H.invCount(p, 'rope')], [1, 0]);
+    H.despawn(p);
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
