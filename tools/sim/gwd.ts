@@ -456,5 +456,60 @@ console.log('\nSWINGING SOMETHING');
     check('  and none of them is from another rig', wrongRig.join(',') || 'none', 'none');
 }
 
+// ---------------------------------------------------------------- the altars
+console.log('\nTHE ALTARS');
+{
+    const p = player('gwdaltar', 2869, 5368, 2);   // inside Graardor's room, by the Bandos altar
+    H.maxOut(p); H.clearInv(p);
+    const prayer = () => p.levels[PlayerStat.PRAYER];
+    const ALTAR: [number, number, number] = [2869, 5370, 2];
+
+    H.setVar(p, 'gwd_altar_minute', 0);
+    // drain the CURRENT level only - setLevel moves the base with it, which made the first
+    // version of this check compare 10 against 10 and pass without testing anything
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  praying recharges you to your Prayer level', prayer(), p.baseLevels[PlayerStat.PRAYER]);
+
+    // the ten minutes
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  and will not do it again straight away', prayer(), 10);
+
+    // +1 per devoted piece worn, counted off the same param the factions read
+    H.setVar(p, 'gwd_altar_minute', 0);
+    H.equip(p, { torso: 'bandos_chestplate', legs: 'bandos_tassets', feet: 'bandos_boots' });
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  three Bandos pieces boost three above your level',
+        prayer(), p.baseLevels[PlayerStat.PRAYER] + 3);
+
+    // Teleport puts you out of the lair, not out of the dungeon
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 2);
+    H.tick(8);
+    check('  and Teleport puts you outside the lair', [p.x, p.z, p.level], [2862, 5354, 2]);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- the payout
+// Killing a boss has to produce something, or none of the rest of this matters.
+console.log('\nKILLING GRAARDOR');
+{
+    const p = player('gwdkill', 2870, 5358, 2);
+    H.maxOut(p);
+    H.equip(p, { rhand: 'dragon_scimitar' });
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
+    const z = World.gameMap.getZone(boss.x, boss.z, boss.level);
+    const before = [...z.getAllObjsUnsafe()].length;
+    const dead = A.fight(p, boss, 2000);
+    H.tick(4);
+    check('  Graardor can actually be killed', dead, true);
+    const dropped = [...World.gameMap.getZone(boss.x, boss.z, boss.level).getAllObjsUnsafe()].length;
+    check(`  and he drops something (${dropped - before} stacks)`, dropped > before, true);
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
