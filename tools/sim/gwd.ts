@@ -13,6 +13,7 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import SeqType from '#/cache/config/SeqType.js';
+import SpotanimType from '#/cache/config/SpotanimType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
@@ -582,6 +583,100 @@ console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
     H.despawn(p);
 }
 
+// ---------------------------------------------------------------- Kree'arra
+// The only general who fights from across the room, and the biggest hit in the dungeon.
+console.log("\nKREE'ARRA");
+{
+    const t = NpcType.get(NpcType.getId('kreearra'));
+    check('  he swings every 3 ticks and reaches 8 tiles',
+        [t.params?.get(ParamType.getId('attackrate')), t.attackrange], [3, 8]);
+
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('kreearra'))!;
+    const p = player('kreevictim', boss.x + 6, boss.z, boss.level);
+    H.maxOut(p);
+    H.tick(1);
+
+    // A projectile's damage is QUEUED for when it lands, so each shot has to be let finish before
+    // the next is fired. Without the drain, one shot's damage arrives during the next test and
+    // reads as a prayer that failed to block - which is exactly how this first reported that both
+    // of his prayers were broken.
+    // AND HE MUST NOT FIRE ON HIS OWN while a single shot is being measured. He is aggressive at
+    // three ticks, so twelve ticks of waiting is four more attacks of his own landing on top of
+    // the one under test - which is how a 69-max attack measured 92.
+    boss.huntMode = -1;
+    (boss as any).target = null;
+    (boss as any).huntTarget = null;
+    // MEASURE THE SHOT, NOT THE WINDOW. Reading hitpoints before and after counts everything that
+    // lands in between, and plenty does: the player AUTO-RETALIATES, which re-engages him, and he
+    // then attacks on his own three-tick schedule however thoroughly he has been silenced. That is
+    // how a 69-max attack measured 74 and 92, and how a blocked one measured 6.
+    //
+    // Retaliation off, and the FIRST hit recorded against this player after the shot is the shot.
+    H.setVar(p, 'option_nodef', 1);                   // ^player_auto_retaliate_off
+    const shoot = (proc: string) => {
+        H.tick(12);                                   // let anything in flight land
+        const from = H.hits.length;
+        p.levels[PlayerStat.HITPOINTS] = 99;
+        H.runNpcProc(boss, proc, p);
+        H.tick(12);
+        const mine = H.hits.slice(from).filter(h => h.who === p.username);
+        return mine.length ? mine[0].damage : 0;
+    };
+
+    const ranged = shoot('[proc,kreearra_ranged_attack]');
+    check(`  he shoots you from 6 tiles away (${ranged})`, ranged > 0 && ranged <= 69, true);
+
+    H.setVar(p, 'prayer13', 1);                        // Protect from Missiles
+    check('  Protect from Missiles stops it', shoot('[proc,kreearra_ranged_attack]'), 0);
+
+    H.setVar(p, 'prayer13', 0);
+    H.setVar(p, 'prayer12', 1);                        // Protect from Magic
+    check('  and Protect from Magic stops the other one', shoot('[proc,kreearra_magic_attack]'), 0);
+
+    // both projectiles resolve - a missing graphic is an attack with nothing leaving him
+    for (const n of ['kreearra_ranged_proj', 'kreearra_magic_proj'])
+        check(`  ${n} is a real spotanim`, SpotanimType.getId(n) >= 0, true);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- the armies pay out
+// Before this the 39 npcs you grind killcount on dropped nothing at all, which made wearing a god
+// item strictly better than fighting. Four shared tables, one per kind.
+console.log('\nTHE ARMIES DROP SOMETHING');
+{
+    const objsAt = (x: number, z: number, lvl: number) =>
+        [...World.gameMap.getZone(x, z, lvl).getAllObjsUnsafe()]
+            .filter((o: any) => Math.abs(o.x - x) <= 2 && Math.abs(o.z - z) <= 2).length;
+
+    for (const kind of ['gwd_spiritual_mage_bandos', 'gwd_spiritual_warrior_bandos',
+                        'gwd_spiritual_ranger_bandos', 'gwd_aviansie_1']) {
+        const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(kind));
+        if (!npc) { check(`  ${kind} is spawned to kill`, false, true); continue; }
+        // PIN IT PROPERLY. huntMode = -1 stops it hunting, not WANDERING - these drift a tile at a
+        // time and A.fight gives up rather than chasing, which is how this reported "killed and
+        // dropped (0)" on one run and passed on the next, twice. The victim is moved next to the
+        // player and held there, the same way Graardor is.
+        npc.huntMode = -1;
+        const spot = nearestOpen(npc.x, npc.z, npc.level, 4)!;
+        const p = player('loot_' + kind, spot[0], spot[1], npc.level);
+        const near = nearestOpen(spot[0] + 1, spot[1], npc.level, 3)!;
+        npc.teleport(near[0], near[1], npc.level);
+        H.tick(1);
+        H.maxOut(p);
+        H.equip(p, { rhand: 'dragon_scimitar' });
+        const before = objsAt(npc.x, npc.z, npc.level);
+        const dead = A.fight(p, npc, 1500);
+        H.tick(4);
+        const after = objsAt(npc.x, npc.z, npc.level);
+        if (!dead || after <= before)
+            console.log(`    ${kind}: dead=${dead} npc hp ${npc.levels[NpcStat.HITPOINTS]} active ${npc.isActive} `
+                + `at ${npc.x},${npc.z}; player hp ${p.levels[PlayerStat.HITPOINTS]} at ${p.x},${p.z}`);
+        check(`  ${kind.replace('gwd_', '').padEnd(26)} killed and dropped (${after - before})`,
+            dead && after > before, true);
+        H.despawn(p);
+    }
+}
+
 // NOTE: this kills Graardor, so it goes LAST - anything after it finds an empty room.
 // ---------------------------------------------------------------- the payout
 // Killing a boss has to produce something, or none of the rest of this matters.
@@ -604,6 +699,13 @@ console.log('\nKILLING GRAARDOR');
     // AND STAND NEXT TO HIM. He wanders, and A.fight gives up rather than walking a long path -
     // which is why this test passed or failed depending on where he happened to be. Twice it
     // reported 'Graardor cannot be killed' with both of them untouched and seven tiles apart.
+    // PIN HIM. Standing beside him once is not enough: he wanders, and A.fight gives up rather
+    // than walking a long path, so this kept reporting 'Graardor cannot be killed' with both of
+    // them untouched several tiles apart. Put him somewhere known, put the player next to him,
+    // and keep him from drifting off while the fight starts.
+    boss.teleport(2870, 5360, 2);
+    boss.huntMode = -1;
+    H.tick(1);
     const beside = nearestOpen(boss.x + boss.width, boss.z, boss.level, 4)!;
     p.teleport(beside[0], beside[1], boss.level);
     H.tick(1);
