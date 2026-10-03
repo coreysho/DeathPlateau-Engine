@@ -11,6 +11,7 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
+import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { World, LocType, NpcType, check, R, player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
@@ -262,6 +263,47 @@ console.log('\nKILLCOUNT');
         && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) < 30), true);
     H.despawn(p);
 }
+
+// ---------------------------------------------------------------- getting in
+// Walked rather than asserted from the constants: the boulder on Trollheim, the rope down, and
+// back out again. Before this the dungeon could only be reached by teleport.
+console.log('\nTHE WAY IN');
+{
+    const p = player('gwdin', 2898, 3724);
+    const where = () => `${p.level}_${p.x}_${p.z}`;
+
+    // too weak
+    p.setLevel(PlayerStat.STRENGTH, 59);
+    H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
+    H.tick(5);
+    check('  59 Strength cannot shift the boulder', p.z > 3700 && p.level === 0, true);
+    check('  and it says what is needed', A.lastMes(p).includes('Strength level of 60'), true);
+
+    // strong enough
+    p.setLevel(PlayerStat.STRENGTH, 60);
+    H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
+    H.tick(6);
+    check('  60 Strength puts you in the dungeon', [p.x, p.z, p.level], [2880, 5311, 3]);
+
+    // down the rope to the floor the faction doors are on
+    H.opLoc(p, 2881, 5311, 'gwd_rope_top', 1);
+    H.tick(6);
+    check('  the rope drops you onto the dungeon floor', [p.x, p.z, p.level], [2880, 5310, 2]);
+
+    // back up, and out
+    H.opLoc(p, 2881, 5311, 'gwd_rope_down', 1);
+    H.tick(6);
+    check('  and climbs back up', [p.x, p.z, p.level], [2880, 5311, 3]);
+    H.opLoc(p, 2882, 5311, 'gwd_crack', 1);
+    H.tick(12); // walk to it, then the squeeze-through delay
+    check('  the crack puts you back on Trollheim', [p.x, p.z, p.level], [2898, 3724, 0]);
+    void where;
+    H.despawn(p);
+}
+
+// And the boulder must not wall off the summit it stands on - it is 4x3 and blocks.
+check('  the Trollheim plateau is still crossable past the boulder',
+    A.connected(0, 2890, 3722, 2905, 3730, 60), true);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
