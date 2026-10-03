@@ -494,6 +494,55 @@ console.log('\nTHE ALTARS');
     H.despawn(p);
 }
 
+// ---------------------------------------------------------------- Graardor's two attacks
+// He had one attack and Old School gives him two: crush for up to 60, and a ground slam that hits
+// EVERY player in the room for 15-35 on a 1-in-3 roll. The slam is what makes his room a team
+// fight rather than four separate ones.
+console.log("\nGENERAL GRAARDOR");
+{
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
+    const t = NpcType.get(boss.type);
+    check('  he swings every 6 ticks', t.params?.get(ParamType.getId('attackrate')), 6);
+    // and his melee max, which Old School puts at 60. Read off the engine's own formula rather
+    // than assumed from his strength of 350.
+    {
+        const probe = player('gwdmax', boss.x + 1, boss.z, boss.level);
+        H.maxOut(probe);
+        const max = H.runNpcProc(boss, '[proc,npc_melee_maxhit]', probe)[0];
+        check(`  his melee max is near Old School's 60 (formula gives ${max})`, max >= 45 && max <= 75, true);
+        H.despawn(probe);
+    }
+
+    // THE SLAM REACHES EVERYONE. Three players spread around the room, only one of them his target.
+    const crowd = [0, 1, 2].map(i => {
+        const p = player('gwdslam' + i, boss.x + 3 + i * 3, boss.z + 3 + i * 2, boss.level);
+        H.maxOut(p);
+        return p;
+    });
+    H.tick(1);
+    const before = crowd.map(p => p.levels[PlayerStat.HITPOINTS]);
+    // drive the slam itself rather than waiting on a 1-in-3 roll
+    H.runNpcProc(boss, '[proc,graardor_slam_attack]', crowd[0]);
+    H.tick(3);
+    const hurt = crowd.map((p, i) => before[i] - p.levels[PlayerStat.HITPOINTS]);
+    check(`  the slam hits everyone in the room, not just his target (${hurt.join(', ')})`,
+        hurt.every(h => h > 0), true);
+    check(`  and each hit is between 15 and 35 (${hurt.join(', ')})`,
+        hurt.every(h => h >= 15 && h <= 35), true);
+
+    // Protect from Missiles stops it - it is a ranged attack, which is why a team brings that prayer
+    const saved = crowd[0];
+    saved.levels[PlayerStat.HITPOINTS] = saved.baseLevels[PlayerStat.HITPOINTS];
+    H.setVar(saved, 'prayer13', 1);   // Protect from Missiles - check_protect_prayer reads %prayer13 for ranged
+    const hpBefore = saved.levels[PlayerStat.HITPOINTS];
+    H.runNpcProc(boss, '[proc,graardor_slam_attack]', saved);
+    H.tick(3);
+    check('  Protect from Missiles stops the slam', saved.levels[PlayerStat.HITPOINTS], hpBefore);
+
+    for (const p of crowd) H.despawn(p);
+}
+
+// NOTE: this kills Graardor, so it goes LAST - anything after it finds an empty room.
 // ---------------------------------------------------------------- the payout
 // Killing a boss has to produce something, or none of the rest of this matters.
 console.log('\nKILLING GRAARDOR');
@@ -501,10 +550,32 @@ console.log('\nKILLING GRAARDOR');
     const p = player('gwdkill', 2870, 5358, 2);
     H.maxOut(p);
     H.equip(p, { rhand: 'dragon_scimitar' });
+    // Protect from Melee. He hits 61 now and a 99-hitpoint player dies in two swings, which is
+    // what killed this test the moment his strength bonus was corrected - the fight was being
+    // lost, not the drop. This check is about the payout, not about surviving him.
+    H.setVar(p, 'prayer14', 1);
     const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
+    // The slam test above leaves him mid-fight with players who have since been despawned, and
+    // A.fight cannot take a boss that is already busy. Put him back to idle first.
+    (boss as any).target = null;
+    (boss as any).huntTarget = null;
+    H.setNpcVar(boss, 'npc_action_delay', 0);
+    H.tick(2);
+    // AND STAND NEXT TO HIM. He wanders, and A.fight gives up rather than walking a long path -
+    // which is why this test passed or failed depending on where he happened to be. Twice it
+    // reported 'Graardor cannot be killed' with both of them untouched and seven tiles apart.
+    const beside = nearestOpen(boss.x + boss.width, boss.z, boss.level, 4)!;
+    p.teleport(beside[0], beside[1], boss.level);
+    H.tick(1);
     const z = World.gameMap.getZone(boss.x, boss.z, boss.level);
     const before = [...z.getAllObjsUnsafe()].length;
-    const dead = A.fight(p, boss, 2000);
+    const bossHp0 = boss.levels[NpcStat.HITPOINTS];
+    // 6000 ticks, not 2000: he has 255 hitpoints behind 90 defence in every melee style, and a
+    // scimitar does not always get through that in 2000. The test was passing and failing on
+    // the same code depending on the damage rolls.
+    const dead = A.fight(p, boss, 6000);
+    console.log(`    boss hp ${bossHp0} -> ${boss.levels[NpcStat.HITPOINTS]}, active ${boss.isActive}; `
+        + `player hp ${p.levels[PlayerStat.HITPOINTS]}, at ${p.x},${p.z},${p.level} (boss at ${boss.x},${boss.z},${boss.level})`);
     H.tick(4);
     check('  Graardor can actually be killed', dead, true);
     const dropped = [...World.gameMap.getZone(boss.x, boss.z, boss.level).getAllObjsUnsafe()].length;
