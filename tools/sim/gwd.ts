@@ -10,9 +10,12 @@
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import HuntType from '#/cache/config/HuntType.js';
+import ParamType from '#/cache/config/ParamType.js';
+import SeqType from '#/cache/config/SeqType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import { World, LocType, NpcType, check, R, player } from './a1lib.ts';
+import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
 
@@ -368,6 +371,255 @@ console.log('\nINTO THE ENCAMPMENTS');
     go(2912, 5300, 2, 'gwd_rock_tierope_upper');
     check('  Saradomin the ropes stay tied for next time', [p.level, H.invCount(p, 'rope')], [1, 0]);
     H.despawn(p);
+}
+
+// ---------------------------------------------------------------- aggression
+// "All monsters in the dungeon are aggressive to any player unless they have equipped at least one
+// item that is devoted to their god." The thing worth proving is that it is PER GOD: one item buys
+// peace from one faction and from no other.
+console.log('\nWHO COMES AFTER YOU');
+{
+    // huntAll is called DIRECTLY rather than waiting for the world to do it. World.cycle only hunts
+    // for npcs with rsbuf observers, which a socketless sim player does not register as - so the
+    // whole dungeon reads as peaceful if you just tick, including with nothing worn, which is how
+    // the first version of this reported every faction ignoring everybody.
+    const hunts = (npcName: string, p: Player) => {
+        const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(npcName));
+        if (!npc) throw new Error('not spawned: ' + npcName);
+        // A STANDABLE neighbour, not blindly x+1: drop the player inside a wall and check_vis
+        // =lineofsight fails, which reads as that faction being peaceful. Zamorak's warrior happens
+        // to stand with rock to its east, and that alone made it look like the one god who ignores
+        // everybody.
+        const spot = nearestOpen(npc.x, npc.z, npc.level, 3);
+        if (!spot) throw new Error('nowhere to stand beside ' + npcName);
+        p.teleport(spot[0], spot[1], npc.level);
+        H.tick(1);
+        npc.huntMode = NpcType.get(npc.type).huntmode;
+        (npc as any).huntTarget = null;
+        npc.huntAll(HuntType.get(npc.huntMode));
+        return (npc as any).huntTarget === p;
+    };
+    const FACES = [['bandos', 'gwd_spiritual_warrior_bandos'], ['zamorak', 'gwd_spiritual_warrior_zamorak'],
+                   ['armadyl', 'gwd_spiritual_warrior_armadyl'], ['saradomin', 'gwd_spiritual_warrior_saradomin']] as const;
+    const WEAR: Record<string, string> = {
+        bandos: 'bandos_chestplate', zamorak: 'zamorak_cape',
+        armadyl: 'armadyl_chestplate', saradomin: 'saradomin_cape',
+    };
+
+    // nothing worn: everybody wants you
+    {
+        const p = player('gwdagg', 2880, 5310, 2);
+        H.maxOut(p);
+        const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
+        check(`  wearing nothing, every faction hunts you (${after.join(',')})`, after.length, 4);
+        H.despawn(p);
+    }
+    // one god's item: that god alone leaves you alone
+    for (const [god] of FACES) {
+        const p = player('gwdagg_' + god, 2880, 5310, 2);
+        H.maxOut(p);
+        H.equip(p, { [god === 'zamorak' || god === 'saradomin' ? 'back' : 'torso']: WEAR[god] });
+        const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
+        check(`  wearing ${WEAR[god].padEnd(20)} only ${god} ignores you (hunted by ${after.join(',') || 'nobody'})`,
+            after.sort().join(','), FACES.map(([g]) => g).filter(g => g !== god).sort().join(','));
+        H.despawn(p);
+    }
+}
+
+// ---------------------------------------------------------------- combat animations
+// Every npc in the dungeon should swing something. The cache states ready and walk only, so attack,
+// defend and death were derived per rig; what this checks is that each one RESOLVES and sits on the
+// same skeleton as the npc's own ready animation - an animation from another rig does not look
+// wrong, it folds the model inside out.
+console.log('\nSWINGING SOMETHING');
+{
+    const ALL = [...SPAWNED.flatMap(([, w]) => w.slice(1)),
+        ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`)),
+        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)];
+    const P = (t: any, name: string) => t.params?.get(ParamType.getId(name));
+    const noAttack: string[] = [], noDefend: string[] = [], wrongRig: string[] = [];
+    for (const n of ALL) {
+        const t = NpcType.get(NpcType.getId(n));
+        const atk = P(t, 'attack_anim'), def = P(t, 'defend_anim');
+        if (atk === undefined) noAttack.push(n);
+        if (def === undefined) noDefend.push(n);
+        // same skeleton as its ready animation?
+        const base = (id: number) => { const s = SeqType.get(id); return s?.frames?.[0] !== undefined ? s.frames[0] >>> 16 : -1; };
+        for (const [what, id] of [['attack', atk], ['defend', def]] as const) {
+            if (id === undefined) continue;
+            if (base(id) !== -1 && base(t.readyanim) !== -1 && base(id) !== base(t.readyanim))
+                wrongRig.push(`${n} ${what}`);
+        }
+    }
+    check(`  all ${ALL.length} have an attack animation`, noAttack.join(',') || 'none', 'none');
+    check('  all have a defend animation', noDefend.join(',') || 'none', 'none');
+    check('  and none of them is from another rig', wrongRig.join(',') || 'none', 'none');
+}
+
+// ---------------------------------------------------------------- the altars
+console.log('\nTHE ALTARS');
+{
+    const p = player('gwdaltar', 2869, 5368, 2);   // inside Graardor's room, by the Bandos altar
+    H.maxOut(p); H.clearInv(p);
+    const prayer = () => p.levels[PlayerStat.PRAYER];
+    const ALTAR: [number, number, number] = [2869, 5370, 2];
+
+    H.setVar(p, 'gwd_altar_minute', 0);
+    // drain the CURRENT level only - setLevel moves the base with it, which made the first
+    // version of this check compare 10 against 10 and pass without testing anything
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  praying recharges you to your Prayer level', prayer(), p.baseLevels[PlayerStat.PRAYER]);
+
+    // the ten minutes
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  and will not do it again straight away', prayer(), 10);
+
+    // +1 per devoted piece worn, counted off the same param the factions read
+    H.setVar(p, 'gwd_altar_minute', 0);
+    H.equip(p, { torso: 'bandos_chestplate', legs: 'bandos_tassets', feet: 'bandos_boots' });
+    p.levels[PlayerStat.PRAYER] = 10;
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
+    H.tick(6);
+    check('  three Bandos pieces boost three above your level',
+        prayer(), p.baseLevels[PlayerStat.PRAYER] + 3);
+
+    // Teleport puts you out of the lair, not out of the dungeon
+    H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 2);
+    H.tick(8);
+    check('  and Teleport puts you outside the lair', [p.x, p.z, p.level], [2862, 5354, 2]);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- Graardor's two attacks
+// He had one attack and Old School gives him two: crush for up to 60, and a ground slam that hits
+// EVERY player in the room for 15-35 on a 1-in-3 roll. The slam is what makes his room a team
+// fight rather than four separate ones.
+console.log("\nGENERAL GRAARDOR");
+{
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
+    const t = NpcType.get(boss.type);
+    check('  he swings every 6 ticks', t.params?.get(ParamType.getId('attackrate')), 6);
+    // and his melee max, which Old School puts at 60. Read off the engine's own formula rather
+    // than assumed from his strength of 350.
+    {
+        const probe = player('gwdmax', boss.x + 1, boss.z, boss.level);
+        H.maxOut(probe);
+        const max = H.runNpcProc(boss, '[proc,npc_melee_maxhit]', probe)[0];
+        check(`  his melee max is near Old School's 60 (formula gives ${max})`, max >= 45 && max <= 75, true);
+        H.despawn(probe);
+    }
+
+    // THE SLAM REACHES EVERYONE. Three players spread around the room, only one of them his target.
+    const crowd = [0, 1, 2].map(i => {
+        const p = player('gwdslam' + i, boss.x + 3 + i * 3, boss.z + 3 + i * 2, boss.level);
+        H.maxOut(p);
+        return p;
+    });
+    H.tick(1);
+    const before = crowd.map(p => p.levels[PlayerStat.HITPOINTS]);
+    // drive the slam itself rather than waiting on a 1-in-3 roll
+    H.runNpcProc(boss, '[proc,graardor_slam_attack]', crowd[0]);
+    H.tick(3);
+    const hurt = crowd.map((p, i) => before[i] - p.levels[PlayerStat.HITPOINTS]);
+    check(`  the slam hits everyone in the room, not just his target (${hurt.join(', ')})`,
+        hurt.every(h => h > 0), true);
+    check(`  and each hit is between 15 and 35 (${hurt.join(', ')})`,
+        hurt.every(h => h >= 15 && h <= 35), true);
+
+    // Protect from Missiles stops it - it is a ranged attack, which is why a team brings that prayer
+    const saved = crowd[0];
+    saved.levels[PlayerStat.HITPOINTS] = saved.baseLevels[PlayerStat.HITPOINTS];
+    H.setVar(saved, 'prayer13', 1);   // Protect from Missiles - check_protect_prayer reads %prayer13 for ranged
+    const hpBefore = saved.levels[PlayerStat.HITPOINTS];
+    H.runNpcProc(boss, '[proc,graardor_slam_attack]', saved);
+    H.tick(3);
+    check('  Protect from Missiles stops the slam', saved.levels[PlayerStat.HITPOINTS], hpBefore);
+
+    for (const p of crowd) H.despawn(p);
+}
+
+// ---------------------------------------------------------------- K'ril and Zilyana
+console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
+{
+    const maxOf = (n: string) => {
+        const b = World.npcs.find(x => x && x.isActive && x.type === NpcType.getId(n))!;
+        const p = player('mx_' + n, b.x + 2, b.z, b.level);
+        H.maxOut(p);
+        const m = H.runNpcProc(b, '[proc,npc_melee_maxhit]', p)[0];
+        H.despawn(p);
+        return m;
+    };
+    const rate = (n: string) => NpcType.get(NpcType.getId(n)).params?.get(ParamType.getId('attackrate'));
+    check("  K'ril swings every 6 ticks and maxes 46", [rate('kril'), maxOf('kril')], [6, 46]);
+    check('  Zilyana swings every 2 ticks and maxes 27', [rate('zilyana'), maxOf('zilyana')], [2, 27]);
+
+    // THE SPECIAL GOES THROUGH PRAYER. This is the one thing about K'ril that changes how he is
+    // fought, so it is asserted from both sides: his ordinary magic is stopped by Protect from
+    // Magic, and the special is not stopped by anything.
+    const kril = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('kril'))!;
+    const p = player('krilvictim', kril.x + 2, kril.z, kril.level);
+    H.maxOut(p);
+
+    H.setVar(p, 'prayer12', 1);                       // Protect from Magic
+    p.levels[PlayerStat.HITPOINTS] = 99;
+    H.runNpcProc(kril, '[proc,kril_magic_attack]', p);
+    H.tick(3);
+    check('  Protect from Magic stops his ordinary magic', p.levels[PlayerStat.HITPOINTS], 99);
+
+    H.setVar(p, 'prayer14', 1);                       // and Protect from Melee as well
+    p.levels[PlayerStat.HITPOINTS] = 99;
+    p.setLevel(PlayerStat.PRAYER, 80);
+    H.runNpcProc(kril, '[proc,kril_special_attack]', p);
+    H.tick(3);
+    const hurt = 99 - p.levels[PlayerStat.HITPOINTS];
+    check(`  the special goes through prayer anyway (${hurt})`, hurt >= 35 && hurt <= 49, true);
+    check(`  and takes half the prayer left (80 -> ${p.levels[PlayerStat.PRAYER]})`,
+        p.levels[PlayerStat.PRAYER], 40);
+    H.despawn(p);
+}
+
+// NOTE: this kills Graardor, so it goes LAST - anything after it finds an empty room.
+// ---------------------------------------------------------------- the payout
+// Killing a boss has to produce something, or none of the rest of this matters.
+console.log('\nKILLING GRAARDOR');
+{
+    const p = player('gwdkill', 2870, 5358, 2);
+    H.maxOut(p);
+    H.equip(p, { rhand: 'dragon_scimitar' });
+    // Protect from Melee. He hits 61 now and a 99-hitpoint player dies in two swings, which is
+    // what killed this test the moment his strength bonus was corrected - the fight was being
+    // lost, not the drop. This check is about the payout, not about surviving him.
+    H.setVar(p, 'prayer14', 1);
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
+    // The slam test above leaves him mid-fight with players who have since been despawned, and
+    // A.fight cannot take a boss that is already busy. Put him back to idle first.
+    (boss as any).target = null;
+    (boss as any).huntTarget = null;
+    H.setNpcVar(boss, 'npc_action_delay', 0);
+    H.tick(2);
+    // AND STAND NEXT TO HIM. He wanders, and A.fight gives up rather than walking a long path -
+    // which is why this test passed or failed depending on where he happened to be. Twice it
+    // reported 'Graardor cannot be killed' with both of them untouched and seven tiles apart.
+    const beside = nearestOpen(boss.x + boss.width, boss.z, boss.level, 4)!;
+    p.teleport(beside[0], beside[1], boss.level);
+    H.tick(1);
+    const z = World.gameMap.getZone(boss.x, boss.z, boss.level);
+    const before = [...z.getAllObjsUnsafe()].length;
+    const bossHp0 = boss.levels[NpcStat.HITPOINTS];
+    // 6000 ticks, not 2000: he has 255 hitpoints behind 90 defence in every melee style, and a
+    // scimitar does not always get through that in 2000. The test was passing and failing on
+    // the same code depending on the damage rolls.
+    const dead = A.fight(p, boss, 6000);
+    console.log(`    boss hp ${bossHp0} -> ${boss.levels[NpcStat.HITPOINTS]}, active ${boss.isActive}; `
+        + `player hp ${p.levels[PlayerStat.HITPOINTS]}, at ${p.x},${p.z},${p.level} (boss at ${boss.x},${boss.z},${boss.level})`);
+    H.tick(4);
+    check('  Graardor can actually be killed', dead, true);
+    const dropped = [...World.gameMap.getZone(boss.x, boss.z, boss.level).getAllObjsUnsafe()].length;
+    check(`  and he drops something (${dropped - before} stacks)`, dropped > before, true);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
