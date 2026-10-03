@@ -11,6 +11,8 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import HuntType from '#/cache/config/HuntType.js';
+import ParamType from '#/cache/config/ParamType.js';
+import SeqType from '#/cache/config/SeqType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
@@ -422,6 +424,36 @@ console.log('\nWHO COMES AFTER YOU');
             after.sort().join(','), FACES.map(([g]) => g).filter(g => g !== god).sort().join(','));
         H.despawn(p);
     }
+}
+
+// ---------------------------------------------------------------- combat animations
+// Every npc in the dungeon should swing something. The cache states ready and walk only, so attack,
+// defend and death were derived per rig; what this checks is that each one RESOLVES and sits on the
+// same skeleton as the npc's own ready animation - an animation from another rig does not look
+// wrong, it folds the model inside out.
+console.log('\nSWINGING SOMETHING');
+{
+    const ALL = [...SPAWNED.flatMap(([, w]) => w.slice(1)),
+        ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`)),
+        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)];
+    const P = (t: any, name: string) => t.params?.get(ParamType.getId(name));
+    const noAttack: string[] = [], noDefend: string[] = [], wrongRig: string[] = [];
+    for (const n of ALL) {
+        const t = NpcType.get(NpcType.getId(n));
+        const atk = P(t, 'attack_anim'), def = P(t, 'defend_anim');
+        if (atk === undefined) noAttack.push(n);
+        if (def === undefined) noDefend.push(n);
+        // same skeleton as its ready animation?
+        const base = (id: number) => { const s = SeqType.get(id); return s?.frames?.[0] !== undefined ? s.frames[0] >>> 16 : -1; };
+        for (const [what, id] of [['attack', atk], ['defend', def]] as const) {
+            if (id === undefined) continue;
+            if (base(id) !== -1 && base(t.readyanim) !== -1 && base(id) !== base(t.readyanim))
+                wrongRig.push(`${n} ${what}`);
+        }
+    }
+    check(`  all ${ALL.length} have an attack animation`, noAttack.join(',') || 'none', 'none');
+    check('  all have a defend animation', noDefend.join(',') || 'none', 'none');
+    check('  and none of them is from another rig', wrongRig.join(',') || 'none', 'none');
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
