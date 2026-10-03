@@ -8,7 +8,9 @@
 // cannot be read from 474 and it comes from the OSRS cache instead. Two sources meeting inside one
 // dungeon is a seam, and a seam you cannot walk through is a dungeon nobody can finish.
 import * as H from './harness.ts';
-import { World, LocType, NpcType, check, R } from './a1lib.ts';
+import * as A from './a1lib.ts';
+import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import { World, LocType, NpcType, check, R, player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
 
@@ -168,6 +170,74 @@ for (const list of [['the four armies', ARMY], ['the Aviansies', AVIANSIES], ['t
 }
 for (const b of broken) console.log('    ' + b);
 check('  nobody in the dungeon is missing models or animations', broken.length, 0);
+
+// ---------------------------------------------------------------- the spawns
+console.log('\nWHO IS STANDING IN THE ROOMS');
+const SPAWNED: [string, string[]][] = [
+    ['Armadyl', ['kreearra', 'gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa']],
+    ['Bandos', ['graardor', 'gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike']],
+    ['Zamorak', ['kril', 'gwd_tstanon_karlak', 'gwd_zakln_gritch', 'gwd_balfrug_kreeyath']],
+    ['Saradomin', ['zilyana', 'gwd_starlight', 'gwd_growler', 'gwd_bree']],
+];
+const inDungeon = (name: string) => World.npcs.filter(n => n && n.type === NpcType.getId(name)
+    && n.x >= 2816 && n.x < 2944 && n.z >= 5248 && n.z < 5376).length;
+for (const [god, who] of SPAWNED) {
+    const missing = who.filter(n => inDungeon(n) === 0);
+    check(`  ${god.padEnd(10)} boss and bodyguard are in the dungeon`, missing.join(',') || 'none', 'none');
+}
+
+// ---------------------------------------------------------------- killcount
+console.log('\nKILLCOUNT');
+{
+    const p = player('gwd', 2880, 5310, 2);
+    const kc = () => p.getVar(VarPlayerType.getByName('gwd_kc_bandos')!.id) as number;
+    // ACTUALLY KILL ONE, rather than calling the proc with an npc nobody fought. Credit is
+    // npc_findhero - the test every drop table opens with - so a victim that took no damage from
+    // this player is nobody's kill and the count correctly stays put. Running the proc directly
+    // was testing the early return and nothing else.
+    H.setVar(p, 'gwd_kc_bandos', 0);
+    H.maxOut(p);
+    // Graardor's three sergeants - the only Bandos followers spawned so far. The armies are not
+    // placed yet, which is the next stage.
+    let killed = 0;
+    for (const name of ['gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike']) {
+        const victim = World.npcs.find(n => n && n.type === NpcType.getId(name) && n.isActive);
+        if (!victim) continue;
+        p.teleport(victim.x + 1, victim.z, victim.level); H.tick(1);
+        if (A.fight(p, victim, 400)) killed++;
+        H.tick(2); // the message is queued
+    }
+    check(`  killing ${killed} of Bandos's followers counts ${killed}`, kc(), killed);
+    check('  and something was actually killed', killed > 0, true);
+
+    // and nobody else's count moved - a death hook that credits the wrong god is worse than one
+    // that credits nothing
+    check('  the other three gods are untouched',
+        ['armadyl', 'saradomin', 'zamorak'].map(g => p.getVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id)), [0, 0, 0]);
+
+    // the door, below the price
+    const door = { x: 2863, z: 5354, lvl: 2 };
+    p.teleport(2862, 5354, 2); H.tick(1);
+    H.setVar(p, 'gwd_kc_bandos', 39);
+    const before = A.mark();
+    H.opLoc(p, door.x, door.z, 'gwd_door_bandos', 1);
+    H.tick(3); // clicking a door walks you to it first; the handler runs on arrival
+    // What matters is that it did not let you THROUGH, and did not take the kills. Where the click
+    // left you standing is the router's business - clicking a door walks you to it.
+    check('  39 kills does not get you in', [p.x === 2864 && p.z === 5354, kc()], [false, 39]);
+    check('  and it says how many are missing', A.said(p, before, '1 more kill'), true);
+
+    // and at the price
+    H.setVar(p, 'gwd_kc_bandos', 40);
+    H.opLoc(p, door.x, door.z, 'gwd_door_bandos', 1);
+    H.tick(1);
+    check('  40 kills opens it, and is spent', kc(), 0);
+    check('  and puts you on the room side of the door', [p.x, p.z, p.level], [2864, 5354, 2]);
+    // the altar is in there with you, which is what makes it the room and not the corridor
+    check('  with Graardor', World.npcs.some(n => n && n.type === NpcType.getId('graardor')
+        && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) < 30), true);
+    H.despawn(p);
+}
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
