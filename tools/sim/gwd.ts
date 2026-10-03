@@ -542,6 +542,46 @@ console.log("\nGENERAL GRAARDOR");
     for (const p of crowd) H.despawn(p);
 }
 
+// ---------------------------------------------------------------- K'ril and Zilyana
+console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
+{
+    const maxOf = (n: string) => {
+        const b = World.npcs.find(x => x && x.isActive && x.type === NpcType.getId(n))!;
+        const p = player('mx_' + n, b.x + 2, b.z, b.level);
+        H.maxOut(p);
+        const m = H.runNpcProc(b, '[proc,npc_melee_maxhit]', p)[0];
+        H.despawn(p);
+        return m;
+    };
+    const rate = (n: string) => NpcType.get(NpcType.getId(n)).params?.get(ParamType.getId('attackrate'));
+    check("  K'ril swings every 6 ticks and maxes 46", [rate('kril'), maxOf('kril')], [6, 46]);
+    check('  Zilyana swings every 2 ticks and maxes 27', [rate('zilyana'), maxOf('zilyana')], [2, 27]);
+
+    // THE SPECIAL GOES THROUGH PRAYER. This is the one thing about K'ril that changes how he is
+    // fought, so it is asserted from both sides: his ordinary magic is stopped by Protect from
+    // Magic, and the special is not stopped by anything.
+    const kril = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('kril'))!;
+    const p = player('krilvictim', kril.x + 2, kril.z, kril.level);
+    H.maxOut(p);
+
+    H.setVar(p, 'prayer12', 1);                       // Protect from Magic
+    p.levels[PlayerStat.HITPOINTS] = 99;
+    H.runNpcProc(kril, '[proc,kril_magic_attack]', p);
+    H.tick(3);
+    check('  Protect from Magic stops his ordinary magic', p.levels[PlayerStat.HITPOINTS], 99);
+
+    H.setVar(p, 'prayer14', 1);                       // and Protect from Melee as well
+    p.levels[PlayerStat.HITPOINTS] = 99;
+    p.setLevel(PlayerStat.PRAYER, 80);
+    H.runNpcProc(kril, '[proc,kril_special_attack]', p);
+    H.tick(3);
+    const hurt = 99 - p.levels[PlayerStat.HITPOINTS];
+    check(`  the special goes through prayer anyway (${hurt})`, hurt >= 35 && hurt <= 49, true);
+    check(`  and takes half the prayer left (80 -> ${p.levels[PlayerStat.PRAYER]})`,
+        p.levels[PlayerStat.PRAYER], 40);
+    H.despawn(p);
+}
+
 // NOTE: this kills Graardor, so it goes LAST - anything after it finds an empty room.
 // ---------------------------------------------------------------- the payout
 // Killing a boss has to produce something, or none of the rest of this matters.
