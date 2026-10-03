@@ -10,9 +10,10 @@
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import HuntType from '#/cache/config/HuntType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import { World, LocType, NpcType, check, R, player } from './a1lib.ts';
+import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
 
@@ -368,6 +369,59 @@ console.log('\nINTO THE ENCAMPMENTS');
     go(2912, 5300, 2, 'gwd_rock_tierope_upper');
     check('  Saradomin the ropes stay tied for next time', [p.level, H.invCount(p, 'rope')], [1, 0]);
     H.despawn(p);
+}
+
+// ---------------------------------------------------------------- aggression
+// "All monsters in the dungeon are aggressive to any player unless they have equipped at least one
+// item that is devoted to their god." The thing worth proving is that it is PER GOD: one item buys
+// peace from one faction and from no other.
+console.log('\nWHO COMES AFTER YOU');
+{
+    // huntAll is called DIRECTLY rather than waiting for the world to do it. World.cycle only hunts
+    // for npcs with rsbuf observers, which a socketless sim player does not register as - so the
+    // whole dungeon reads as peaceful if you just tick, including with nothing worn, which is how
+    // the first version of this reported every faction ignoring everybody.
+    const hunts = (npcName: string, p: Player) => {
+        const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(npcName));
+        if (!npc) throw new Error('not spawned: ' + npcName);
+        // A STANDABLE neighbour, not blindly x+1: drop the player inside a wall and check_vis
+        // =lineofsight fails, which reads as that faction being peaceful. Zamorak's warrior happens
+        // to stand with rock to its east, and that alone made it look like the one god who ignores
+        // everybody.
+        const spot = nearestOpen(npc.x, npc.z, npc.level, 3);
+        if (!spot) throw new Error('nowhere to stand beside ' + npcName);
+        p.teleport(spot[0], spot[1], npc.level);
+        H.tick(1);
+        npc.huntMode = NpcType.get(npc.type).huntmode;
+        (npc as any).huntTarget = null;
+        npc.huntAll(HuntType.get(npc.huntMode));
+        return (npc as any).huntTarget === p;
+    };
+    const FACES = [['bandos', 'gwd_spiritual_warrior_bandos'], ['zamorak', 'gwd_spiritual_warrior_zamorak'],
+                   ['armadyl', 'gwd_spiritual_warrior_armadyl'], ['saradomin', 'gwd_spiritual_warrior_saradomin']] as const;
+    const WEAR: Record<string, string> = {
+        bandos: 'bandos_chestplate', zamorak: 'zamorak_cape',
+        armadyl: 'armadyl_chestplate', saradomin: 'saradomin_cape',
+    };
+
+    // nothing worn: everybody wants you
+    {
+        const p = player('gwdagg', 2880, 5310, 2);
+        H.maxOut(p);
+        const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
+        check(`  wearing nothing, every faction hunts you (${after.join(',')})`, after.length, 4);
+        H.despawn(p);
+    }
+    // one god's item: that god alone leaves you alone
+    for (const [god] of FACES) {
+        const p = player('gwdagg_' + god, 2880, 5310, 2);
+        H.maxOut(p);
+        H.equip(p, { [god === 'zamorak' || god === 'saradomin' ? 'back' : 'torso']: WEAR[god] });
+        const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
+        check(`  wearing ${WEAR[god].padEnd(20)} only ${god} ignores you (hunted by ${after.join(',') || 'nobody'})`,
+            after.sort().join(','), FACES.map(([g]) => g).filter(g => g !== god).sort().join(','));
+        H.despawn(p);
+    }
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
