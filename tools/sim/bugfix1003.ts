@@ -95,9 +95,39 @@ console.log('\nTHE MAGIC SHORTBOW (I) IS ITS OWN BOW');
     const imbued = obj('magic_shortbow_i') as any;
     check('  it no longer borrows the plain bow\'s model', imbued.model === plain.model, false);
     check('  nor its worn model', imbued.manwear === plain.manwear, false);
-    // 75 faces against the plain bow's 48: the extra ones are the glow along the limbs.
     const size = (n: string) => readFileSync(`../content/models/obj/${n}.ob2`).length;
     check('  and its model is the bigger of the two', size('obj_magic_shortbow_i') > size('obj_shortbow'), true);
+
+    // THE SPARKLE IS A TEXTURE, AND IT HAS TO STAY ONE. Old School paints twelve faces of this
+    // bow with texture 34 - pale stars on a transparent field. 377's own texture 34 is yewtree,
+    // so until the sparkle was imported as a local texture those twelve were flattened to the
+    // texture's AVERAGE COLOUR and the bow shipped under solid cream slabs, twice. This reads
+    // the face-info and colour blocks and fails if any of them is flat again.
+    const SPARKLE_TEXTURE = 51;                        // content/pack/texture.pack
+    for (const n of ['obj_magic_shortbow_i', 'obj_magic_shortbow_i_manwear', 'obj_magic_shortbow_i_womanwear']) {
+        const raw = readFileSync(`../content/models/obj/${n}.ob2`);
+        const h = raw.length - 18;
+        const g2 = (o: number) => (raw[o] << 8) | raw[o + 1];
+        const vcount = g2(h), fcount = g2(h + 2);
+        const [fTex, fPri, fAlpha, fFlab, fVlab] = [raw[h + 5], raw[h + 6], raw[h + 7], raw[h + 8], raw[h + 9]];
+        let o = vcount + fcount;                       // vertex flags, face types
+        if (fPri === 255) o += fcount;
+        if (fFlab === 1) o += fcount;
+        const finfoAt = o;
+        if (fTex === 1) o += fcount;
+        if (fVlab === 1) o += vcount;
+        if (fAlpha === 1) o += fcount;
+        o += g2(h + 16);                               // face data
+        const colourAt = o;
+        let textured = 0, flattened = 0;
+        for (let i = 0; i < fcount; i++) {
+            const info = fTex === 1 ? raw[finfoAt + i] : 0;
+            const colour = g2(colourAt + i * 2);
+            if ((info & 2) !== 0 && colour === SPARKLE_TEXTURE) textured++;
+            if ((info & 2) === 0 && colour === 9443) flattened++;   // the texture's average colour
+        }
+        check(`  ${n.padEnd(34)} wears the sparkle texture`, [textured, flattened], [12, 0]);
+    }
 }
 
 // ---------------------------------------------------------------- 5. one Rogue outfit
