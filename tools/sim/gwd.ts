@@ -10,6 +10,7 @@
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { World, LocType, NpcType, check, R, player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
@@ -185,6 +186,27 @@ for (const [god, who] of SPAWNED) {
     const missing = who.filter(n => inDungeon(n) === 0);
     check(`  ${god.padEnd(10)} boss and bodyguard are in the dungeon`, missing.join(',') || 'none', 'none');
 }
+// And the armies, which are what you actually grind killcount on - the bodyguards are behind the
+// door you need the killcount to open, so without these there is no legitimate way in.
+for (const g of ['armadyl', 'bandos', 'zamorak', 'saradomin']) {
+    const n = ['warrior', 'ranger', 'mage'].reduce((s, k) => s + inDungeon(`gwd_spiritual_${k}_${g}`), 0);
+    check(`  ${g.padEnd(10)} has an army outside its door (${n})`, n >= 6, true);
+}
+check(`  the Aviansies are in (${Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`)).reduce((a, b) => a + b, 0)})`,
+    Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`)).reduce((a, b) => a + b, 0), 15);
+
+// Stats, which 474 does not carry - every one of them came from the Old School cache. An npc left
+// on the defaults is a punchbag, and a dungeon full of punchbags looks finished and is not.
+const noStats = [...SPAWNED.flatMap(([, w]) => w),
+    ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`))]
+    .filter(n => {
+        // NpcType keeps the six combat numbers in .stats, not as .hitpoints - reading the latter
+        // gives undefined for everyone, which is how the first version of this check reported the
+        // whole dungeon statless including Graardor, who plainly is not.
+        const t = NpcType.get(NpcType.getId(n));
+        return (t.stats?.[NpcStat.HITPOINTS] ?? 1) <= 1;
+    });
+check('  everyone in the dungeon has real combat stats', noStats.join(',') || 'none', 'none');
 
 // ---------------------------------------------------------------- killcount
 console.log('\nKILLCOUNT');
@@ -197,14 +219,16 @@ console.log('\nKILLCOUNT');
     // was testing the early return and nothing else.
     H.setVar(p, 'gwd_kc_bandos', 0);
     H.maxOut(p);
-    // Graardor's three sergeants - the only Bandos followers spawned so far. The armies are not
-    // placed yet, which is the next stage.
+    // Killed OUTSIDE the door, which is the only way a player could earn it: the bodyguards are in
+    // the room you need the killcount to reach. Bandos's army holds the approach.
     let killed = 0;
-    for (const name of ['gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike']) {
-        const victim = World.npcs.find(n => n && n.type === NpcType.getId(name) && n.isActive);
-        if (!victim) continue;
+    for (let i = 0; i < 3; i++) {
+        const victim = World.npcs.find(n => n && n.isActive
+            && NpcType.get(n.type).debugname?.startsWith('gwd_spiritual_') === true
+            && NpcType.get(n.type).debugname?.endsWith('_bandos') === true);
+        if (!victim) break;
         p.teleport(victim.x + 1, victim.z, victim.level); H.tick(1);
-        if (A.fight(p, victim, 400)) killed++;
+        if (A.fight(p, victim, 600)) killed++;
         H.tick(2); // the message is queued
     }
     check(`  killing ${killed} of Bandos's followers counts ${killed}`, kc(), killed);
