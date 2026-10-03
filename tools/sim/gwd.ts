@@ -8,7 +8,7 @@
 // cannot be read from 474 and it comes from the OSRS cache instead. Two sources meeting inside one
 // dungeon is a seam, and a seam you cannot walk through is a dungeon nobody can finish.
 import * as H from './harness.ts';
-import { World, LocType, check, R } from './a1lib.ts';
+import { World, LocType, NpcType, check, R } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
 
@@ -127,6 +127,47 @@ for (const [dbg, e] of [...seen].sort((a, b) => a[0].localeCompare(b[0])))
     console.log(`  ${dbg.padEnd(22)} "${e.name}" [${e.ops.join('/')}] x${e.n} first at ${e.where}`);
 check('  all four faction altars are in', [...seen].filter(([, e]) => e.ops.includes('Pray-at') || e.ops.includes('Pray')).length, 4);
 check('  all four faction doors are in', [...seen].filter(([, e]) => e.name === 'Big door' && e.ops.includes('Open')).length, 4);
+
+// ---------------------------------------------------------------- the cast
+// Everyone in the dungeon who is not one of the four bosses: twelve bodyguards, each god's
+// warrior/ranger/mage, and the fifteen Aviansies. Imported from rev 474 as one batch so that a
+// model worn by several of them is copied once.
+console.log('\nTHE CAST');
+const BODYGUARDS: Record<string, string[]> = {
+    Bandos: ['gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike'],
+    Zamorak: ['gwd_tstanon_karlak', 'gwd_zakln_gritch', 'gwd_balfrug_kreeyath'],
+    Armadyl: ['gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa'],
+    Saradomin: ['gwd_starlight', 'gwd_growler', 'gwd_bree'],
+};
+const GODS = ['bandos', 'zamorak', 'armadyl', 'saradomin'];
+const ARMY = GODS.flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`));
+const AVIANSIES = Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`);
+const BOSSES = ['graardor', 'kril', 'zilyana', 'kreearra'];
+
+function npcOk(name: string) {
+    const id = NpcType.getId(name);
+    if (id < 0) return `missing`;
+    const t = NpcType.get(id);
+    if (!t.models?.length) return 'no models';
+    // A ready or walk seq that did not convert leaves the npc frozen or sliding, which is the
+    // failure the 474 import is most likely to produce and the hardest to see in a screenshot.
+    if (t.readyanim === undefined || t.readyanim < 0) return 'no readyanim';
+    if (t.walkanim === undefined || t.walkanim < 0) return 'no walkanim';
+    return null;
+}
+const broken: string[] = [];
+for (const [god, three] of Object.entries(BODYGUARDS)) {
+    const bad = three.map(n => [n, npcOk(n)] as const).filter(([, e]) => e);
+    check(`  ${god.padEnd(10)} bodyguards (${three.length})`, bad.length, 0);
+    broken.push(...bad.map(([n, e]) => `${n}: ${e}`));
+}
+for (const list of [['the four armies', ARMY], ['the Aviansies', AVIANSIES], ['the four bosses', BOSSES]] as const) {
+    const bad = (list[1] as string[]).map(n => [n, npcOk(n)] as const).filter(([, e]) => e);
+    check(`  ${String(list[0]).padEnd(20)} (${(list[1] as string[]).length})`, bad.length, 0);
+    broken.push(...bad.map(([n, e]) => `${n}: ${e}`));
+}
+for (const b of broken) console.log('    ' + b);
+check('  nobody in the dungeon is missing models or animations', broken.length, 0);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
