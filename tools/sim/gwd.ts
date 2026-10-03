@@ -7,6 +7,12 @@
 // you arrive on and Commander Zilyana's room - has no XTEA key in any published set, so its locs
 // cannot be read from 474 and it comes from the OSRS cache instead. Two sources meeting inside one
 // dungeon is a seam, and a seam you cannot walk through is a dungeon nobody can finish.
+// WAITS IN THIS FILE ARE DELIBERATELY GENEROUS. Clicking a loc or an npc walks the player there
+// first and the handler runs on arrival; a projectile queues its damage for when it lands; a
+// death queues its drops. Every short wait here has either failed intermittently or is the same
+// shape as one that did, so they are 20 ticks rather than tuned individually - the sim is slow
+// because it fights a 255-hitpoint boss, not because of these.
+//
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
@@ -250,7 +256,7 @@ console.log('\nKILLCOUNT');
     H.setVar(p, 'gwd_kc_bandos', 39);
     const before = A.mark();
     H.opLoc(p, door.x, door.z, 'gwd_door_bandos', 1);
-    H.tick(3); // clicking a door walks you to it first; the handler runs on arrival
+    H.tick(20); // clicking a door walks you to it first; the handler runs on arrival
     // What matters is that it did not let you THROUGH, and did not take the kills. Where the click
     // left you standing is the router's business - clicking a door walks you to it.
     check('  39 kills does not get you in', [p.x === 2864 && p.z === 5354, kc()], [false, 39]);
@@ -279,27 +285,27 @@ console.log('\nTHE WAY IN');
     // too weak
     p.setLevel(PlayerStat.STRENGTH, 59);
     H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
-    H.tick(5);
+    H.tick(20);
     check('  59 Strength cannot shift the boulder', p.z > 3700 && p.level === 0, true);
     check('  and it says what is needed', A.lastMes(p).includes('Strength level of 60'), true);
 
     // strong enough
     p.setLevel(PlayerStat.STRENGTH, 60);
     H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
-    H.tick(6);
+    H.tick(20);
     check('  60 Strength puts you in the dungeon', [p.x, p.z, p.level], [2880, 5311, 3]);
 
     // down the rope to the floor the faction doors are on
     H.opLoc(p, 2881, 5311, 'gwd_rope_top', 1);
-    H.tick(6);
+    H.tick(20);
     check('  the rope drops you onto the dungeon floor', [p.x, p.z, p.level], [2880, 5310, 2]);
 
     // back up, and out
     H.opLoc(p, 2881, 5311, 'gwd_rope_down', 1);
-    H.tick(6);
+    H.tick(20);
     check('  and climbs back up', [p.x, p.z, p.level], [2880, 5311, 3]);
     H.opLoc(p, 2882, 5311, 'gwd_crack', 1);
-    H.tick(12); // walk to it, then the squeeze-through delay
+    H.tick(20); // walk to it, then the squeeze-through delay
     check('  the crack puts you back on Trollheim', [p.x, p.z, p.level], [2898, 3724, 0]);
     void where;
     H.despawn(p);
@@ -319,7 +325,7 @@ console.log('\nINTO THE ENCAMPMENTS');
         p.teleport(x, z, lvl); H.tick(1);
         const m = A.mark();
         H.opLoc(p, ...(LOCAT[loc] as [number, number]), loc, 1);
-        H.tick(12);
+        H.tick(20);
         return A.mesSince(p, m);
     };
     const LOCAT: Record<string, [number, number]> = {
@@ -470,13 +476,13 @@ console.log('\nTHE ALTARS');
     // version of this check compare 10 against 10 and pass without testing anything
     p.levels[PlayerStat.PRAYER] = 10;
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
-    H.tick(6);
+    H.tick(20);
     check('  praying recharges you to your Prayer level', prayer(), p.baseLevels[PlayerStat.PRAYER]);
 
     // the ten minutes
     p.levels[PlayerStat.PRAYER] = 10;
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
-    H.tick(6);
+    H.tick(20);
     check('  and will not do it again straight away', prayer(), 10);
 
     // +1 per devoted piece worn, counted off the same param the factions read
@@ -484,13 +490,13 @@ console.log('\nTHE ALTARS');
     H.equip(p, { torso: 'bandos_chestplate', legs: 'bandos_tassets', feet: 'bandos_boots' });
     p.levels[PlayerStat.PRAYER] = 10;
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
-    H.tick(6);
+    H.tick(20);
     check('  three Bandos pieces boost three above your level',
         prayer(), p.baseLevels[PlayerStat.PRAYER] + 3);
 
     // Teleport puts you out of the lair, not out of the dungeon
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 2);
-    H.tick(8);
+    H.tick(20);
     check('  and Teleport puts you outside the lair', [p.x, p.z, p.level], [2862, 5354, 2]);
     H.despawn(p);
 }
@@ -644,37 +650,107 @@ console.log("\nKREE'ARRA");
 // item strictly better than fighting. Four shared tables, one per kind.
 console.log('\nTHE ARMIES DROP SOMETHING');
 {
-    const objsAt = (x: number, z: number, lvl: number) =>
-        [...World.gameMap.getZone(x, z, lvl).getAllObjsUnsafe()]
-            .filter((o: any) => Math.abs(o.x - x) <= 2 && Math.abs(o.z - z) <= 2).length;
+    // LOOK FOR A NEW OBJECT, ANYWHERE NEARBY. Counting objects around a point cannot work: these
+    // chase the player across the room over a 1500-tick fight and die tens of tiles from where it
+    // started, so a count near the start sees nothing and a count near the end has no baseline.
+    // Both of those reported "killed and dropped (0)" for npcs the diagnostic showed dead with
+    // their loot on the floor. A snapshot of what is on the ground before and after, over a box
+    // wide enough to contain the whole fight, answers it whatever either of them did.
+    const snapshot = (cx: number, cz: number, lvl: number, r = 40) => {
+        const seen = new Set<string>();
+        for (let zx = cx - r; zx <= cx + r; zx += 8)
+            for (let zz = cz - r; zz <= cz + r; zz += 8)
+                for (const o of World.gameMap.getZone(zx, zz, lvl).getAllObjsUnsafe() as any)
+                    seen.add(`${o.x},${o.z},${o.type},${o.count}`);
+        return seen;
+    };
 
+    // SOME OF THESE TABLES ROLL NOTHING. The wiki gives the Spiritual ranger a "Nothing" branch,
+    // and the five items this cache lacks add their weights to it: 33 of its 128 rolls drop
+    // nothing at all, and the mage has 7. So one kill proving nothing is not a failure - it is the
+    // table. Up to three of each are killed, and the check is that SOME kill drops.
     for (const kind of ['gwd_spiritual_mage_bandos', 'gwd_spiritual_warrior_bandos',
                         'gwd_spiritual_ranger_bandos', 'gwd_aviansie_1']) {
-        const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(kind));
-        if (!npc) { check(`  ${kind} is spawned to kill`, false, true); continue; }
-        // PIN IT PROPERLY. huntMode = -1 stops it hunting, not WANDERING - these drift a tile at a
-        // time and A.fight gives up rather than chasing, which is how this reported "killed and
-        // dropped (0)" on one run and passed on the next, twice. The victim is moved next to the
-        // player and held there, the same way Graardor is.
-        npc.huntMode = -1;
-        const spot = nearestOpen(npc.x, npc.z, npc.level, 4)!;
-        const p = player('loot_' + kind, spot[0], spot[1], npc.level);
-        const near = nearestOpen(spot[0] + 1, spot[1], npc.level, 3)!;
-        npc.teleport(near[0], near[1], npc.level);
-        H.tick(1);
-        H.maxOut(p);
-        H.equip(p, { rhand: 'dragon_scimitar' });
-        const before = objsAt(npc.x, npc.z, npc.level);
-        const dead = A.fight(p, npc, 1500);
-        H.tick(4);
-        const after = objsAt(npc.x, npc.z, npc.level);
-        if (!dead || after <= before)
-            console.log(`    ${kind}: dead=${dead} npc hp ${npc.levels[NpcStat.HITPOINTS]} active ${npc.isActive} `
-                + `at ${npc.x},${npc.z}; player hp ${p.levels[PlayerStat.HITPOINTS]} at ${p.x},${p.z}`);
-        check(`  ${kind.replace('gwd_', '').padEnd(26)} killed and dropped (${after - before})`,
-            dead && after > before, true);
-        H.despawn(p);
+        let dropped = 0, kills = 0;
+        for (let attempt = 0; attempt < 3 && dropped === 0; attempt++) {
+            const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(kind));
+            if (!npc) break;
+            npc.huntMode = -1;
+            const spot = nearestOpen(npc.x, npc.z, npc.level, 4)!;
+            const p = player(`loot_${kind}_${attempt}`, spot[0], spot[1], npc.level);
+            const near = nearestOpen(spot[0] + 1, spot[1], npc.level, 3)!;
+            npc.teleport(near[0], near[1], npc.level);
+            H.tick(1);
+            H.maxOut(p);
+            // A halberd, not a scimitar: the Armadylean flyers refuse anything with less than two
+            // tiles of reach now, so a scimitar cannot kill an Aviansie at all.
+            H.equip(p, { rhand: 'rune_halberd' });
+            const cx = npc.x, cz = npc.z, clvl = npc.level;
+            const before = snapshot(cx, cz, clvl);
+            const dead = A.fight(p, npc, 1500);
+            H.tick(20);
+            if (dead) kills++;
+            dropped += [...snapshot(cx, cz, clvl)].filter(k => !before.has(k)).length;
+            H.despawn(p);
+        }
+        check(`  ${kind.replace('gwd_', '').padEnd(26)} ${kills} killed, ${dropped} dropped`,
+            kills > 0 && dropped > 0, true);
     }
+}
+
+// ---------------------------------------------------------------- Armadyl cannot be meleed
+// "Like other Armadylean followers in the God Wars Dungeon, he and his bodyguards cannot be
+// attacked with Melee, except when using Halberds or Salamanders." min_attackrange=2 is how this
+// build already says that - it is what keeps a short weapon off Zulrah across the water.
+console.log('\nARMADYL FLIES');
+{
+    const FLYERS = ['kreearra', 'gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa',
+        'gwd_spiritual_warrior_armadyl', 'gwd_spiritual_ranger_armadyl', 'gwd_spiritual_mage_armadyl',
+        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)];
+    const reach = (n: string) => NpcType.get(NpcType.getId(n)).params?.get(ParamType.getId('min_attackrange'));
+    const unguarded = FLYERS.filter(n => reach(n) !== 2);
+    check(`  all ${FLYERS.length} Armadylean flyers refuse a short weapon`, unguarded.join(',') || 'none', 'none');
+
+    // and the other three gods are NOT affected - this is Armadyl's rule, not a dungeon-wide one
+    const others = ['graardor', 'kril', 'zilyana', 'gwd_strongstack', 'gwd_spiritual_warrior_bandos',
+        'gwd_starlight', 'gwd_tstanon_karlak'];
+    check('  and nobody else in the dungeon is melee-proof',
+        others.filter(n => reach(n) === 2).join(',') || 'none', 'none');
+
+    // the refusal actually fires: a scimitar is turned away, a halberd is not
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('gwd_flight_kilisa'))!;
+    // Pinned, like every other victim in this file. She wanders, and a fight that never starts
+    // reads as "the halberd was refused" - which is the opposite of what it would mean.
+    boss.huntMode = -1;
+    const spot = nearestOpen(boss.x, boss.z, boss.level, 5)!;
+    const p = player('armamelee', spot[0], spot[1], boss.level);
+    const beside = nearestOpen(spot[0] + 2, spot[1], boss.level, 3)!;
+    boss.teleport(beside[0], beside[1], boss.level);
+    H.tick(1);
+    H.maxOut(p);
+
+    H.equip(p, { rhand: 'dragon_scimitar' });
+    let mark = A.mark();
+    H.opNpc(p, boss, 2);
+    H.tick(20);   // the player walks to her first; the refusal fires on arrival, not on the click
+    check('  a scimitar is told it cannot reach', A.said(p, mark, 'longer weapon'), true);
+
+    H.equip(p, { rhand: 'rune_halberd' });
+    mark = A.mark();
+    const hpBefore = boss.levels[NpcStat.HITPOINTS];
+    const swings = H.anims.length;
+    H.opNpc(p, boss, 2);
+    H.tick(30);
+    // WHAT IS BEING TESTED IS THE REACH RULE, not the damage roll. Flight Kilisa has 175 defence
+    // and a halberd got her down ONE hitpoint in sixty ticks when this was measured directly, so
+    // asserting that she loses health makes the check a coin flip - which is exactly how it passed
+    // once and failed once on identical code. The swing happening at all is the thing: no refusal,
+    // and the player actually attacking rather than standing there.
+    const swung = H.anims.slice(swings).some(a => a.who === p.username);
+    check('  a halberd is not, and the swing happens',
+        [A.said(p, mark, 'longer weapon'), swung], [false, true]);
+    void hpBefore;
+    H.despawn(p);
 }
 
 // NOTE: this kills Graardor, so it goes LAST - anything after it finds an empty room.
@@ -718,7 +794,7 @@ console.log('\nKILLING GRAARDOR');
     const dead = A.fight(p, boss, 6000);
     console.log(`    boss hp ${bossHp0} -> ${boss.levels[NpcStat.HITPOINTS]}, active ${boss.isActive}; `
         + `player hp ${p.levels[PlayerStat.HITPOINTS]}, at ${p.x},${p.z},${p.level} (boss at ${boss.x},${boss.z},${boss.level})`);
-    H.tick(4);
+    H.tick(20);
     check('  Graardor can actually be killed', dead, true);
     const dropped = [...World.gameMap.getZone(boss.x, boss.z, boss.level).getAllObjsUnsafe()].length;
     check(`  and he drops something (${dropped - before} stacks)`, dropped > before, true);
