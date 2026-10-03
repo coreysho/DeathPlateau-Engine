@@ -340,7 +340,8 @@ export function take(p: Player, objName: string, radius = 3): boolean {
     return false;
 }
 /** Run a proc the way an op script would: with protected access to the player. */
-export function runProcProtected(p: Player, name: string, args: any[] = []) {
+/** Returns what the proc returned, the same way H.runProc does - several of these have outputs. */
+export function runProcProtected(p: Player, name: string, args: any[] = []): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
     const state = ScriptRunner.init(script, p, null, args);
@@ -348,6 +349,7 @@ export function runProcProtected(p: Player, name: string, args: any[] = []) {
     p.protect = true;
     ScriptRunner.execute(state);
     p.protect = false;
+    return (state as any).intStack.slice(0, (state as any).isp);
 }
 /** Put a loc into the world (a fire to cook on, say). */
 export function addLoc(name: string, x: number, z: number, level = 0, shape = 10, duration = 500) {

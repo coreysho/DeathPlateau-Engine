@@ -240,6 +240,35 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             player.addSessionLog(LoggerEventType.MODERATOR, 'Ran cheat', cheat);
         }
 
+        if (player.staffModLevel >= 4) {
+            // developer and above, ON LIVE TOO - which is the whole reason this sits above the
+            // block below rather than in it. ::godmode was asked for (2026-10-03) for testing boss
+            // rotations on the real server, and a [debugproc,] cannot do that: debugprocs are
+            // owner-only on a live world. Nothing here touches another player or the economy.
+
+            if (cmd === 'godmode') {
+                // The switch itself is content - misc/scripts/godmode.rs2 - so what it restores and
+                // what it refuses is readable and editable there rather than buried in the engine.
+                //
+                // protect=true, like ::bank above: the proc writes %godmode and %sa_energy, both
+                // protected varps, and running it unprotected is "requires protected access" and a
+                // dropped client.
+                if (!player.canAccess()) {
+                    player.messageGame('Please finish what you are doing first.');
+                    return false;
+                }
+
+                const script = ScriptProvider.getByName('[proc,godmode_toggle]');
+                if (!script) {
+                    // a content build from before godmode.rs2
+                    return false;
+                }
+
+                player.executeScript(ScriptRunner.init(script, player), true);
+                return true;
+            }
+        }
+
         if (player.staffModLevel >= 5 || (!Environment.NODE_PRODUCTION && player.staffModLevel >= 4)) {
             // developer commands. On live only the owners have them (5, red crown; 6, blue and gold) -
             // ::speed, ::snapshot, ::reload and the rest can stop or wreck the world, so a developer (4)
