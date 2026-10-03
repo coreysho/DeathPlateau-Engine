@@ -98,16 +98,17 @@ console.log('\nTHE MAGIC SHORTBOW (I) IS ITS OWN BOW');
     const size = (n: string) => readFileSync(`../content/models/obj/${n}.ob2`).length;
     check('  and its model is the bigger of the two', size('obj_magic_shortbow_i') > size('obj_shortbow'), true);
 
-    // ONE FRAME OF THE SPARKLE, NOT ALL THREE. Old School bakes the icon animation into the
-    // mesh - the sparkle sits at three places along the limb, four faces each, and the client
-    // shows one position per frame. 377 cannot animate an icon, so it drew all twelve at once
-    // and the bow came out buried under pale slabs. tools/models/genmsbi.py marks eight of
-    // them undrawn; this is what says they stayed that way.
+    // THE SPARKLE IS A TEXTURE, AND IT HAS TO STAY ONE. Old School paints twelve faces of this
+    // bow with texture 34 - pale stars on a transparent field. 377's own texture 34 is yewtree,
+    // so until the sparkle was imported as a local texture those twelve were flattened to the
+    // texture's AVERAGE COLOUR and the bow shipped under solid cream slabs, twice. This reads
+    // the face-info and colour blocks and fails if any of them is flat again.
+    const SPARKLE_TEXTURE = 51;                        // content/pack/texture.pack
     for (const n of ['obj_magic_shortbow_i', 'obj_magic_shortbow_i_manwear', 'obj_magic_shortbow_i_womanwear']) {
         const raw = readFileSync(`../content/models/obj/${n}.ob2`);
         const h = raw.length - 18;
         const g2 = (o: number) => (raw[o] << 8) | raw[o + 1];
-        const vcount = g2(h), fcount = g2(h + 2), tcount = raw[h + 4];
+        const vcount = g2(h), fcount = g2(h + 2);
         const [fTex, fPri, fAlpha, fFlab, fVlab] = [raw[h + 5], raw[h + 6], raw[h + 7], raw[h + 8], raw[h + 9]];
         let o = vcount + fcount;                       // vertex flags, face types
         if (fPri === 255) o += fcount;
@@ -115,18 +116,17 @@ console.log('\nTHE MAGIC SHORTBOW (I) IS ITS OWN BOW');
         const finfoAt = o;
         if (fTex === 1) o += fcount;
         if (fVlab === 1) o += vcount;
-        const alphaAt = o;
         if (fAlpha === 1) o += fcount;
         o += g2(h + 16);                               // face data
         const colourAt = o;
-        let sparkle = 0, drawn = 0;
+        let textured = 0, flattened = 0;
         for (let i = 0; i < fcount; i++) {
-            if (g2(colourAt + i * 2) !== 9443) continue;   // the pale cream the sparkle is painted
-            sparkle++;
-            if (fAlpha !== 1 || raw[alphaAt + i] < 255) drawn++;
+            const info = fTex === 1 ? raw[finfoAt + i] : 0;
+            const colour = g2(colourAt + i * 2);
+            if ((info & 2) !== 0 && colour === SPARKLE_TEXTURE) textured++;
+            if ((info & 2) === 0 && colour === 9443) flattened++;   // the texture's average colour
         }
-        void finfoAt; void tcount;
-        check(`  ${n.padEnd(34)} shows 4 of its ${sparkle} sparkle faces`, [sparkle, drawn], [12, 4]);
+        check(`  ${n.padEnd(34)} wears the sparkle texture`, [textured, flattened], [12, 0]);
     }
 }
 
