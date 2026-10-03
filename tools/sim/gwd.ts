@@ -13,6 +13,7 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import SeqType from '#/cache/config/SeqType.js';
+import SpotanimType from '#/cache/config/SpotanimType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
@@ -579,6 +580,53 @@ console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
     check(`  the special goes through prayer anyway (${hurt})`, hurt >= 35 && hurt <= 49, true);
     check(`  and takes half the prayer left (80 -> ${p.levels[PlayerStat.PRAYER]})`,
         p.levels[PlayerStat.PRAYER], 40);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- Kree'arra
+// The only general who fights from across the room, and the biggest hit in the dungeon.
+console.log("\nKREE'ARRA");
+{
+    const t = NpcType.get(NpcType.getId('kreearra'));
+    check('  he swings every 3 ticks and reaches 8 tiles',
+        [t.params?.get(ParamType.getId('attackrate')), t.attackrange], [3, 8]);
+
+    const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('kreearra'))!;
+    const p = player('kreevictim', boss.x + 6, boss.z, boss.level);
+    H.maxOut(p);
+    H.tick(1);
+
+    // A projectile's damage is QUEUED for when it lands, so each shot has to be let finish before
+    // the next is fired. Without the drain, one shot's damage arrives during the next test and
+    // reads as a prayer that failed to block - which is exactly how this first reported that both
+    // of his prayers were broken.
+    // AND HE MUST NOT FIRE ON HIS OWN while a single shot is being measured. He is aggressive at
+    // three ticks, so twelve ticks of waiting is four more attacks of his own landing on top of
+    // the one under test - which is how a 69-max attack measured 92.
+    boss.huntMode = -1;
+    (boss as any).target = null;
+    (boss as any).huntTarget = null;
+    const shoot = (proc: string) => {
+        H.tick(12);                                   // let anything in flight land
+        p.levels[PlayerStat.HITPOINTS] = 99;
+        H.runNpcProc(boss, proc, p);
+        H.tick(12);
+        return 99 - p.levels[PlayerStat.HITPOINTS];
+    };
+
+    const ranged = shoot('[proc,kreearra_ranged_attack]');
+    check(`  he shoots you from 6 tiles away (${ranged})`, ranged > 0 && ranged <= 69, true);
+
+    H.setVar(p, 'prayer13', 1);                        // Protect from Missiles
+    check('  Protect from Missiles stops it', shoot('[proc,kreearra_ranged_attack]'), 0);
+
+    H.setVar(p, 'prayer13', 0);
+    H.setVar(p, 'prayer12', 1);                        // Protect from Magic
+    check('  and Protect from Magic stops the other one', shoot('[proc,kreearra_magic_attack]'), 0);
+
+    // both projectiles resolve - a missing graphic is an attack with nothing leaving him
+    for (const n of ['kreearra_ranged_proj', 'kreearra_magic_proj'])
+        check(`  ${n} is a real spotanim`, SpotanimType.getId(n) >= 0, true);
     H.despawn(p);
 }
 
