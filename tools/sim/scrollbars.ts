@@ -26,7 +26,7 @@ function ifFiles(dir: string, out: string[] = []): string[] {
     return out;
 }
 
-type Com = { name: string; file: string; layer?: string; type?: string; x: number; y: number; w: number; h: number; scroll: number };
+type Com = { name: string; file: string; layer?: string; type?: string; x: number; y: number; w: number; h: number; scroll: number; hasScroll: boolean };
 
 const windows = new Map<string, Com[]>();
 for (const file of ifFiles('../content/scripts')) {
@@ -34,7 +34,7 @@ for (const file of ifFiles('../content/scripts')) {
     let cur: Com | null = null;
     for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
         const head = /^\[(\w+)\]/.exec(line);
-        if (head) { cur = { name: head[1], file, x: 0, y: 0, w: 0, h: 0, scroll: 0 }; coms.push(cur); continue; }
+        if (head) { cur = { name: head[1], file, x: 0, y: 0, w: 0, h: 0, scroll: 0, hasScroll: false }; coms.push(cur); continue; }
         if (!cur) continue;
         const kv = /^(\w+)=(.*)$/.exec(line);
         if (!kv) continue;
@@ -43,7 +43,7 @@ for (const file of ifFiles('../content/scripts')) {
         else if (k === 'y') cur.y = Number(v);
         else if (k === 'width') cur.w = Number(v);
         else if (k === 'height') cur.h = Number(v);
-        else if (k === 'scroll') cur.scroll = Number(v);
+        else if (k === 'scroll') { cur.scroll = Number(v); cur.hasScroll = true; }
         else if (k === 'layer') cur.layer = v;
         else if (k === 'type') cur.type = v;
     }
@@ -63,16 +63,22 @@ for (const [file, coms] of windows) {
     const drawn = Math.max(0, ...top.map(c => c.x + c.w));
     const right = drawn <= 190 ? 190 : drawn;
     for (const c of top) {
-        if (c.type !== 'layer' || c.scroll <= c.h) continue;   // the client draws no bar for these
+        // EVERY LAYER THAT DECLARES A SCROLL, not only the ones long enough to draw a bar today.
+        // The collection log's entry list had scroll=0 and thirteen rows in a box that holds
+        // fifteen, so it drew nothing and looked right - and a sixteenth entry would have put its
+        // bar out in the gutter between the panels. A layer that cannot fit its own scrollbar is
+        // wrong whether or not it is full yet, and waiting for it to fill is waiting for a player
+        // to find it. equipment_stats.if's bonuses panel was the other one.
+        if (c.type !== 'layer' || !c.hasScroll) continue;
         scrollers++;
         if (c.x + c.w + SCROLLBAR_W > right) {
             over.push(`${file.split(/[\/]/).pop()} ${c.name}: bar ends at ${c.x + c.w + SCROLLBAR_W}, the window at ${right}`);
         }
     }
 }
-console.log(`${windows.size} interfaces, ${scrollers} layers long enough to draw a scrollbar`);
+console.log(`${windows.size} interfaces, ${scrollers} layers that scroll or could`);
 for (const o of over) console.log('  ' + o);
-check('  every scrollbar stays inside its window', over.length, 0);
+check('  every one of them has room for its bar inside the window', over.length, 0);
 
 // and the one this was written for, by the numbers
 console.log('\nTHE COLLECTION LOG GRID');
@@ -81,6 +87,14 @@ const grid = log.find(c => c.name === 'grid')!;
 const pagebox = log.find(c => c.name === 'pagebox')!;
 check('  its scrollbar ends exactly where pagebox does', grid.x + grid.w + SCROLLBAR_W, pagebox.x + pagebox.w);
 check('  and the layer still holds eight whole item cells', grid.w, 7 * (4 + 32) + 32);
+
+// The entry list on the left, which has the same arrangement and had the same latent fault: its
+// panel grew into the gutter rather than the list losing width, so the rows read as they did.
+const list = log.find(c => c.name === 'list')!;
+const listbox = log.find(c => c.name === 'listbox')!;
+check('  the entry list has room for a bar inside listbox', list.x + list.w + SCROLLBAR_W <= listbox.x + listbox.w, true);
+check('  and the rows kept their full width', list.w, 150);
+check('  with listbox still clear of pagebox', listbox.x + listbox.w <= pagebox.x, true);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
