@@ -108,6 +108,23 @@ console.log('\nEVERY REWARD IS ON A COLLECTION LOG PAGE');
         const missing = want.filter(n => !have.has(n));
         check(`  ${page.padEnd(18)} lists all ${want.length}`, missing.length ? missing.join(' ') : 'yes', 'yes');
     }
+
+    // THE GOD PAGES ARE NOT IN ANY TIER'S TABLE, which is why the four lines above never covered
+    // them: ~trail_clue_god_page rolls them ahead of all three tiers rather than sitting inside one.
+    // They belong on the shared page and nowhere else, as they do in Old School - and for a while
+    // they were rollable here and on no page at all, so a player could hold every one of them and
+    // the window would never say so. Twelve, not Old School's twenty-four: the Armadyl, Bandos and
+    // Ancient books came years after this era.
+    const PAGES = (readFileSync('../content/scripts/minigames/game_trail/configs/trail_god_pages.enum', 'utf8')
+        .match(/^val=\d+,(\S+)$/gm) ?? []).map(l => l.split(',')[1]);
+    check('  the era has twelve god pages', PAGES.length, 12);
+    const sharedHas = pageItems('clue_shared');
+    const noPage = PAGES.filter(n => !sharedHas.has(n));
+    check('  clue_shared         lists all 12 god pages', noPage.length ? noPage.join(' ') : 'yes', 'yes');
+    for (const page of ['clue_easy', 'clue_medium', 'clue_hard', 'clue_elite_master']) {
+        const dupes = PAGES.filter(n => pageItems(page).has(n));
+        check(`  and ${page.padEnd(18)} does not repeat them`, dupes.length ? dupes.join(' ') : 'yes', 'yes');
+    }
 }
 
 // And the round trip on the real engine: roll a casket and the log fills.

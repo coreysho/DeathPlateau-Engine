@@ -52,8 +52,15 @@ for (const name of ['weapon_unarmed_table', 'weapon_2h_sword_table', 'weapon_bow
     const row: any = DbRowType.getByName(name);
     check(`  ${name.padEnd(24)} is in combat_style_table`, row?.tableId, styleTable);
 }
+// The row that broke it, counted against its own source rather than a number written here - the
+// tab grows every time a clue reward is added, and what matters is that the cache holds as many as
+// the spec asked for and that it is still well past the 255 a single byte could carry.
+const src = readFileSync('../content/scripts/collection_log/configs/collection_log.dbrow', 'utf8');
+const want = (/\[collection_log_tab_1\]([\s\S]*?)(?=\r?\n\[|$)/.exec(src)?.[1].match(/^data=items,/gm) ?? []).length;
 const clues: any = DbRowType.getByName('collection_log_tab_1');
-check('  the collection log Clues tab kept all 516 of its items', clues?.columnValues[DbTableType.get(clues.tableId).columnNames.indexOf('items')]?.length, 516);
+const got = clues?.columnValues[DbTableType.get(clues.tableId).columnNames.indexOf('items')]?.length;
+check(`  the collection log Clues tab kept all ${want} of its items`, got, want);
+check('  which is more than one byte could ever have carried', got > 255, true);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
