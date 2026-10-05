@@ -7,6 +7,8 @@
 import * as H from './harness.ts';
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
+import NpcType from '#/cache/config/NpcType.js';
+import ParamType from '#/cache/config/ParamType.js';
 
 await H.boot();
 H.loginOrder();
@@ -76,6 +78,28 @@ H.tick(2);
 check('a pet handed over by ~pet_receive_later follows the killer a tick later', follower(q), 'bosspet_kbd_item');
 check('  and %pet_pending is cleared', H.getVar(q, 'pet_pending'), -1);
 
+
+// ---------------------------------------------------------------- every pet, both ways round
+// A pet is two configs that have to name each other: the item's follower_id and the npc's
+// pet_item_id. Miss one and nothing complains - the item simply drops like any other and never
+// becomes anything, which is how the Bloodhound rolled off the master reward table for a day as an
+// item that did nothing. Checked over the whole category so the next one cannot do the same.
+console.log('\nEVERY BOSS PET NAMES ITS OTHER HALF');
+{
+    const PET = (ObjType.get(ObjType.getId('bosspet_snakeling_item')) as any).category;
+    const bad: string[] = [];
+    let n = 0;
+    for (let i = 0; i < ObjType.count; i++) {
+        const t = ObjType.get(i) as any;
+        if (!t || t.category !== PET || t.certlink !== -1) continue;
+        n++;
+        const npc = t.params?.get(ParamType.getId('follower_id')) ?? null;
+        if (npc === null) { bad.push(`${t.debugname} has no follower_id`); continue; }
+        const back = (NpcType.get(npc) as any)?.params?.get(ParamType.getId('pet_item_id')) ?? null;
+        if (back !== i) bad.push(`${t.debugname} -> ${NpcType.get(npc)?.debugname} does not point back`);
+    }
+    check(`  all ${n} of them`, bad.length ? bad.join('; ') : 'yes', 'yes');
+}
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);

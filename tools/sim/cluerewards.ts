@@ -86,5 +86,55 @@ console.log('\nTHE ELITE AND MASTER TABLE IS REACHED ONE RARE ROLL IN EIGHT');
     check(`  ${(rate * 100).toFixed(1)}% of rare rolls (want 12.5%)`, Math.abs(rate - 0.125) < 0.02, true);
 }
 
+// ---------------------------------------------------------------- and the log knows about them
+// A reward that is not on a collection log page is one the log quietly ignores:
+// ~collection_log_casket walks the whole reward inv and calls ~collection_log_add on every slot,
+// and add() looks the item up in the log's own list and RETURNS if it is not there. So a table
+// entry missing from its page is silent - no error, no warning, just an item that never registers.
+// 456 of them were in exactly that state until this check went in.
+console.log('\nEVERY REWARD IS ON A COLLECTION LOG PAGE');
+{
+    const dbrow = readFileSync('../content/scripts/collection_log/configs/collection_log.dbrow', 'utf8');
+    const pageItems = (key: string) => {
+        const block = dbrow.split(/\[collection_log_/).find(b => b.startsWith(key + ']')) ?? '';
+        return new Set((block.match(/^data=items,(\S+)$/gm) ?? []).map(l => l.split(',')[1]));
+    };
+    for (const [tier, proc, page] of [['easy', 'trail_clue_easy_rare', 'clue_easy'],
+                                      ['medium', 'trail_clue_medium_rare', 'clue_medium'],
+                                      ['hard', 'trail_clue_hard_rare', 'clue_hard'],
+                                      ['hard', 'trail_clue_master_rare', 'clue_elite_master']] as [string, string, string][]) {
+        const want = entriesOf(`${DIR}/${tier}/trail_clue_${tier}_reward.rs2`, proc);
+        const have = pageItems(page);
+        const missing = want.filter(n => !have.has(n));
+        check(`  ${page.padEnd(18)} lists all ${want.length}`, missing.length ? missing.join(' ') : 'yes', 'yes');
+    }
+}
+
+// And the round trip on the real engine: roll a casket and the log fills.
+console.log('\nOPENING A CASKET RECORDS WHAT WAS IN IT');
+{
+    const q: any = player('cluelog', 3200, 3200);
+    H.clearInv(q);
+    const LOG = InvType.getId('collection_log');
+    const count = () => {
+        const inv = q.getInventory(LOG)!;
+        let n = 0;
+        for (let s = 0; s < inv.capacity; s++) if (inv.get(s)) n++;
+        return n;
+    };
+    const had = count();
+    const inv = q.getInventory(REWARD)!;
+    for (let s = 0; s < inv.capacity; s++) inv.delete(s);
+    // IN THAT ORDER. casket_before SNAPSHOTS the reward inv so that what is already in it - loot
+    // from a casket the player had no room for - is not logged twice; ~trail_prepare_rewardinv
+    // calls it before any rolling. Running it after the roll makes the snapshot equal to the loot
+    // and the delta zero, and nothing is recorded at all.
+    A.runProcProtected(q, '[proc,collection_log_casket_before]');
+    A.runProcProtected(q, '[proc,trail_clue_hard_rare]');
+    A.runProcProtected(q, '[proc,collection_log_casket]', [0, 'hard']);
+    check('  the log gained what the casket rolled', count() > had, true);
+    H.despawn(q);
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
