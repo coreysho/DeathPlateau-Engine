@@ -87,13 +87,13 @@ type Step = {
     walked?: boolean;    // crossed on foot, so every tile between must be roof
 };
 const COURSE: Step[] = [
-    { name: 'rough wall',  loc: 'osrsloc_11404', x: 3103, z: 3279, level: 0, land: [3102, 3279, 3], xp: 5 },
-    { name: 'tightrope 1', loc: 'osrsloc_11405', x: 3098, z: 3277, level: 3, land: [3089, 3277, 3], xp: 8, walked: true },
-    { name: 'tightrope 2', loc: 'osrsloc_11406', x: 3092, z: 3276, level: 3, land: [3092, 3266, 3], xp: 7, walked: true },
-    { name: 'narrow wall', loc: 'osrsloc_11430', x: 3089, z: 3264, level: 3, land: [3088, 3261, 3], xp: 7, walked: true },
-    { name: 'wall',        loc: 'osrsloc_11630', x: 3088, z: 3256, level: 3, land: [3088, 3255, 3], xp: 10 },
-    { name: 'gap',         loc: 'osrsloc_11631', x: 3095, z: 3255, level: 3, land: [3096, 3256, 3], xp: 4, walked: true },
-    { name: 'crate',       loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: [3103, 3261, 0], xp: 79 },
+    { name: 'rough wall',  loc: 'osrsloc_11404', x: 3103, z: 3279, level: 0, land: [3102, 3279, 3], xp: 50 },
+    { name: 'tightrope 1', loc: 'osrsloc_11405', x: 3098, z: 3277, level: 3, land: [3089, 3277, 3], xp: 80, walked: true },
+    { name: 'tightrope 2', loc: 'osrsloc_11406', x: 3092, z: 3276, level: 3, land: [3092, 3266, 3], xp: 70, walked: true },
+    { name: 'narrow wall', loc: 'osrsloc_11430', x: 3089, z: 3264, level: 3, land: [3088, 3261, 3], xp: 70, walked: true },
+    { name: 'wall',        loc: 'osrsloc_11630', x: 3088, z: 3256, level: 3, land: [3088, 3255, 3], xp: 100 },
+    { name: 'gap',         loc: 'osrsloc_11631', x: 3095, z: 3255, level: 3, land: [3096, 3256, 3], xp: 40, walked: true },
+    { name: 'crate',       loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: [3103, 3261, 0], xp: 790 },
 ];
 
 console.log('\nEVERY LANDING IS SOMEWHERE YOU CAN STAND');
@@ -146,14 +146,16 @@ for (const s of COURSE) {
 check('  every obstacle put the player where the constant says', ok, true);
 if (offRoof.length) console.log('  stepped on nothing: ' + offRoof.join('; '));
 check('  and no crossing stepped off the roof', offRoof.length, 0);
-check('  the lap paid 120 experience', agil() - before, 120);
+// 1200 TENTHS, WHICH IS 120 EXPERIENCE. stat_advance takes xp * 10 and these constants
+// were written as whole points, so a lap paid 12 - a tenth of the wiki's rate.
+check('  the lap paid 120 experience (1200 tenths)', agil() - before, 1200);
 check('  and the progress counter reset for the next lap', prog(), 0);
 
 // ---------------------------------------------------------------- the wiki's numbers
 // 5, 8, 7, 7, 10, 4, 79. The crate's 79 IS the lap bonus; there is no separate award, which is why
 // the seven have to add to 120 exactly.
 console.log('\nTHE EXPERIENCE IS THE WIKI\'S');
-check('  the seven obstacles add to a lap', COURSE.reduce((a, s) => a + s.xp, 0), 120);
+check('  the seven obstacles add to a lap', COURSE.reduce((a, s) => a + s.xp, 0), 1200);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

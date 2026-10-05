@@ -46,14 +46,14 @@ for (const line of readFileSync('../content/scripts/skill_agility/configs/alkhar
 
 type Step = { name: string; loc: string; x: number; z: number; level: number; land: string; xp: number; walk?: string };
 const COURSE: Step[] = [
-    { name: 'rough wall',   loc: 'osrsloc_11633', x: 3273, z: 3195, level: 0, land: 'alkharid_land_wall',  xp: 12 },
-    { name: 'tightrope 1',  loc: 'osrsloc_14398', x: 3272, z: 3181, level: 3, land: 'alkharid_land_rope1', xp: 36, walk: 'alkharid_rope1_start' },
-    { name: 'cable',        loc: 'osrsloc_14402', x: 3269, z: 3166, level: 3, land: 'alkharid_land_cable', xp: 48 },
-    { name: 'zip line',     loc: 'osrsloc_14403', x: 3302, z: 3163, level: 3, land: 'alkharid_land_zip',   xp: 48 },
-    { name: 'tropical tree',loc: 'osrsloc_14404', x: 3318, z: 3166, level: 1, land: 'alkharid_land_tree',  xp: 12 },
-    { name: 'beams',        loc: 'osrsloc_11634', x: 3316, z: 3179, level: 2, land: 'alkharid_land_beams', xp: 6 },
-    { name: 'tightrope 2',  loc: 'osrsloc_14409', x: 3313, z: 3186, level: 3, land: 'alkharid_land_rope2', xp: 18, walk: 'alkharid_rope2_start' },
-    { name: 'gap',          loc: 'osrsloc_14399', x: 3300, z: 3193, level: 3, land: 'alkharid_land_gap',   xp: 36 },
+    { name: 'rough wall',   loc: 'osrsloc_11633', x: 3273, z: 3195, level: 0, land: 'alkharid_land_wall',  xp: 120 },
+    { name: 'tightrope 1',  loc: 'osrsloc_14398', x: 3272, z: 3181, level: 3, land: 'alkharid_land_rope1', xp: 360, walk: 'alkharid_rope1_start' },
+    { name: 'cable',        loc: 'osrsloc_14402', x: 3269, z: 3166, level: 3, land: 'alkharid_land_cable', xp: 480 },
+    { name: 'zip line',     loc: 'osrsloc_14403', x: 3302, z: 3163, level: 3, land: 'alkharid_land_zip',   xp: 480 },
+    { name: 'tropical tree',loc: 'osrsloc_14404', x: 3318, z: 3166, level: 1, land: 'alkharid_land_tree',  xp: 120 },
+    { name: 'beams',        loc: 'osrsloc_11634', x: 3316, z: 3179, level: 2, land: 'alkharid_land_beams', xp: 60 },
+    { name: 'tightrope 2',  loc: 'osrsloc_14409', x: 3313, z: 3186, level: 3, land: 'alkharid_land_rope2', xp: 180, walk: 'alkharid_rope2_start' },
+    { name: 'gap',          loc: 'osrsloc_14399', x: 3300, z: 3193, level: 3, land: 'alkharid_land_gap',   xp: 360 },
 ];
 
 console.log('\nEVERY OBSTACLE IS THERE TO CLICK');
@@ -132,7 +132,8 @@ for (const s of COURSE.slice(0, 4)) {
     prev = [p.x, p.z, p.level];
 }
 check('  the first four put the player where the constant says', ok, true);
-check('  and paid 12 + 36 + 48 + 48', agil() - before, 144);
+// tenths of a point: stat_advance takes xp * 10
+check('  and paid 12 + 36 + 48 + 48 experience', agil() - before, 1440);
 check('  with the lap counter four in', prog(), 4);
 
 console.log('\nAND IT IS SHUT TO ANYONE UNDER 20');
@@ -149,7 +150,7 @@ console.log('\nAND IT IS SHUT TO ANYONE UNDER 20');
 }
 
 console.log('\nTHE EXPERIENCE IS THE WIKI\'S');
-check('  the eight obstacles add to a lap', COURSE.reduce((a, s) => a + s.xp, 0), 216);
+check('  the eight obstacles add to a lap (216 experience)', COURSE.reduce((a, s) => a + s.xp, 0), 2160);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
