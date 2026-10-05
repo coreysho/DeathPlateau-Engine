@@ -86,6 +86,59 @@ const COURSES: Course[] = [
             { name: 'edge'          , loc: 'osrsloc_14925', x: 3025, z: 3332, level: 3, land: 'falador_land_edge', xp: 'falador_xp_edge' },
         ],
     },
+    {
+        key: 'seers', title: "SEERS' VILLAGE", level: 60, lapXp: 5700,
+        start: [2729, 3490, 0],
+        obstacles: [
+            { name: 'wall',      loc: 'osrsloc_14927', x: 2729, z: 3489, level: 0, land: 'seers_land_wall', xp: 'seers_xp_wall' },
+            { name: 'gap 1',     loc: 'osrsloc_14928', x: 2720, z: 3492, level: 3, land: 'seers_land_gap1', xp: 'seers_xp_gap1' },
+            { name: 'tightrope', loc: 'osrsloc_14932', x: 2710, z: 3489, level: 2, land: 'seers_land_rope', xp: 'seers_xp_rope' },
+            { name: 'gap 2',     loc: 'osrsloc_14929', x: 2710, z: 3476, level: 2, land: 'seers_land_gap2', xp: 'seers_xp_gap2' },
+            { name: 'gap 3',     loc: 'osrsloc_14930', x: 2700, z: 3469, level: 3, land: 'seers_land_gap3', xp: 'seers_xp_gap3' },
+            { name: 'edge',      loc: 'osrsloc_14931', x: 2703, z: 3461, level: 2, land: 'seers_land_edge', xp: 'seers_xp_edge' },
+        ],
+    },
+    {
+        key: 'pollnivneach', title: 'POLLNIVNEACH', level: 70, lapXp: 8900,
+        start: [3351, 2961, 0],
+        obstacles: [
+            { name: 'basket', loc: 'osrsloc_14935', x: 3351, z: 2962, level: 0, land: 'pollnivneach_land_basket', xp: 'pollnivneach_xp_basket' },
+            { name: 'market stall', loc: 'osrsloc_14936', x: 3349, z: 2970, level: 1, land: 'pollnivneach_land_stall', xp: 'pollnivneach_xp_stall' },
+            { name: 'banner', loc: 'osrsloc_14937', x: 3356, z: 2978, level: 1, land: 'pollnivneach_land_banner', xp: 'pollnivneach_xp_banner' },
+            { name: 'gap', loc: 'osrsloc_14938', x: 3363, z: 2976, level: 1, land: 'pollnivneach_land_gap', xp: 'pollnivneach_xp_gap' },
+            { name: 'tree 1', loc: 'osrsloc_14939', x: 3367, z: 2977, level: 1, land: 'pollnivneach_land_tree1', xp: 'pollnivneach_xp_tree1' },
+            { name: 'rough wall', loc: 'osrsloc_14940', x: 3365, z: 2982, level: 1, land: 'pollnivneach_land_wall', xp: 'pollnivneach_xp_wall' },
+            { name: 'monkeybars', loc: 'osrsloc_14941', x: 3358, z: 2985, level: 2, land: 'pollnivneach_land_bars', xp: 'pollnivneach_xp_bars' },
+            { name: 'tree 2', loc: 'osrsloc_14944', x: 3359, z: 2996, level: 2, land: 'pollnivneach_land_tree2', xp: 'pollnivneach_xp_tree2' },
+            { name: 'drying line', loc: 'osrsloc_14945', x: 3363, z: 3000, level: 2, land: 'pollnivneach_land_line', xp: 'pollnivneach_xp_line' },
+        ],
+    },
+    {
+        key: 'rellekka', title: 'RELLEKKA', level: 80, lapXp: 7800,
+        start: [2625, 3678, 0],
+        obstacles: [
+            { name: 'rough wall', loc: 'osrsloc_14946', x: 2625, z: 3677, level: 0, land: 'rellekka_land_wall', xp: 'rellekka_xp_wall' },
+            { name: 'gap 1', loc: 'osrsloc_14947', x: 2621, z: 3669, level: 3, land: 'rellekka_land_gap1', xp: 'rellekka_xp_gap1' },
+            { name: 'tightrope 1', loc: 'osrsloc_14987', x: 2623, z: 3658, level: 3, land: 'rellekka_land_rope1', xp: 'rellekka_xp_rope1' },
+            { name: 'gap 2', loc: 'osrsloc_14990', x: 2629, z: 3656, level: 3, land: 'rellekka_land_gap2', xp: 'rellekka_xp_gap2' },
+            { name: 'gap 3', loc: 'osrsloc_14991', x: 2643, z: 3654, level: 3, land: 'rellekka_land_gap3', xp: 'rellekka_xp_gap3' },
+            { name: 'tightrope 2', loc: 'osrsloc_14992', x: 2647, z: 3663, level: 3, land: 'rellekka_land_rope2', xp: 'rellekka_xp_rope2' },
+            { name: 'pile of fish', loc: 'osrsloc_14994', x: 2654, z: 3676, level: 3, land: 'rellekka_land_fish', xp: 'rellekka_xp_fish' },
+        ],
+    },
+    {
+        key: 'ardougne', title: 'ARDOUGNE', level: 90, lapXp: 8890,
+        start: [2673, 3297, 0],
+        obstacles: [
+            { name: 'wooden beams', loc: 'osrsloc_15608', x: 2673, z: 3298, level: 0, land: 'ardougne_land_beams', xp: 'ardougne_xp_beams' },
+            { name: 'gap 1', loc: 'osrsloc_15609', x: 2670, z: 3310, level: 3, land: 'ardougne_land_gap1', xp: 'ardougne_xp_gap1' },
+            { name: 'plank', loc: 'osrsloc_26635', x: 2661, z: 3318, level: 3, land: 'ardougne_land_plank', xp: 'ardougne_xp_plank' },
+            { name: 'gap 2', loc: 'osrsloc_15610', x: 2653, z: 3317, level: 3, land: 'ardougne_land_gap2', xp: 'ardougne_xp_gap2' },
+            { name: 'gap 3', loc: 'osrsloc_15611', x: 2653, z: 3308, level: 3, land: 'ardougne_land_gap3', xp: 'ardougne_xp_gap3' },
+            { name: 'steep roof', loc: 'osrsloc_28912', x: 2654, z: 3300, level: 3, land: 'ardougne_land_roof', xp: 'ardougne_xp_roof' },
+            { name: 'gap 4', loc: 'osrsloc_15612', x: 2656, z: 3296, level: 3, land: 'ardougne_land_gap4', xp: 'ardougne_xp_gap4' },
+        ],
+    },
 ];
 
 // ---------------------------------------------------------------- the constant files

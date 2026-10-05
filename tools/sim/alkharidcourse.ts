@@ -89,14 +89,16 @@ for (const s of COURSE) {
 }
 
 // ---------------------------------------------------------------- the one that does not work
-// THE TROPICAL TREE CANNOT BE REACHED. The zip line lands the player in a pocket six tiles across
-// - 3313 to 3318, z 3160 to 3165, everything north of 3165 blocked - so the tile south of the tree
-// is the only one they can ever stand on, and that is the side the engine's reach test refuses.
-// The swing itself is correct and fires from the east, west and north, which are tiles no player
-// can get to. forceapproach=south, length 1 and blockwalk=no all changed nothing.
+// THE TROPICAL TREE CANNOT BE REACHED. The zip line lands the player in a pocket six tiles
+// across - 3313 to 3318, z 3160 to 3165, every tile north of 3165 blocked - so 3318,3165 is the
+// only tile they can ever stand on, and that is the side the engine's reach test refuses. The
+// swing is correct and fires from the east, west and north, which are tiles no player can get to.
 //
-// Pinned rather than skipped: this is GREEN while the bug is there and goes RED the moment the
-// tree becomes reachable, which is the day the rest of this file should be joined up again.
+// Four things tried: forceapproach=south, length 1, blockwalk=no, and moving the loc a tile
+// north. None changed it; whatever closes that face is in the level-1 map there.
+//
+// Pinned rather than skipped: GREEN while the bug is there, RED the moment the tree becomes
+// reachable, which is the day the rest of this file should be joined up again.
 console.log('\nTHE TROPICAL TREE IS STILL UNREACHABLE (known, unfixed)');
 {
     const q: any = player('stuck', 3318, 3165, 1);
