@@ -494,8 +494,12 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
         [true, new Set(['zulrah_ranged'])]);
     check('  and it is OSRS spotanim 1044, not shared with anything else it throws',
         projs.every(x => x.spotanim === RANGED), true);
-    check('  the snake plays its spit while it does (OSRS seq 5069)',
-        anims.some(a => a.seq === SeqType.getId('osrs_seq_5069')), true);
+    // NO ATTACK ANIMATION, deliberately. The snake flickered on every one of them and nothing
+    // measured ever found why - skeletons, geometry, alpha faces, the scene, the per-tile cap and
+    // the barrage were all eliminated. param=attack_anim is null on all three forms (2026-10-03),
+    // which removes the trigger rather than the cause; this guards against it coming back.
+    check('  and plays no attack animation, which is what stopped the flicker',
+        anims.some(a => a.seq === SeqType.getId('osrs_seq_5069')), false);
     check('  and nothing is drawn on the floor - a ranged attack leaves no cloud', gfx.length, 0);
 
     // THE JAD PHASE. Rotation 1's phase 9 (index 8) is "10 alternating ranged and magic, starting
@@ -666,10 +670,11 @@ console.log('WHAT THE PLAYER SEES: every attack by graphic id');
     s = park(1, 1);
     (p as any).clearInteraction();
     run(1);
-    check('the magma form swings its tail (OSRS seq 5807), and does not spit',
+    // Same as the green form above: no attack animation on any of the three.
+    check('the magma form swings its tail at you and plays nothing',
         [anims.some(a => a.seq === SeqType.getId('zulrah_tail_swipe')),
          anims.some(a => a.seq === SeqType.getId('osrs_seq_5069'))],
-        [true, false]);
+        [false, false]);
     check('  and throws nothing - a tail is not a projectile', projs.length, 0);
     // Stand still and it lands; the damage is queued a beat ahead, not dealt on the swing.
     // WITHOUT clearPendingAction this time, which run() does every tick: auto-retaliation IS a
@@ -1076,10 +1081,10 @@ console.log('THE KILL COUNT AND THE COLLECTION LOG');
     const page = fs.readFileSync('../content/scripts/collection_log/configs/collection_log.dbrow', 'utf8')
         .split(/\[collection_log_/).find(b => b.startsWith('zulrah]')) ?? '';
     check('the log has a Zulrah page', page.includes('data=name,"Zulrah"'), true);
-    check('  carrying its six collectables and nothing common',
+    check('  carrying its eight collectables and nothing common',
         (page.match(/^data=items,(\S+)$/gm) ?? []).map(l => l.split(',')[1]),
         ['bosspet_snakeling_item', 'tanzanite_fang', 'magic_fang', 'serpentine_visage',
-         'uncut_onyx', 'jar_of_swamp']);
+         'uncut_onyx', 'jar_of_swamp', 'tanzanite_mutagen', 'magma_mutagen']);
     check('  no clue on it - a clue belongs to the Clues tab by its tier, as every other boss page here has it',
         /clue/i.test(page), false);
     check('  and the kill count on it is Zulrah\'s slot',
