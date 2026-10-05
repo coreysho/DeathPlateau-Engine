@@ -88,18 +88,20 @@ for (const s of COURSE) {
     check(`  ${s.name.padEnd(14)} ${path.length} tiles, all floor`, bad.length ? bad.join(' ') : 'yes', 'yes');
 }
 
-// ---------------------------------------------------------------- the one that does not work
-// THE TROPICAL TREE CANNOT BE REACHED. The zip line lands the player in a pocket six tiles
-// across - 3313 to 3318, z 3160 to 3165, every tile north of 3165 blocked - so 3318,3165 is the
-// only tile they can ever stand on, and that is the side the engine's reach test refuses. The
-// swing is correct and fires from the east, west and north, which are tiles no player can get to.
+// ---------------------------------------------------------------- the tropical tree
+// THIS USED TO BE PINNED AS UNFIXABLE. The zip line lands the player in a pocket six tiles across
+// - 3313 to 3318, z 3160 to 3165, every tile north of 3165 blocked - so 3318,3165 is the only tile
+// they can ever stand on, and the engine refused that side with "I can't reach that!". Four things
+// had been tried on the TREE: forceapproach=south, length 1, blockwalk=no, and moving the loc a
+// tile north. None of them was the problem.
 //
-// Four things tried: forceapproach=south, length 1, blockwalk=no, and moving the loc a tile
-// north. None changed it; whatever closes that face is in the level-1 map there.
-//
-// Pinned rather than skipped: GREEN while the bug is there, RED the moment the tree becomes
-// reachable, which is the day the rest of this file should be joined up again.
-console.log('\nTHE TROPICAL TREE IS STILL UNREACHABLE (known, unfixed)');
+// What closed that face was a different loc on the same tile. osrsloc_26587 is a roof edge, and it
+// sits at 3318,3166 as a shape-0 wall on the SOUTH face - between the tree and the one tile a
+// player can reach. Old School carries it there too, with opcode 27, which this build's importer
+// has no equivalent for and dropped, so ours came out solid and theirs is not. blockwalk=no on the
+// edge, and the swing fires. The level-1 terrain was compared tile by tile against Old School's
+// first and is identical, which is what ruled the map out.
+console.log('\nTHE TROPICAL TREE');
 {
     const q: any = player('stuck', 3318, 3165, 1);
     q.baseLevels[16] = 20; q.levels[16] = 20;
@@ -109,8 +111,8 @@ console.log('\nTHE TROPICAL TREE IS STILL UNREACHABLE (known, unfixed)');
     A.op(q, 3318, 3166, 'osrsloc_14404', 1);
     H.tick(8);
     const said = H.mesgs.slice(from).filter(m => m.who === q.username).map(m => m.text);
-    check('  from the only tile a player can stand on, the swing is refused',
-        [A.saw(said, "can't reach"), [q.x, q.z, q.level].join(',')], [true, '3318,3165,1']);
+    check('  the swing fires from the only tile a player can stand on', A.saw(said, "can't reach"), false);
+    check('  and it carries them up into the branches', [q.x, q.z, q.level], [3317, 3169, 2]);
     H.despawn(q);
 }
 
