@@ -7,7 +7,7 @@ import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 // small deathDrop set (BotConfig), never this.
 
 export type BotKind = 'roamer' | 'pker';
-export type BotBuild = 'pure' | 'main' | 'tank';
+export type BotBuild = 'pure' | 'zerker' | 'main' | 'tank';
 export type BotStyle = 'melee' | 'ranged' | 'mage' | 'hybrid';
 
 export type BotKit = {
@@ -38,7 +38,23 @@ export type BotKit = {
     meleeSet?: string[];
     /** Its own eat threshold (% of max hitpoints) - a Dharok's fights low on purpose. */
     eatPercent?: number;
-    spellbook?: 'normal' | 'ancient';
+    spellbook?: 'normal' | 'ancient' | 'lunar';
+    /**
+     * A spell the bot casts ON ITSELF, by its button on the spellbook - Vengeance is the one this
+     * was added for. Every other spell a bot knows is aimed at somebody (freezeSpell, damageSpell,
+     * and Input.castOnPlayer with it), so there was nowhere to put a buff: a self-cast is a button
+     * press and nothing else. selfSpellTicks is its own cooldown, which the bot has to respect on
+     * its side because the script only tells it off after the fact (vengeance.rs2 is 50 ticks).
+     */
+    selfSpell?: string;
+    selfSpellTicks?: number;
+    /**
+     * A weapon to switch to once its own health is low - a Dharok's set hits hardest nearly dead,
+     * so the axe is a finisher rather than an opener. specWeapon is the wrong hook for it: that
+     * switches on the TARGET's health and switches back when the energy is gone.
+     */
+    lowHpWeapon?: string;
+    lowHpPercent?: number;
     /** Spells, as component names: a freeze to open with, and a damage spell. */
     freezeSpell?: string;
     damageSpell?: string;
@@ -397,6 +413,286 @@ export const BOT_KITS: BotKit[] = [
         damageSpell: 'ancient_magic:ice_blitz',
         mageSet: ['barrows_ahrim_head', 'barrows_ahrim_body', 'barrows_ahrim_legs', 'barrows_ahrim_weapon'],
         meleeSet: ['barrows_verac_head', 'barrows_verac_body', 'barrows_verac_legs', 'barrows_verac_weapon'],
+        dropExtras: MAX_EXTRAS
+    },
+
+    // ------------------------------------------------------------------------------------------
+    // THE OWNER'S OWN PK KITS, from loadout screenshots (2026-10-05). Nine kits, all pkers, all
+    // 99 Hitpoints and 52 Prayer - 52 is Smite, which is what the default prayer mode wants.
+    //
+    // THE INVENTORY IS ONE RULE FOR ALL NINE: a super set, two super restores, one spec weapon,
+    // whatever runes the style needs, any switches, and manta rays for the rest of the 28. The
+    // spec weapon follows ATTACK, because an Armadyl godsword needs 75 to wield - so the kits
+    // under that take a dragon dagger or an Arkan blade instead.
+    //
+    // FIVE PIECES ARE NOT NAMED WHAT YOU WOULD GUESS, because this build names an item after where
+    // it came from rather than what Old School calls it: mithril and barrows gloves are Recipe for
+    // Disaster's hundred_gauntlets_level_6 and _10, ghostly robes are secret_ghost_top/bottom, and
+    // the mage's book is magictraining_bookofmagic. Searching the Old School name finds none of them.
+    //
+    // AND THE BERSERKER HELM IS viking_helmet_crush, not viking_helmet. The latter is the plain
+    // Fremennik helm and is what an id search turns up first; the Berserker helm is four ids along,
+    // with the +3 strength these kits want and 31/29/33/30 defences against the Fremennik's
+    // 19/21/16/19. Taking the first hit would have meant buffing the wrong item to compensate.
+    //
+    // A PURE'S TRIBRID SWAPS SPELLBOOK AND WEAPON, NOT ARMOUR - it has 1 Defence and nothing better
+    // to put on - so mageSet and meleeSet name the same pieces on those kits. wearSet() only checks
+    // the set is worn, so that is a deliberate no-op rather than an oversight.
+    {
+        id: 'pk-pure-dscim',
+        build: 'pure',
+        style: 'melee',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 60, [S]: 99, [D]: 1, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['gnome_hat_cream', 'tzhaar_cape_fire', 'amulet_of_strength', 'monkrobetop', 'monkrobebottom', 'hundred_gauntlets_level_6', 'death_climbingboots', 'ring_of_recoil', 'zamorakbook_complete', 'dragon_scimitar'],
+        inv: [
+            ['dragon_dagger_p++', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2]
+        ],
+        food: 'mantaray',
+        foodCount: 22,
+        specWeapon: 'dragon_dagger_p++',
+        specEnergy: 25,
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-pure-tribrid-whip',
+        build: 'pure',
+        style: 'hybrid',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 99, [S]: 99, [D]: 1, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['gnome_hat_cream', 'zamorak_cape', 'amulet_of_glory', 'secret_ghost_top', 'secret_ghost_bottom', 'hundred_gauntlets_level_6', 'death_climbingboots', 'ring_of_recoil', 'zamorakbook_complete', 'abyssal_whip'],
+        inv: [
+            ['armadyl_godsword', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['waterrune', 1500],
+            ['bloodrune', 300],
+            ['deathrune', 600]
+        ],
+        food: 'mantaray',
+        foodCount: 19,
+        specWeapon: 'armadyl_godsword',
+        specEnergy: 50,
+        mageSet: ['abyssal_whip', 'zamorakbook_complete'],
+        meleeSet: ['abyssal_whip', 'zamorakbook_complete'],
+        spellbook: 'ancient',
+        freezeSpell: 'ancient_magic:ice_barrage',
+        damageSpell: 'ancient_magic:ice_blitz',
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-zerker-whip',
+        build: 'zerker',
+        style: 'melee',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 70, [S]: 99, [D]: 45, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['viking_helmet_crush', 'tzhaar_cape_fire', 'amulet_of_strength', 'fighter_torso', 'rune_platelegs', 'hundred_gauntlets_level_10', 'death_climbingboots', 'ring_of_recoil', 'rune_defender', 'abyssal_whip'],
+        inv: [
+            ['dragon_dagger_p++', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['astralrune', 400],
+            ['deathrune', 200],
+            ['earthrune', 1000]
+        ],
+        food: 'mantaray',
+        foodCount: 19,
+        specWeapon: 'dragon_dagger_p++',
+        specEnergy: 25,
+        spellbook: 'lunar',
+        selfSpell: 'lunar_magic:vengeance',
+        selfSpellTicks: 50,
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-range-tank-msb',
+        build: 'tank',
+        style: 'ranged',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 70, [S]: 70, [D]: 70, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['barrows_torag_head', 'tzhaar_cape_fire', 'amulet_of_glory', 'black_dragonhide_body', 'black_dragonhide_chaps', 'hundred_gauntlets_level_10', 'rune_armoured_boots', 'ring_of_recoil', 'magic_shortbow'],
+        wornAmmo: ['rune_arrow', 500],
+        inv: [
+            ['arkan_blade', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['astralrune', 400],
+            ['deathrune', 200],
+            ['earthrune', 1000]
+        ],
+        food: 'mantaray',
+        foodCount: 19,
+        specWeapon: 'arkan_blade',
+        specEnergy: 25,
+        spellbook: 'lunar',
+        selfSpell: 'lunar_magic:vengeance',
+        selfSpellTicks: 50,
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-tribrid-ahrim-msb',
+        build: 'main',
+        style: 'hybrid',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 70, [S]: 70, [D]: 70, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['barrows_torag_head', 'zamorak_cape', 'enchanted_onyx_amulet', 'barrows_ahrim_body', 'barrows_ahrim_legs', 'hundred_gauntlets_level_10', 'magictraining_infinityboots', 'seer_ring', 'magic_shortbow'],
+        wornAmmo: ['rune_arrow', 500],
+        inv: [
+            ['arkan_blade', 1],
+            ['abyssal_whip', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['waterrune', 1500],
+            ['bloodrune', 300],
+            ['deathrune', 600]
+        ],
+        food: 'mantaray',
+        foodCount: 18,
+        specWeapon: 'arkan_blade',
+        specEnergy: 25,
+        mageSet: ['magic_shortbow'],
+        meleeSet: ['abyssal_whip'],
+        spellbook: 'ancient',
+        freezeSpell: 'ancient_magic:ice_barrage',
+        damageSpell: 'ancient_magic:ice_blitz',
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-max-tribrid-wand',
+        build: 'main',
+        style: 'hybrid',
+        bracket: 'max',
+        kinds: ['pker'],
+        stats: { [A]: 99, [S]: 99, [D]: 99, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['barrows_torag_head', 'tzhaar_cape_fire', 'enchanted_onyx_amulet', 'barrows_ahrim_body', 'barrows_ahrim_legs', 'hundred_gauntlets_level_10', 'magictraining_infinityboots', 'seer_ring', 'magictraining_bookofmagic', 'magictraining_wand_master'],
+        wornAmmo: ['rune_arrow', 500],
+        inv: [
+            ['armadyl_godsword', 1],
+            ['abyssal_whip', 1],
+            ['magic_shortbow', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['waterrune', 1500],
+            ['bloodrune', 300],
+            ['deathrune', 600]
+        ],
+        food: 'mantaray',
+        foodCount: 17,
+        specWeapon: 'armadyl_godsword',
+        specEnergy: 50,
+        mageSet: ['magictraining_wand_master', 'magictraining_bookofmagic'],
+        meleeSet: ['abyssal_whip'],
+        spellbook: 'ancient',
+        freezeSpell: 'ancient_magic:ice_barrage',
+        damageSpell: 'ancient_magic:ice_blitz',
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-max-melee-verac',
+        build: 'main',
+        style: 'melee',
+        bracket: 'max',
+        kinds: ['pker'],
+        stats: { [A]: 99, [S]: 99, [D]: 99, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['viking_helmet_crush', 'tzhaar_cape_fire', 'enchanted_onyx_amulet', 'fighter_torso', 'barrows_verac_legs', 'hundred_gauntlets_level_10', 'dragon_boots', 'ring_of_recoil', 'dragon_defender', 'abyssal_whip'],
+        inv: [
+            ['armadyl_godsword', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['astralrune', 400],
+            ['deathrune', 200],
+            ['earthrune', 1000]
+        ],
+        food: 'mantaray',
+        foodCount: 19,
+        specWeapon: 'armadyl_godsword',
+        specEnergy: 50,
+        spellbook: 'lunar',
+        selfSpell: 'lunar_magic:vengeance',
+        selfSpellTicks: 50,
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-max-dharok',
+        build: 'main',
+        style: 'melee',
+        bracket: 'max',
+        kinds: ['pker'],
+        stats: { [A]: 99, [S]: 99, [D]: 99, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['barrows_dharok_head', 'tzhaar_cape_fire', 'amulet_of_glory', 'barrows_dharok_body', 'barrows_dharok_legs', 'hundred_gauntlets_level_10', 'dragon_boots', 'ring_of_recoil', 'dragon_defender', 'abyssal_whip'],
+        inv: [
+            ['armadyl_godsword', 1],
+            ['barrows_dharok_weapon', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['astralrune', 400],
+            ['deathrune', 200],
+            ['earthrune', 1000]
+        ],
+        food: 'mantaray',
+        foodCount: 18,
+        specWeapon: 'armadyl_godsword',
+        specEnergy: 50,
+        lowHpWeapon: 'barrows_dharok_weapon',
+        lowHpPercent: 40,
+        eatPercent: 35,
+        spellbook: 'lunar',
+        selfSpell: 'lunar_magic:vengeance',
+        selfSpellTicks: 50,
+        dropExtras: MAX_EXTRAS
+    },
+    {
+        id: 'pk-pure-tribrid-msb',
+        build: 'pure',
+        style: 'hybrid',
+        bracket: 'high',
+        kinds: ['pker'],
+        stats: { [A]: 99, [S]: 99, [D]: 1, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
+        worn: ['gnome_hat_cream', 'zamorak_cape', 'amulet_of_glory', 'secret_ghost_top', 'secret_ghost_bottom', 'hundred_gauntlets_level_6', 'death_climbingboots', 'ring_of_recoil', 'magic_shortbow'],
+        wornAmmo: ['rune_arrow', 500],
+        inv: [
+            ['armadyl_godsword', 1],
+            ['abyssal_whip', 1],
+            ['4dose2attack', 1],
+            ['4dose2strength', 1],
+            ['4dose2defense', 1],
+            ['4dose2restore', 2],
+            ['waterrune', 1500],
+            ['bloodrune', 300],
+            ['deathrune', 600]
+        ],
+        food: 'mantaray',
+        foodCount: 18,
+        specWeapon: 'armadyl_godsword',
+        specEnergy: 50,
+        mageSet: ['magic_shortbow'],
+        meleeSet: ['abyssal_whip'],
+        spellbook: 'ancient',
+        freezeSpell: 'ancient_magic:ice_barrage',
+        damageSpell: 'ancient_magic:ice_blitz',
         dropExtras: MAX_EXTRAS
     }
 ];

@@ -5,6 +5,8 @@ import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWilderne
 import { FuzzBrain } from '#/engine/bot/BotFuzzer.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
@@ -344,7 +346,28 @@ class BotManager implements BotHooks {
         setVarp(bot, 'sa_energy', 1000); // ^sa_max_energy
         setVarp(bot, 'option_nodef', 0); // auto retaliate on
         setVarp(bot, 'option_run', 1);
-        setVarp(bot, 'spellbook', kit.spellbook === 'ancient' ? 1 : 0);
+        // ^spellbook_normal 0, ^spellbook_ancient 1, ^spellbook_lunar 2
+        // (content/scripts/skill_magic/configs/spellbook.constant). This used to be a ternary on
+        // 'ancient', so a lunar kit silently got the normal book.
+        //
+        // AND THE VARP ON ITS OWN IS NOT THE SPELLBOOK. ~spellbook_tab is what puts the book in the
+        // magic tab (if_settab), and login.rs2 runs it before any of this - so a kit set here got
+        // the right varp behind the wrong interface. Casting did not care, because
+        // Input.castOnPlayer names the spell's component outright; pressing a BUTTON does, because
+        // IfButton goes through the real handler and the component has to be on an open tab. That
+        // is why a lunar bot's Vengeance did nothing at all and said nothing either.
+        setVarp(bot, 'spellbook', kit.spellbook === 'ancient' ? 1 : kit.spellbook === 'lunar' ? 2 : 0);
+        // AND THE LUNAR BOOK IS QUEST-LOCKED. ~lunar_spell_locked refuses every lunar spell until
+        // %lunar_unlocked, which is Lunar Diplomacy - so a lunar bot pressed Vengeance, the script
+        // ran, and it returned without casting. The same shape as the three unlocks above: a bot is
+        // given the state its kit assumes rather than made to earn it.
+        if (kit.spellbook === 'lunar') {
+            setVarp(bot, 'lunar_unlocked', 1);
+        }
+        const tabScript = ScriptProvider.getByName('[proc,spellbook_tab]');
+        if (tabScript) {
+            ScriptRunner.execute(ScriptRunner.init(tabScript, bot));
+        }
         bot.runenergy = 10000;
 
         bot.gender = 0;

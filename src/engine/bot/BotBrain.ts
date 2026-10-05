@@ -174,6 +174,8 @@ export class BotState {
     leavingSince = 0;
     restocked = false;
     noSpec = false;
+    /** The tick the self-cast buff may next be cast at (Vengeance is 50). */
+    selfSpellAt = 0;
     noFreeze = false;
     engageAt = 0;
     lastSpell: string | undefined;
@@ -796,6 +798,8 @@ export class BotBrain {
         }
         this.s.chaseTo = null;
 
+        this.manageSelfSpell();
+        this.manageLowHpWeapon();
         this.manageSpec(t, d);
 
         if (kit.style === 'mage' || kit.style === 'hybrid') {
@@ -813,6 +817,46 @@ export class BotBrain {
      * press the bar, and switch back once the energy is spent. Switching does not stop the fight (an
      * equip keeps the target), so this only ever adds clicks.
      */
+    /**
+     * A buff it casts on ITSELF, by its button on the spellbook. Vengeance is the one this exists
+     * for: every other spell a bot knows is aimed at somebody, and a self-cast has no target at all.
+     *
+     * The bot keeps its own cooldown. vengeance.rs2 refuses an early cast with "You can only cast
+     * vengeance spells every 30 seconds" and does nothing else - so without one a bot would press
+     * the button every tick of every fight and never notice it was not working.
+     */
+    private manageSelfSpell(): void {
+        const kit = this.kit;
+        if (!kit.selfSpell) return;
+        const now = World.currentTick;
+        if (now < this.s.selfSpellAt) return;
+        const bot = this.bot;
+        this.s.selfSpellAt = now + (kit.selfSpellTicks ?? 50);
+        this.later('selfspell', () => Input.button(bot, kit.selfSpell!));
+    }
+
+    /**
+     * The Dharok's switch. The set hits harder the closer its wearer is to death, so the axe is a
+     * finisher: the bot fights in what it spawned holding and swaps once its OWN health is low.
+     * That is the opposite of manageSpec below, which switches on the TARGET's health and switches
+     * back once the energy is spent - this one stays on the axe.
+     */
+    private manageLowHpWeapon(): void {
+        const kit = this.kit;
+        if (!kit.lowHpWeapon) return;
+        // ASK WHAT IS IN ITS HAND, do not remember having asked. The first version latched a flag
+        // the moment it queued the switch, so when the click was dropped - a target change clears
+        // pending, and every action here is a deferred click that may not survive the tick it was
+        // meant for - the bot never tried again and fought the rest of its life in the whip. It
+        // read as a flaky test before it read as a bug.
+        if (this.wornWeapon() === kit.lowHpWeapon) return;
+        if (this.hpPercent() > (kit.lowHpPercent ?? 35)) return;
+        if (this.invCount(kit.lowHpWeapon) < 1) return;
+        const bot = this.bot;
+        this.later('lowhp-switch', () =>
+            Input.heldOp(bot, kit.lowHpWeapon!, Input.heldOpNamed(kit.lowHpWeapon!, 'Wield', 'Wear') || 2));
+    }
+
     private manageSpec(t: Player, d: number): void {
         const bot = this.bot;
         const kit = this.kit;
