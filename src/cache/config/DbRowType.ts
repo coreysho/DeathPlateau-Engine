@@ -103,7 +103,14 @@ export default class DbRowType extends ConfigType {
 
     decodeValues(dat: Packet, column: number) {
         const types = this.types[column];
-        const fieldCount = dat.g1();
+        // TWO BYTES, NOT ONE. A LIST column holds as many values as the content gives it, and the
+        // collection log's Clues tab gives one 516 items - which a single byte writes as 4, after
+        // which this is reading the next row's bytes and EVERY dbrow after it in the file decodes
+        // to nothing. That took out the combat style tables at ids 1290+, so db_getfieldcount
+        // returned 0, player_combat_stat clamped %com_mode to -1, and every melee swing on the
+        // server threw "combat style of -1 not defined in switch for p_npc_melee_roll".
+        // tools/pack/config/DbRowConfig.ts writes this width and has to keep matching it.
+        const fieldCount = dat.g2();
         const values: string[] | number[] = new Array(fieldCount * types.length);
 
         for (let fieldId = 0; fieldId < fieldCount; fieldId++) {

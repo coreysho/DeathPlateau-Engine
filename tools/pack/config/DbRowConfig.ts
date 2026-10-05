@@ -150,7 +150,16 @@ export function packDbRowConfigs(configs: Map<string, ConfigLine[]>): { client: 
                         throw packStepError(debugname, `${columnName} column has multiple data values but is not marked as LIST`);
                     }
 
-                    server.p1(fields.length);
+                    // TWO BYTES, because a LIST column is as long as the content makes it and this
+                    // used to be one: the collection log's Clues tab has 516 items, p1 wrote that
+                    // as 4, and from that row on every dbrow in the file decoded to nothing - which
+                    // is how 516 clue items silently disabled melee combat. DbRowType.decodeValues
+                    // reads this width. The guard below is for the day a column outgrows this one
+                    // too; it has to be an error, never a wrapped number.
+                    if (fields.length > 0xffff) {
+                        throw packStepError(debugname, `${columnName} column has ${fields.length} values, more than the format can hold (65535)`);
+                    }
+                    server.p2(fields.length);
                     for (let j = 0; j < fields.length; j++) {
                         const values = fields[j].values;
 
