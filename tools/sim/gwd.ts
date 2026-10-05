@@ -277,21 +277,26 @@ console.log('\nKILLCOUNT');
 // ---------------------------------------------------------------- getting in
 // Walked rather than asserted from the constants: the boulder on Trollheim, the rope down, and
 // back out again. Before this the dungeon could only be reached by teleport.
+//
+// The boulder is at 2898,3716 and you click it from 2898,3715. Both numbers matter: the valley it
+// stands in is grafted from a newer cache (gwd_surface.loc) because the 377 square had the lot as
+// solid rock, so this walk is also the check that the graft is still joined to the mountain. If it
+// comes adrift, a player standing here is standing inside a cliff.
 console.log('\nTHE WAY IN');
 {
-    const p = player('gwdin', 2898, 3724);
+    const p = player('gwdin', 2898, 3715);
     const where = () => `${p.level}_${p.x}_${p.z}`;
 
     // too weak
     p.setLevel(PlayerStat.STRENGTH, 59);
-    H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
+    H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
     H.tick(20);
     check('  59 Strength cannot shift the boulder', p.z > 3700 && p.level === 0, true);
     check('  and it says what is needed', A.lastMes(p).includes('Strength level of 60'), true);
 
     // strong enough
     p.setLevel(PlayerStat.STRENGTH, 60);
-    H.opLoc(p, 2898, 3720, 'gwd_boulder', 1);
+    H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
     H.tick(20);
     check('  60 Strength puts you in the dungeon', [p.x, p.z, p.level], [2880, 5311, 3]);
 
@@ -306,14 +311,22 @@ console.log('\nTHE WAY IN');
     check('  and climbs back up', [p.x, p.z, p.level], [2880, 5311, 3]);
     H.opLoc(p, 2882, 5311, 'gwd_crack', 1);
     H.tick(20); // walk to it, then the squeeze-through delay
-    check('  the crack puts you back on Trollheim', [p.x, p.z, p.level], [2898, 3724, 0]);
+    check('  the crack puts you back on Trollheim', [p.x, p.z, p.level], [2898, 3715, 0]);
     void where;
     H.despawn(p);
 }
 
-// And the boulder must not wall off the summit it stands on - it is 4x3 and blocks.
-check('  the Trollheim plateau is still crossable past the boulder',
-    A.connected(0, 2890, 3722, 2905, 3730, 60), true);
+// AND THE WALK UP MUST STILL EXIST. The valley the boulder stands in is grafted from a newer cache,
+// and a graft can come adrift from the mountain under it in a way nothing else here would notice:
+// the boulder would still work, because this sim and the teleports put you beside it, while a
+// player climbing Trollheim would find no way north. So walk it, from where the first climbing
+// rock up from Burthorpe lands you to the tile you click the boulder from - 44 tiles and across
+// the seam at the mountain's north-east shoulder.
+check('  Trollheim still joins the grafted valley on foot',
+    A.connected(0, 2871, 3671, 2898, 3715, 80), true);
+// The boulder blocks its own neck, which is the point of it - 4x3 and blocking, in the one gap.
+check('  and the boulder is what stops you walking in',
+    A.connected(0, 2898, 3715, 2898, 3719, 20), false);
 
 // ---------------------------------------------------------------- into the encampments
 // Four obstacles, one level-70 skill each, and before these the dungeon was four islands: you
