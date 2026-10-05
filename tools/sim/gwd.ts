@@ -204,8 +204,16 @@ for (const g of ['armadyl', 'bandos', 'zamorak', 'saradomin']) {
     const n = ['warrior', 'ranger', 'mage'].reduce((s, k) => s + inDungeon(`gwd_spiritual_${k}_${g}`), 0);
     check(`  ${g.padEnd(10)} has an army outside its door (${n})`, n >= 6, true);
 }
-check(`  the Aviansies are in (${Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`)).reduce((a, b) => a + b, 0)})`,
-    Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`)).reduce((a, b) => a + b, 0), 15);
+// ONE OF EACH VARIANT AT LEAST, not exactly fifteen: ten more aviansies were put in the main
+// chamber on 2026-10-05, so fifteen is now the floor rather than the number. What this is really
+// guarding is that no variant is missing - fifteen configs and fourteen spawns is a model nobody
+// ever sees.
+{
+    const perVariant = Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`));
+    const absent = perVariant.map((n, i) => [n, i + 1] as const).filter(([n]) => n === 0).map(([, i]) => i);
+    const total = perVariant.reduce((a, b) => a + b, 0);
+    check(`  every Aviansie variant is in (${total} birds)`, absent.length ? absent.join(',') : 'yes', 'yes');
+}
 
 // Stats, which 474 does not carry - every one of them came from the Old School cache. An npc left
 // on the defaults is a punchbag, and a dungeon full of punchbags looks finished and is not.
