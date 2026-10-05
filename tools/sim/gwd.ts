@@ -318,18 +318,19 @@ console.log('\nTHE WAY IN');
 
     H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
     H.tick(20);
-    check('  climbing down lands you on the shaft floor', [p.x, p.z, p.level], [2880, 5311, 3]);
+    // STRAIGHT INTO THE CHAMBER, not onto a shaft floor. Old School has a floor between the two and
+    // this build does not: m45_82 plane 3 came across the graft with 2,061 locs and NOT ONE TILE of
+    // terrain, so every tile of it is undrawn. Landing there put the player on black with nothing
+    // under them and no npc on the whole plane, and the only rope out led back to it.
+    check('  climbing down lands you in the chamber', [p.x, p.z, p.level], [2880, 5310, 2]);
 
-    // ---- and only the rope goes the last step, into the chamber
-    H.opLoc(p, 2881, 5311, 'gwd_rope_top', 1);
-    H.tick(20);
-    check('  the rope drops you into the chamber', [p.x, p.z, p.level], [2880, 5310, 2]);
+    // ---- and the rope is the way back out to the surface
     H.opLoc(p, 2881, 5311, 'gwd_rope_down', 1);
     H.tick(20);
-    check('  and climbs back up', [p.x, p.z, p.level], [2880, 5311, 3]);
-    H.opLoc(p, 2882, 5311, 'gwd_crack', 1);
-    H.tick(20);
-    check('  the crack puts you back out by the hole', [p.x, p.z, p.level], [2917, 3744, 0]);
+    check('  and the rope climbs back out to the snow', [p.x, p.z, p.level], [2917, 3744, 0]);
+    // The crack that used to do this sits on plane 3 beside gwd_rope_top, and is unreachable for
+    // the same reason: there is no floor up there for either of them to stand on. The rope IS the
+    // way out now, which is what the check above measures.
     H.despawn(p);
 }
 
@@ -428,7 +429,7 @@ console.log('\nMULTI-COMBAT');
 {
     const multi = (lvl: number, x: number, z: number) => World.gameMap.isMulti(CoordGrid.packCoord(lvl, x, z));
     check('  the chamber', multi(2, 2880, 5310), true);
-    check('  the shaft floor', multi(3, 2880, 5311), true);
+    // not the shaft floor: plane 3 has no terrain, so there is nothing up there to fight on.
     check('  the generals rooms', multi(2, 2864, 5354) && multi(2, 2871, 5269), true);
     check('  and Lumbridge still is not', multi(0, 3222, 3218), false);
 }
