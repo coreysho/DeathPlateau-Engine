@@ -208,8 +208,12 @@ export function reachLoc(level: number, x: number, z: number, locName: string, l
     const loc = World.getLoc(lx, lz, level, id);
     if (!loc) return false;
     const path = findPathToLoc(level, x, z, loc.x, loc.z, 1, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach);
-    if (!path.length) return false;
-    const last = path[path.length - 1];
+    // AN EMPTY PATH MEANS YOU ARE ALREADY THERE, not that you cannot get there. findPathToLoc
+    // returns nothing for a player standing on a valid interaction tile - no steps are needed -
+    // and reading that as a refusal made every tile beside a loc report 'cannot click it' while
+    // tiles four squares away reported fine. It said the God Wars boulder was unusable from both
+    // of its own sides. So fall back to the player's own tile and run the same footprint test.
+    const last = path.length ? path[path.length - 1] : ((x << 14) | z);
     const px = (last >> 14) & 0x3fff, pz = last & 0x3fff;
     // the route ends next to the loc (or on it for ground decor); compare against the loc's footprint
     const d = Math.max(Math.max(loc.x - px, 0, px - (loc.x + loc.width - 1)), Math.max(loc.z - pz, 0, pz - (loc.z + loc.length - 1)));

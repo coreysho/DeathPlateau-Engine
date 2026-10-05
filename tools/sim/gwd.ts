@@ -25,6 +25,7 @@ import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
+import { CoordGrid } from '#/engine/CoordGrid.js';
 
 await H.boot();
 
@@ -285,48 +286,185 @@ console.log('\nKILLCOUNT');
 console.log('\nTHE WAY IN');
 {
     const p = player('gwdin', 2898, 3715);
-    const where = () => `${p.level}_${p.x}_${p.z}`;
+    p.setLevel(PlayerStat.AGILITY, 60);
 
-    // too weak
+    // ---- the boulder: 60 Strength, and it only moves you to the other side of itself
     p.setLevel(PlayerStat.STRENGTH, 59);
     H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
     H.tick(20);
-    check('  59 Strength cannot shift the boulder', p.z > 3700 && p.level === 0, true);
+    check('  59 Strength cannot shift the boulder', [p.x, p.z, p.level], [2898, 3715, 0]);
     check('  and it says what is needed', A.lastMes(p).includes('Strength level of 60'), true);
 
-    // strong enough
     p.setLevel(PlayerStat.STRENGTH, 60);
     H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
     H.tick(20);
-    check('  60 Strength puts you in the dungeon', [p.x, p.z, p.level], [2880, 5311, 3]);
+    check('  60 Strength puts you on the battlefield, NOT in the dungeon', [p.x, p.z, p.level], [2898, 3719, 0]);
 
-    // down the rope to the floor the faction doors are on
+    // ---- and the battlefield is a walk, not a doorstep
+    check('  the hole is a walk away across it', A.connected(0, 2898, 3719, 2917, 3744, 60), true);
+    check('  and you cannot walk back round the boulder', A.connected(0, 2898, 3719, 2898, 3715, 20), false);
+
+    // ---- the hole wants a rope, once, and keeps it
+    p.teleport(2917, 3744, 0); H.tick(1);
+    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
+    H.tick(20);
+    check('  the hole needs a rope', [p.x, p.z, p.level], [2917, 3744, 0]);
+    check('  and says so', A.lastMes(p).includes('rope'), true);
+    H.give(p, 'rope', 1);
+    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
+    H.tick(20);
+    check('  tying it spends the rope', H.invCount(p, 'rope'), 0);
+    check('  and the hole stays roped', p.getVar(VarPlayerType.getByName('gwd_rope_tied')!.id), 1);
+
+    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
+    H.tick(20);
+    check('  climbing down lands you on the shaft floor', [p.x, p.z, p.level], [2880, 5311, 3]);
+
+    // ---- and only the rope goes the last step, into the chamber
     H.opLoc(p, 2881, 5311, 'gwd_rope_top', 1);
     H.tick(20);
-    check('  the rope drops you onto the dungeon floor', [p.x, p.z, p.level], [2880, 5310, 2]);
-
-    // back up, and out
+    check('  the rope drops you into the chamber', [p.x, p.z, p.level], [2880, 5310, 2]);
     H.opLoc(p, 2881, 5311, 'gwd_rope_down', 1);
     H.tick(20);
     check('  and climbs back up', [p.x, p.z, p.level], [2880, 5311, 3]);
     H.opLoc(p, 2882, 5311, 'gwd_crack', 1);
-    H.tick(20); // walk to it, then the squeeze-through delay
-    check('  the crack puts you back on Trollheim', [p.x, p.z, p.level], [2898, 3715, 0]);
-    void where;
+    H.tick(20);
+    check('  the crack puts you back out by the hole', [p.x, p.z, p.level], [2917, 3744, 0]);
     H.despawn(p);
 }
 
-// AND THE WALK UP MUST STILL EXIST. The valley the boulder stands in is grafted from a newer cache,
-// and a graft can come adrift from the mountain under it in a way nothing else here would notice:
-// the boulder would still work, because this sim and the teleports put you beside it, while a
-// player climbing Trollheim would find no way north. So walk it, from where the first climbing
-// rock up from Burthorpe lands you to the tile you click the boulder from - 44 tiles and across
-// the seam at the mountain's north-east shoulder.
-check('  Trollheim still joins the grafted valley on foot',
-    A.connected(0, 2871, 3671, 2898, 3715, 80), true);
-// The boulder blocks its own neck, which is the point of it - 4x3 and blocking, in the one gap.
-check('  and the boulder is what stops you walking in',
-    A.connected(0, 2898, 3715, 2898, 3719, 20), false);
+// ---------------------------------------------------------------- the little crack
+// Old School's Agility way past the same rock, both of its ends.
+console.log('\nTHE LITTLE CRACK');
+{
+    const p = player('gwdcrack', 2899, 3713);
+    p.setLevel(PlayerStat.AGILITY, 59);
+    H.opLoc(p, 2900, 3713, 'gwd_crack', 1);
+    H.tick(20);
+    check('  59 Agility is refused', [p.x, p.z], [2899, 3713]);
+    check('  and it says what is needed', A.lastMes(p).includes('Agility level of 60'), true);
+    p.setLevel(PlayerStat.AGILITY, 60);
+    H.opLoc(p, 2900, 3713, 'gwd_crack', 1);
+    H.tick(20);
+    check('  60 Agility crawls through to the battlefield', [p.x, p.z], [2904, 3720]);
+    H.opLoc(p, 2904, 3719, 'gwd_crack', 1);
+    H.tick(20);
+    check('  and back again', [p.x, p.z], [2899, 3713]);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- the chill
+// "Drains your stats by 1 every few seconds, and will also drain all of your run and special
+// energy." Trollweiss's ~apply_chill does exactly that, so the battlefield is another zone in
+// chill_zones - but the zone is entered by a hop that never leaves map square 45_58, so the two
+// crossings refresh the timer themselves. Both halves are checked: that it starts, and that it
+// stops. The second matters more - a chill that followed you off the mountain would grind a
+// player down to nothing on the walk home.
+console.log('\nTHE CHILL');
+{
+    const p = player('gwdchill', 2898, 3715);
+    p.setLevel(PlayerStat.STRENGTH, 60);
+    const att = () => p.levels[PlayerStat.ATTACK];
+    H.tick(30);
+    check('  Trollheim does not chill you', att(), 99);
+    H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
+    H.tick(6);
+    const onEntry = att();
+    H.tick(30);
+    check('  the battlefield does', att() < onEntry, true);
+    H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
+    H.tick(6);
+    const onLeaving = att();
+    H.tick(40);
+    // Not equality: stats restore on their own, so off the battlefield Attack creeps back UP. What
+    // must not happen is another point coming off.
+    check('  and it stops when you leave', att() >= onLeaving, true);
+    // THE TRAP THIS WOULD OTHERWISE BE. The chill takes Strength below 60 within a minute, so a
+    // requirement read off the CURRENT level would shut a 60-Strength player out of the way they
+    // came in, with the crack drained past its 60 Agility too. Both crossings read the base level,
+    // as this tree's level requirements do.
+    check('  and a drained player is not shut out', p.levels[PlayerStat.STRENGTH] < 60, true);
+    H.opLoc(p, 2898, 3716, 'gwd_boulder', 1);
+    H.tick(20);
+    check('  the boulder still works on the base level', [p.x, p.z], [2898, 3719]);
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------- the wolves
+// "High-level ice wolves" on the way across. The 2006 map already had eighteen of them here; what
+// it did not have was aggression - every ice_wolf_1..6 in the cache was huntmode=cowardly, and they
+// spawn nowhere else in the tree, so they were made aggressive in place.
+console.log('\nTHE ICE WOLVES');
+{
+    let wolves = 0;
+    for (const n of World.npcs) {
+        if (!n) continue;
+        if (n.level === 0 && n.x >= 2880 && n.x <= 2940 && n.z >= 3715 && n.z <= 3760 &&
+            (NpcType.get(n.type).debugname ?? '').startsWith('ice_wolf_')) wolves++;
+    }
+    check('  the battlefield is wolf country', wolves >= 15, true);
+    const w = H.npcNear('ice_wolf_3', 2898, 3733, 0) ?? H.npcNear('ice_wolf_2', 2895, 3730, 0);
+    check('  and one is standing in the way', w !== null, true);
+    if (w) {
+        const p = player('gwdbait', w.x + 5, w.z);
+        const before = [w.x, w.z];
+        H.tick(12);
+        check('  it comes for you unprovoked', w.x !== before[0] || w.z !== before[1], true);
+        H.despawn(p);
+    }
+}
+
+// ---------------------------------------------------------------- the whole place is multi
+// "The space is multi-combat, with a free-for-all between each god's forces occurring there" - and
+// not only the chamber, so every zone of all four squares that has ground on it is in multiway.csv.
+console.log('\nMULTI-COMBAT');
+{
+    const multi = (lvl: number, x: number, z: number) => World.gameMap.isMulti(CoordGrid.packCoord(lvl, x, z));
+    check('  the chamber', multi(2, 2880, 5310), true);
+    check('  the shaft floor', multi(3, 2880, 5311), true);
+    check('  the generals rooms', multi(2, 2864, 5354) && multi(2, 2871, 5269), true);
+    check('  and Lumbridge still is not', multi(0, 3222, 3218), false);
+}
+
+// ---------------------------------------------------------------- the chamber is not empty
+// "Numerous monsters from different gods' factions inhabit this area." They were all behind the
+// four doors before this: the room they open onto had one npc standing in it.
+console.log('\nTHE CHAMBER');
+{
+    const gods = new Set<string>();
+    let n = 0;
+    for (const npc of World.npcs) {
+        if (!npc) continue;
+        if (npc.level !== 2 || npc.x < 2846 || npc.x > 2912 || npc.z < 5279 || npc.z > 5347) continue;
+        const name = NpcType.get(npc.type).debugname ?? '';
+        if (!name.startsWith('gwd_spiritual_')) continue;
+        n++;
+        gods.add(name.split('_').pop()!);
+    }
+    check('  followers stand in the chamber', n >= 40, true);
+    check('  and all four gods are in there together', gods.size, 4);
+}
+
+// ---------------------------------------------------------------- the killcount on screen
+// Asked for by name: "add the killcount of followers to the screen like osrs". Written from the
+// server and rewritten on every show, because the client drops server-set text when the interface
+// holding it is replaced - a panel written only on a kill would come back blank.
+console.log('\nTHE KILLCOUNT PANEL');
+{
+    const p = player('gwdpanel', 2880, 5310, 2);
+    H.setVar(p, 'gwd_kc_armadyl', 7);
+    H.setVar(p, 'gwd_kc_bandos', 40);
+    H.setVar(p, 'gwd_kc_saradomin', 0);
+    H.setVar(p, 'gwd_kc_zamorak', 13);
+    H.clearLogs();
+    H.runProc(p, '[proc,gwd_kc_overlay_open]');
+    H.tick(2);
+    const texts = H.ifaces.filter(f => f.kind === 'text').map(f => f.text);
+    check('  it shows all four counts', texts.length, 4);
+    check('  with the numbers that are stored', texts,
+        ['Armadyl: 7', 'Bandos: 40', 'Saradomin: 0', 'Zamorak: 13']);
+    H.despawn(p);
+}
 
 // ---------------------------------------------------------------- into the encampments
 // Four obstacles, one level-70 skill each, and before these the dungeon was four islands: you
