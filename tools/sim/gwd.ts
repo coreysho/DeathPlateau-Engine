@@ -403,13 +403,20 @@ console.log('\nTHE ICE WOLVES');
             (NpcType.get(n.type).debugname ?? '').startsWith('ice_wolf_')) wolves++;
     }
     check('  the battlefield is wolf country', wolves >= 15, true);
+    // The config is the fact worth asserting - that all six carry an aggressive hunt rather than
+    // the cowardly one they shipped with. Watching one walk is too flaky to assert on: a wandering
+    // wolf may already be next to the bait, or may be busy with another wolf.
+    const cowards = ['ice_wolf_1', 'ice_wolf_2', 'ice_wolf_3', 'ice_wolf_4', 'ice_wolf_5', 'ice_wolf_6']
+        .filter(n => (HuntType.get(NpcType.getByName(n)!.huntmode).debugname ?? '').includes('coward'));
+    check('  none of the six are cowardly any more', cowards, []);
     const w = H.npcNear('ice_wolf_3', 2898, 3733, 0) ?? H.npcNear('ice_wolf_2', 2895, 3730, 0);
     check('  and one is standing in the way', w !== null, true);
     if (w) {
-        const p = player('gwdbait', w.x + 5, w.z);
-        const before = [w.x, w.z];
-        H.tick(12);
-        check('  it comes for you unprovoked', w.x !== before[0] || w.z !== before[1], true);
+        const p = player('gwdbait', w.x + 4, w.z);
+        H.tick(15);
+        const engaged = (w as any).target !== null || (w as any).mode !== 0 ||
+            Math.abs(w.x - p.x) + Math.abs(w.z - p.z) <= 1;
+        check('  and it engages you unprovoked', engaged, true);
         H.despawn(p);
     }
 }
