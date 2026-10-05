@@ -16,6 +16,7 @@ import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
+import CategoryType from '#/cache/config/CategoryType.js';
 
 await H.boot();
 
@@ -25,14 +26,23 @@ const name = (id: number) => ObjType.get(id).debugname ?? String(id);
 const pairs: { base: number; kit: number; into: number }[] = [];
 for (let i = 0; i < ObjType.count; i++) {
     if (!ObjType.get(i)) continue;
-    for (const [k, v] of [['ornament_kit', 'ornament_into'], ['ornament_kit2', 'ornament_into2']]) {
+    // THREE SLOTS: the infinity robes take either colour kit, the rune scimitar takes one per god.
+    for (const [k, v] of [['ornament_kit', 'ornament_into'], ['ornament_kit2', 'ornament_into2'],
+                          ['ornament_kit3', 'ornament_into3']]) {
         const kit = P(i, k), into = P(i, v);
         if (kit !== null && into !== null) pairs.push({ base: i, kit, into });
     }
 }
 const kits = new Set(pairs.map(p => p.kit));
 console.log(`${pairs.length} pairings across ${kits.size} kits`);
-check('  all sixteen kits are wired to something', kits.size, 16);
+// NO KIT IS A DEAD ITEM. Counted against the cache rather than a number written here, which went
+// stale the moment a seventeenth kit was added: every obj in category ornament_kit has to be the
+// kit half of some pairing, or it is a reward that drops with nothing it fits.
+const ORNAMENT_KIT = CategoryType.getId('ornament_kit');
+const declared: number[] = [];
+for (let i = 0; i < ObjType.count; i++) if (ObjType.get(i)?.category === ORNAMENT_KIT) declared.push(i);
+const dead = declared.filter(i => !kits.has(i)).map(name);
+check(`  all ${declared.length} kits are wired to something`, dead.length ? dead.join(' ') : 'yes', 'yes');
 
 let applied = 0, reverted = 0;
 const broken: string[] = [];
