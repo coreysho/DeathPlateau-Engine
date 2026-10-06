@@ -24,14 +24,35 @@ await H.boot();
 // ---------------------------------------------------------------- the roof, read off the map
 // A tile is floor if it carries an overlay. The course deck is greyroof; the spans under a rope
 // are overlay 161, which draws as nothing here but is still floor you are meant to be on.
+//
+// A roof MODEL one level below counts too, and that is not a technicality. Where loc 1925 - a flat
+// slate roof with sloped edges - already covers the tile, the floor above it was REMOVED: drawing
+// both put the roof's slate lips and its edge pieces up through the deck as a grid of seams and
+// triangular wedges, which is what was reported as clipping. The player still walks level 3 and
+// sees the roof 48 units under their feet, which is what they walked on in Old School as well.
+//
+// A parapet is not a roof. desertroofwall and desertroofbeams ring a flat roof rather than being
+// one, so a tile standing over a parapet still has to carry its own floor - hence /^roof/, which
+// they do not match.
 const ROOF = new Set<string>();
 {
+    const locNames = new Map<number, string>();
+    for (const line of readFileSync('../content/pack/loc.pack', 'utf8').split(/\r?\n/)) {
+        const m = /^(\d+)=(.+)$/.exec(line.trim());
+        if (m) locNames.set(Number(m[1]), m[2]);
+    }
     const lines = readFileSync('../content/maps/m51_49.jm2', 'utf8').split(/\r?\n/);
+    let inLocs = false;
     for (const line of lines) {
-        if (line === '==== LOC ====') break;
+        if (line.startsWith('====')) { inLocs = line === '==== LOC ===='; continue; }
         const m = /^([0-3]) (\d+) (\d+): (.*)$/.exec(line);
-        if (!m || !/(^| )o\d+/.test(m[4])) continue;
-        ROOF.add(`${m[1]}:${51 * 64 + Number(m[2])},${49 * 64 + Number(m[3])}`);
+        if (!m) continue;
+        const level = Number(m[1]), x = 51 * 64 + Number(m[2]), z = 49 * 64 + Number(m[3]);
+        if (!inLocs) {
+            if (/(^| )o\d+/.test(m[4])) ROOF.add(`${level}:${x},${z}`);
+        } else if (/^roof/.test(locNames.get(Number(m[4].split(' ')[0])) ?? '')) {
+            ROOF.add(`${level + 1}:${x},${z}`);
+        }
     }
 }
 console.log(`THE COURSE'S FLOORS ARE ${ROOF.size} TILES`);
@@ -112,7 +133,10 @@ console.log('\nTHE TROPICAL TREE');
     H.tick(8);
     const said = H.mesgs.slice(from).filter(m => m.who === q.username).map(m => m.text);
     check('  the swing fires from the only tile a player can stand on', A.saw(said, "can't reach"), false);
-    check('  and it carries them up into the branches', [q.x, q.z, q.level], [3317, 3169, 2]);
+    // Read off the constant rather than written out a second time, so the two cannot drift apart.
+    // Both used to say 3317,3169, which is open air: the level 2 roof does not begin until z3173,
+    // in Old School as well as here, so the swing left the player standing on top of the tree.
+    check('  and it carries them up into the branches', [q.x, q.z, q.level], K.alkharid_land_tree);
     H.despawn(q);
 }
 
