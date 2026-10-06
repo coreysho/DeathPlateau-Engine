@@ -10,10 +10,47 @@ import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import ObjType from '#/cache/config/ObjType.js';
+import * as A from './a1lib.js';
+import InvType from '#/cache/config/InvType.js';
+import VarNpcType from '#/cache/config/VarNpcType.js';
+import EnumType from '#/cache/config/EnumType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
+
+// H.npcNear searches the WHOLE WORLD for the nearest npc of a type, with no radius - so a check
+// that simply asks "is there a Niles?" answers yes for one standing in another kingdom. Every spawn
+// test here wants the one that just appeared beside the player.
+/** What Dr Ford is asking this player for: his own %npc_int2, through the enum he picked it from. */
+const wanted = (npc: any): string => {
+    const slot = npc.vars[VarNpcType.getByName('npc_int2')!.id];
+    const id = EnumType.get(EnumType.getId('macro_dr_ford_wants')).values.get(slot) as number;
+    return ObjType.get(id).debugname!;
+};
+
+/** Talk to THIS npc, not to the nearest one of its type in the world, which is what a1lib's talk
+ * does - and which walked the player away from their own event to a Rick Turpentine standing
+ * somewhere else entirely, where the click said nothing at all. */
+const talkToThis = (p: any, npc: any, picks: (number | string)[] = []): string[] => {
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        p.teleport(npc.x + dx, npc.z + dz, npc.level);
+        H.tick(1);
+        H.opNpc(p, npc, 1);
+        for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+        if (p.activeScript) break;
+    }
+    return A.drive(p, picks);
+};
+
+const nearby = (name: string, p: any, within = 6) => {
+    const npc = H.npcNear(name, p.x, p.z, p.level);
+    if (!npc) return null;
+    return Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= within ? npc : null;
+};
+
+let badCoins = 0;
+const check0 = (ok: boolean, got: number) => { if (!ok) { badCoins++; console.log(`       coins out of range: ${got}`); } };
 
 /** Run a proc the way a click does, so a p_delay inside it is resumed instead of abandoned. */
 function runToEnd(p: any, name: string, ticks = 8) {
@@ -140,6 +177,143 @@ console.log('CALL FOLLOWER BRINGS THE PET TO YOU');
     check('calling it brings it to your feet', [away > 1, near <= 1], [true, true]);
     check('  ...and says so', mesSince(p, from).join(' | '), 'You call your follower.');
     check('  ...and it is following again, not standing there', pet!.targetOp, NpcMode.PLAYERFOLLOW);
+}
+
+
+// ======================================================= the four talking randoms this round added
+console.log('');
+console.log('FOUR PEOPLE WALK UP AND TALK TO YOU');
+{
+    // The ids in macro_events.constant: 7 Rick Turpentine, 8 Cap'n Hand, 9 a certer, 10 Dr Ford.
+    const EVENTS: [number, string, string][] = [
+        [7, 'macro_highwayman', 'Rick Turpentine'],
+        [8, 'macro_pirate', "Cap'n Hand"],
+        [10, 'macro_doctor', 'Dr Ford']
+    ];
+    for (const [id, npcName, who] of EVENTS) {
+        const p: any = player(`talk${id}`, 3222 + id, 3230, 0);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [id]);
+        H.tick(2);
+        const npc = nearby(npcName, p);
+        check(`${who} turns up`, npc !== null, true);
+        if (!npc) continue;
+        check('  ...and comes to you rather than wandering off', npc.targetOp, NpcMode.PLAYERFOLLOW);
+    }
+
+    // A CERTER IS ONE OF THREE BROTHERS, so the check is that it is one of them rather than which.
+    const p: any = player('talkcerter', 3240, 3230, 0);
+    H.setVar(p, 'macro_event', 0);
+    H.runProc(p, '[proc,macro_event_general_spawn]', [9]);
+    H.tick(2);
+    const brothers = ['macro_niles', 'macro_miles', 'macro_giles']
+        .map(n => nearby(n, p)).filter(Boolean);
+    check('one of the three certers turns up', brothers.length, 1);
+}
+
+// ============================================================== the shared random event drop table
+console.log('');
+console.log('AND THEY ALL PAY FROM ONE TABLE');
+{
+    const p: any = player('eventloot', 3250, 3230, 0);
+    const seen = new Map<string, number>();
+    for (let i = 0; i < 6000; i++) {
+        const out = H.runProc(p, '[proc,macro_event_reward]');
+        const [item, count] = out.slice(-2);
+        const n = ObjType.get(item).debugname ?? String(item);
+        seen.set(n, (seen.get(n) ?? 0) + 1);
+        if (n === 'coins') check0(count >= 80 && count <= 640, count);
+    }
+    console.log(`       ${[...seen].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ${(c / 60).toFixed(1)}%`).join(', ')}`);
+    check('every branch of the table is reachable', [...seen.keys()].sort(),
+        ['coins', 'cosmic_talisman', 'kebab', 'keyhalf1', 'keyhalf2', 'spinach_roll',
+            'uncut_diamond', 'uncut_emerald', 'uncut_ruby', 'uncut_sapphire'].sort());
+    const pct = (n: string) => (seen.get(n) ?? 0) / 60;
+    check('  ...a third of it is coins, and the gems thin out in order',
+        pct('coins') > 32 && pct('coins') < 42
+        && pct('uncut_sapphire') > pct('uncut_emerald')
+        && pct('uncut_emerald') > pct('uncut_ruby')
+        && pct('uncut_ruby') > pct('uncut_diamond'), true);
+    check('  ...and no coin drop is outside 80-640', badCoins, 0);
+}
+
+// ================================================== a members event never lands on a free world
+console.log('');
+console.log('AND EVERY ID THE ROLL CAN GIVE HAS AN NPC BEHIND IT');
+{
+    // Both tables have holes in them now - 5 and 6 are members' - which is the whole reason the
+    // _pick enums exist: the roll used to be 1..count over the npc table, which required the ids to
+    // run with no gaps. This world is a members one, so what it proves is that the roll and the npc
+    // lookup agree; the free table's own holes are read straight out of general_macro_events_free.
+    const free: number[] = [];
+    const p: any = player('freeroll', 3260, 3230, 0);
+    for (let i = 0; i < 400; i++) free.push(H.runProc(p, '[proc,macro_event_set_random]')[0]);
+    const kinds = [...new Set(free)].sort((a, b) => a - b);
+    console.log(`       400 rolls gave ids ${kinds.join(', ')} (members world)`);
+    check('every id rolled is one the world has an npc for',
+        kinds.every(id => H.runProc(p, '[proc,macro_event_npc]', [id])[0] > 0), true);
+}
+
+
+// ============================================== and talking to them is what actually pays out
+console.log('');
+console.log('AND TALKING TO THEM IS THE POINT');
+{
+    const invCount = (p: any) => {
+        const inv = p.getInventory(InvType.INV)!;
+        let n = 0;
+        for (let k = 0; k < inv.capacity; k++) if (inv.get(k)) n++;
+        return n;
+    };
+
+    // RICK TURPENTINE pays off the shared table for nothing but the courtesy of a reply.
+    {
+        const p: any = player('rickchat', 3222, 3240, 0);
+        H.clearInv(p);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [7]);
+        H.tick(2);
+        // NOT ASSERTED ON WHAT HE SAYS. drive() collects the chat from the SECOND page on - the page
+        // the click itself opens is already gone by the time it starts - and Rick's whole dialogue is
+        // one page, so there is nothing to read. What he DOES is the thing worth checking anyway.
+        const rick = nearby('macro_highwayman', p)!;
+        talkToThis(p, rick);
+        check('Rick Turpentine hands something over', invCount(p) > 0, true);
+        // And only once: the done marker is what stops him being a tap you can turn on again.
+        const after = invCount(p);
+        talkToThis(p, rick);
+        check('  ...and not twice', invCount(p), after);
+    }
+
+    // DR FORD, both ways: he takes the thing he asked for, and leaves quietly when you have none.
+    {
+        const p: any = player('fordchat', 3232, 3240, 0);
+        H.clearInv(p);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [10]);
+        H.tick(2);
+        const empty = talkToThis(p, nearby('macro_doctor', p)!);
+        check('Dr Ford takes no for an answer', empty.some(m => m.includes('Thank you anyway')), true);
+        check('  ...and goes away empty-handed when you have none', invCount(p), 0);
+    }
+    {
+        const p: any = player('fordgive', 3236, 3240, 0);
+        H.clearInv(p);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [10]);
+        H.tick(2);
+        const npc = nearby('macro_doctor', p, 8)!;
+        // HE SETTLES ON WHAT HE WANTS AT SPAWN and keeps it in %npc_int2, so he asks for the same
+        // thing every time you click him rather than a fresh one. That is also how this test knows
+        // what to carry - reading the npc's own var instead of guessing from the list.
+        const wants = wanted(npc);
+        H.give(p, wants, 1);
+        const before = invCount(p);
+        const said = talkToThis(p, npc);
+        check('given what he asked for, Dr Ford takes it', H.invCount(p, wants), 0);
+        check('  ...and pays for it', said.some(m => m.includes('Marvellous')), true);
+        check('  ...so you are no worse off', invCount(p) >= before, true);
+    }
 }
 
 
