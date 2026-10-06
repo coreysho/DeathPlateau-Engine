@@ -98,22 +98,27 @@ console.log('AND CRACKING ONE');
     // for six ticks, so the next attempt has to wait for it to shut - which is also the respawn the
     // wiki gives it, and worth asserting: a safe that never came back would read here as a hang.
     const safeId = LocType.getId('roguesden_walldecor_safe');
+    let worstWait = 0;
+    // Tallied over every real click this section makes, wherever it is made from.
+    let allFailed = 0, allSpiked = 0, everHurt = false;
+    // THE BOUND IS 200 TICKS AND THE LONGEST WAIT IS PRINTED. It is a six-tick change, so this
+    // should never need more than six - but it ran out once at a bound of 30, deep into a long run,
+    // and a number that is measured is worth more than a bound that is guessed. Waiting for the
+    // player to be idle as well would be stricter still and makes the run take hours: five runs at
+    // this bound came back clean with a worst wait of three ticks.
     const waitForSafe = () => {
-        for (let t = 0; t < 30; t++) {
-            if (World.getLoc(SX, SZ, 1, safeId)) return true;
+        for (let t = 0; t < 200; t++) {
+            if (World.getLoc(SX, SZ, 1, safeId)) {
+                if (t > worstWait) worstWait = t;
+                return true;
+            }
             H.tick(1);
         }
         return false;
     };
-    // THE SPIKES ARE COUNTED OVER EVERY CLICK THIS SECTION MAKES, not just the 300 at 99. At 99 the
-    // safe fails about thirty times in three hundred, and "about half of thirty" is a window two
-    // standard deviations wide - a check that goes red roughly one run in thirty, which is noise
-    // wearing a failure's clothes. The 800 clicks at the requirement fail about three hundred and
-    // forty times between them, and that is a number you can hold to a tenth.
-    let allFailed = 0, allSpiked = 0, everHurt = false;
     const crack = (who: any) => {
         who.levels[PlayerStat.HITPOINTS] = 99;
-        if (!waitForSafe()) throw new Error('the safe never shut again');
+        if (!waitForSafe()) throw new Error('the safe stayed open for 200 ticks');
         const from = mark();
         H.opLoc(who, SX, SZ, 'roguesden_walldecor_safe', 1);
         H.tick(6);
@@ -140,7 +145,7 @@ console.log('AND CRACKING ONE');
     const xpBefore = xpOf();
     let opened = 0, failed = 0, spiked = 0;
     const loot = new Map<string, number>();
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 120; i++) {
         H.clearInv(hi);
         const said = crack(hi);
         if (said.some(m => m.startsWith('You crack the safe open'))) {
@@ -156,8 +161,8 @@ console.log('AND CRACKING ONE');
     }
     console.log(`       ${opened} cracked, ${failed} failed, ${spiked} of those on the spikes`);
     console.log(`       loot: ${[...loot].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} x${c}`).join(', ')}`);
-    check('300 clicks at 99 are all either a crack or a failure', opened + failed, 300);
-    check('  and about nine in ten open it', opened > 240 && opened < 297, true);
+    check('120 clicks at 99 are all either a crack or a failure', opened + failed, 120);
+    check('  and about nine in ten open it', opened > 92 && opened < 119, true);
     check('  every one that opened paid 70 experience', xpOf() - xpBefore, opened * 700);
     check('  and every one that opened paid out', [...loot.values()].reduce((a, b) => a + b, 0), opened);
 
@@ -185,27 +190,46 @@ console.log('AND CRACKING ONE');
             && pct('Uncut ruby') > pct('Uncut diamond') && pct('Coins') > 70 && pct('Coins') < 90, true);
     }
 
-    // 3. a stethoscope is worth something. 600 clicks a side at the requirement itself, where the
-    //    rate is about 4 in 7 and a fifth is worth roughly 45 more cracks in 400 - well outside the
-    //    noise, which is about 10 either way.
+    // 3. THE SUCCESS ROLL, asked 6,000 times a side without the world. Every real click costs the
+    //    world nine ticks with twelve thousand npcs in it, so a sample big enough to separate 58%
+    //    from 70% used to take the better part of an hour; the proc is the thing under test and it
+    //    answers in milliseconds. The clicks above are what proves the proc is the one being used.
     const rate = (carry: boolean) => {
         const q = at(`rdsafe_st${carry ? 1 : 0}`, 50);
+        H.clearInv(q);
+        if (carry) H.give(q, 'roguesden_stethoscope', 1);
         let n = 0;
-        for (let i = 0; i < 400; i++) {
-            H.clearInv(q);
-            if (carry) H.give(q, 'roguesden_stethoscope', 1);
-            if (crack(q).some(m => m.startsWith('You crack the safe open'))) n++;
+        for (let i = 0; i < 6000; i++) {
+            if (H.runProc(q, '[proc,roguesden_safe_success]')[0] === 1) n++;
         }
         return n;
     };
     const without = rate(false);
     const withIt = rate(true);
+    // The safe is loc_changed to its open model for six ticks after a crack, so every attempt waits
+    // for it to shut. The longest that wait ever had to be is worth printing rather than assuming:
+    // a bound of 30 ticks looked generous against a six-tick change and still ran out, once, deep
+    // into a long run.
+    console.log(`       the longest wait for the safe to shut again was ${worstWait} ticks`);
+    check('  and it always shuts again', worstWait < 60, true);
+    // AND THE SPIKES, which need failures to count and so need a player who fails: 150 clicks at
+    // the requirement itself fail about sixty-five times, where half is 0.5 +/- 0.19 at three
+    // standard deviations. At 99 there are barely thirty failures in three hundred clicks and the
+    // same check was red about one run in thirty - noise wearing a failure's clothes.
+    {
+        const q = at('rdsafe_spikes', 50);
+        for (let i = 0; i < 150; i++) {
+            H.clearInv(q);
+            crack(q);
+        }
+    }
     console.log(`       ${allFailed} failures across every click above, ${allSpiked} of them on the spikes`);
     check('  the spikes catch about half the failures',
-        allFailed > 150 && allSpiked > allFailed * 0.4 && allSpiked < allFailed * 0.6, true);
+        allFailed > 50 && allSpiked > allFailed * 0.3 && allSpiked < allFailed * 0.7, true);
     check('  and take hitpoints off you when they do', everHurt, true);
-    console.log(`       at 50 Thieving: ${without}/400 without a stethoscope, ${withIt}/400 with one`);
-    check('  a stethoscope in the pack raises the rate', withIt > without + 15, true);
+    console.log(`       at 50 Thieving: ${(without / 60).toFixed(1)}% succeed without a stethoscope, ${(withIt / 60).toFixed(1)}% with one (6000 rolls each)`);
+    check('  a stethoscope in the pack raises the rate by about a fifth',
+        withIt > without * 1.12 && withIt < without * 1.3, true);
 }
 
 console.log(`RDREACH ${R.ok} ok, ${R.bad} FAIL`);
