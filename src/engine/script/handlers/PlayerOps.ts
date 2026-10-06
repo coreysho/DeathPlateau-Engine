@@ -35,6 +35,7 @@ import {
     PlayerOpStateValid,
     HuntVisValid
 } from '#/engine/script/ScriptValidators.js';
+import { opHeldUAlternate } from '#/engine/script/OpHeldUTrigger.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
 import CamReset from '#/network/game/server/model/CamReset.js';
@@ -327,6 +328,24 @@ const PlayerOps: CommandHandlers = {
         }
 
         state.pushInt(state.activePlayer.lastSlot);
+    },
+
+    // "This script does not know this pair - let the other half try." True when the click was handed
+    // over and the caller should say nothing more; false when there is nobody to hand it to, which
+    // includes every call from outside an opheldu and the SECOND refusal of the same click.
+    //
+    // No pointer requirement and no trigger check that throws, because ~displaymessage calls this
+    // from all 787 of its "Nothing interesting happens." sites and almost none of them are a use.
+    [ScriptOpcode.OPHELDU_DECLINE]: state => {
+        const player = state.activePlayer;
+        if (state.trigger !== ServerTriggerType.OPHELDU || !player.opheldUHandoverAvailable || !opHeldUAlternate(player)) {
+            state.pushInt(0);
+            return;
+        }
+
+        player.opheldUHandoverAvailable = false;
+        player.opheldUHandoverAsked = true;
+        state.pushInt(1);
     },
 
     [ScriptOpcode.LAST_USEITEM]: state => {

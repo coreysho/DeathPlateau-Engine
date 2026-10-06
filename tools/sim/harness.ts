@@ -29,6 +29,8 @@ import { toBase37 } from '#/util/JString.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+import OpHeldU from '#/network/game/client/model/OpHeldU.js';
+import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
 import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
 
 export type Hit = { tick: number; who: string; damage: number; type: number };
@@ -319,6 +321,35 @@ export function opheld(p: Player, objName: string, op: number) {
     if (!script) throw new Error('no opheld' + op + ' trigger for ' + objName);
     p.executeScript(ScriptRunner.init(script, p), true);
     return true;
+}
+
+/**
+ * What "Use A on B" does in the inventory: the REAL OpHeldUHandler, fed the packet the client
+ * sends. Client.java's opcode 903 writes the item CLICKED SECOND as obj/slot and the one selected
+ * FIRST as useObj/useSlot, so `useName` is the one you picked up and `onName` the one you dropped
+ * it on - and swapping those two arguments is the whole of what "the other way round" means.
+ *
+ * EVERY OTHER SIM IN THIS DIRECTORY RE-IMPLEMENTED THE HANDLER'S TRIGGER LOOKUP BY HAND, seven of
+ * them, each with the comment "OpHeldUHandler's lookup, swaps included". That is why none of them
+ * could ever see the handler swap last_item on a lookup that MISSED: a copy of the engine cannot
+ * disagree with the engine. Use this instead.
+ */
+export function useHeldOn(p: Player, useName: string, onName: string): boolean {
+    const inv = p.getInventory(InvType.INV)!;
+    const find = (name: string, skip: number): { obj: number; slot: number } => {
+        const id = ObjType.getId(name);
+        if (id === -1) throw new Error('no such obj: ' + name);
+        for (let i = 0; i < inv.capacity; i++) {
+            if (i !== skip && inv.get(i)?.id === id) return { obj: id, slot: i };
+        }
+        throw new Error('not carrying ' + name);
+    };
+    const a = find(useName, -1);
+    const b = find(onName, a.slot); // two stacks of the same obj still have to be two slots
+    const listener = p.invListeners.find(l => l.type === InvType.INV);
+    if (!listener) throw new Error('no inventory listener: the player never logged in');
+    p.closeModal();
+    return new OpHeldUHandler().handle(new OpHeldU(b.obj, b.slot, listener.com, a.obj, a.slot, listener.com), p);
 }
 
 /**

@@ -517,6 +517,13 @@ export const enum ScriptOpcode {
 
     FINDNAME, // custom (2026-09-23) - finduid by display name; house guests find the owner by the name they type
 
+    // custom (2026-10-05). APPENDED HERE, not next to last_useitem where it belongs by subject,
+    // because the numbers in this enum are implicit: an insertion in the middle shifts every opcode
+    // after it, and the already-compiled scripts in data/pack then decode against the wrong table.
+    // Inside [opheldu,x]: this script does not know this pair, so let the other item's trigger try.
+    // See engine/script/OpHeldUTrigger.ts and ~displaymessage.
+    OPHELDU_DECLINE,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -663,6 +670,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['LAST_TARGETSLOT', ScriptOpcode.LAST_TARGETSLOT],
     ['LAST_DRAGMODE', ScriptOpcode.LAST_DRAGMODE],
     ['LAST_USEITEM', ScriptOpcode.LAST_USEITEM],
+    ['OPHELDU_DECLINE', ScriptOpcode.OPHELDU_DECLINE],
     ['LAST_USESLOT', ScriptOpcode.LAST_USESLOT],
     ['LONGQUEUE', ScriptOpcode.LONGQUEUE],
     ['LONGQUEUE*', ScriptOpcode.LONGQUEUEVARARG],

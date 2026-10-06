@@ -382,6 +382,14 @@ export default class Player extends PathingEntity {
     lastSlot: number = -1; // opheld, opheldu, opheldt, inv_button, inv_buttond
     lastUseItem: number = -1; // opheldu, opobju, oplocu, opnpcu, opplayeru
     lastUseSlot: number = -1; // opheldu, opobju, oplocu, opnpcu, opplayeru
+
+    // THE OPHELDU HAND-OVER, both of them live for one packet and are never saved.
+    // "Use a on b" picks ONE of the two items' triggers - b's, the one clicked second - so a script
+    // that does not know the pair has to be able to pass the click to the other half, or the same
+    // two items do something one way round and nothing the other way round. The content asks with
+    // opheldu_decline (see ~displaymessage) and OpHeldUHandler does the passing.
+    opheldUHandoverAvailable: boolean = false;
+    opheldUHandoverAsked: boolean = false;
     lastTargetSlot: number = -1; // inv_buttond
     lastDragMode: number = -1; // inv_buttond - 0 swap, 1 insert, 100+n dropped on bank tab n
     lastCom: number = -1; // if_button
