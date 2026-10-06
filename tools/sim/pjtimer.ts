@@ -306,5 +306,47 @@ console.log('A KILL FREES THE KILLER');
     H.tick(2);
 }
 
+console.log('A RANDOM EVENT CANNOT PJ A FIGHT');
+{
+    // A monster that has hold of you keeps other players off you for 8 ticks, and that is right:
+    // you are busy, and somebody else's hit would be a pile-on you did not ask for. A RANDOM EVENT
+    // IS NOT THAT. It walked up on its own, it chose the moment, and neither player invited it - so
+    // letting it set the hold hands a third party the power to end a fight. Reported as "aggressive
+    // random events can pj a pvp fight".
+    //
+    // Every event npc carries %npc_macro_event_target, the player it came for, and nothing else in
+    // the game sets it; ~pj_blocking_npc reads exactly that. The control below is the same setup
+    // with an ordinary monster, because a fix that let EVERY monster through would pass the first
+    // half of this and break the timer.
+    const a = spawn(SINGLE, 0);
+    const b = spawn(SINGLE, 1);
+
+    const hold = (victim: Player, npcName: string, event: boolean) => {
+        const npc = H.addNpc(npcName, victim.x + 1, victim.z);
+        H.tick(1);
+        if (event) H.setNpcVar(npc, 'npc_macro_event_target', victim.uid);
+        H.setVar(victim, 'aggressive_npc', npc.uid);
+        H.setVar(victim, 'lastcombat', World.currentTick);
+        return npc;
+    };
+
+    const golem = hold(a, 'macro_golemguardian_1', true);
+    check('a random event on A does not shut B out', gate(b, a).allowed, true);
+    check('  and does not stop A attacking B either', gate(a, b).allowed, true);
+    World.removeNpc(golem, -1);
+    H.tick(1);
+
+    const goblin = hold(a, 'goblin', false);
+    check('an ordinary monster on A still shuts B out', [gate(b, a).allowed, gate(b, a).said],
+        [false, 'Someone else is already fighting your opponent.']);
+    check('  and still stops A starting on B', [gate(a, b).allowed, gate(a, b).said],
+        [false, "I'm already under attack."]);
+    World.removeNpc(goblin, -1);
+
+    H.despawn(a, b);
+    H.tick(2);
+}
+
+
 console.log(`PJTIMER  ${ok} ok, ${bad} failed`);
 process.exit(0);

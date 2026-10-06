@@ -82,7 +82,32 @@ for (let i = 0; i < NpcType.count; i++) {
 }
 check('every npc with a pet item is flagged a follower', pets.filter(i => !NpcType.get(i).follower).length, 0);
 check('  ...and none of them draws a minimap dot', pets.filter(i => NpcType.get(i).minimap).length, 0);
-check('  ...and there are as many as there are pets and forms', pets.length, 73);
+// COUNTED, NOT WRITTEN DOWN. This was the literal 73, which went stale twice without anybody
+// noticing - the number only moves when a pet or a metamorphosis form is added, which is exactly
+// when nobody is looking at this file. The invariant it was reaching for is the real one: every npc
+// that carries pet_item_id is a member of some pet item's metamorphosis ring, walked from the base
+// the item names in follower_id. An npc with the param that no ring reaches is a form that can
+// never be shown; a ring member without the param is a form the pick-up cannot identify.
+{
+    const followerId = ParamType.getId('follower_id');
+    const metamorphNext = ParamType.getId('metamorph_next');
+    const reachable = new Set<number>();
+    for (let i = 0; i < ObjType.count; i++) {
+        const base = ObjType.get(i)?.params?.get(followerId) as number | undefined;
+        if (typeof base !== 'number') continue;
+        let at: number | undefined = base;
+        for (let step = 0; step < 32 && typeof at === 'number' && !reachable.has(at); step++) {
+            reachable.add(at);
+            at = NpcType.get(at).params?.get(metamorphNext) as number | undefined;
+        }
+    }
+    const unreachable = pets.filter(i => !reachable.has(i)).map(i => NpcType.get(i).debugname ?? String(i));
+    const unmarked = [...reachable].filter(i => !NpcType.get(i).params?.has(petItem))
+        .map(i => NpcType.get(i).debugname ?? String(i));
+    console.log(`  ${pets.length} npcs carry a pet item; ${reachable.size} are reachable from one`);
+    check("  ...and every one of them is on some pet item's ring", unreachable, []);
+    check('  ...and every form on a ring carries the pet item', unmarked, []);
+}
 check('the cats are in that set as well as the boss and skilling pets',
     ['kittenpet1', 'growncat', 'overgrowncat', 'bosspet_kbd', 'skillpet_beaver', 'bosspet_kraken']
         .filter(n => !NpcType.get(NpcType.getId(n)).follower), []);
@@ -112,6 +137,42 @@ H.opNpc(owner, pet!, 1);
 H.tick(3);
 check('picking it up empties the slot', H.getVar(owner, 'follower_uid') <= 0, true);
 check('  ...and the pet is back in the pack', H.invCount(owner, 'bosspet_kbd_item'), 1);
+
+// ------------------------------------------------- the Pet snakeling's three colours, in the hand
+// Zulrah has three forms and so does the pet that drops from it. The ring is checked in the configs
+// by content/tools/follower_battery.py; this is the right-click itself, because a ring that is
+// closed on paper still has to come back round in play AND be remembered across a put-down.
+{
+    const owner2: any = H.makePlayer('pet_snake', 3226, 3218, 93);
+    H.tick(3);
+    H.clearInv(owner2);
+    H.give(owner2, 'bosspet_snakeling_item', 1);
+    H.opheld(owner2, 'bosspet_snakeling_item', 5);
+    H.tick(2);
+    const form = () => {
+        const f = H.followerOf(owner2);
+        return f ? (NpcType.get(f.type).debugname ?? String(f.type)) : 'none';
+    };
+    const seen = [form()];
+    for (let i = 0; i < 3; i++) {
+        H.opNpc(owner2, H.followerOf(owner2)!, 4);
+        H.tick(2);
+        seen.push(form());
+    }
+    check('the snakeling cycles its three colours and comes back round', seen,
+        ['bosspet_snakeling', 'bosspet_snakeling_magma', 'bosspet_snakeling_tanzanite', 'bosspet_snakeling']);
+
+    // and the chosen colour survives being put away, which is the whole point of %pet_form
+    H.opNpc(owner2, H.followerOf(owner2)!, 4);
+    H.tick(2);
+    check('  ...stopping on the magma one', form(), 'bosspet_snakeling_magma');
+    H.opNpc(owner2, H.followerOf(owner2)!, 1);
+    H.tick(3);
+    check('  ...which goes back in the pack', H.invCount(owner2, 'bosspet_snakeling_item'), 1);
+    H.opheld(owner2, 'bosspet_snakeling_item', 5);
+    H.tick(2);
+    check('  ...and comes back out magma, not green', form(), 'bosspet_snakeling_magma');
+}
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);
