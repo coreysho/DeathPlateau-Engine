@@ -96,11 +96,33 @@ const COURSE: Step[] = [
     { name: 'crate',       loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: [3103, 3261, 0], xp: 790 },
 ];
 
-console.log('\nEVERY LANDING IS SOMEWHERE YOU CAN STAND');
-for (const s of COURSE) {
+// WHICH LANDINGS SIT ON A FLAGGED TILE - printed, not asserted. A teleport can put you on one and
+// you walk off it, and the flags are the map's own. This used to be a check, and a broken one: it
+// passed (level, x, z) to isFlagged(x, z, level), so it read collision off a tile nowhere near the
+// course and passed whatever the constants said. Fixed, it fails for the first tightrope, which is
+// fine in play. What matters is the check below.
+{
+    const on = COURSE.filter(s => isFlagged(s.land[0], s.land[1], s.land[2], CollisionFlag.WALK_BLOCKED));
+    console.log('\nWHERE EACH OBSTACLE PUTS YOU DOWN');
+    console.log(on.length
+        ? `  note: ${on.map(s => `${s.name} (${s.land[0]},${s.land[1]})`).join(', ')} land on flagged tiles`
+        : '  note: no landing sits on a flagged tile');
+}
+
+// AND THE LAP CAN CARRY ON FROM IT: either you can walk off the landing, or the next obstacle is
+// usable from where you stand. A landing that is a one-tile island is fine when the thing you click
+// next is the tile beside you, and several courses are built that way on purpose. Failing both is
+// the fault worth catching - Al Kharid's tropical tree was an island six tiles from its next
+// obstacle, and you simply could not move.
+console.log('\nAND THE LAP CAN CARRY ON FROM EVERY LANDING');
+for (let i = 0; i < COURSE.length; i++) {
+    const s = COURSE[i], n = COURSE[(i + 1) % COURSE.length];
     const [lx, lz, ll] = s.land;
-    check(`  ${s.name.padEnd(12)} lands on ${lx},${lz} level ${ll}`,
-        isFlagged(ll, lx, lz, CollisionFlag.WALK_BLOCKED), false);
+    const canWalkOff = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+        .some(([dx, dz]) => A.walkable(ll, lx + dx, lz + dz));
+    const canUseNext = ll === n.level && !!A.reachLoc(ll, lx, lz, n.loc, n.x, n.z);
+    check(`  ${s.name.padEnd(12)} ${canWalkOff ? 'walk off' : canUseNext ? `use ${n.name}` : 'STUCK'}`,
+        canWalkOff || canUseNext, true);
 }
 
 console.log('\nAND THE OBSTACLE IS THERE TO CLICK');
