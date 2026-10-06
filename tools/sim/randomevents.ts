@@ -13,6 +13,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
+import { NpcMode } from '#/engine/entity/NpcMode.js';
 
 /** Run a proc the way a click does, so a p_delay inside it is resumed instead of abandoned. */
 function runToEnd(p: any, name: string, ticks = 8) {
@@ -111,5 +112,36 @@ console.log('AN EVIL CHICKEN TURNS UP AND MEANS IT');
 }
 
 console.log('');
+// ============================================================== Call follower, on the equipment tab
+console.log('');
+console.log('CALL FOLLOWER BRINGS THE PET TO YOU');
+{
+    const p: any = player('callpet', 3230, 3222);
+    H.clearInv(p);
+    const from0 = mark();
+    H.runProc(p, '[proc,call_follower]');
+    check('with no pet out it says so', mesSince(p, from0).join(' | '), "You don't have a follower.");
+
+    H.give(p, 'bosspet_kbd_item', 1);
+    H.opheld(p, 'bosspet_kbd_item', 5);
+    H.tick(2);
+    const pet = H.followerOf(p);
+    check('the pet is out', pet !== null, true);
+
+    // STRAND IT SOMEWHERE IT CANNOT WALK BACK FROM, but close enough and on the same floor that
+    // ~follower_keepup will not fetch it - which is the whole gap this button fills.
+    pet!.teleport(p.x + 4, p.z + 4, p.level);
+    H.tick(1);
+    const away = Math.max(Math.abs(pet!.x - p.x), Math.abs(pet!.z - p.z));
+    const from = mark();
+    H.runProc(p, '[proc,call_follower]');
+    H.tick(1);
+    const near = Math.max(Math.abs(pet!.x - p.x), Math.abs(pet!.z - p.z));
+    check('calling it brings it to your feet', [away > 1, near <= 1], [true, true]);
+    check('  ...and says so', mesSince(p, from).join(' | '), 'You call your follower.');
+    check('  ...and it is following again, not standing there', pet!.targetOp, NpcMode.PLAYERFOLLOW);
+}
+
+
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
