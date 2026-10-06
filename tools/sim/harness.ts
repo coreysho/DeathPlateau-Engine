@@ -46,7 +46,8 @@ export const anims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
 export const sounds: Sound[] = [];
 export const ifaces: Iface[] = [];
-/** Overhead text, player or npc ("Taste vengeance!"), with the tick it was said on. */
+/** Overhead text, with the tick it was said on. `who` is the username for a player and the
+ * debugname for an npc. */
 export const says: Say[] = [];
 /** Every hitsplat an npc takes, as `hits` is for players; `who` is the npc's debugname. */
 export const npcHits: Hit[] = [];
@@ -93,6 +94,14 @@ export async function boot() {
     (Player.prototype as any).say = function (text: string) {
         says.push({ tick: World.currentTick, who: this.username, text });
         return origSay.call(this, text);
+    };
+    // AND AN NPC'S OWN overhead text, under its debugname. npc_say was the one thing a talking
+    // random does that nothing here could see - the sandwich lady's "Thief! Thief! Thief!" is said
+    // this way, not through a chat interface, so a test could only have asserted it by eye.
+    const origNpcSay = (Npc.prototype as any).say;
+    (Npc.prototype as any).say = function (text: string) {
+        says.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), text });
+        return origNpcSay.call(this, text);
     };
     const origAnim = (Player.prototype as any).playAnimation;
     (Player.prototype as any).playAnimation = function (seq: number, delay: number) {

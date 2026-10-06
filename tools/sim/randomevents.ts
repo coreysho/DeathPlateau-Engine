@@ -18,6 +18,9 @@ import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
+import SeqType from '#/cache/config/SeqType.js';
+import Component from '#/cache/config/Component.js';
+import ScriptState from '#/engine/script/ScriptState.js';
 
 // H.npcNear searches the WHOLE WORLD for the nearest npc of a type, with no radius - so a check
 // that simply asks "is there a Niles?" answers yes for one standing in another kingdom. Every spawn
@@ -316,6 +319,148 @@ console.log('AND TALKING TO THEM IS THE POINT');
     }
 }
 
+
+// ===================================================== the sandwich lady, her tray and her baguette
+console.log('');
+console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
+{
+    const FOODS = ['baguette', 'triangle_sandwich', 'square_sandwich', 'chocolate_bar',
+        'kebab', 'roll', 'meat_pie'];
+    const KO = SeqType.getId('macro_sandwich_lady_knockout');
+
+    // THE TRAY, read back out of the script rather than out of the file it was written in. slot(7)
+    // is off the end of a seven-slot tray and has to answer null, because multiobj7 would otherwise
+    // be handed a component id of 0.
+    {
+        const p: any = player('tray', 3270, 3230, 0);
+        const got: string[] = [];
+        for (let i = 0; i < 7; i++) {
+            const out = H.runProc(p, '[proc,macro_sandwich_lady_slot]', [i]);
+            got.push(ObjType.get(out[0]).debugname!);
+        }
+        check('seven foods on the tray, in her order', got, FOODS);
+        check('  ...and nothing past the seventh', H.runProc(p, '[proc,macro_sandwich_lady_slot]', [7])[0], -1);
+    }
+
+    // THE INTERFACE EXISTS AND HAS THE COMPONENTS THE PROC ADDRESSES. multiobj7 is new, and a .if
+    // and a pack that disagree would only show up as a throw the first time somebody met her.
+    for (let i = 0; i <= 16; i++) {
+        if (Component.getId(`multiobj7:com_${i}`) === -1) {
+            check(`multiobj7:com_${i} is in the pack`, false, true);
+        }
+    }
+    check('multiobj7 is built: 7 models, 7 labels, a title and two swords', true, true);
+
+    // HER KNOCKOUT IS THE CACHE'S OWN, not something written here: human_death's frames with a
+    // shorter hold at the end. If that ever stops being true the comment in her script is wrong.
+    {
+        const ko = SeqType.get(KO);
+        const death = SeqType.get(SeqType.getId('human_death'));
+        check('she knocks you out with a seq out of the cache, not one written here', ko.frames.join(','), death.frames.join(','));
+        check('  ...held for less time than a death', ko.delay[ko.delay.length - 1] < death.delay[death.delay.length - 1], true);
+    }
+
+    /** Click her, then take slot $slot off the tray - or close it, with slot -1. Returns where the
+     * player stood when the tray opened, so "did she teleport you" is measured from there rather
+     * than from where they logged in: getting next to her to click her is itself a move.
+     *
+     * Which modal is open is what says the tray is up. The resume buttons do NOT clear when it
+     * closes - the page of dialogue after it still lists multiobj7s - so a test that went by those
+     * would answer the next question by clicking a sandwich. */
+    const takeFromTray = (p: any, npc: any, slot: number): { x: number; z: number } => {
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            p.teleport(npc.x + dx, npc.z + dz, npc.level);
+            H.tick(1);
+            H.opNpc(p, npc, 1);
+            for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+            if (p.activeScript) break;
+        }
+        const stood = { x: p.x, z: p.z };
+        const tray = Component.getId('multiobj7');
+        let opened = false;
+        for (let guard = 0; guard < 60; guard++) {
+            const s = p.activeScript;
+            if (s && s.execution === ScriptState.PAUSEBUTTON) {
+                if (p.modalChat === tray) {
+                    opened = true;
+                    // last_com of -1 is what closing the tray without choosing leaves behind, and
+                    // multiobj7 answers that with null.
+                    if (slot < 0) { p.lastCom = -1; p.executeScript(s, true, true); }
+                    else if (!H.choose(p, `multiobj7:com_${2 + slot}`)) throw new Error('the tray would not take a click');
+                } else {
+                    p.executeScript(s, true, true);
+                }
+                continue;
+            }
+            if (!s && !p.delayed && [...p.queue.all()].length === 0) break;
+            H.tick(1);
+        }
+        // Without this, a tray that never opened would make every outcome below pass by default.
+        if (!opened) throw new Error('the tray never opened');
+        return stood;
+    };
+
+    /** The slot she decided on at spawn, read off her own var the way Dr Ford's is. */
+    const offered = (npc: any): number => npc.vars[VarNpcType.getByName('npc_int2')!.id];
+
+    // TAKE THE RIGHT ONE and you get it - exactly it, and nothing else.
+    {
+        const p: any = player('sandwichok', 3270, 3240, 0);
+        H.clearInv(p);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [11]);
+        H.tick(2);
+        const lady = nearby('macro_sandwich_lady_npc', p);
+        check('the sandwich lady turns up', lady !== null, true);
+        if (lady) {
+            check('  ...and comes to you rather than wandering off', lady.targetOp, NpcMode.PLAYERFOLLOW);
+            const slot = offered(lady);
+            const was = takeFromTray(p, lady, slot);
+            check('  ...taking the one she offered gets you it', H.invCount(p, FOODS[slot]), 1);
+            const others = FOODS.filter((_, i) => i !== slot).reduce((n, f) => n + H.invCount(p, f), 0);
+            check('  ...and only it', others, 0);
+            for (let i = 0; i < 12; i++) H.tick(1);
+            check('  ...and she does not teleport you anywhere', [p.x, p.z], [was.x, was.z]);
+            check('  ...and does not knock you down either', H.anims.some(a => a.who === p.username && a.seq === KO), false);
+        }
+    }
+
+    // TAKE THE WRONG ONE and she baguettes you across the map. Nothing is taken from you.
+    {
+        const p: any = player('sandwichbad', 3280, 3240, 0);
+        H.clearInv(p);
+        H.give(p, 'coins', 5000);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [11]);
+        H.tick(2);
+        const lady = nearby('macro_sandwich_lady_npc', p)!;
+        const slot = offered(lady);
+        const wrong = (slot + 3) % 7;
+        const was = takeFromTray(p, lady, wrong);
+        check('she calls you a thief', H.saysFor('macro_sandwich_lady_npc')
+            .some(s => s.text.includes('Thief! Thief! Thief!')), true);
+        check('  ...and knocks you down, with the seq the cache keeps for it',
+            H.anims.some(a => a.who === p.username && a.seq === KO), true);
+        for (let i = 0; i < 12; i++) H.tick(1);
+        check('  ...and you wake up somewhere else', Math.abs(p.x - was.x) + Math.abs(p.z - was.z) > 20, true);
+        check('  ...with your coins still on you', H.invCount(p, 'coins'), 5000);
+        check('  ...and none of her food', FOODS.reduce((n, f) => n + H.invCount(p, f), 0), 0);
+    }
+
+    // WALK AWAY FROM THE TRAY and she is not robbed, so nothing happens to you at all.
+    {
+        const p: any = player('sandwichshut', 3290, 3240, 0);
+        H.clearInv(p);
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [11]);
+        H.tick(2);
+        const lady = nearby('macro_sandwich_lady_npc', p)!;
+        const was = takeFromTray(p, lady, -1);
+        for (let i = 0; i < 12; i++) H.tick(1);
+        check('closing the tray is not stealing', [p.x, p.z], [was.x, was.z]);
+        check('  ...and you get nothing', FOODS.reduce((n, f) => n + H.invCount(p, f), 0), 0);
+    }
+}
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
