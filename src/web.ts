@@ -11,6 +11,9 @@ import { register } from 'prom-client';
 
 import { CrcBuffer, CrcTable } from '#/cache/CrcTable.js';
 
+import ServerGameProt from '#/network/game/server/ServerGameProt.js';
+import ServerGameZoneProt from '#/network/game/server/ServerGameZoneProt.js';
+
 import OnDemand from '#/engine/OnDemand.js';
 import World from '#/engine/World.js';
 
@@ -207,6 +210,48 @@ if (existsSync(clientJsPath)) {
         printWarning('web client: patched in interface component type 8, which this bundle could not read');
     } else {
         printWarning('web client: cannot tell whether this bundle reads interface component type 8 - if it will not load past "Unpacking interfaces", that is why');
+    }
+
+    // WHICH CLIENT THIS IS. public/client/client.js is not built from this repo - it came with the
+    // server and is maintained nowhere - so the only way to know whether it can actually play here
+    // is to read it. Two things in it say so, and both have cost an evening:
+    //
+    //   THE BUILD HANDSHAKE it sends at login (`p1(255), p2(<rev>)`), which World.onClientData
+    //   compares with ENGINE_REVISION and refuses with response 6. The client then shows "has been
+    //   updated! Please reload this page", which reads like a stale cache and is not one: the
+    //   bundle sends that same number every time, so no reload can fix it.
+    //
+    //   ITS TABLE OF SERVER PACKET LENGTHS, which is what frames the stream. A bundle that
+    //   disagrees here cannot be let in by relaxing the revision - it would read one packet out of
+    //   the middle of another the first time the server sends one it frames differently.
+    //
+    // The bundle this server shipped with is a web client for another game revision: it announces
+    // 274 and disagrees about 117 of the 256 lengths, so it loads the title screen, reads the cache
+    // and can never log in. Saying so here is the difference between five minutes and an afternoon.
+    const rev = /p1\(255\),\s*[\w$.]+\.p2\((\d+)\)/.exec(clientJs);
+    if (!rev) {
+        printWarning('web client: cannot find the build handshake in this bundle');
+    } else if (Number(rev[1]) !== Environment.ENGINE_REVISION) {
+        printWarning(`web client: this bundle logs in as revision ${rev[1]} and the server takes only ${Environment.ENGINE_REVISION} - every login is refused with "has been updated, please reload this page", and reloading cannot help`);
+    }
+    // The longest numeric array literal in the bundle is that packet length table.
+    const arrays = clientJs.match(/\[-?\d+(?:,-?\d+){200,}\]/g) ?? [];
+    const table = arrays.map(a => JSON.parse(a) as number[]).sort((a, b) => b.length - a.length)[0];
+    if (table) {
+        const ours: number[] = new Array(256).fill(0);
+        for (const prot of Object.values(ServerGameProt)) {
+            if (prot instanceof ServerGameProt) ours[prot.id] = prot.length;
+        }
+        for (const prot of Object.values(ServerGameZoneProt)) {
+            if (prot instanceof ServerGameZoneProt) ours[prot.id] = prot.length;
+        }
+        let differ = 0;
+        for (let i = 0; i < 256; i++) {
+            if ((table[i] ?? 0) !== ours[i]) differ++;
+        }
+        if (differ > 0) {
+            printWarning(`web client: this bundle frames ${differ} of 256 server packets differently - it is a client for another revision and cannot play here, whatever it is allowed to log in as`);
+        }
     }
 
     const patched = clientJs;
