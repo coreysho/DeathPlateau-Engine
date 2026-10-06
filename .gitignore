@@ -44,3 +44,8 @@ data/tradingpost/
 
 # Clan chat channels (ClanChat), written at runtime like the saves and the trading post above.
 data/clans/
+
+# The web client files, which are put on the server rather than committed: public/client.jar is
+# the release jar the browser runs through CheerpJ (src/web.ts), and whatever bundle came with the
+# server lives here too. None of it is built from this repository.
+public/

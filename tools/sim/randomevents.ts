@@ -21,6 +21,13 @@ import { NpcMode } from '#/engine/entity/NpcMode.js';
 import SeqType from '#/cache/config/SeqType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
+import LocType from '#/cache/config/LocType.js';
+// VarBitType, with the capital B the filename has. The lowercase spelling resolves on Windows
+// and loads a SECOND copy of the module whose static tables are empty, so every name lookup
+// answers -1; on Linux the same import throws outright.
+import VarBitType from '#/cache/config/VarBitType.js';
+import Environment from '#/util/Environment.js';
+import fs from 'fs';
 
 // H.npcNear searches the WHOLE WORLD for the nearest npc of a type, with no radius - so a check
 // that simply asks "is there a Niles?" answers yes for one standing in another kingdom. Every spawn
@@ -459,6 +466,366 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
         for (let i = 0; i < 12; i++) H.tick(1);
         check('closing the tray is not stealing', [p.x, p.z], [was.x, was.z]);
         check('  ...and you get nothing', FOODS.reduce((n, f) => n + H.invCount(p, f), 0), 0);
+    }
+}
+
+// ============================================== Leo's cemetery: the first random event with a place
+console.log('');
+console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
+{
+    // The room was built long before this script: five graves, five headstones two tiles north of
+    // them, a mausoleum and Leo, in map square 30_78. These are the tiles the map puts them on, read
+    // off tools/sim/roommap.ts, and a check that they are still there is the first thing worth
+    // making - the event is a script hung on a room somebody else placed.
+    const GRAVE: [number, number, string][] = [
+        [1924, 4996, 'loc_12721'], [1926, 4999, 'loc_12722'], [1928, 4996, 'loc_12723'],
+        [1930, 4999, 'loc_12724'], [1932, 4996, 'loc_12725']
+    ];
+    const STONE: [number, number, string][] = [
+        [1924, 4998, 'loc_12716'], [1926, 5001, 'loc_12717'], [1928, 4998, 'loc_12718'],
+        [1930, 5001, 'loc_12719'], [1932, 4998, 'loc_12720']
+    ];
+    // A grave is two tiles long and forceapproach=south, so the player has to be standing on the
+    // tile below it before the click will take. Walking there would work too and takes thirty ticks
+    // a grave; this is the same shortcut talkToThis uses.
+    const atGrave = (p: any, i: number) => {
+        p.teleport(GRAVE[i][0], GRAVE[i][1] - 1, 0);
+        H.tick(1);
+    };
+    // TICK UNTIL THE PLAYER IS ACTUALLY FREE, queue included. A fixed number of ticks and then one
+    // more is not enough here: the arrival is a queued script with a delay in it, so the first click
+    // landed while the player was still being dragged to the graveyard and every click after it was
+    // one behind - which read as "only some of the graves open".
+    const settle = (p: any) => {
+        for (let t = 0; t < 40; t++) {
+            // t < 2 because a click does nothing on the tick it is made: opLoc only sets the
+            // interaction, and a settle that returned straight away measured the state before
+            // anything had happened. Then wait for the player to be free of it - target included,
+            // or an interaction that takes a step first is read as finished.
+            if (t >= 2 && !p.activeScript && !p.delayed && !p.target
+                && [...p.queue.all()].length === 0) return;
+            H.tick(1);
+        }
+        throw new Error('the player never became idle');
+    };
+    const grave = (p: any, i: number) => H.getVarBit(p, `macro_digger_grave_${i + 1}`);
+    const wants = (p: any, i: number) => H.getVarBit(p, `macro_digger_coffin_${i + 1}`);
+    const coffinObj = (trade: number) => `macro_digger_coffin_object_${trade}`;
+
+    {
+        const missing = [...GRAVE, ...STONE].filter(([x, z, name]) =>
+            !World.getLoc(x, z, 0, LocType.getId(name)));
+        check('the cemetery is still where the map put it', missing.map(m => m[2]), []);
+        check('  ...and the mausoleum with it',
+            World.getLoc(1927, 5004, 0, LocType.getId('loc_12731')) !== null, true);
+    }
+
+    // THE ARRANGEMENT. Five headstones get a shuffle of the five trades and the five graves get
+    // another, and the second is rotated if it came out matching - a cemetery that is already
+    // finished is an event the player wins by standing still.
+    // The arrival is queued rather than done in the spawn proc - p_teleport needs protected access
+    // and [timer,general_macro_events] has none - so the ticks after it are part of starting.
+    const started = (p: any) => {
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [12]);
+        settle(p);
+    };
+    {
+        const p: any = player('digger', 3222, 3250, 0);
+        H.clearInv(p);
+        started(p);
+        check('Leo takes you to his graveyard', [p.x, p.z, p.level], [1929, 5003, 0]);
+        check('  ...and Leo is there when you arrive', nearby('macro_gravedigger', p, 8) !== null, true);
+        const held = [0, 1, 2, 3, 4].map(i => grave(p, i));
+        const asked = [0, 1, 2, 3, 4].map(i => wants(p, i));
+        check('every grave starts with a coffin in it', held.filter(v => v >= 1 && v <= 5).length, 5);
+        check('  ...one of each trade', [...held].sort().join(','), '1,2,3,4,5');
+        check('  ...and every headstone asks for a different one', [...asked].sort().join(','), '1,2,3,4,5');
+        check('  ...and it is never finished already', held.join(',') !== asked.join(','), true);
+    }
+
+    // SHUFFLED, not dealt in an order. 200 cemeteries; if the headstones came out the same way twice
+    // in a row the puzzle would be the same puzzle every time.
+    {
+        const p: any = player('diggerroll', 3226, 3250, 0);
+        const seen = new Set<string>();
+        for (let i = 0; i < 200; i++) {
+            H.runProc(p, '[proc,macro_digger_setup]');
+            seen.add([0, 1, 2, 3, 4].map(k => wants(p, k)).join(''));
+            const solved = [0, 1, 2, 3, 4].every(k => grave(p, k) === wants(p, k));
+            if (solved) check('a cemetery came out already finished', false, true);
+        }
+        console.log(`       200 cemeteries gave ${seen.size} different headstone orders`);
+        check('the headstones are shuffled, not dealt', seen.size > 60, true);
+    }
+
+    // DIGGING. Take-Coffin empties the grave and hands you the coffin of whatever was in it; using
+    // that coffin on an empty hole puts it back.
+    {
+        const p: any = player('diggerdig', 3230, 3250, 0);
+        H.clearInv(p);
+        started(p);
+        const was = [0, 1, 2, 3, 4].map(i => grave(p, i));
+
+        // The loc on the tile never changes: what changes is the varbit the client draws it through.
+        // A loc_change here would have been visible to everyone else in the cemetery.
+        const typeBefore = World.getLoc(GRAVE[0][0], GRAVE[0][1], 0, LocType.getId(GRAVE[0][2]))!.type;
+        for (let i = 0; i < 5; i++) {
+            atGrave(p, i);
+            H.opLoc(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], 1);
+            settle(p);
+        }
+        check('all five coffins come out', [0, 1, 2, 3, 4].map(i => grave(p, i)), [0, 0, 0, 0, 0]);
+        check('  ...and you are carrying them',
+            was.map(trade => H.invCount(p, coffinObj(trade))), [1, 1, 1, 1, 1]);
+        check('  ...and the grave on the tile is the same loc it always was',
+            World.getLoc(GRAVE[0][0], GRAVE[0][1], 0, LocType.getId(GRAVE[0][2]))!.type, typeBefore);
+
+        // CHECK is the only way to tell two coffins apart: every grave good is called "Item" and
+        // examines as "It seems bleached with age".
+        // Check opens a window and leaves it open, so this reads the inv and then shuts it - the
+        // next coffin cannot be checked with the last one's lid still up.
+        const inside = (trade: number): string[] => {
+            H.opheld(p, coffinObj(trade), 1);
+            for (let i = 0; i < 4; i++) H.tick(1);
+            check(`  the window opens for coffin ${trade}`, p.modalMain, Component.getId('macro_digger_coffin'));
+            const inv = p.getInventory(InvType.getId('macro_digger_coffin_inv'))!;
+            const out: string[] = [];
+            for (let k = 0; k < inv.capacity; k++) {
+                const o = inv.get(k);
+                if (o) out.push(ObjType.get(o.id).debugname!);
+            }
+            p.closeModal();
+            H.tick(1);
+            return out;
+        };
+        const cook = inside(1);
+        check("the cook's coffin holds the cook's things", cook,
+            ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_chefshat',
+                'macro_digger_apron', 'macro_digger_cake', 'macro_digger_kebab']);
+        const miner = inside(4);
+        check('  ...and the miner holds his own, not the cook’s', miner,
+            ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_pick_axe', 'macro_digger_nuggets']);
+        // Every trade's coffin, and no item in two of them: the goods are what identifies a coffin,
+        // so a good that turns up twice makes two coffins impossible to tell apart.
+        const all = [1, 2, 3, 4, 5].map(inside);
+        const goods = all.flat().filter(n => n !== 'macro_digger_skull' && n !== 'macro_digger_bones');
+        check('  ...and no grave good is in two coffins', goods.length, new Set(goods).size);
+        check('  ...with a body in every one of them',
+            all.every(c => c[0] === 'macro_digger_skull' && c[1] === 'macro_digger_bones'), true);
+
+        // PUTTING THEM BACK. Each coffin into the grave whose headstone asks for it.
+        for (let i = 0; i < 5; i++) {
+            atGrave(p, i);
+            A.useOn(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], coffinObj(wants(p, i)));
+            settle(p);
+        }
+        check('every coffin goes where its headstone asks',
+            [0, 1, 2, 3, 4].map(i => grave(p, i)), [0, 1, 2, 3, 4].map(i => wants(p, i)));
+        check('  ...and none are left in your pack',
+            [1, 2, 3, 4, 5].reduce((n, trade) => n + H.invCount(p, coffinObj(trade)), 0), 0);
+        check('  ...so Leo calls it done', H.runProc(p, '[proc,macro_digger_done]')[0], 1);
+
+        // AND LEO PAYS. Two things off the zombie list, and home.
+        const before = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
+            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
+            + H.invCount(p, 'macro_digger_boots');
+        talkToThis(p, nearby('macro_gravedigger', p, 10)!);
+        for (let t = 0; t < 10; t++) H.tick(1);
+        const after = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
+            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
+            + H.invCount(p, 'macro_digger_boots');
+        const emotes = H.getVarBit(p, 'emote_zombie_walk') + H.getVarBit(p, 'emote_zombie_dance');
+        check('Leo pays two things off the zombie list', after - before + emotes, 2);
+        check('  ...and sends you back where he found you', [p.x, p.z], [3230, 3250]);
+        check('  ...and lets go of the event, so randoms can happen again',
+            H.getVar(p, 'macro_event'), 0);
+    }
+
+    // AND NOT BEFORE. A cemetery one coffin short of right pays nothing - which is the check that
+    // says the five-way comparison is really being made.
+    {
+        const p: any = player('diggerhalf', 3234, 3250, 0);
+        H.clearInv(p);
+        started(p);
+        for (let i = 0; i < 5; i++) {
+            atGrave(p, i);
+            H.opLoc(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], 1);
+            settle(p);
+        }
+        // Four right, and the last two swapped.
+        const order = [wants(p, 0), wants(p, 1), wants(p, 2), wants(p, 4), wants(p, 3)];
+        for (let i = 0; i < 5; i++) {
+            atGrave(p, i);
+            A.useOn(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], coffinObj(order[i]));
+            settle(p);
+        }
+        check('two coffins swapped is not finished', H.runProc(p, '[proc,macro_digger_done]')[0], 0);
+        // "I'll keep at it" is the first of the two he offers.
+        talkToThis(p, nearby('macro_gravedigger', p, 10)!, [1]);
+        settle(p);
+        // NOT asserted on what he says: drive() only collects the chat from the second page on, and
+        // the line that turns him down is on the first. Where the player ends up is the thing that
+        // matters, and it is not something a wrong assertion could make true by accident.
+        check('  ...and Leo leaves you in the graveyard rather than paying',
+            [p.x >= 1921 && p.x <= 1934, p.z >= 4993 && p.z <= 5007], [true, true]);
+        check('  ...and the event is still running', H.getVar(p, 'macro_event'), 12);
+        check('  ...with nothing to show for it',
+            H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
+            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
+            + H.invCount(p, 'macro_digger_boots'), 0);
+    }
+}
+
+// ================================================ Sergeant Damien's yard: read the sign, use the mat
+console.log('');
+console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
+{
+    // Four mats in a row, each with a signpost one tile behind it. The mats are the only part the
+    // server knows about: a signpost is a loc with no options, GameMap only keeps a loc whose type
+    // is active, and the client draws and re-draws them straight off the map from the varbit.
+    const MAT: [number, number, string][] = [
+        [3160, 4819, 'loc_10076'], [3162, 4819, 'loc_10077'],
+        [3164, 4819, 'loc_10078'], [3166, 4819, 'loc_10079']
+    ];
+    const EX = ['run', 'sit-ups', 'press-ups', 'star jumps'];
+    const post = (p: any, i: number) => H.getVarBit(p, `macro_drilldemon_post_${i + 1}`);
+    const posts = (p: any) => [0, 1, 2, 3].map(i => post(p, i));
+    const ordered = (p: any) => H.getVarBit(p, 'macro_drilldemon_order') - 1;
+    const done = (p: any) => H.getVarBit(p, 'macro_drilldemon_done');
+
+    {
+        const missing = MAT.filter(([x, z, name]) => !World.getLoc(x, z, 0, LocType.getId(name)));
+        check('the four mats are still where the map put them', missing.map(m => m[2]), []);
+        check('  ...and Sergeant Damien is standing in front of them',
+            H.npcNear('macro_drilldemon', 3165, 4816, 0) !== null, true);
+        // The signposts are placed but deliberately not entities. If they ever become active the
+        // client stops being the only thing that draws them and this comment is wrong.
+        check('  ...and the signposts are scenery, not entities',
+            [0, 1, 2, 3].map(i => World.getLoc(MAT[i][0], 4821, 0, LocType.getId(`loc_${10068 + i}`))),
+            [null, null, null, null]);
+
+        // WHICH SIGN STANDS BEHIND WHICH MAT, read out of the map file rather than assumed. The
+        // whole event is "look at the sign above the mat", so a mat wired to the wrong post would
+        // be unplayable in game and invisible to every other check here, which uses the same
+        // mapping the script does. The map square is 49_75, so local x = world x - 3136 and
+        // local z = world z - 4800.
+        const jm2 = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m49_75.jm2`, 'ascii')
+            .split(/\r?\n/);
+        const placedAt = (lx: number, lz: number) => jm2
+            .filter(l => l.startsWith(`0 ${lx} ${lz}: `))
+            .map(l => parseInt(l.slice(l.indexOf(': ') + 2)));
+        const pairs = [0, 1, 2, 3].map(i => {
+            const lx = MAT[i][0] - 3136;
+            return {
+                mat: placedAt(lx, MAT[i][1] - 4800).includes(LocType.getId(MAT[i][2])),
+                sign: placedAt(lx, 4821 - 4800).includes(LocType.getId(`loc_${10068 + i}`))
+            };
+        });
+        check('  ...and the map puts each sign in its own mat’s column',
+            pairs.every(q => q.mat && q.sign), true);
+        check('  ...each reading the post varbit the script writes for that mat',
+            [0, 1, 2, 3].map(i => LocType.get(LocType.getId(`loc_${10068 + i}`)).multivarbit),
+            [0, 1, 2, 3].map(i => VarBitType.getByName(`macro_drilldemon_post_${i + 1}`)!.id));
+    }
+
+    const settleD = (p: any) => {
+        for (let t = 0; t < 40; t++) {
+            if (t >= 2 && !p.activeScript && !p.delayed && !p.target
+                && [...p.queue.all()].length === 0) return;
+            H.tick(1);
+        }
+        throw new Error('the player never became idle');
+    };
+    const startedD = (p: any) => {
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [13]);
+        settleD(p);
+    };
+    /** Use the mat in front of post i. */
+    const useMat = (p: any, i: number) => {
+        p.teleport(MAT[i][0], MAT[i][1], 0);
+        H.tick(1);
+        H.opLoc(p, MAT[i][0], MAT[i][1], MAT[i][2], 1);
+        settleD(p);
+    };
+
+    {
+        const p: any = player('drill', 3240, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        check('Damien marches you to his yard', [p.x, p.z, p.level], [3165, 4816, 0]);
+        check('  ...with nothing done yet', done(p), 0);
+        check('  ...and an order already given', ordered(p) >= 0 && ordered(p) <= 3, true);
+        check('  ...one sign per exercise, no two alike', [...posts(p)].sort().join(','), '0,1,2,3');
+    }
+
+    // THE SIGNS MOVE. 200 parades; if the four signs came up in the same arrangement every time the
+    // player could learn one mat and stop reading.
+    {
+        const p: any = player('drillroll', 3244, 3250, 0);
+        const seen = new Set<string>();
+        for (let i = 0; i < 200; i++) {
+            H.runProc(p, '[proc,macro_drill_shuffle]');
+            const row = posts(p);
+            if ([...row].sort().join(',') !== '0,1,2,3') {
+                check('a parade came up with two signs the same', row.join(','), '0,1,2,3');
+            }
+            seen.add(row.join(''));
+        }
+        console.log(`       200 shuffles gave ${seen.size} of the 24 possible sign orders`);
+        check('every arrangement of the four signs turns up', seen.size, 24);
+    }
+
+    // THE WRONG MAT IS NOT THE RIGHT MAT. Standing on the one whose sign is not what he called for
+    // does nothing at all, which is the check that says the signs are being read and not ignored.
+    {
+        const p: any = player('drillwrong', 3248, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        const want = ordered(p);
+        const wrongMat = [0, 1, 2, 3].find(i => post(p, i) !== want)!;
+        const before = { done: done(p), order: ordered(p), signs: posts(p).join('') };
+        useMat(p, wrongMat);
+        check('the wrong mat gets you nowhere', done(p), before.done);
+        check('  ...and the order stands', ordered(p), before.order);
+        check('  ...and Damien says so',
+            H.saysFor('macro_drilldemon').some(s => s.text.includes('not what I said')), true);
+
+        // AND THE RIGHT ONE DOES.
+        const rightMat = [0, 1, 2, 3].find(i => post(p, i) === want)!;
+        useMat(p, rightMat);
+        check('the mat he asked for counts', done(p), 1 << want);
+        check('  ...and he calls for a different one', ordered(p) !== want, true);
+        check('  ...and the signs have moved', posts(p).join('') !== before.signs, true);
+    }
+
+    // ALL FOUR, ONCE EACH, AND THEN PAID.
+    {
+        const p: any = player('drillfull', 3252, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        const called: number[] = [];
+        for (let round = 0; round < 4; round++) {
+            const want = ordered(p);
+            check(`  order ${round + 1} is one he has not called before`, called.includes(want), false);
+            called.push(want);
+            useMat(p, [0, 1, 2, 3].find(i => post(p, i) === want)!);
+        }
+        check('four orders cover all four exercises', [...called].sort().join(','), '0,1,2,3');
+        check('  ...and the parade is over', done(p), 15);
+        check('  ...and he stops calling', H.getVarBit(p, 'macro_drilldemon_order'), 0);
+        console.log(`       he called for ${called.map(c => EX[c]).join(', ')}`);
+
+        const was = { x: p.x, z: p.z };
+        talkToThis(p, nearby('macro_drilldemon', p, 12)!);
+        settleD(p);
+        check('Damien pays a piece of the camo outfit',
+            H.invCount(p, 'drill_helm') + H.invCount(p, 'drill_top') + H.invCount(p, 'drill_bottoms'), 1);
+        check('  ...and sends you back where he found you', [p.x, p.z], [3240 + 12, 3250]);
+        check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+        check('  ...and clears the yard behind him', [done(p), ...posts(p)], [0, 0, 0, 0, 0]);
+        check('  ...from somewhere other than where he left you', was.z, 4819);
     }
 }
 
