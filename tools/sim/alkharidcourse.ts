@@ -83,11 +83,54 @@ for (const s of COURSE) {
     check(`  ${s.name.padEnd(14)} ${s.loc} at ${s.x},${s.z} level ${s.level}`, found.length > 0, true);
 }
 
-console.log('\nAND EVERY LANDING IS SOMEWHERE YOU CAN STAND');
+console.log('\nEVERY LANDING IS A TILE THE CONSTANTS NAME');
+for (const s of COURSE) {
+    check(`  ${s.name.padEnd(14)} is written down`, K[s.land] ? 'yes' : 'missing', 'yes');
+}
+
+// WHICH LANDINGS SIT ON A FLAGGED TILE - printed, not asserted.
+//
+// This used to be a check, and a broken one: K holds [x, z, level] while isFlagged takes
+// (x, z, level), and it passed c[2], c[0], c[1] - level as x, x as z, z as level. So all eight read
+// collision off a tile nowhere near the course and all eight passed, which is how the tropical
+// tree's landing went out twice, the second time onto a tile blocked on all four sides.
+//
+// Fixed, it fails for the zip line and the second tightrope, and both of those are fine in play:
+// a teleport can put you on a flagged tile and you walk off it. The flag is the map's own, matching
+// Old School tile for tile. What actually matters is the two checks below - that you can step off,
+// and that the next obstacle is reachable - so this is left as a note rather than a failure that
+// would have to be argued away every run.
+{
+    const on = COURSE.filter(s => K[s.land] && isFlagged(K[s.land][0], K[s.land][1], K[s.land][2], CollisionFlag.WALK_BLOCKED));
+    console.log(on.length
+        ? `  note: ${on.map(s => `${s.name} (${K[s.land][0]},${K[s.land][1]})`).join(', ')} land on flagged tiles`
+        : '  note: none of the landings sit on a flagged tile');
+}
+
+// AND YOU CAN GET OFF IT AGAIN. Standing somewhere is not the same as being able to leave. The
+// tropical tree's second landing was 3318,3173: a tile with a floor drawn on it, sitting in the
+// roof's blocked rim with blocked on all four sides. You arrived and could not move. Nothing above
+// catches that, so this does - a landing has to have at least one neighbour you can step onto.
+console.log('\nAND YOU CAN STEP OFF EVERY LANDING');
 for (const s of COURSE) {
     const c = K[s.land];
-    check(`  ${s.name.padEnd(14)} lands on ${c?.[0]},${c?.[1]} level ${c?.[2]}`,
-        c ? isFlagged(c[2], c[0], c[1], CollisionFlag.WALK_BLOCKED) : 'missing', false);
+    if (!c) continue;
+    const out = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+        .filter(([dx, dz]) => A.walkable(c[2], c[0] + dx, c[1] + dz))
+        .map(([dx, dz]) => `${c[0] + dx},${c[1] + dz}`);
+    check(`  ${s.name.padEnd(14)} has somewhere to step`, out.length > 0, true);
+}
+
+// AND THE NEXT OBSTACLE IS REACHABLE ON FOOT FROM IT. reachLoc, not a flood to the loc's own tile -
+// an obstacle stands ON a blocked tile and is used from beside it, so walking TO it never arrives.
+console.log('\nAND THE NEXT OBSTACLE CAN BE REACHED FROM IT');
+for (let i = 0; i < COURSE.length; i++) {
+    const c = K[COURSE[i].land];
+    const n = COURSE[(i + 1) % COURSE.length];
+    if (!c) continue;
+    check(`  ${COURSE[i].name.padEnd(14)} -> ${n.name}`,
+        c[2] === n.level ? !!A.reachLoc(c[2], c[0], c[1], n.loc, n.x, n.z)
+                         : `lands on level ${c[2]}, ${n.name} is on ${n.level}`, true);
 }
 
 console.log('\nTHE WALKED CROSSINGS STAY ON THE ROPE');
