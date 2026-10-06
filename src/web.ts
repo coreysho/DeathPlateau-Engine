@@ -22,6 +22,7 @@ import WSClientSocket from '#/server/ws/WSClientSocket.js';
 import ConnectionLimiter, { HANDSHAKE_TIMEOUT_MS, normalizeAddress } from '#/server/ConnectionLimiter.js';
 import { isProxyProtocolEnabled, isTrustedProxy, readProxyHeader } from '#/server/ProxyProtocol.js';
 
+import { printInfo, printWarning } from '#/util/Logger.js';
 import Environment from '#/util/Environment.js';
 import { tryParseInt } from '#/util/TryParse.js';
 
@@ -134,11 +135,83 @@ fastify.route({
     }
 });
 
+// ------------------------------------------------------------------- the web client
+// public/ is not in this repository. It is a prebuilt LostCity web client dropped on the server by
+// hand, which means nothing about it can be fixed by a commit - so the two things wrong with the one
+// on live are dealt with here, where they are at least visible in a diff and in the log.
+
+// THE CLIENT IS 765 BY 503 and takes that from the canvas: it calls getElementById('canvas') and
+// never sets a size. The page on live had the two the wrong way round, which drew the game into a
+// tall narrow strip with most of it cut off.
+const WEB_CLIENT_WIDTH = 765;
+const WEB_CLIENT_HEIGHT = 503;
+
+// Served when public/rs2.cgi is missing, so a server with the client files and no page still works.
+const DEFAULT_RS2CGI = `<!DOCTYPE html>
+<html>
+<head>
+<title>Death Plateau</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  canvas { display: block; margin: 0 auto; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="canvas" width="${WEB_CLIENT_WIDTH}" height="${WEB_CLIENT_HEIGHT}"></canvas>
+<script type="module">
+  import { Client } from '/client/client.js';
+  new Client(${Environment.NODE_ID}, false, ${Environment.NODE_MEMBERS});
+</script>
+</body>
+</html>
+`;
+
 const rs2cgiPath = path.join(process.cwd(), 'public', 'rs2.cgi');
+let rs2cgiHtml = DEFAULT_RS2CGI;
 if (existsSync(rs2cgiPath)) {
-    const rs2cgiHtml = readFileSync(rs2cgiPath, 'utf8');
-    fastify.get('/rs2.cgi', (_req, reply) => {
-        reply.type('text/html').send(rs2cgiHtml);
+    rs2cgiHtml = readFileSync(rs2cgiPath, 'utf8');
+
+    const canvas = /<canvas[^>]*\swidth="(\d+)"[^>]*\sheight="(\d+)"/.exec(rs2cgiHtml);
+    if (canvas && (canvas[1] !== String(WEB_CLIENT_WIDTH) || canvas[2] !== String(WEB_CLIENT_HEIGHT))) {
+        printWarning(`public/rs2.cgi declares a ${canvas[1]}x${canvas[2]} canvas; the client draws ${WEB_CLIENT_WIDTH}x${WEB_CLIENT_HEIGHT} - serving a corrected page`);
+        rs2cgiHtml = rs2cgiHtml.replace(canvas[0], canvas[0]
+            .replace(`width="${canvas[1]}"`, `width="${WEB_CLIENT_WIDTH}"`)
+            .replace(`height="${canvas[2]}"`, `height="${WEB_CLIENT_HEIGHT}"`));
+    }
+}
+fastify.get('/rs2.cgi', (_req, reply) => {
+    reply.type('text/html').send(rs2cgiHtml);
+});
+
+// COMPONENT TYPE 8 is a 377 interface component that holds one string, and this content uses it -
+// the combat tab's Auto Retaliate area is one. The Java client reads it (jagex2/config/Component.java)
+// and so does the server (cache/config/Component.ts), but an older web client bundle has no branch
+// for it: it reads the type, falls through every case without consuming the string, and from there
+// every following component is read out of the middle of the one before. It dies about two thirds of
+// the way through with "Unpacking interfaces 95%: Offset is outside the bounds of the DataView" and
+// the game never loads at all. tools/sim/ifunpack.ts walks the archive the same way and names it.
+//
+// So a bundle that cannot read this cache is repaired on the way out. The anchor is the end of the
+// type 7 block, which is where the string belongs; a bundle that already handles type 8, or one
+// minified differently enough that the anchor is gone, is served exactly as it is and says so.
+const WEB_CLIENT_COM8_ANCHOR = '0===T.Ml[N].length&&(T.Ml[N]=null)}2!==T.Rm&&2!==T.type||(';
+const WEB_CLIENT_COM8_PATCH = '0===T.Ml[N].length&&(T.Ml[N]=null)}8===T.type&&(T.text=t.xa()),2!==T.Rm&&2!==T.type||(';
+
+const clientJsPath = path.join(process.cwd(), 'public', 'client', 'client.js');
+if (existsSync(clientJsPath)) {
+    let clientJs = readFileSync(clientJsPath, 'utf8');
+    if (clientJs.includes('8===T.type')) {
+        printInfo('web client: reads interface component type 8 already');
+    } else if (clientJs.includes(WEB_CLIENT_COM8_ANCHOR)) {
+        clientJs = clientJs.replace(WEB_CLIENT_COM8_ANCHOR, WEB_CLIENT_COM8_PATCH);
+        printWarning('web client: patched in interface component type 8, which this bundle could not read');
+    } else {
+        printWarning('web client: cannot tell whether this bundle reads interface component type 8 - if it will not load past "Unpacking interfaces", that is why');
+    }
+
+    const patched = clientJs;
+    fastify.get('/client/client.js', (_req, reply) => {
+        reply.type('text/javascript').send(patched);
     });
 }
 
