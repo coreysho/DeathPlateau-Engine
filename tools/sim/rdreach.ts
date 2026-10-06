@@ -105,13 +105,27 @@ console.log('AND CRACKING ONE');
         }
         return false;
     };
+    // THE SPIKES ARE COUNTED OVER EVERY CLICK THIS SECTION MAKES, not just the 300 at 99. At 99 the
+    // safe fails about thirty times in three hundred, and "about half of thirty" is a window two
+    // standard deviations wide - a check that goes red roughly one run in thirty, which is noise
+    // wearing a failure's clothes. The 800 clicks at the requirement fail about three hundred and
+    // forty times between them, and that is a number you can hold to a tenth.
+    let allFailed = 0, allSpiked = 0, everHurt = false;
     const crack = (who: any) => {
         who.levels[PlayerStat.HITPOINTS] = 99;
         if (!waitForSafe()) throw new Error('the safe never shut again');
         const from = mark();
         H.opLoc(who, SX, SZ, 'roguesden_walldecor_safe', 1);
         H.tick(6);
-        return mesSince(who, from);
+        const said = mesSince(who, from);
+        if (said.some(m => m === 'You fail to crack the safe.')) {
+            allFailed++;
+            if (said.some(m => m === 'The floor spikes catch you!')) {
+                allSpiked++;
+                if (who.levels[PlayerStat.HITPOINTS] < 99) everHurt = true;
+            }
+        }
+        return said;
     };
 
     // 1. the level gate
@@ -124,7 +138,7 @@ console.log('AND CRACKING ONE');
     // 2. at 99 it opens, pays 70 and hands over something
     const hi = at('rdsafe_hi', 99);
     const xpBefore = xpOf();
-    let opened = 0, failed = 0, spiked = 0, hurt = false;
+    let opened = 0, failed = 0, spiked = 0;
     const loot = new Map<string, number>();
     for (let i = 0; i < 300; i++) {
         H.clearInv(hi);
@@ -137,10 +151,7 @@ console.log('AND CRACKING ONE');
             }
         } else if (said.some(m => m === 'You fail to crack the safe.')) {
             failed++;
-            if (said.some(m => m === 'The floor spikes catch you!')) {
-                spiked++;
-                if (hi.levels[PlayerStat.HITPOINTS] < 99) hurt = true;
-            }
+            if (said.some(m => m === 'The floor spikes catch you!')) spiked++;
         }
     }
     console.log(`       ${opened} cracked, ${failed} failed, ${spiked} of those on the spikes`);
@@ -173,9 +184,6 @@ console.log('AND CRACKING ONE');
             pct('Uncut sapphire') > pct('Uncut emerald') && pct('Uncut emerald') > pct('Uncut ruby')
             && pct('Uncut ruby') > pct('Uncut diamond') && pct('Coins') > 70 && pct('Coins') < 90, true);
     }
-    check('  the spikes catch about half the failures',
-        failed > 10 && spiked > failed * 0.3 && spiked < failed * 0.7, true);
-    check('  and take hitpoints off you when they do', hurt, true);
 
     // 3. a stethoscope is worth something. 600 clicks a side at the requirement itself, where the
     //    rate is about 4 in 7 and a fifth is worth roughly 45 more cracks in 400 - well outside the
@@ -192,6 +200,10 @@ console.log('AND CRACKING ONE');
     };
     const without = rate(false);
     const withIt = rate(true);
+    console.log(`       ${allFailed} failures across every click above, ${allSpiked} of them on the spikes`);
+    check('  the spikes catch about half the failures',
+        allFailed > 150 && allSpiked > allFailed * 0.4 && allSpiked < allFailed * 0.6, true);
+    check('  and take hitpoints off you when they do', everHurt, true);
     console.log(`       at 50 Thieving: ${without}/400 without a stethoscope, ${withIt}/400 with one`);
     check('  a stethoscope in the pack raises the rate', withIt > without + 15, true);
 }
