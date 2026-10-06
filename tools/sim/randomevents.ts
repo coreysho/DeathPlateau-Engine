@@ -22,6 +22,12 @@ import SeqType from '#/cache/config/SeqType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import LocType from '#/cache/config/LocType.js';
+// VarBitType, with the capital B the filename has. The lowercase spelling resolves on Windows
+// and loads a SECOND copy of the module whose static tables are empty, so every name lookup
+// answers -1; on Linux the same import throws outright.
+import VarBitType from '#/cache/config/VarBitType.js';
+import Environment from '#/util/Environment.js';
+import fs from 'fs';
 
 // H.npcNear searches the WHOLE WORLD for the nearest npc of a type, with no radius - so a check
 // that simply asks "is there a Niles?" answers yes for one standing in another kingdom. Every spawn
@@ -668,6 +674,158 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
             H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
             + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
             + H.invCount(p, 'macro_digger_boots'), 0);
+    }
+}
+
+// ================================================ Sergeant Damien's yard: read the sign, use the mat
+console.log('');
+console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
+{
+    // Four mats in a row, each with a signpost one tile behind it. The mats are the only part the
+    // server knows about: a signpost is a loc with no options, GameMap only keeps a loc whose type
+    // is active, and the client draws and re-draws them straight off the map from the varbit.
+    const MAT: [number, number, string][] = [
+        [3160, 4819, 'loc_10076'], [3162, 4819, 'loc_10077'],
+        [3164, 4819, 'loc_10078'], [3166, 4819, 'loc_10079']
+    ];
+    const EX = ['run', 'sit-ups', 'press-ups', 'star jumps'];
+    const post = (p: any, i: number) => H.getVarBit(p, `macro_drilldemon_post_${i + 1}`);
+    const posts = (p: any) => [0, 1, 2, 3].map(i => post(p, i));
+    const ordered = (p: any) => H.getVarBit(p, 'macro_drilldemon_order') - 1;
+    const done = (p: any) => H.getVarBit(p, 'macro_drilldemon_done');
+
+    {
+        const missing = MAT.filter(([x, z, name]) => !World.getLoc(x, z, 0, LocType.getId(name)));
+        check('the four mats are still where the map put them', missing.map(m => m[2]), []);
+        check('  ...and Sergeant Damien is standing in front of them',
+            H.npcNear('macro_drilldemon', 3165, 4816, 0) !== null, true);
+        // The signposts are placed but deliberately not entities. If they ever become active the
+        // client stops being the only thing that draws them and this comment is wrong.
+        check('  ...and the signposts are scenery, not entities',
+            [0, 1, 2, 3].map(i => World.getLoc(MAT[i][0], 4821, 0, LocType.getId(`loc_${10068 + i}`))),
+            [null, null, null, null]);
+
+        // WHICH SIGN STANDS BEHIND WHICH MAT, read out of the map file rather than assumed. The
+        // whole event is "look at the sign above the mat", so a mat wired to the wrong post would
+        // be unplayable in game and invisible to every other check here, which uses the same
+        // mapping the script does. The map square is 49_75, so local x = world x - 3136 and
+        // local z = world z - 4800.
+        const jm2 = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m49_75.jm2`, 'ascii')
+            .split(/\r?\n/);
+        const placedAt = (lx: number, lz: number) => jm2
+            .filter(l => l.startsWith(`0 ${lx} ${lz}: `))
+            .map(l => parseInt(l.slice(l.indexOf(': ') + 2)));
+        const pairs = [0, 1, 2, 3].map(i => {
+            const lx = MAT[i][0] - 3136;
+            return {
+                mat: placedAt(lx, MAT[i][1] - 4800).includes(LocType.getId(MAT[i][2])),
+                sign: placedAt(lx, 4821 - 4800).includes(LocType.getId(`loc_${10068 + i}`))
+            };
+        });
+        check('  ...and the map puts each sign in its own mat’s column',
+            pairs.every(q => q.mat && q.sign), true);
+        check('  ...each reading the post varbit the script writes for that mat',
+            [0, 1, 2, 3].map(i => LocType.get(LocType.getId(`loc_${10068 + i}`)).multivarbit),
+            [0, 1, 2, 3].map(i => VarBitType.getByName(`macro_drilldemon_post_${i + 1}`)!.id));
+    }
+
+    const settleD = (p: any) => {
+        for (let t = 0; t < 40; t++) {
+            if (t >= 2 && !p.activeScript && !p.delayed && !p.target
+                && [...p.queue.all()].length === 0) return;
+            H.tick(1);
+        }
+        throw new Error('the player never became idle');
+    };
+    const startedD = (p: any) => {
+        H.setVar(p, 'macro_event', 0);
+        H.runProc(p, '[proc,macro_event_general_spawn]', [13]);
+        settleD(p);
+    };
+    /** Use the mat in front of post i. */
+    const useMat = (p: any, i: number) => {
+        p.teleport(MAT[i][0], MAT[i][1], 0);
+        H.tick(1);
+        H.opLoc(p, MAT[i][0], MAT[i][1], MAT[i][2], 1);
+        settleD(p);
+    };
+
+    {
+        const p: any = player('drill', 3240, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        check('Damien marches you to his yard', [p.x, p.z, p.level], [3165, 4816, 0]);
+        check('  ...with nothing done yet', done(p), 0);
+        check('  ...and an order already given', ordered(p) >= 0 && ordered(p) <= 3, true);
+        check('  ...one sign per exercise, no two alike', [...posts(p)].sort().join(','), '0,1,2,3');
+    }
+
+    // THE SIGNS MOVE. 200 parades; if the four signs came up in the same arrangement every time the
+    // player could learn one mat and stop reading.
+    {
+        const p: any = player('drillroll', 3244, 3250, 0);
+        const seen = new Set<string>();
+        for (let i = 0; i < 200; i++) {
+            H.runProc(p, '[proc,macro_drill_shuffle]');
+            const row = posts(p);
+            if ([...row].sort().join(',') !== '0,1,2,3') {
+                check('a parade came up with two signs the same', row.join(','), '0,1,2,3');
+            }
+            seen.add(row.join(''));
+        }
+        console.log(`       200 shuffles gave ${seen.size} of the 24 possible sign orders`);
+        check('every arrangement of the four signs turns up', seen.size, 24);
+    }
+
+    // THE WRONG MAT IS NOT THE RIGHT MAT. Standing on the one whose sign is not what he called for
+    // does nothing at all, which is the check that says the signs are being read and not ignored.
+    {
+        const p: any = player('drillwrong', 3248, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        const want = ordered(p);
+        const wrongMat = [0, 1, 2, 3].find(i => post(p, i) !== want)!;
+        const before = { done: done(p), order: ordered(p), signs: posts(p).join('') };
+        useMat(p, wrongMat);
+        check('the wrong mat gets you nowhere', done(p), before.done);
+        check('  ...and the order stands', ordered(p), before.order);
+        check('  ...and Damien says so',
+            H.saysFor('macro_drilldemon').some(s => s.text.includes('not what I said')), true);
+
+        // AND THE RIGHT ONE DOES.
+        const rightMat = [0, 1, 2, 3].find(i => post(p, i) === want)!;
+        useMat(p, rightMat);
+        check('the mat he asked for counts', done(p), 1 << want);
+        check('  ...and he calls for a different one', ordered(p) !== want, true);
+        check('  ...and the signs have moved', posts(p).join('') !== before.signs, true);
+    }
+
+    // ALL FOUR, ONCE EACH, AND THEN PAID.
+    {
+        const p: any = player('drillfull', 3252, 3250, 0);
+        H.clearInv(p);
+        startedD(p);
+        const called: number[] = [];
+        for (let round = 0; round < 4; round++) {
+            const want = ordered(p);
+            check(`  order ${round + 1} is one he has not called before`, called.includes(want), false);
+            called.push(want);
+            useMat(p, [0, 1, 2, 3].find(i => post(p, i) === want)!);
+        }
+        check('four orders cover all four exercises', [...called].sort().join(','), '0,1,2,3');
+        check('  ...and the parade is over', done(p), 15);
+        check('  ...and he stops calling', H.getVarBit(p, 'macro_drilldemon_order'), 0);
+        console.log(`       he called for ${called.map(c => EX[c]).join(', ')}`);
+
+        const was = { x: p.x, z: p.z };
+        talkToThis(p, nearby('macro_drilldemon', p, 12)!);
+        settleD(p);
+        check('Damien pays a piece of the camo outfit',
+            H.invCount(p, 'drill_helm') + H.invCount(p, 'drill_top') + H.invCount(p, 'drill_bottoms'), 1);
+        check('  ...and sends you back where he found you', [p.x, p.z], [3240 + 12, 3250]);
+        check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+        check('  ...and clears the yard behind him', [done(p), ...posts(p)], [0, 0, 0, 0, 0]);
+        check('  ...from somewhere other than where he left you', was.z, 4819);
     }
 }
 
