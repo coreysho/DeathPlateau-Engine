@@ -21,6 +21,7 @@ import IfOpenMain from '#/network/game/server/model/IfOpenMain.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
 import IfSetInvOp from '#/network/game/server/model/IfSetInvOp.js';
 import IfSetObject from '#/network/game/server/model/IfSetObject.js';
+import IfSetRotation from '#/network/game/server/model/IfSetRotation.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import fs from 'fs';
 import Environment from '#/util/Environment.js';
@@ -40,7 +41,7 @@ export type Sound = { tick: number; who: string; synth: string; loops: number; d
 // 'invop' is an if_setinvop: the server rewriting one right-click option of a server-side
 // inventory grid. Only the bank and the trading post use it, and it is the only way to see
 // from the server side which options a grid is actually offering.
-export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop' | 'obj'; com: number; text?: string; op?: number; obj?: number };
+export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop' | 'obj' | 'spin'; com: number; text?: string; op?: number; obj?: number; xspeed?: number; yspeed?: number };
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
@@ -130,6 +131,13 @@ export async function boot() {
         // point of the Quiz Master is that the answers are pictures and have no text.
         if (message instanceof IfSetObject) {
             ifaces.push({ tick: World.currentTick, who: this.username, kind: 'obj', com: message.component, obj: message.obj });
+        }
+        // WHETHER A MODEL SLOT WAS TOLD TO TURN. if_setrotation is how the gravedigger's
+        // headstone, the prison lever's balloon animal and the certer's object are made readable -
+        // a 377 model held at one angle is a silhouette - and without this hook a test cannot tell
+        // a spinning panel from a still one.
+        if (message instanceof IfSetRotation) {
+            ifaces.push({ tick: World.currentTick, who: this.username, kind: 'spin', com: message.component, xspeed: message.xAngleSpeed, yspeed: message.yAngleSpeed });
         }
         if (message instanceof IfSetInvOp) {
             ifaces.push({ tick: World.currentTick, who: this.username, kind: 'invop', com: message.component, op: message.op, text: message.text });

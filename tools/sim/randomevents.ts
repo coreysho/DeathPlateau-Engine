@@ -1030,6 +1030,8 @@ console.log('PRISON PETE: THREE KEYS, AND THE DOORS WERE ALREADY WIRED TO THEM')
     const pull = () => {
         p.teleport(2089, 4429, 0);
         H.tick(1);
+        p.teleport(2089, 4429, 0);
+        H.tick(1);
         H.opLoc(p, 2089, 4430, 'prisonpete_lever', 1);
         for (let i = 0; i < 12; i++) {
             H.tick(1);
@@ -1097,32 +1099,81 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
     check('the portal will not take you while he is awake', [p.x, p.z], [p.x, p.z]);
     check('  ...because you are still on the island', p.z > 4700, true);
 
-    // FISH UNTIL ONE OF THEM IS THE RIGHT ONE. Nothing about a cooked fishlike thing says which it
-    // is, so this is what a player does too.
-    let got = 0;
-    for (let i = 0; i < 60 && H.invCount(p, 'evil_bob_cooked_fish_correct') === 0; i++) {
-        p.teleport(2511, 4777, 0);
+    // WHICH SHORE IS A REAL ANSWER NOW. The sixteen spots are four clusters of four, one per shore,
+    // and %macro_bob_spot says which cluster has the fish he likes. The old version rolled one in
+    // three on the net, so the servant had nothing to point at and the only strategy was grinding.
+    // Spot coords straight off m39_74.jm2; the stand tile is the land side of each.
+    const SHORE: Record<number, [number, number, number, number]> = {
+        1: [2524, 4764, 2524, 4765],   // north
+        2: [2526, 4791, 2526, 4790],   // south
+        3: [2510, 4774, 2511, 4774],   // west
+        4: [2543, 4776, 2542, 4776]    // east
+    };
+    const SHORENAME = ['', 'north', 'south', 'west', 'east'];
+    const fishAt = (area: number) => {
+        const [sx, sz, px, pz] = SHORE[area];
+        p.teleport(px, pz, 0);
         H.tick(1);
-        H.opLoc(p, 2510, 4777, 'loc_8986', 1);
+        H.opLoc(p, sx, sz, 'loc_8986', 1);
         settleAny(p);
-        got++;
-    }
-    check('netting the water gives you cooked fish', got < 60, true);
-    console.log(`       ${got} casts before the right one came up`);
+    };
+    const uncook = (which: string) => {
+        p.teleport(2523, 4780, 0);
+        H.tick(1);
+        A.useOn(p, 2524, 4779, 'loc_8985', which);
+        settleAny(p);
+    };
 
-    p.teleport(2523, 4780, 0);
-    H.tick(1);
-    A.useOn(p, 2524, 4779, 'loc_8985', 'evil_bob_cooked_fish_correct');
+    const right = H.getVarBit(p, 'macro_bob_spot');
+    check('one of the four shores is the right one', right >= 1 && right <= 4, true);
+    const wrong = right === 4 ? 1 : right + 1;
+
+    // THE SERVANT POINTS AT IT, before you have anything in your hands - the wiki's cutscene,
+    // "Look... over t-t-there! That fishing spot c-c-contains the f-f-f-fish he likes." A hint
+    // that names no shore is what sent this report in.
+    const servant = nearby('macro_evil_bob_female_servant', p, 48) ?? nearby('macro_evil_bob_male_servant', p, 48)!;
+    const before = H.mesgs.length;
+    talkToThis(p, servant);
     settleAny(p);
-    check('the uncooking pot makes it raw', H.invCount(p, 'evil_bob_uncooked_fish_correct'), 1);
-    check('  ...and the cooked one is gone', H.invCount(p, 'evil_bob_cooked_fish_correct'), 0);
+    const said = H.mesgs.slice(before).map(m => m.text).join(' | ');
+    check('the servant says which shore is biting', said.includes(SHORENAME[right]), true);
+    // ...and names none of the other three, which is the half that would pass by accident.
+    check('  ...and names none of the other three',
+        [1, 2, 3, 4].filter(a => a !== right && said.includes(SHORENAME[a])).length, 0);
 
+    fishAt(wrong);
+    check('the wrong shore gives you the wrong fish',
+        [H.invCount(p, 'evil_bob_cooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_correct')], [1, 0]);
+    fishAt(right);
+    check('  ...and the right shore gives you the right one, first cast',
+        H.invCount(p, 'evil_bob_cooked_fish_correct'), 1);
+
+    uncook('evil_bob_cooked_fish_incorrect');
+    check('the uncooking pot makes it raw',
+        [H.invCount(p, 'evil_bob_uncooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_incorrect')], [1, 0]);
+
+    // A WRONG ONE COSTS YOU A FISH. "Each time you feed Bob an incorrect fish, it will take one
+    // more fish to get him to fall asleep."
     const bob = nearby('macro_evil_bob_island', p, 16)!;
+    check('he wants one fish to start with', H.getVarBit(p, 'macro_bob_needed'), 1);
+    talkToThis(p, bob);
+    settleAny(p);
+    check('a wrong fish is disgusting and costs you one',
+        [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [2, 0]);
+
+    uncook('evil_bob_cooked_fish_correct');
+    talkToThis(p, bob);
+    settleAny(p);
+    check('  ...so one right one is no longer enough',
+        [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [1, 0]);
+
     const lvl = p.baseLevels[10];
+    fishAt(right);
+    uncook('evil_bob_cooked_fish_correct');
     // He asks which experience you want; "Fishing." is the first of the two.
     talkToThis(p, bob, [1]);
     settleAny(p);
-    check('Bob eats it and goes to sleep', bob.vars[VarNpcType.getByName('npc_int')!.id], -1);
+    check('the second right one puts him to sleep', H.getVarBit(p, 'macro_bob_asleep'), 1);
     check('  ...and pays in experience', p.baseLevels[10] >= lvl, true);
 
     p.teleport(2523, 4778, 0);
@@ -1541,6 +1592,182 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
         [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
     check('  ...and you are back where he found you', [p.x, p.z], [3266, 3264]);
     check('  ...and the cage is shut behind you', H.getVarBit(p, 'macro_pillory_open'), 0);
+}
+
+// ================================= the three events that ask you to recognise a shape in the chatbox
+console.log('');
+console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
+{
+    // IF_SETOBJECT TAKES THE ANGLE FROM THE OBJ, NOT THE INTERFACE. Client.java sets the
+    // component's xan, yan and zoom from the ObjType every time (zoom = zoom2d * 100 / scale), so
+    // an obj with no 2d params is drawn edge on at the default distance - which is what made all
+    // five grave symbols the same dark slab. The carvings are only visible from above.
+    for (const s of ['macro_digger_stonecook', 'macro_digger_stonespade', 'macro_digger_stoneaxe',
+        'macro_digger_stonemine', 'macro_digger_stonevase']) {
+        const o: any = ObjType.get(ObjType.getId(s));
+        check(`${s} is turned face up`, [o.xan2d, o.zoom2d > 2000], [512, true]);
+    }
+
+    // Both of these end on a p_pausebutton - a box with "Click here to continue" - so settleAny
+    // would wait for an idle that never comes. This is the click.
+    const clickThrough = (p: any, max = 60) => {
+        // The lever is forceapproach=south, so a click from the wrong tile walks first: give the
+        // player a moment to arrive before deciding nothing is happening.
+        for (let w = 0; w < 12 && !p.activeScript; w++) H.tick(1);
+        for (let g = 0; g < max; g++) {
+            const sc = p.activeScript;
+            if (!sc) { H.tick(1); if (!p.delayed) break; continue; }
+            if (sc.execution === ScriptState.PAUSEBUTTON) { p.executeScript(sc, true, true); continue; }
+            H.tick(1);
+        }
+    };
+    const spinOf = (p: any, comName: string) => [...H.ifaces].reverse()
+        .find(f => f.who === p.username && f.kind === 'spin' && f.com === Component.getId(comName));
+    const objOf = (p: any, comName: string) => [...H.ifaces].reverse()
+        .find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId(comName));
+    const textOf = (p: any, comName: string) => [...H.ifaces].reverse()
+        .find(f => f.who === p.username && f.kind === 'text' && f.com === Component.getId(comName));
+
+    // ---------------------------------------------------------------- the gravedigger's headstone
+    {
+        const p: any = player('stoneread', 3222, 3266, 0);
+        H.clearInv(p);
+        startEvent(p, 12);
+        // Headstone 1 stands two tiles north of grave 1; loc ids 12716..12720 are the five stones.
+        p.teleport(1925, 4998, 0);
+        H.tick(1);
+        H.opLoc(p, 1924, 4998, 'loc_12716', 1);
+        clickThrough(p);
+        const shown = objOf(p, 'macro_digger_stone:com_0');
+        check('reading a headstone shows you a symbol', shown !== undefined, true);
+        if (shown) {
+            // ...and it is the symbol for whatever that grave wants, not just any of the five.
+            const want = H.getVarBit(p, 'macro_digger_coffin_1');
+            const expect = ObjType.getId(['', 'macro_digger_stonecook', 'macro_digger_stonespade',
+                'macro_digger_stoneaxe', 'macro_digger_stonemine', 'macro_digger_stonevase'][want]);
+            check('  ...the one that grave is waiting for', shown.obj, expect);
+        }
+        const spin = spinOf(p, 'macro_digger_stone:com_0');
+        check('  ...and the stone turns', spin !== undefined && spin.yspeed! > 0, true);
+    }
+
+    // ---------------------------------------------------------------- the prison lever's balloon
+    {
+        const p: any = player('leverspin', 3226, 3266, 0);
+        H.clearInv(p);
+        startEvent(p, 16);
+        H.opLoc(p, 2089, 4430, 'prisonpete_lever', 1);
+        clickThrough(p);
+        const spin = spinOf(p, 'macro_pete_lever:com_0');
+        check('the lever panel turns the balloon animal', spin !== undefined && spin.yspeed! > 0, true);
+        // The four are a cat, a dog, a goat and a sheep, told apart by horns, body width and tail -
+        // none of which reads from one fixed angle.
+        check('  ...and it picked one of the four', H.getVarBit(p, 'macro_pete_wants') >= 1, true);
+    }
+
+    // ---------------------------------------------------------------- the certer holds one thing
+    {
+        const p: any = player('certerask', 3240, 3234, 0);
+        H.clearInv(p);
+        startEvent(p, 9);
+        const brother = ['macro_niles', 'macro_miles', 'macro_giles']
+            .map(n => nearby(n, p, 10)).find(Boolean)!;
+
+        // Drive the custom chooser by hand: A.drive does not know this interface, and the whole
+        // point of the check is what is in it.
+        let shownObj = -1;
+        let names: string[] = [];
+        const show = Component.getId('macro_certer_show');
+        const ask = (wantCorrect: boolean) => {
+            p.teleport(brother.x + 1, brother.z, brother.level);
+            H.tick(1);
+            H.opNpc(p, brother, 1);
+            for (let g = 0; g < 160; g++) {
+                const sc = p.activeScript;
+                if (!sc) { H.tick(1); if (!p.delayed && g > 3) break; continue; }
+                if (sc.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+                if (p.modalChat === show) {
+                    shownObj = objOf(p, 'macro_certer_show:com_0')!.obj!;
+                    names = [2, 3, 4].map(i => textOf(p, `macro_certer_show:com_${i}`)!.text!);
+                    const right = ObjType.get(shownObj).name;
+                    const slot = names.findIndex(n => (n === right) === wantCorrect);
+                    H.choose(p, `macro_certer_show:com_${2 + slot}`);
+                    continue;
+                }
+                p.executeScript(sc, true, true);
+            }
+            settleAny(p);
+        };
+
+        ask(true);
+        check('the certer shows you one object', shownObj > 0, true);
+        check('  ...and offers three names for it', names.length, 3);
+        // THE ANSWER IS AMONG THEM EXACTLY ONCE. Three objs with their names written underneath -
+        // which is what this was - gave the answer away and left him holding nothing.
+        check('  ...one of which is right',
+            names.filter(n => n === ObjType.get(shownObj).name).length, 1);
+        check('  ...and naming it is paid for',
+            [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+
+        // AND GETTING IT WRONG IS NOT. The control: the same walk through, picking a name that is
+        // not the object's.
+        const q: any = player('certerwrong', 3244, 3234, 0);
+        H.clearInv(q);
+        startEvent(q, 9);
+        const brother2 = ['macro_niles', 'macro_miles', 'macro_giles']
+            .map(n => nearby(n, q, 10)).find(Boolean)!;
+        q.teleport(brother2.x + 1, brother2.z, brother2.level);
+        H.tick(1);
+        H.opNpc(q, brother2, 1);
+        for (let g = 0; g < 160; g++) {
+            const sc = q.activeScript;
+            if (!sc) { H.tick(1); if (!q.delayed && g > 3) break; continue; }
+            if (sc.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+            if (q.modalChat === show) {
+                const o = objOf(q, 'macro_certer_show:com_0')!.obj!;
+                const ns = [2, 3, 4].map(i => textOf(q, `macro_certer_show:com_${i}`)!.text!);
+                const slot = ns.findIndex(n => n !== ObjType.get(o).name);
+                H.choose(q, `macro_certer_show:com_${2 + slot}`);
+                continue;
+            }
+            q.executeScript(sc, true, true);
+        }
+        settleAny(q);
+        check('  ...while getting it wrong is not',
+            [...Array(28).keys()].some(k => q.getInventory(InvType.INV)!.get(k)), false);
+    }
+}
+
+// ============================================ the mime's stage was an upper floor marked as a bridge
+console.log('');
+console.log('THE MIME STAGE IS A FLOOR AND NOT A BRIDGE');
+{
+    // 474 shipped the stage's 96 tiles at level 1 with tile settings 2 and 3 - LINK_BELOW, the
+    // bridge bit - and the import copied them verbatim. Two things follow from that bit, and both
+    // were wrong here. The server reads it in GameMap.loadGround: a bridged level-1 tile moves its
+    // collision down to level 0, so level 1 had no land collision at all. The client reads it in
+    // getHeight: an entity on a bridged tile is drawn from the heightmap one level UP, which for a
+    // player standing at level 1 is level 2 - a heightmap that does not exist, so they float.
+    // The stage is simply an upper floor, so the bit is gone and the floor is level everywhere.
+    const STAGE: [number, number][] = [];
+    for (let x = 2002; x <= 2017; x++) for (let z = 4761; z <= 4766; z++) STAGE.push([x, z]);
+    check('the whole stage is one height', new Set(STAGE.map(([x, z]) =>
+        (World.gameMap as any).levelHeightmap?.[1]?.[x]?.[z] ?? 'n/a')).size <= 1, true);
+    // The wings are curtained off and solid - local x 19-20 and 31-32 - which is the stage, not a
+    // mistake. The boards you perform on are the middle.
+    const BOARDS = STAGE.filter(([x]) => x >= 2005 && x <= 2014);
+    check('  ...and you can walk on all of the boards',
+        BOARDS.filter(([x, z]) => isFlagged(x, z, 1, CollisionFlag.WALK_BLOCKED)).length, 0);
+
+    const p: any = player('mimefloor', 3230, 3266, 0);
+    H.clearInv(p);
+    startEvent(p, 18);
+    check('the mime puts you on the stage, at level 1', [p.level, p.x >= 2002 && p.x <= 2017], [1, true]);
+    // HE STANDS STILL. wanderrange defaults to 5, and five tiles off a sixteen-wide stage is off
+    // the stage.
+    check('  ...and the mime does not wander off it', NpcType.get(NpcType.getId('macro_mime')).wanderrange, 0);
+    check('  ...and he is a person, not a cat',
+        SeqType.get(NpcType.get(NpcType.getId('macro_mime')).readyanim).debugname, 'human_ready');
 }
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);
