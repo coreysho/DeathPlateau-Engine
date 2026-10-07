@@ -373,9 +373,14 @@ const DEFAULT_RS2CGI = `<!DOCTYPE html>
 const WEB_CLIENT_COM8_ANCHOR = '0===T.Ml[N].length&&(T.Ml[N]=null)}2!==T.Rm&&2!==T.type||(';
 const WEB_CLIENT_COM8_PATCH = '0===T.Ml[N].length&&(T.Ml[N]=null)}8===T.type&&(T.text=t.xa()),2!==T.Rm&&2!==T.type||(';
 
+// NONE OF WHICH IS LOOKED AT WHEN THERE IS A client.jar. The bundle is then not served, not
+// patched and not consulted, so reading it would only put three warnings about a file nobody
+// fetches into every startup - which reads like something is wrong, every boot, forever.
 const clientJsPath = path.join(process.cwd(), 'public', 'client', 'client.js');
 let bundleCanPlay = false;
-if (existsSync(clientJsPath)) {
+if (hasClientJar && existsSync(clientJsPath)) {
+    printInfo('web client: public/client/client.js is present and unused - client.jar is what the browser runs');
+} else if (existsSync(clientJsPath)) {
     let clientJs = readFileSync(clientJsPath, 'utf8');
     if (clientJs.includes('8===T.type')) {
         printInfo('web client: reads interface component type 8 already');
