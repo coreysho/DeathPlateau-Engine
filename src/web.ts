@@ -290,6 +290,9 @@ const natives = {
             'lostcity.host=' + location.hostname,
             'lostcity.webhost=' + location.hostname,
             'lostcity.webport=' + port,
+            // The cache comes from wherever this page came from, scheme included. A page on https
+            // whose client fetched http would have every archive blocked as mixed content.
+            'lostcity.weburl=' + location.origin,
             'lostcity.ws=' + ws,
             // CheerpJ keeps /files in the browser's own storage, so the client's file store
             // survives a reload and the animations and models are downloaded once rather than
