@@ -20,7 +20,7 @@ import { isFlagged } from '#/engine/GameMap.js';
 
 await H.boot();
 
-const free = (lv: number, x: number, z: number) => !isFlagged(lv, x, z, CollisionFlag.WALK_BLOCKED);
+const free = (lv: number, x: number, z: number) => !isFlagged(x, z, lv, CollisionFlag.WALK_BLOCKED);
 
 /** Every tile walkable from the tiles around (x,z), within `limit`. */
 function component(lv: number, x: number, z: number, limit = 600): Set<string> {

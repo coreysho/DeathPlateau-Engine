@@ -48,7 +48,7 @@ for (let i = 0; i < 400; i++) {
         // nearest tile of the snake's footprint to any tile you can actually stand on
         for (let x = s.x - 8; x <= s.x + s.width + 8; x++) {
             for (let z = s.z - 8; z <= s.z + s.length + 8; z++) {
-                if (isFlagged(0, x, z, CollisionFlag.WALK_BLOCKED)) continue;
+                if (isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED)) continue;
                 const dx = Math.max(s.x - x, 0, x - (s.x + s.width - 1));
                 const dz = Math.max(s.z - z, 0, z - (s.z + s.length - 1));
                 const d = Math.max(dx, dz);

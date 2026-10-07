@@ -177,20 +177,72 @@ for (const course of COURSES) {
         check(`    ${o.name.padEnd(14)} ${o.loc} at ${o.x},${o.z} level ${o.level}`, found.length > 0, true);
     }
 
-    console.log('  every landing is somewhere you can stand');
+    console.log('  every landing is a tile the constants name');
     for (const o of course.obstacles) {
-        const c = C[o.land];
-        check(`    ${o.name.padEnd(14)} -> ${c ? c.join(',') : o.land + ' MISSING'}`,
-            c ? isFlagged(c[2], c[0], c[1], CollisionFlag.WALK_BLOCKED) : 'missing', false);
+        check(`    ${o.name.padEnd(14)} is written down`, C[o.land] ? 'yes' : o.land + ' MISSING', 'yes');
     }
 
+    // WHICH LANDINGS SIT ON A FLAGGED TILE - printed, not asserted. A teleport can put you on a
+    // flagged tile and you walk off it, and most of these are fine in play; the flags are the map's
+    // own, matching Old School tile for tile. What matters is the two checks below. Asserting this
+    // one would mean arguing it away on seven courses every run.
+    {
+        const on = course.obstacles.filter(o => C[o.land] &&
+            isFlagged(C[o.land][0], C[o.land][1], C[o.land][2], CollisionFlag.WALK_BLOCKED));
+        console.log(on.length
+            ? `    note: ${on.map(o => `${o.name} (${C[o.land][0]},${C[o.land][1]})`).join(', ')} land on flagged tiles`
+            : '    note: no landing sits on a flagged tile');
+    }
+
+    // AND THE LAP CAN CARRY ON FROM IT. Two ways it can, and a landing only has to manage one:
+    //
+    //   you can WALK off it - some neighbour you can step onto; or
+    //   you can USE THE NEXT OBSTACLE from where you stand, without walking at all.
+    //
+    // The second is not a loophole, it is the design. Pollnivneach's basket drops you on a one-tile
+    // island and the market stall is the tile beside you; Ardougne's steep roof does the same into
+    // gap 4. Testing only the first condemns both, and moving those landings "somewhere you can
+    // walk" breaks a lap that worked - which is exactly what happened on the first pass at this.
+    //
+    // Al Kharid's tropical tree failed BOTH: an island with its next obstacle six tiles away. That
+    // is the fault worth catching, and nothing caught it, because the check above passed c[2],
+    // c[0], c[1] to isFlagged(x, z, level) and read collision off a tile somewhere else entirely.
+    console.log('  and the lap can carry on from every landing');
+    for (let i = 0; i < course.obstacles.length; i++) {
+        const o = course.obstacles[i];
+        const n = course.obstacles[(i + 1) % course.obstacles.length];
+        const c = C[o.land];
+        if (!c) continue;
+        const canWalkOff = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+            .some(([dx, dz]) => A.walkable(c[2], c[0] + dx, c[1] + dz));
+        const canUseNext = c[2] === n.level && !!A.reachLoc(c[2], c[0], c[1], n.loc, n.x, n.z);
+        check(`    ${o.name.padEnd(14)} ${canWalkOff ? 'walk off' : canUseNext ? `use ${n.name}` : 'STUCK'}`,
+            canWalkOff || canUseNext, true);
+    }
+
+    // A WALKED CROSSING STAYS ON THE OBSTACLE, tested as geometry rather than as collision.
+    //
+    // The fault this exists for is Draynor's: ~agility_walk spends its diagonal FIRST, so a crossing
+    // whose start and finish are not on one row or one column leaves the rope on the first step and
+    // walks the row beside it. That is a question about the three coordinates, not about collision.
+    //
+    // It used to ask whether the walked tiles were blocked, and that is the wrong question: the span
+    // of a rope or a washing line is open air, so of course it is blocked, and the player is force
+    // walked across it regardless. Varrock's clothes line failed on exactly that - 3209 to 3212 over
+    // the street - while being perfectly correct: start, finish and the line itself all on z3414.
     const walked = course.obstacles.filter(o => o.walk);
     if (walked.length) {
         console.log('  and a walked crossing stays on the obstacle');
         for (const o of walked) {
-            const path = walk(C[o.walk!], C[o.land]);
-            const bad = path.filter(t => isFlagged(t[2], t[0], t[1], CollisionFlag.WALK_BLOCKED)).map(t => `${t[0]},${t[1]}`);
-            check(`    ${o.name.padEnd(14)} ${path.length} tiles`, bad.length ? bad.join(' ') : 'all clear', 'all clear');
+            const a = C[o.walk!], b = C[o.land];
+            if (!a || !b) { check(`    ${o.name.padEnd(14)} has both ends`, 'missing', 'ok'); continue; }
+            const straight = a[0] === b[0] || a[1] === b[1];
+            const onLine = a[0] === b[0] ? o.x === a[0] : o.z === a[1];
+            check(`    ${o.name.padEnd(14)} ${a[0]},${a[1]} -> ${b[0]},${b[1]}, loc at ${o.x},${o.z}`,
+                straight && onLine ? 'straight, and along the obstacle'
+                    : !straight ? 'start and finish are not on one row or column'
+                    : 'straight, but the obstacle is on a different line',
+                'straight, and along the obstacle');
         }
     }
 
