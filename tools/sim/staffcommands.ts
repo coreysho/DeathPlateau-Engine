@@ -50,7 +50,7 @@ console.log('\n::teleto - the one that sent us looking');
 {
     const said = cheat(mod, 'teleto victimsim');
     const moved = mod.x === other.x && mod.z === other.z && mod.level === other.level;
-    check(`  a moderator can teleport to a player`, moved, expected);
+    check('  a moderator can teleport to a player', moved, expected);
     if (!expected) {
         check('  and is told nothing at all, which is the complaint', said, []);
     }
