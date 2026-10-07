@@ -60,6 +60,23 @@ const PASSWORD_CHARS = /^[a-z0-9!"$%^&*()\-_=+[{\]};:'@#~,<.>/?\\|]+$/;
 const BUG_COOLDOWN_MS = 60_000;
 const lastBugReport: Map<string, number> = new Map();
 
+// WHICH WORLDS THE STAFF COMMANDS EXIST ON (2026-10-07).
+//
+// A world with NODE_PRODUCTION=false promotes every login to at least staff level 4 (LoginThread:
+// "dev (destructive commands) - AT LEAST 4"), so on an OPEN development world the level checks below
+// mean nothing, and the commands that reach other players or the whole world - teleto, teleother,
+// giveother, setvarother, broadcast, reboot, ban, mute, kick - would belong to anyone who connected.
+// Being production-only was standing in for that.
+//
+// A STAFF-ONLY WORLD IS NOT AN OPEN ONE. NODE_MIN_STAFF_LEVEL refuses anybody below it at login
+// (LoginThread.belowStaffLevel) before the promotion ever happens, so everyone on the dev world was
+// already staff, and a moderator there should have the moderator commands they have on live.
+//
+// Without this they silently did nothing on the dev world - no message, no refusal, nothing - which
+// is the one world where you are most likely to be teleporting to someone to look at what they are
+// standing on.
+const STAFF_WORLD = Environment.NODE_PRODUCTION || Environment.NODE_MIN_STAFF_LEVEL >= 2;
+
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
         if (message.input.length > 80) {
@@ -507,7 +524,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                     player.setVar(varp.id, value);
                     player.messageGame('set ' + varp.debugname + ': to ' + value);
                 }
-            } else if (cmd === 'setvarother' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'setvarother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 3) {
                     // ::setvarother <username> <name> <value>
@@ -581,7 +598,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                     const value = player.getVar(varp.id);
                     player.messageGame('get ' + varp.debugname + ': ' + value);
                 }
-            } else if (cmd === 'getvarother' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'getvarother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {
                     // ::getvarother <username> <variable>
@@ -616,7 +633,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 const count = Math.max(1, Math.min(tryParseInt(args[1], 1), 0x7fffffff));
                 player.invAdd(InvType.INV, obj, count);
-            } else if (cmd === 'giveother' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'giveother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {
                     // ::giveother <username> <item> (amount)
@@ -666,7 +683,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 }
 
                 player.invAdd(InvType.INV, obj, 1000);
-            } else if (cmd === 'broadcast' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'broadcast' && STAFF_WORLD) {
                 // custom - a staff announcement to every player. (2026-09-23) Built by
                 // [proc,broadcast_staff] in content, beside the drops and ::yell, so it carries the
                 // sender's crown and the announcement styling. Staff text keeps its @col@ tags - the
@@ -683,12 +700,12 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 } else {
                     World.broadcastMes(text);
                 }
-            } else if (cmd === 'reboot' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'reboot' && STAFF_WORLD) {
                 // semi-authentic - we actually just shut down for maintenance
 
                 // Reboots the game world, applying packed changes
                 World.rebootTimer(0);
-            } else if (cmd === 'slowreboot' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'slowreboot' && STAFF_WORLD) {
                 // semi-authentic - we actually just shut down for maintenance
                 if (args.length < 1) {
                     // ::slowreboot <seconds>
@@ -700,7 +717,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             } else if (cmd === 'serverdrop') {
                 // testing reconnection behavior
                 player.terminate();
-            } else if (cmd === 'teleother' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'teleother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 1) {
                     // ::teleother <username>
@@ -863,7 +880,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 }
 
                 player.teleJump((mx << 6) + lx, (mz << 6) + lz, level);
-            } else if (cmd === 'teleto' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'teleto' && STAFF_WORLD) {
                 // custom
                 if (args.length < 1) {
                     return false;
@@ -887,7 +904,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 player.unsetMapFlag();
 
                 player.teleJump(other.x, other.z, other.level);
-            } else if (cmd === 'setvis' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'setvis' && STAFF_WORLD) {
                 // authentic
                 if (args.length < 1) {
                     // ::setvis <level>
@@ -907,7 +924,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                     default:
                         return false;
                 }
-            } else if (cmd === 'ban' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'ban' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {
                     // ::ban <username> <minutes>
@@ -920,7 +937,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 World.notifyPlayerBan(player.username, username, Date.now() + minutes * 60 * 1000);
                 player.messageGame(`Player '${args[0]}' has been banned for ${minutes} minutes.`);
-            } else if (cmd === 'mute' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'mute' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {
                     // ::mute <username> <minutes>
@@ -933,7 +950,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 World.notifyPlayerMute(player.username, username, Date.now() + minutes * 60 * 1000);
                 player.messageGame(`Player '${args[0]}' has been muted for ${minutes} minutes.`);
-            } else if (cmd === 'kick' && Environment.NODE_PRODUCTION) {
+            } else if (cmd === 'kick' && STAFF_WORLD) {
                 // custom
                 if (args.length < 1) {
                     // ::kick <username>
