@@ -797,7 +797,10 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
         useMat(p, rightMat);
         check('the mat he asked for counts', done(p), 1 << want);
         check('  ...and he calls for a different one', ordered(p) !== want, true);
-        check('  ...and the signs have moved', posts(p).join('') !== before.signs, true);
+        // NOT "the signs have moved" on one sample: a shuffle of four comes back the same one time
+        // in twenty-four, and a test that fails one run in twenty-four is worse than no test. That
+        // the shuffle shuffles is the 200-run above; this is that it happens between orders at all.
+        check('  ...and the signs are laid out afresh', [...posts(p)].sort().join(','), '0,1,2,3');
     }
 
     // ALL FOUR, ONCE EACH, AND THEN PAID.
@@ -827,6 +830,301 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
         check('  ...and clears the yard behind him', [done(p), ...posts(p)], [0, 0, 0, 0, 0]);
         check('  ...from somewhere other than where he left you', was.z, 4819);
     }
+}
+
+// ========================================================= the four that needed nothing but a script
+//
+// settle() and the "started" shape are the gravedigger's, lifted out so all five room events share
+// them: tick until the player is genuinely free, because every arrival is a queued script with a
+// delay in it and a fixed wait lands the first click while they are still being dragged.
+const settleAny = (p: any) => {
+    for (let t = 0; t < 60; t++) {
+        if (t >= 2 && !p.activeScript && !p.delayed && !p.target
+            && [...p.queue.all()].length === 0) return;
+        H.tick(1);
+    }
+    throw new Error('the player never became idle');
+};
+const startEvent = (p: any, id: number) => {
+    H.setVar(p, 'macro_event', 0);
+    H.runProc(p, '[proc,macro_event_general_spawn]', [id]);
+    settleAny(p);
+};
+const onGround = (x: number, z: number, level: number, objName: string, p: any) =>
+    World.getObj(x, z, level, ObjType.getId(objName), p.hash64)
+    ?? World.getObj(x, z, level, ObjType.getId(objName), -1n);
+
+// ------------------------------------------------------------------------------ Dr Jekyll
+console.log('');
+console.log('DR JEKYLL WANTS YOUR BEST HERB, AND TURNS IF HE DOES NOT GET IT');
+{
+    const p: any = player('jekyll', 3222, 3260, 0);
+    H.clearInv(p);
+    startEvent(p, 14);
+    const doc = nearby('macro_jekyll', p);
+    check('Dr Jekyll turns up', doc !== null, true);
+    check('  ...and comes to you', doc!.targetOp, NpcMode.PLAYERFOLLOW);
+
+    // THE HIGHEST ONE YOU ARE CARRYING. Given a guam and a torstol he must take the torstol, which
+    // is the only part of "requested the highest level clean herb that the player had" a script can
+    // get wrong quietly.
+    H.give(p, 'guam_leaf', 1);
+    H.give(p, 'torstol', 1);
+    talkToThis(p, doc!);
+    settleAny(p);
+    check('he takes the torstol and leaves the guam', [H.invCount(p, 'torstol'), H.invCount(p, 'guam_leaf')], [0, 1]);
+    check('  ...and hands back what torstol makes', H.invCount(p, '2dosepotionofzamorak'), 1);
+
+    // And somebody with nothing still gets something: "players who refused or lacked herbs still
+    // received a strength potion (2) anyway".
+    const q: any = player('jekyllnone', 3226, 3260, 0);
+    H.clearInv(q);
+    startEvent(q, 14);
+    talkToThis(q, nearby('macro_jekyll', q)!);
+    settleAny(q);
+    check('with no herbs at all you still get a strength potion', H.invCount(q, '2dose1strength'), 1);
+
+    // IGNORE HIM AND HE IS NOT DR JEKYLL ANY MORE. Four ai_timer steps, the shape every talking
+    // random here uses, and then the Hyde whose bracket matches your combat level.
+    const r: any = player('jekyllturn', 3230, 3260, 0);
+    H.clearInv(r);
+    // Max stats so the fight that follows does not kill them before the check: a dead player's
+    // Mr Hyde goes back to standing about, and the mode would read as "not after anybody".
+    H.maxOut(r);
+    startEvent(r, 14);
+    const jek = nearby('macro_jekyll', r)!;
+    // LET HIS OWN TIMER DO IT. Calling [ai_timer] by hand four times in a row cuts the fourth one
+    // off at its npc_delay - the next call takes the script's place - so the turn half happened
+    // and he never came for anybody. timer=20 and four steps is 80 ticks.
+    // TICK UNTIL HE TURNS AND THEN LOOK, rather than ticking a fixed number and hoping. Four
+    // timer steps is about eighty ticks, but the fight that follows is real: left running, Mr Hyde
+    // wanders out of reach and ~macro_event_lost_hostile deletes him, and the check reads "he was
+    // never here" when what happened is that it looked too late.
+    const jekType = NpcType.getId('macro_jekyll');
+    let turned = false;
+    for (let i = 0; i < 140 && !turned; i++) { H.tick(1); turned = jek.type !== jekType; }
+    const want = NpcType.getId(`macro_hyde_${H.runProc(r, '[proc,macro_event_combat_level]')[0]}`);
+    check('ignored four times, Dr Jekyll is Mr Hyde', jek.type, want);
+    // The turn changes type, delays a tick and only then sets %aggressive_npc and the mode, so the
+    // tick it is first visible on is too early to read the rest of it.
+    for (let i = 0; i < 5; i++) H.tick(1);
+    // ASSERTED ON %aggressive_npc AND NOT ON THE MODE. The mode is where he is pointed this tick
+    // and a fight moves it about; %aggressive_npc is the line that says this npc picked the fight,
+    // which is what stops the PJ timer treating it as one the player started.
+    check('  ...and Mr Hyde is the one who started it', H.getVar(r, 'aggressive_npc'), jek.uid);
+    check('  ...and he is still in the world', jek.isActive, true);
+
+    // The six Hydes carry the zombie's ladder, which is what their six vislevels are. Read off
+    // spawned npcs rather than the config, because that is what a fight would meet.
+    const hp = [1, 2, 3, 4, 5, 6].map(i => H.addNpc(`macro_hyde_${i}`, 3200 + i, 3280).levels[3]);
+    check('  ...and all six brackets have stats behind them', hp, [20, 40, 60, 85, 120, 170]);
+}
+
+// ------------------------------------------------------------------------------ Freaky Forester
+console.log('');
+console.log('THE FREAKY FORESTER WANTS A PARTICULAR BIRD');
+{
+    const PHEASANTS = ['macro_pheasant_onetail', 'macro_pheasant_twotail',
+        'macro_pheasant_threetail', 'macro_pheasant_fourtail'];
+    check('the clearing still has its portal',
+        World.getLoc(2611, 4776, 0, LocType.getId('loc_8972')) !== null, true);
+    check('  ...and three of each bird in it',
+        PHEASANTS.map(n => World.npcs.filter(x => x && x.type === NpcType.getId(n)).length),
+        [3, 3, 3, 3]);
+
+    const p: any = player('forester', 3234, 3260, 0);
+    H.clearInv(p);
+    H.maxOut(p);
+    startEvent(p, 15);
+    check('the forester takes you to his clearing', [p.x, p.z, p.level], [2600, 4776, 0]);
+    const wants = H.getVarBit(p, 'macro_forester_wants');
+    check('  ...and asks for one of the four', wants >= 1 && wants <= 4, true);
+
+    /** Kill the nearest pheasant with this many tails and say what it dropped. */
+    const hunt = (tails: number): string[] => {
+        const bird = H.npcNear(PHEASANTS[tails - 1], p.x, p.z, 0)!;
+        p.teleport(bird.x + 1, bird.z, 0);
+        H.tick(1);
+        const before = new Map<string, number>();
+        for (const n of ['raw_macro_pheasant_good', 'raw_macro_pheasant_bad']) {
+            let c = 0;
+            for (let dx = -4; dx <= 4; dx++) {
+                for (let dz = -4; dz <= 4; dz++) if (onGround(bird.x + dx, bird.z + dz, 0, n, p)) c++;
+            }
+            before.set(n, c);
+        }
+        H.attackNpc(p, bird);
+        // FOLLOW IT WHILE IT DIES, and keep asking. A pheasant walks, so the bird drops where it
+        // fell and not where it stood when the first punch landed - and a bird that wanders out of
+        // reach needs the click making again, which is what a player would do.
+        let at = { x: bird.x, z: bird.z };
+        for (let i = 0; i < 60 && bird.isActive; i++) {
+            at = { x: bird.x, z: bird.z };
+            if (i > 0 && i % 15 === 0) { p.teleport(bird.x + 1, bird.z, 0); H.tick(1); H.attackNpc(p, bird); }
+            H.tick(1);
+        }
+        if (bird.isActive) throw new Error('the pheasant would not die');
+        H.tick(2);
+        // ONLY WHAT THIS BIRD DROPPED. The last one's carcass is still lying in the clearing -
+        // lootdrop_duration outlasts a hunt - so the ground is diffed against the snapshot taken
+        // before the fight rather than simply read.
+        const found: string[] = [];
+        for (const n of ['raw_macro_pheasant_good', 'raw_macro_pheasant_bad']) {
+            let now = 0;
+            for (let dx = -4; dx <= 4; dx++) {
+                for (let dz = -4; dz <= 4; dz++) if (onGround(at.x + dx, at.z + dz, 0, n, p)) now++;
+            }
+            if (now > (before.get(n) ?? 0)) found.push(n);
+        }
+        return found;
+    };
+    check('the bird he asked for drops the right one', hunt(wants), ['raw_macro_pheasant_good']);
+    const other = (wants % 4) + 1;
+    check('  ...and any other bird does not', hunt(other), ['raw_macro_pheasant_bad']);
+
+    // Handing the right one over pays; the wrong one is the wiki's own failure - "teleported to a
+    // different area and would not receive a reward".
+    H.give(p, 'raw_macro_pheasant_good', 1);
+    const before = H.invCount(p, 'coins');
+    talkToThis(p, nearby('macro_forester_m', p, 20)!);
+    settleAny(p);
+    check('the forester takes it', H.invCount(p, 'raw_macro_pheasant_good'), 0);
+    check('  ...and pays from the table', H.invCount(p, 'coins') > before
+        || [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+}
+
+// ------------------------------------------------------------------------------ Prison Pete
+console.log('');
+console.log('PRISON PETE: THREE KEYS, AND THE DOORS WERE ALREADY WIRED TO THEM');
+{
+    // THE CHECK THAT IS NOT MINE. The three locs across the west wall are multilocs over one
+    // varbit with lists three barriers long, then two, then one - so every key takes one barrier
+    // away and three open the wall. That is the cache's wiring, and the script only counts; if the
+    // lists ever change shape the counting stops meaning anything.
+    const keysVarbit = VarBitType.getByName('macro_pete_keys')!.id;
+    const doors = [1, 2, 3].map(i => LocType.get(LocType.getId(`prisonpete_door_${i}`)));
+    check('the three doors read the key count', doors.map(d => d.multivarbit),
+        [keysVarbit, keysVarbit, keysVarbit]);
+    check('  ...and drop one barrier per key', doors.map(d => d.multiloc.length), [3, 2, 1]);
+    const barrier = LocType.getId('prisonpete_energybarrier');
+    check('  ...with every entry in those lists a barrier',
+        doors.every(d => d.multiloc.every(m => m === barrier)), true);
+
+    // The lever's four pictures are raw model ids, which nothing else would catch if model.pack
+    // were renumbered under them.
+    const models = [1, 2, 3, 4].map(i => EnumType.get(EnumType.getId('macro_pete_balloon_model')).values.get(i) as number);
+    check('the lever shows the balloons’ own models',
+        models.map(m => m), [1, 2, 3, 4].map(i =>
+            NpcType.get(NpcType.getId(`prisonpete_balloon${i}`)).models[0]));
+
+    const p: any = player('pete', 3238, 3260, 0);
+    H.clearInv(p);
+    startEvent(p, 16);
+    check('you wake up in the cell', [p.x, p.z, p.level], [2088, 4429, 0]);
+    check('  ...with no keys and all three barriers up', H.getVarBit(p, 'macro_pete_keys'), 0);
+
+    /** Pull the lever, then pop the balloon of the given type. */
+    const pull = () => {
+        p.teleport(2089, 4429, 0);
+        H.tick(1);
+        H.opLoc(p, 2089, 4430, 'prisonpete_lever', 1);
+        for (let i = 0; i < 12; i++) {
+            H.tick(1);
+            if (p.activeScript && p.activeScript.execution === ScriptState.PAUSEBUTTON) {
+                p.executeScript(p.activeScript, true, true);
+            }
+        }
+        settleAny(p);
+        return H.getVarBit(p, 'macro_pete_wants');
+    };
+    const pop = (which: number) => {
+        const b = H.npcNear(`prisonpete_balloon${which}`, p.x, p.z, 0)!;
+        p.teleport(b.x + 1, b.z, 0);
+        H.tick(1);
+        H.opNpc(p, b, 1);
+        settleAny(p);
+    };
+
+    let shown = pull();
+    check('the lever picks one of the four', shown >= 1 && shown <= 4, true);
+    check('  ...and pulling it again shows the same one', pull(), shown);
+    pop(shown);
+    check('the matching balloon has a key in it', H.getVarBit(p, 'macro_pete_keys'), 1);
+    check('  ...and in your pack', H.invCount(p, 'prisonpete_key'), 1);
+
+    shown = pull();
+    pop((shown % 4) + 1);
+    check('the wrong one puts you back to nothing', H.getVarBit(p, 'macro_pete_keys'), 0);
+    check('  ...and takes the key off you', H.invCount(p, 'prisonpete_key'), 0);
+
+    for (let k = 0; k < 3; k++) pop(pull());
+    check('three right in a row opens the wall', H.getVarBit(p, 'macro_pete_keys'), 3);
+    talkToThis(p, nearby('prisonpete_pete', p, 12)!);
+    settleAny(p);
+    check('  ...and Pete sends you home', [p.x, p.z], [3238, 3260]);
+    check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+}
+
+// ------------------------------------------------------------------------------ Evil Bob
+console.log('');
+console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
+{
+    let spots = 0;
+    for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).values()) {
+        for (const l of zone.getAllLocsUnsafe()) if (l.type === LocType.getId('loc_8986')) spots++;
+    }
+    check('the island is ringed with fishing spots', spots, 16);
+    check('  ...with two uncooking pots and a portal',
+        [World.getLoc(2524, 4779, 0, LocType.getId('loc_8985')) !== null,
+            World.getLoc(2526, 4774, 0, LocType.getId('loc_8985')) !== null,
+            World.getLoc(2523, 4777, 0, LocType.getId('loc_8987')) !== null], [true, true, true]);
+
+    const p: any = player('evilbob', 3242, 3260, 0);
+    H.clearInv(p);
+    startEvent(p, 17);
+    check('Bob takes you to his island', [p.x, p.z, p.level], [2521, 4778, 0]);
+    check('  ...and leaves you a net', H.invCount(p, 'evil_bob_net'), 1);
+
+    // The portal does not let you off until he has eaten, which is the whole of "once Evil Bob
+    // fell asleep... players could leave the island".
+    H.opLoc(p, 2523, 4777, 'loc_8987', 1);
+    settleAny(p);
+    check('the portal will not take you while he is awake', [p.x, p.z], [p.x, p.z]);
+    check('  ...because you are still on the island', p.z > 4700, true);
+
+    // FISH UNTIL ONE OF THEM IS THE RIGHT ONE. Nothing about a cooked fishlike thing says which it
+    // is, so this is what a player does too.
+    let got = 0;
+    for (let i = 0; i < 60 && H.invCount(p, 'evil_bob_cooked_fish_correct') === 0; i++) {
+        p.teleport(2511, 4777, 0);
+        H.tick(1);
+        H.opLoc(p, 2510, 4777, 'loc_8986', 1);
+        settleAny(p);
+        got++;
+    }
+    check('netting the water gives you cooked fish', got < 60, true);
+    console.log(`       ${got} casts before the right one came up`);
+
+    p.teleport(2523, 4780, 0);
+    H.tick(1);
+    A.useOn(p, 2524, 4779, 'loc_8985', 'evil_bob_cooked_fish_correct');
+    settleAny(p);
+    check('the uncooking pot makes it raw', H.invCount(p, 'evil_bob_uncooked_fish_correct'), 1);
+    check('  ...and the cooked one is gone', H.invCount(p, 'evil_bob_cooked_fish_correct'), 0);
+
+    const bob = nearby('macro_evil_bob_island', p, 16)!;
+    const lvl = p.baseLevels[10];
+    // He asks which experience you want; "Fishing." is the first of the two.
+    talkToThis(p, bob, [1]);
+    settleAny(p);
+    check('Bob eats it and goes to sleep', bob.vars[VarNpcType.getByName('npc_int')!.id], -1);
+    check('  ...and pays in experience', p.baseLevels[10] >= lvl, true);
+
+    p.teleport(2523, 4778, 0);
+    H.tick(1);
+    H.opLoc(p, 2523, 4777, 'loc_8987', 1);
+    settleAny(p);
+    check('  ...and now the portal lets you go', [p.x, p.z], [3242, 3260]);
 }
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);
