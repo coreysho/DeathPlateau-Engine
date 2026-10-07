@@ -7,7 +7,6 @@ import Fastify from 'fastify';
 import FastifyStatic from '@fastify/static';
 import FastifyView from '@fastify/view';
 import FastifyWebsocket from '@fastify/websocket';
-import { register } from 'prom-client';
 
 import { CrcBuffer, CrcTable } from '#/cache/CrcTable.js';
 
@@ -602,43 +601,6 @@ export async function startWeb() {
     await new Promise<void>(resolve => server.listen(Environment.WEB_PORT, '0.0.0.0', resolve));
 }
 
-// management routes
-
-const management = Fastify();
-
-management.register(FastifyView, {
-    engine: {
-        ejs
-    },
-    root: 'view'
-});
-
-management.get('/prometheus', async (_req, reply) => {
-    reply.header('Content-Type', register.contentType);
-    return register.metrics();
-});
-
-// custom (2026-09-21) - a timed restart from the server's own shell (content/tools/restart.sh):
-// the "System update in" countdown every client draws, a line in chat, and a clean shutdown when it
-// runs out - the same as ::slowreboot, without needing to be logged in. Loopback only: anyone who
-// can reach this port from outside must not be able to take the world down.
-// req.ip is the socket's address (no trustProxy), so a header cannot fake it - but a reverse proxy on
-// this machine would make every request loopback. Never put one in front of the management port.
-management.post<{ Querystring: { seconds?: string } }>('/reboot', async (req, reply) => {
-    if (req.ip !== '127.0.0.1' && req.ip !== '::1' && req.ip !== '::ffff:127.0.0.1') {
-        return reply.code(403).send('loopback only\n');
-    }
-    const seconds = Math.max(5, Math.min(3600, parseInt(req.query.seconds ?? '60', 10) || 60));
-    if (World.isPendingShutdown) {
-        return reply.code(409).send(`a restart is already under way: ${Math.round((World.shutdownTicksRemaining * 600) / 1000)}s left\n`);
-    }
-    const ticks = Math.ceil((seconds * 1000) / 600);
-    World.rebootTimer(ticks);
-    const when = seconds % 60 === 0 ? `${seconds / 60} minute${seconds === 60 ? '' : 's'}` : `${seconds} seconds`;
-    World.broadcastMes(`@red@The server will restart in ${when}. Please find a safe place to log out.`);
-    return reply.send(`restart in ${seconds}s (${ticks} ticks)\n`);
-});
-
-export async function startManagementWeb() {
-    await management.listen({ port: Environment.WEB_MANAGEMENT_PORT, host: Environment.WEB_MANAGEMENT_HOST });
-}
+// The management port (/prometheus, /reboot) is server/management/ManagementWeb.ts, not here:
+// the login server starts it, and importing this file to do that re-ran all of it - the pages,
+// the routes, the client jar - inside the login worker. See the comment there.

@@ -12,7 +12,7 @@ import Packet from '#/io/Packet.js';
 import Environment from '#/util/Environment.js';
 import { toSafeName } from '#/util/JString.js';
 import { printInfo } from '#/util/Logger.js';
-import { startManagementWeb } from '#/web.js';
+import { startManagementWeb } from '#/server/management/ManagementWeb.js';
 import { createInternalServer } from '#/server/InternalServer.js';
 import InvType from '#/cache/config/InvType.js';
 
