@@ -36,6 +36,7 @@ import { queueBugReport } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
 import handleCoverageCommand from '#/engine/script/ScriptCoverageCommands.js';
+import handleCommandsCommand, { STAFF_WORLD } from '#/network/game/client/handler/ClientCheatCommands.js';
 import handleFaultsCommand from '#/engine/script/ScriptFaultCommands.js';
 import { printDebug } from '#/util/Logger.js';
 import { tryParseInt } from '#/util/TryParse.js';
@@ -59,23 +60,6 @@ const PASSWORD_CHARS = /^[a-z0-9!"$%^&*()\-_=+[{\]};:'@#~,<.>/?\\|]+$/;
 // Keyed by username rather than Player so logging out and back in does not reset it.
 const BUG_COOLDOWN_MS = 60_000;
 const lastBugReport: Map<string, number> = new Map();
-
-// WHICH WORLDS THE STAFF COMMANDS EXIST ON (2026-10-07).
-//
-// A world with NODE_PRODUCTION=false promotes every login to at least staff level 4 (LoginThread:
-// "dev (destructive commands) - AT LEAST 4"), so on an OPEN development world the level checks below
-// mean nothing, and the commands that reach other players or the whole world - teleto, teleother,
-// giveother, setvarother, broadcast, reboot, ban, mute, kick - would belong to anyone who connected.
-// Being production-only was standing in for that.
-//
-// A STAFF-ONLY WORLD IS NOT AN OPEN ONE. NODE_MIN_STAFF_LEVEL refuses anybody below it at login
-// (LoginThread.belowStaffLevel) before the promotion ever happens, so everyone on the dev world was
-// already staff, and a moderator there should have the moderator commands they have on live.
-//
-// Without this they silently did nothing on the dev world - no message, no refusal, nothing - which
-// is the one world where you are most likely to be teleporting to someone to look at what they are
-// standing on.
-const STAFF_WORLD = Environment.NODE_PRODUCTION || Environment.NODE_MIN_STAFF_LEVEL >= 2;
 
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
@@ -209,6 +193,14 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 player.wrappedMessageGame('If your account is linked to our Discord (::discord), you will be added to its ticket there to follow it up.');
             }
             return true;
+        }
+
+        if (cmd === 'commands') {
+            // custom (2026-10-07) - what you can run, at your rank, on this world. Available to all
+            // players, and deliberately the first thing above the staff blocks: the whole point is
+            // that a command you do not have answers nothing, so the one that explains that has to
+            // answer everybody. ClientCheatCommands.ts keeps the list and the two rank rules.
+            return handleCommandsCommand(player, args);
         }
 
         if (cmd === 'yell') {
