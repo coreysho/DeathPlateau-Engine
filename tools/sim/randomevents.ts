@@ -916,6 +916,13 @@ console.log('DR JEKYLL WANTS YOUR BEST HERB, AND TURNS IF HE DOES NOT GET IT');
     // which is what stops the PJ timer treating it as one the player started.
     check('  ...and Mr Hyde is the one who started it', H.getVar(r, 'aggressive_npc'), jek.uid);
     check('  ...and he is still in the world', jek.isActive, true);
+    // AND HE ARRIVES WITH HIS OWN STATS, which is the half the config check below cannot see:
+    // that one spawns a fresh Mr Hyde and reads the record. Jekyll BECOMES one by npc_changetype,
+    // and npc_changetype_keepall - which this used - is reset=false in Npc.changeType and skips
+    // the stat re-init entirely. Hyde inherited Dr Jekyll's levels, and Jekyll, being a talker,
+    // has no hitpoints line and defaults to 1. Every Mr Hyde in the game died to one punch.
+    check("  ...and he arrives with Mr Hyde's hitpoints, not Dr Jekyll's",
+        jek.levels[3], NpcType.get(want).stats[3]);
 
     // The six Hydes carry the zombie's ladder, which is what their six vislevels are. Read off
     // spawned npcs rather than the config, because that is what a fight would meet.
