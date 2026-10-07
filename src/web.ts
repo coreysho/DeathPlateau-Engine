@@ -162,6 +162,12 @@ fastify.route({
 const WEB_CLIENT_WIDTH = 765;
 const WEB_CLIENT_HEIGHT = 503;
 
+// AND THE DISPLAY IS TALLER THAN THE CLIENT. CheerpJ puts the game's window at the top left of the
+// display and draws it with a title bar, so a display exactly 503 high pushes the last 20 rows of
+// the client - the bottom row of tabs - off the end of it, with nothing to say they are missing.
+// The 24 is that title bar plus a little slack; the client still draws 765x503 inside it.
+const WEB_CLIENT_CHROME = 24;
+
 const LAUNCHER_URL = 'https://github.com/coreysho/DeathPlateau-Client/releases/latest/download/Death-Plateau-Launcher.jar';
 
 const clientJarPath = path.join(process.cwd(), 'public', 'client.jar');
@@ -177,7 +183,7 @@ const CHEERPJ_PAGE = `<!DOCTYPE html>
 <title>Death Plateau</title>
 <style>
   html, body { margin: 0; padding: 0; background: #000; color: #9a9a9a; font: 12px sans-serif; overflow: hidden; }
-  #display { margin: 0 auto; width: ${WEB_CLIENT_WIDTH}px; height: ${WEB_CLIENT_HEIGHT}px; }
+  #display { margin: 0 auto; width: ${WEB_CLIENT_WIDTH}px; height: ${WEB_CLIENT_HEIGHT + WEB_CLIENT_CHROME}px; }
   #foot { text-align: center; padding: 6px; }
   #foot a { color: #c8a04a; }
 </style>
@@ -291,7 +297,7 @@ const natives = {
             'lostcity.cachedir=/files/.deathplateau'
         ]
     });
-    cheerpjCreateDisplay(${WEB_CLIENT_WIDTH}, ${WEB_CLIENT_HEIGHT}, document.getElementById('display'));
+    cheerpjCreateDisplay(${WEB_CLIENT_WIDTH}, ${WEB_CLIENT_HEIGHT + WEB_CLIENT_CHROME}, document.getElementById('display'));
     await cheerpjRunMain('jagex2.client.Client', '/app/client.jar');
 })();
 </script>
