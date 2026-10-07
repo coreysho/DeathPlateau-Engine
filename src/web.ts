@@ -161,11 +161,19 @@ fastify.route({
 const WEB_CLIENT_WIDTH = 765;
 const WEB_CLIENT_HEIGHT = 503;
 
-// AND THE DISPLAY IS TALLER THAN THE CLIENT. CheerpJ puts the game's window at the top left of the
-// display and draws it with a title bar, so a display exactly 503 high pushes the last 20 rows of
-// the client - the bottom row of tabs - off the end of it, with nothing to say they are missing.
-// The 24 is that title bar plus a little slack; the client still draws 765x503 inside it.
-const WEB_CLIENT_CHROME = 24;
+// AND THE DISPLAY HAS TO BE TALLER THAN THE CLIENT, BY A NUMBER NOBODY HERE CAN KNOW (2026-10-07).
+//
+// CheerpJ draws the game's window with a title bar of its own and packs the window to fit inside
+// the display: measured against the real runtime, a display of 503 gives a window of 503 and a
+// CONTENT AREA of 483, and the client's bottom 20 rows - its row of chat tabs - are never drawn.
+// Not clipped at the edge of the page, where you might see them half-cut: not drawn at all.
+//
+// The title bar is 20 pixels here and 30 in the browser this was reported from, because its height
+// comes from CheerpJ's own CSS and that follows the reader's font. A constant was wrong twice. So
+// the page starts with far more room than any title bar could need - the window packs against
+// THAT, which is what matters, because it only packs once - and then measures the bar it actually
+// got and trims the display to exactly the client plus that bar.
+const WEB_CLIENT_ROOM = 160;
 
 const LAUNCHER_URL = 'https://github.com/coreysho/DeathPlateau-Client/releases/latest/download/Death-Plateau-Launcher.jar';
 
@@ -181,15 +189,19 @@ const CHEERPJ_PAGE = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Death Plateau</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #000; color: #9a9a9a; font: 12px sans-serif; overflow: hidden; }
-  #display { margin: 0 auto; width: ${WEB_CLIENT_WIDTH}px; height: ${WEB_CLIENT_HEIGHT + WEB_CLIENT_CHROME}px; }
+  html, body { margin: 0; padding: 0; background: #000; color: #9a9a9a; font: 12px sans-serif; }
+  /* The hole the game is seen through: exactly the client, with the display sliding up behind it
+     by the height of CheerpJ's title bar, so the bar is out of sight above rather than taking a
+     strip out of the page and a window button beside the game's own. */
+  #screen { margin: 0 auto; width: ${WEB_CLIENT_WIDTH}px; height: ${WEB_CLIENT_HEIGHT}px; overflow: hidden; }
+  #display { width: ${WEB_CLIENT_WIDTH}px; height: ${WEB_CLIENT_HEIGHT + WEB_CLIENT_ROOM}px; }
   #foot { text-align: center; padding: 6px; }
   #foot a { color: #c8a04a; }
 </style>
 <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
 </head>
 <body>
-<div id="display"></div>
+<div id="screen"><div id="display"></div></div>
 <div id="foot">The browser client is slower than the real thing. <a href="${LAUNCHER_URL}">Download the launcher</a> to play properly.</div>
 <script>
 // A BROWSER TAB HAS NO TCP. jagex2/io/WsSocket.java declares these four as native and this is where
@@ -206,8 +218,21 @@ function wake(s) {
     if (s.wake) { const w = s.wake; s.wake = null; w(); }
 }
 
+// THE WAY BACK INTO THE RUNNING CLIENT. Every native is handed CheerpJ's library object, and
+// through it the page can read and write a STATIC FIELD of a class that is already running - which
+// is the whole of the camera-drag fix below. A method call cannot be made from here while the game
+// loop is going ("Java code still running"); a field write is just memory, and it lands.
+let LIB = null;
+let BROWSER_INPUT = null;
+// A client.jar from before BrowserInput existed: asked once, then left alone rather than looked up
+// again on every mouse move for the rest of the session.
+let BROWSER_INPUT_MISSING = false;
+
 const natives = {
     async Java_jagex2_io_WsSocket_wsOpen(lib, url) {
+        if (LIB === null) {
+            LIB = lib;
+        }
         const ws = new WebSocket(url);
         ws.binaryType = 'arraybuffer';
         const s = { ws: ws, chunks: [], size: 0, closed: false, wake: null };
@@ -276,6 +301,105 @@ const natives = {
     }
 };
 
+const display = document.getElementById('display');
+
+// THE DISPLAY, ONCE THERE IS A WINDOW TO MEASURE. Shrinking it before the client has packed its
+// window would shrink the window with it - that is how the bottom row of tabs went missing - so
+// this only ever runs once a title bar exists, and only sets the one height that fits: the client
+// plus that bar. The negative margin then slides the bar up out of #screen, which is the client's
+// size exactly. CheerpJ reads mouse positions off the canvas's own rectangle, so the game is
+// clicked where it is drawn, and a click at the top left of the page arrives as 0,0 in the client.
+let cropped = 0;
+function fitWindow() {
+    const bar = display.querySelector('.cjWindow .cjTitleBar');
+    if (bar === null) {
+        return;
+    }
+    const height = Math.round(bar.getBoundingClientRect().height);
+    // Nothing, or something absurd: leave the generous display alone rather than crop by a number
+    // that would take the top off the game.
+    if (height <= 0 || height > 64 || height === cropped) {
+        return;
+    }
+    cropped = height;
+    display.style.height = (${WEB_CLIENT_HEIGHT} + height) + 'px';
+    const inner = document.getElementById('cheerpjDisplay');
+    if (inner !== null) {
+        inner.style.height = (${WEB_CLIENT_HEIGHT} + height) + 'px';
+    }
+    display.style.marginTop = '-' + height + 'px';
+}
+new MutationObserver(fitWindow).observe(display, { childList: true, subtree: true });
+setInterval(fitWindow, 1000);
+
+// THE MIDDLE BUTTON, WHICH CHEERPJ NEVER PASSES ON (2026-10-07). Measured against the runtime: a
+// pointerdown with button 0 reaches AWT as BUTTON1 and button 2 as BUTTON3, but button 1 - the
+// wheel - is dropped. The release arrives, the press never does, and the moves in between carry no
+// sign of it, so GameShell.middleMouseDown can never be true and the camera cannot be dragged.
+//
+// So the page watches the button itself and writes the running total of the drag into
+// jagex2.client.BrowserInput, which GameShell.pollBrowserCameraDrag() turns into the same delta a
+// real middle-drag would have made. Totals rather than deltas so that neither side can lose one.
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+let totalX = 0;
+let totalY = 0;
+
+async function pushCameraDrag() {
+    if (BROWSER_INPUT === null) {
+        if (LIB === null || BROWSER_INPUT_MISSING) {
+            return;
+        }
+        try {
+            BROWSER_INPUT = await LIB.jagex2.client.BrowserInput;
+        } catch (e) {
+            BROWSER_INPUT_MISSING = true;
+            return;
+        }
+        if (!BROWSER_INPUT) {
+            BROWSER_INPUT_MISSING = true;
+            return;
+        }
+    }
+    BROWSER_INPUT.cameraDragX = totalX;
+    BROWSER_INPUT.cameraDragY = totalY;
+}
+
+display.addEventListener('pointerdown', e => {
+    if (e.button !== 1) {
+        return;
+    }
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    e.preventDefault();
+}, true);
+
+// On window, not on the display: a drag that runs off the edge of the game should keep turning the
+// camera, the way it does on the desktop, rather than stopping at the border.
+window.addEventListener('pointermove', e => {
+    if (!dragging) {
+        return;
+    }
+    totalX += e.clientX - lastX;
+    totalY += e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    pushCameraDrag();
+}, true);
+
+window.addEventListener('pointerup', e => {
+    if (e.button === 1) {
+        dragging = false;
+    }
+}, true);
+
+// Chrome's middle-click autoscroll would otherwise take the button for itself - and leave the
+// scrolling cursor stuck over the game.
+display.addEventListener('mousedown', e => { if (e.button === 1) { e.preventDefault(); } }, true);
+display.addEventListener('auxclick', e => { if (e.button === 1) { e.preventDefault(); } }, true);
+
 (async function () {
     const port = location.port || (location.protocol === 'https:' ? '443' : '80');
     const ws = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/';
@@ -299,7 +423,7 @@ const natives = {
             'lostcity.cachedir=/files/.deathplateau'
         ]
     });
-    cheerpjCreateDisplay(${WEB_CLIENT_WIDTH}, ${WEB_CLIENT_HEIGHT + WEB_CLIENT_CHROME}, document.getElementById('display'));
+    cheerpjCreateDisplay(${WEB_CLIENT_WIDTH}, ${WEB_CLIENT_HEIGHT + WEB_CLIENT_ROOM}, display);
     await cheerpjRunMain('jagex2.client.Client', '/app/client.jar');
 })();
 </script>
@@ -451,9 +575,7 @@ if (hasClientJar) {
     const canvas = /<canvas[^>]*\swidth="(\d+)"[^>]*\sheight="(\d+)"/.exec(rs2cgiHtml);
     if (canvas && (canvas[1] !== String(WEB_CLIENT_WIDTH) || canvas[2] !== String(WEB_CLIENT_HEIGHT))) {
         printWarning(`public/rs2.cgi declares a ${canvas[1]}x${canvas[2]} canvas; the client draws ${WEB_CLIENT_WIDTH}x${WEB_CLIENT_HEIGHT} - serving a corrected page`);
-        rs2cgiHtml = rs2cgiHtml.replace(canvas[0], canvas[0]
-            .replace(`width="${canvas[1]}"`, `width="${WEB_CLIENT_WIDTH}"`)
-            .replace(`height="${canvas[2]}"`, `height="${WEB_CLIENT_HEIGHT}"`));
+        rs2cgiHtml = rs2cgiHtml.replace(canvas[0], canvas[0].replace(`width="${canvas[1]}"`, `width="${WEB_CLIENT_WIDTH}"`).replace(`height="${canvas[2]}"`, `height="${WEB_CLIENT_HEIGHT}"`));
     }
 } else {
     rs2cgiHtml = LAUNCHER_PAGE;
@@ -462,7 +584,6 @@ if (hasClientJar) {
 fastify.get('/rs2.cgi', (_req, reply) => {
     reply.type('text/html').send(rs2cgiHtml);
 });
-
 
 // cache routes
 
