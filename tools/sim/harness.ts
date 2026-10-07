@@ -20,6 +20,7 @@ import SynthSound from '#/network/game/server/model/SynthSound.js';
 import IfOpenMain from '#/network/game/server/model/IfOpenMain.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
 import IfSetInvOp from '#/network/game/server/model/IfSetInvOp.js';
+import IfSetObject from '#/network/game/server/model/IfSetObject.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import fs from 'fs';
 import Environment from '#/util/Environment.js';
@@ -39,7 +40,7 @@ export type Sound = { tick: number; who: string; synth: string; loops: number; d
 // 'invop' is an if_setinvop: the server rewriting one right-click option of a server-side
 // inventory grid. Only the bank and the trading post use it, and it is the only way to see
 // from the server side which options a grid is actually offering.
-export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'; com: number; text?: string; op?: number };
+export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop' | 'obj'; com: number; text?: string; op?: number; obj?: number };
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
@@ -123,6 +124,12 @@ export async function boot() {
         }
         if (message instanceof IfSetText) {
             ifaces.push({ tick: World.currentTick, who: this.username, kind: 'text', com: message.component, text: message.text });
+        }
+        // WHAT A MODEL SLOT WAS FILLED WITH. ~multiobj* puts objs in components with
+        // if_setobject, and without this a test driving one can only click blindly: the whole
+        // point of the Quiz Master is that the answers are pictures and have no text.
+        if (message instanceof IfSetObject) {
+            ifaces.push({ tick: World.currentTick, who: this.username, kind: 'obj', com: message.component, obj: message.obj });
         }
         if (message instanceof IfSetInvOp) {
             ifaces.push({ tick: World.currentTick, who: this.username, kind: 'invop', com: message.component, op: message.op, text: message.text });

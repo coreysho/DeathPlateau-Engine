@@ -21,6 +21,8 @@ import { NpcMode } from '#/engine/entity/NpcMode.js';
 import SeqType from '#/cache/config/SeqType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
+import { CollisionFlag } from '#/engine/routefinder/index.js';
+import { isFlagged } from '#/engine/GameMap.js';
 import LocType from '#/cache/config/LocType.js';
 // VarBitType, with the capital B the filename has. The lowercase spelling resolves on Windows
 // and loads a SECOND copy of the module whose static tables are empty, so every name lookup
@@ -1125,6 +1127,214 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
     H.opLoc(p, 2523, 4777, 'loc_8987', 1);
     settleAny(p);
     check('  ...and now the portal lets you go', [p.x, p.z], [3242, 3260]);
+}
+
+// =========================================== two rooms that were built all along, and I said were not
+//
+// eventplaces.ts asks the booted world which locs are in a zone. GameMap only adds a loc to a zone
+// when its type is ACTIVE, and scenery - a theatre wall, a stage floor, a podium - is not. A
+// complete theatre therefore reads as an empty field, which is what it read as, and what I
+// reported. content/tools/wherelocmap.py reads maps/*.jm2 instead; so does the check below, which
+// is why it can see the 84 chairs the wiki says are there.
+console.log('');
+console.log('THE MIME HAS A THEATRE AND THE QUIZ MASTER HAS A SET');
+{
+    /** Every loc placement in a square, straight out of the .jm2, in world coordinates. */
+    const fromMap = (square: string) => {
+        const [sx, sz] = square.split('_').map(v => parseInt(v) * 64);
+        const rows: { lv: number; x: number; z: number; id: number }[] = [];
+        let inloc = false;
+        for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m${square}.jm2`, 'ascii').split('\n')) {
+            const s = line.trim();
+            if (s.startsWith('====')) { inloc = s.includes('LOC'); continue; }
+            if (!inloc || !s.includes(':')) continue;
+            const [head, tail] = s.split(':');
+            const [lv, x, z] = head.trim().split(/ +/).map(Number);
+            rows.push({ lv, x: sx + x, z: sz + z, id: parseInt(tail.trim().split(/ +/)[0]) });
+        }
+        return rows;
+    };
+    const countOf = (rows: { id: number }[], name: string) =>
+        rows.filter(r => r.id === LocType.getId(name)).length;
+
+    // THE THEATRE, counted against the wiki rather than against the script. runescape.wiki's page
+    // on the Mime event says the venue had "a total of 84 chairs in the area" and "three
+    // mysterious colored audience members" - and the map has exactly that.
+    const theatre = fromMap('31_74');
+    check('the mime\u2019s theatre is in m31_74, to the chair', countOf(theatre, 'macro_theatre_chair'), 84);
+    check('  ...with a stage floor over the seating',
+        [countOf(theatre, 'macro_theatre_floor'),
+            theatre.filter(r => r.id === LocType.getId('macro_theatre_floor') && r.lv === 1).length], [84, 84]);
+    check('  ...106 walls, two spotlights and four exit signs',
+        [countOf(theatre, 'macro_theatrewall'), countOf(theatre, 'macro_spotlight'),
+            countOf(theatre, 'macro_exitsign')], [106, 2, 4]);
+    check('  ...and three in the audience',
+        ['macro_theatre_saradomin', 'macro_theatre_guthix', 'macro_theatre_zamorak']
+            .map(n => World.npcs.filter(x => x && x.type === NpcType.getId(n)).length), [1, 1, 1]);
+    const mimeNpc = World.npcs.find(n => n && n.type === NpcType.getId('macro_mime'))!;
+    check('  ...and the mime is on the stage, not in the seats', mimeNpc.level, 1);
+
+    // THE QUIZ SET. Two three-by-three podiums, invisible walls and light beams, and one standable
+    // tile on each - which is what a game show is, and why "no walkable ground" was the wrong
+    // question to ask of it.
+    const studio = fromMap('30_74');
+    check('the quiz set is in m30_74: two podiums, lit, walled in',
+        [countOf(studio, 'loc_8982'), countOf(studio, 'loc_8983'), countOf(studio, 'inviswall')],
+        [2, 2, 8]);
+    const quizNpc = World.npcs.find(n => n && n.type === NpcType.getId('macro_magneson'))!;
+    check('  ...and the Quiz Master is on his podium, not under it',
+        [quizNpc.level, quizNpc.x, quizNpc.z], [1, 1952, 4768]);
+    check('  ...with one tile to stand on, on each',
+        [!isFlagged(1952, 4768, 1, CollisionFlag.WALK_BLOCKED),
+            !isFlagged(1952, 4764, 1, CollisionFlag.WALK_BLOCKED),
+            isFlagged(1951, 4764, 1, CollisionFlag.WALK_BLOCKED)], [true, true, true]);
+}
+
+// ------------------------------------------------------------------------------ the Mime
+console.log('');
+console.log('AND YOU COPY WHAT THE MIME DOES');
+{
+    const p: any = player('mime', 3246, 3260, 0);
+    H.clearInv(p);
+    startEvent(p, 18);
+    check('the mime takes you onto his stage', [p.x, p.z, p.level], [2010, 4761, 1]);
+    const wants = () => H.getVarBit(p, 'macro_mime_wants');
+    const done = () => H.getVarBit(p, 'macro_mime_done');
+    check('  ...and starts performing', wants() >= 1 && wants() <= 8, true);
+    check('  ...with nothing copied yet', done(), 0);
+
+    // The eight he can perform, and the emote-tab button that plays each. PRESSING THE BUTTON is
+    // the point: ~macro_mime_react is hooked into [label,emote] beside Miscellania's and the
+    // Ethereal Mimic's, and calling the proc directly would skip the hook AND lose the p_delay in
+    // the send-home at the end, which H.runProc never resumes.
+    const BUTTON = ['', 'yes', 'no', 'bow', 'angry', 'think', 'wave', 'cheer', 'clap'];
+    // THE EIGHT BUTTONS ARE THE EIGHT ACTS. If macro_mime_act ever names an emote whose button is
+    // not in this list the test clicks the wrong thing, so the two are checked against each other
+    // rather than assumed.
+    check('every act he can perform has a button in the emote tab',
+        [1, 2, 3, 4, 5, 6, 7, 8].map(i => EnumType.get(EnumType.getId('macro_mime_act')).values.get(i)),
+        [1, 2, 3, 4, 5, 6, 7, 8].map(i => SeqType.getId(`emote_${BUTTON[i]}`)));
+    const copy = (i: number) => {
+        H.ifButton(p, `emotes:${BUTTON[i]}`);
+        for (let k = 0; k < 10 && (p.activeScript || p.delayed || [...p.queue.all()].length); k++) H.tick(1);
+        H.tick(1);
+    };
+
+    // THE WRONG ONE COSTS NOTHING but does not count either, which is the only thing that makes
+    // the four mean anything.
+    const asked = wants();
+    copy((asked % 8) + 1);
+    check('a different emote does not count', done(), 0);
+    check('  ...and he performs again', wants() >= 1 && wants() <= 8, true);
+
+    const seen: number[] = [];
+    for (let i = 0; i < 4; i++) {
+        const w = wants();
+        seen.push(w);
+        copy(w);
+    }
+    check('four copied right and the act is over', done() >= 4 || H.getVar(p, 'macro_event') === 0, true);
+    console.log(`       he performed ${seen.join(', ')} (of eight)`);
+    check('  ...and he sends you back where he found you', [p.x, p.z], [3246, 3260]);
+    check('  ...paying a piece of the mime outfit, or one of his emotes',
+        ['macro_mime_mask', 'macro_mime_top', 'macro_mime_legs', 'macro_mime_gloves', 'macro_mime_boots']
+            .reduce((n, o) => n + H.invCount(p, o), 0)
+        + H.getVarBit(p, 'emote_glasswall') + H.getVarBit(p, 'emote_glassbox')
+        + H.getVarBit(p, 'emote_climbrope') + H.getVarBit(p, 'emote_lean'), 1);
+    check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+}
+
+// ------------------------------------------------------------------------------ the Quiz Master
+console.log('');
+console.log('AND THE QUIZ MASTER ASKS THREE QUESTIONS');
+{
+    const p: any = player('quiz', 3250, 3264, 0);
+    H.clearInv(p);
+    H.setVar(p, 'macro_event', 0);
+    H.runProc(p, '[proc,macro_event_general_spawn]', [19]);
+    for (let i = 0; i < 6; i++) H.tick(1);
+    const podium = [p.x, p.z, p.level];
+
+    // WORK THE ANSWER OUT, do not ask the script for it. The three answers are pictures with no
+    // text - that is the event - so the sim reads the objs off the wire, reads the category out of
+    // the question, and looks up which of the three belongs to it in macro_quiz_item. Neither half
+    // comes from the code under test.
+    const items = EnumType.get(EnumType.getId('macro_quiz_item')).values;
+    const cats = EnumType.get(EnumType.getId('macro_quiz_category')).values;
+    const catOf = (obj: number) => {
+        for (const [k, v] of items) if (v === obj) return Math.floor((k as number) / 4);
+        return -1;
+    };
+    const tray = Component.getId('multiobj3');
+    // The show runs itself out of the arrival queue - see the script - so there is nothing to
+    // click. startEvent would have spun waiting for a player who is sat at a pause button, so the
+    // spawn is run here and the modal loop below is what settles it.
+    let answered = 0;
+    for (let guard = 0; guard < 400; guard++) {
+        const s = p.activeScript;
+        if (!s) { H.tick(1); if (!p.delayed && [...p.queue.all()].length === 0 && guard > 4) break; continue; }
+        if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+        if (p.modalChat !== tray) { p.executeScript(s, true, true); continue; }
+        // the title says which category, the three slots say what is on offer
+        const title = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'text'
+            && f.com === Component.getId('multiobj3:com_8'))!.text!;
+        let wantCat = -1;
+        for (const [k, v] of cats) if (title.includes(v as string)) wantCat = k as number;
+        let pick = 2;
+        for (let i = 0; i < 3; i++) {
+            const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
+                && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
+            if (catOf(o) === wantCat) pick = 2 + i;
+        }
+        answered++;
+        H.choose(p, `multiobj3:com_${pick}`);
+    }
+    check('the Quiz Master puts you on a podium', podium, [1952, 4764, 1]);
+    check('he asks three questions', answered, 3);
+    check('  ...and three right is a Mystery box', H.invCount(p, 'macro_quiz_mystery_box'), 1);
+    check('  ...and then sends you home', [p.x, p.z], [3250, 3264]);
+    check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+
+    // AND THREE WRONG IS NO BOX, which is the half of the scoring the run above cannot show: the
+    // same loop, picking a slot that is deliberately not the answer.
+    {
+        const q: any = player('quizwrong', 3254, 3264, 0);
+        H.clearInv(q);
+        H.setVar(q, 'macro_event', 0);
+        H.runProc(q, '[proc,macro_event_general_spawn]', [19]);
+        for (let i = 0; i < 6; i++) H.tick(1);
+        let asked = 0;
+        for (let guard = 0; guard < 400; guard++) {
+            const s = q.activeScript;
+            if (!s) { H.tick(1); if (!q.delayed && [...q.queue.all()].length === 0 && guard > 4) break; continue; }
+            if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+            if (q.modalChat !== tray) { q.executeScript(s, true, true); continue; }
+            const title = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'text'
+                && f.com === Component.getId('multiobj3:com_8'))!.text!;
+            let wantCat = -1;
+            for (const [k, v] of cats) if (title.includes(v as string)) wantCat = k as number;
+            let pick = -1;
+            for (let i = 0; i < 3; i++) {
+                const o = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'obj'
+                    && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
+                if (catOf(o) !== wantCat) pick = 2 + i;
+            }
+            asked++;
+            H.choose(q, `multiobj3:com_${pick}`);
+        }
+        check('three wrong is three questions and no box', [asked, H.invCount(q, 'macro_quiz_mystery_box')], [3, 0]);
+        check('  ...and he still sends you home', [q.x, q.z], [3254, 3264]);
+    }
+
+    // The box is the prize and opens anywhere.
+    H.opheld(p, 'macro_quiz_mystery_box', 1);
+    for (let k = 0; k < 20; k++) {
+        const s = p.activeScript;
+        if (s && s.execution === ScriptState.PAUSEBUTTON) { p.executeScript(s, true, true); continue; }
+        if (!s && !p.delayed) break;
+        H.tick(1);
+    }
+    check('the box opens into something', H.invCount(p, 'macro_quiz_mystery_box'), 0);
 }
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);

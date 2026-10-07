@@ -8,6 +8,13 @@
 // world once and asks, for every marker that would have to be somewhere, whether it is placed - and
 // then prints what else stands in the same map square, which is how a room gets identified when
 // nothing in it is named after the event.
+//
+// IT CANNOT SEE SCENERY, AND THAT MATTERS. GameMap only adds a loc to a zone when its type is
+// active, so everything below is blind to walls, floors, chairs, podiums and signposts - which is
+// most of what a room is made of. It reported the Mime's theatre as an empty field when m31_74
+// holds 106 theatre walls, 84 chairs and 84 stage tiles, and it reported the Quiz Master's set as
+// nothing at all. For "is this room built", use content/tools/wherelocmap.py, which reads
+// maps/*.jm2. What this is good for is npcs, objs and the handful of event locs that ARE active.
 import World from '#/engine/World.js';
 import * as H from './harness.js';
 import LocType from '#/cache/config/LocType.js';
