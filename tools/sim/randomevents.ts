@@ -22,7 +22,8 @@ import SeqType from '#/cache/config/SeqType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
-import { isFlagged } from '#/engine/GameMap.js';
+import { isFlagged, canTravel } from '#/engine/GameMap.js';
+import { CollisionType } from '#/engine/routefinder/index.js';
 import LocType from '#/cache/config/LocType.js';
 // VarBitType, with the capital B the filename has. The lowercase spelling resolves on Windows
 // and loads a SECOND copy of the module whose static tables are empty, so every name lookup
@@ -1061,7 +1062,9 @@ console.log('PRISON PETE: THREE KEYS, AND THE DOORS WERE ALREADY WIRED TO THEM')
 
     for (let k = 0; k < 3; k++) pop(pull());
     check('three right in a row opens the wall', H.getVarBit(p, 'macro_pete_keys'), 3);
-    talkToThis(p, nearby('prisonpete_pete', p, 12)!);
+    // Pete wanders the cell and the player ends up wherever the last balloon was, so the radius
+    // has to cover the room rather than a conversation's worth of tiles.
+    talkToThis(p, nearby('prisonpete_pete', p, 24)!);
     settleAny(p);
     check('  ...and Pete sends you home', [p.x, p.z], [3238, 3260]);
     check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
@@ -1335,6 +1338,175 @@ console.log('AND THE QUIZ MASTER ASKS THREE QUESTIONS');
         H.tick(1);
     }
     check('the box opens into something', H.invCount(p, 'macro_quiz_mystery_box'), 0);
+}
+
+// ============================================ the two rooms that had to be built rather than found
+console.log('');
+console.log('THE LAND OF THE FROGS, WHICH NOBODY HAD BUILT');
+{
+    // The only random event room in this game that was not already in the maps. 474 cannot supply
+    // it - no XTEA key for the band, and nothing frog-shaped in any of the 565 regions it can read
+    // - so content/tools/genfrogcave.py makes it. The checks are that it is the shape the
+    // generator says and that a player can move about in it.
+    let walk = 0;
+    for (let x = 2070; x <= 2089; x++) {
+        for (let z = 4822; z <= 4841; z++) if (!isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED)) walk++;
+    }
+    check('the clearing is twenty by twenty and open', walk, 400);
+    check('  ...and walled in', [isFlagged(2069, 4830, 0, CollisionFlag.WALK_BLOCKED),
+        isFlagged(2090, 4830, 0, CollisionFlag.WALK_BLOCKED),
+        isFlagged(2080, 4821, 0, CollisionFlag.WALK_BLOCKED),
+        isFlagged(2080, 4842, 0, CollisionFlag.WALK_BLOCKED)], [true, true, true, true]);
+    // COUNTED INSIDE THE CLEARING, not in the world: macro_frog_noncombat is an ordinary frog
+    // and there are others of it elsewhere.
+    const inClearing = (name: string) => World.npcs.filter(x => x && x.type === NpcType.getId(name)
+        && x.level === 0 && x.x >= 2070 && x.x <= 2089 && x.z >= 4822 && x.z <= 4841).length;
+    check('  ...with a herald, six frogs and one in a crown',
+        ['macro_frog_crier', 'macro_frog_noncombat', 'macro_frog_royal'].map(inClearing), [1, 6, 1]);
+
+    const p: any = player('frog', 3258, 3264, 0);
+    H.clearInv(p);
+    startEvent(p, 20);
+    check('you are dropped in the clearing', [p.x, p.z, p.level], [2079, 4826, 0]);
+
+    // A WRONG FROG IS WRONG. They are all one npc type and all look alike bar the hat.
+    const wrong = H.npcNear('macro_frog_noncombat', p.x, p.z, 0)!;
+    talkToThis(p, wrong);
+    settleAny(p);
+    check('an ordinary frog says so', H.getVarBit(p, 'macro_frog_wrong'), 1);
+    check('  ...and you are still in the clearing', p.z > 4800, true);
+
+    // THE ONE IN THE CROWN. "Kiss the frog." is the first of the two he offers.
+    const royal = H.npcNear('macro_frog_royal', p.x, p.z, 0)!;
+    talkToThis(p, royal, [1]);
+    settleAny(p);
+    check('kissing the crowned one makes royalty of it',
+        [NpcType.getId('macro_frog_prince'), NpcType.getId('macro_frog_princess')].includes(royal.type), true);
+    check('  ...and hands you a token', H.invCount(p, 'macro_frog_token'), 1);
+    check('  ...and sends you home', [p.x, p.z], [3258, 3264]);
+    check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
+
+    // AND THESSALIA TAKES IT, which is where the wiki says the token is spent: "may be redeemed at
+    // the Varrock clothes shop to get a frog mask, a royal frog costume, or an experience lamp".
+    talkToThis(p, H.npcNear('thessalia', 3205, 3417, 0)!, [1]);
+    settleAny(p);
+    check('Thessalia turns the token into a frog mask',
+        [H.invCount(p, 'macro_frog_token'), H.invCount(p, 'macro_frog_mask')], [0, 1]);
+
+    // FIVE WRONG ONES AND THE HERALD GIVES UP, which is the half the run above cannot show.
+    const q: any = player('frogwrong', 3262, 3264, 0);
+    H.clearInv(q);
+    startEvent(q, 20);
+    for (let i = 0; i < 5; i++) {
+        const f = H.npcNear('macro_frog_noncombat', q.x, q.z, 0)!;
+        talkToThis(q, f);
+        settleAny(q);
+    }
+    check('five wrong frogs and you are out on your ear', [q.x, q.z], [3262, 3264]);
+    check('  ...with no token', H.invCount(q, 'macro_frog_token'), 0);
+}
+
+console.log('');
+console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
+{
+    // THE CAGES ARE PLACED FROM THE TRAMPS, not from a guess: three pillory_tramp_thrower npcs
+    // were already standing in Varrock, Seers' Village and Yanille, and the wiki says of them
+    // "outside the pillory, the tramp... throws rotten tomatoes at the players inside". A cage one
+    // tile from each is the only arrangement that makes sense of a man throwing tomatoes at
+    // nothing. This checks the three are where their tramps are and nowhere else.
+    const CAGES: [string, number, number][] = [
+        ['pillory_tramp_thrower_varrock', 3228, 3413],
+        ['pillory_tramp_thrower_seers', 2683, 3485],
+        ['pillory_tramp_thrower_yanille', 2606, 3101]
+    ];
+    const doorId = LocType.getId('macro_pillory_door');
+    /** Where a map square SPAWNS an npc, which is the thing to compare a placement against - a
+     * tramp on his rounds is halfway down the street by the time anything here looks at him. */
+    const spawnOf = (square: string, npcId: number) => {
+        const [sx, sz] = square.split('_').map(v => parseInt(v) * 64);
+        let innpc = false;
+        for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m${square}.jm2`, 'ascii').split('\n')) {
+            const s = line.trim();
+            if (s.startsWith('====')) { innpc = s.includes('NPC'); continue; }
+            if (!innpc || !s.includes(':')) continue;
+            const [head, tail] = s.split(':');
+            const [lv, x, z] = head.trim().split(/ +/).map(Number);
+            if (parseInt(tail.trim().split(/ +/)[0]) === npcId && lv === 0) return { x: sx + x, z: sz + z };
+        }
+        return null;
+    };
+    for (const [tramp, cx, cz] of CAGES) {
+        const sq = `${cx >> 6}_${cz >> 6}`;
+        const t = spawnOf(sq, NpcType.getId(tramp))!;
+        check(`${tramp.replace('pillory_tramp_thrower_', '')}: a cage within a tile of its tramp`,
+            Math.max(Math.abs(t.x - cx), Math.abs(t.z - cz)) <= 1, true);
+        check('  ...with a door on it', World.getLoc(cx, cz, 0, doorId) !== null, true);
+        check('  ...and a guard at his post beside it',
+            spawnOf(sq, NpcType.getId('macro_pillory_guard')) !== null
+            && World.npcs.some(n => n && n.type === NpcType.getId('macro_pillory_guard')
+                && Math.max(Math.abs(n.x - cx), Math.abs(n.z - cz)) <= 2), true);
+    }
+
+    // A CAGE HAS TO BE A CAGE. Four walls on one tile, and from inside it every neighbour is on
+    // the other side of one of them - which is the only thing that makes the lock worth picking.
+    const sealed = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dz]) =>
+        !canTravel(0, 3228, 3413, dx, dz, 0, CollisionType.NORMAL));
+    check('and from inside the Varrock cage there is nowhere to go', sealed, true);
+
+    const p: any = player('pillory', 3266, 3264, 0);
+    H.clearInv(p);
+    startEvent(p, 21);
+    check('the guard puts you in the cage', [p.x, p.z, p.level], [3228, 3413, 0]);
+    check('  ...with three tumblers to pick', H.getVarBit(p, 'macro_pillory_locks'), 3);
+
+    // PICK ONE LOCK, right or wrong. The symbol is shown in an objbox before the four are offered,
+    // so the sim reads it off the wire the way a player reads it off the screen.
+    const box = Component.getId('objbox1');
+    const tray = Component.getId('multiobj4');
+    const pickLock = (correct: boolean) => {
+        H.opLoc(p, 3228, 3413, 'macro_pillory_door', 1);
+        let shown = -1;
+        for (let guard = 0; guard < 80; guard++) {
+            const s = p.activeScript;
+            if (!s) { H.tick(1); if (!p.delayed && guard > 3) break; continue; }
+            if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+            if (p.modalChat === box) {
+                shown = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
+                    && f.com === Component.getId('objbox1:com_0'))!.obj!;
+                p.executeScript(s, true, true);
+                continue;
+            }
+            if (p.modalChat === tray) {
+                let slot = -1;
+                for (let i = 0; i < 4; i++) {
+                    const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
+                        && f.com === Component.getId(`multiobj4:com_${2 + i}`))!.obj!;
+                    if (correct === (o === shown)) slot = 2 + i;
+                }
+                H.choose(p, `multiobj4:com_${slot}`);
+                continue;
+            }
+            p.executeScript(s, true, true);
+        }
+        settleAny(p);
+    };
+
+    pickLock(true);
+    check('one right and one tumbler turns', H.getVarBit(p, 'macro_pillory_done'), 1);
+    pickLock(false);
+    check('one wrong and they all drop back', H.getVarBit(p, 'macro_pillory_done'), 0);
+    check('  ...and there is one more of them', H.getVarBit(p, 'macro_pillory_locks'), 4);
+    check('  ...and the door is still shut', H.getVarBit(p, 'macro_pillory_open'), 0);
+
+    for (let i = 0; i < 4; i++) pickLock(true);
+    check('four right and the cage is open', H.getVarBit(p, 'macro_pillory_open'), 1);
+
+    talkToThis(p, H.npcNear('macro_pillory_guard', 3228, 3413, 0)!);
+    settleAny(p);
+    check('the guard lets you off with a gift',
+        [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+    check('  ...and you are back where he found you', [p.x, p.z], [3266, 3264]);
+    check('  ...and the cage is shut behind you', H.getVarBit(p, 'macro_pillory_open'), 0);
 }
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);
