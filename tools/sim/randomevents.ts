@@ -1453,6 +1453,40 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
         !canTravel(0, 3228, 3413, dx, dz, 0, CollisionType.NORMAL));
     check('and from inside the Varrock cage there is nowhere to go', sealed, true);
 
+    // AND IT IS A THIEVING RANDOM, not a general one. runescape.wiki/w/Pillory's update history
+    // says that until "25 February 2009" being caught was something that only happened to
+    // "members using Thieving", and 2006scape lists this event under Thieving as the "Jailer".
+    // So the general roll must never produce it, and the pickpocket roll must.
+    {
+        const picks = (name: string) => {
+            const e = EnumType.get(EnumType.getId(name));
+            return [...e.values.values()] as number[];
+        };
+        check('the general roll cannot land on the pillory',
+            [picks('general_macro_events_members_pick').includes(21),
+                picks('general_macro_events_free_pick').includes(21)], [false, false]);
+        const r: any = player('pilroll', 3270, 3264, 0);
+        check('  ...but the event table still knows which npc it is',
+            H.runProc(r, '[proc,macro_event_npc]', [21])[0], NpcType.getId('macro_pillory_guard'));
+
+        // FOUR HUNDRED PICKPOCKETS' WORTH. The pillory is one slot against the general count,
+        // so about one roll in twenty-one; sixty rolls came up once and a check that only asks
+        // for "more than none" would then fail about one run in twenty. The spawn teleports
+        // through a queue, so nothing moves while the queue is thrown away between rolls - only
+        // the id it chose is read.
+        let caught = 0;
+        for (let i = 0; i < 400; i++) {
+            H.setVar(r, 'macro_event', 0);
+            H.runProc(r, '[label,macro_randomthieving]');
+            if (H.getVar(r, 'macro_event') === 21) caught++;
+            r.queue.clear();
+        }
+        H.setVar(r, 'macro_event', 0);
+        console.log(`       the pillory came up ${caught} times in 400 pickpocket rolls`);
+        check('  ...and the pickpocket roll does, about one in twenty',
+            caught > 5 && caught < 45, true);
+    }
+
     const p: any = player('pillory', 3266, 3264, 0);
     H.clearInv(p);
     startEvent(p, 21);
