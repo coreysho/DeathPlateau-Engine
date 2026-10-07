@@ -97,7 +97,10 @@ console.log('\nTHE MAIN CHAMBER IS POPULATED');
     const names = inChamber.map(n => NpcType.get(n.type).debugname ?? String(n.type));
     const distinct = new Set(names);
     console.log(`  ${inChamber.length} npcs, ${distinct.size} kinds`);
-    check('  the room holds a crowd', inChamber.length >= 60, true);
+    // 50, not 60. The number used to be ours to choose; the spawns are Old School's own
+    // coordinates now, so what this box holds is what Old School puts in it - 58 - and the
+    // check is back to asking the question it was written for: a crowd, not a handful.
+    check('  the room holds a crowd', inChamber.length >= 50, true);
     check('  of many kinds, not six spirituals repeated', distinct.size >= 20, true);
     // All four armies present in the one room, which is what makes it a free-for-all rather than
     // four separate guard posts.
@@ -106,15 +109,20 @@ console.log('\nTHE MAIN CHAMBER IS POPULATED');
 
     // NOT ON TOP OF EACH OTHER, and not inside a wall. Both are things the engine tolerates
     // quietly: two npcs on one tile look like one npc, and a blocked spawn is just absent.
+    // SPAWN positions, not live ones. These npcs roam, and this runs after the free-for-all has
+    // been ticking, so by now they have walked about - and an npc standing on a tile makes that
+    // tile WALK_BLOCKED, so a roamed npc flags itself. With the room this full that turned the
+    // check flaky: three runs in five. What it is for is the MAP DATA - that no two spawns were
+    // written onto one square and none into a wall - so it asks where they started.
     const seen = new Map<string, string>();
     const clashes: string[] = [];
     for (const n of inChamber) {
         const t = NpcType.get(n.type);
         for (let dx = 0; dx < (t.size || 1); dx++) for (let dz = 0; dz < (t.size || 1); dz++) {
-            const k = `${n.x + dx},${n.z + dz}`;
+            const k = `${n.startX + dx},${n.startZ + dz}`;
             if (seen.has(k)) clashes.push(`${t.debugname} on ${seen.get(k)} at ${k}`);
             else seen.set(k, t.debugname ?? '?');
-            if (isFlagged(n.x + dx, n.z + dz, 2, CollisionFlag.WALK_BLOCKED)) clashes.push(`${t.debugname} blocked at ${k}`);
+            if (isFlagged(n.startX + dx, n.startZ + dz, 2, CollisionFlag.WALK_BLOCKED)) clashes.push(`${t.debugname} blocked at ${k}`);
         }
     }
     for (const c of clashes.slice(0, 10)) console.log('    ' + c);

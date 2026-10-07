@@ -313,19 +313,22 @@ console.log('\nTHE WAY IN');
     check('  and you cannot walk back round the boulder', A.connected(0, 2898, 3719, 2898, 3715, 20), false);
 
     // ---- the hole wants a rope, once, and keeps it
+    //
+    // ONE CLICK NOW, not two. Old School splits this into Tie-rope and Climb-down with a multiloc,
+    // and that multiloc draws as a flat black square in this client however it is wired - which is
+    // the black hole that was reported. The plain child loc draws a proper rim and shaft, so that
+    // is what the map places, and the single op ties the rope on the way down the first time.
     p.teleport(2917, 3744, 0); H.tick(1);
-    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
+    H.opLoc(p, 2917, 3745, 'gwd_hole_untied', 1);
     H.tick(20);
     check('  the hole needs a rope', [p.x, p.z, p.level], [2917, 3744, 0]);
     check('  and says so', A.lastMes(p).includes('rope'), true);
     H.give(p, 'rope', 1);
-    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
+    H.opLoc(p, 2917, 3745, 'gwd_hole_untied', 1);
     H.tick(20);
     check('  tying it spends the rope', H.invCount(p, 'rope'), 0);
     check('  and the hole stays roped', p.getVar(VarPlayerType.getByName('gwd_rope_tied')!.id), 1);
 
-    H.opLoc(p, 2917, 3745, 'gwd_hole', 1);
-    H.tick(20);
     // STRAIGHT INTO THE CHAMBER, not onto a shaft floor. Old School has a floor between the two and
     // this build does not: m45_82 plane 3 came across the graft with 2,061 locs and NOT ONE TILE of
     // terrain, so every tile of it is undrawn. Landing there put the player on black with nothing
