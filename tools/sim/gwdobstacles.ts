@@ -85,5 +85,41 @@ for (const [label, sx, sz, want] of [['in from the corridor', 2852, 5333, 2850],
     check(`  ${label}`, p.x, want);
     H.despawn(p);
 }
+
+// AND THE WAY BACK. Both Saradomin ropes were one-way - you climbed down and that was that, which
+// left the level 1 cavern and the encampment below it as places you could only leave by teleport.
+// The Armadyl grapple fired you at the same pillar whichever side you stood on, so coming back you
+// played the animation and did not move.
+
+console.log('BOTH SARADOMIN ROPES GO BACK UP');
+for (const [nm, lv, lx, lz, sx, sz, wantLv] of [
+    ['upper', 1, 2914, 5300, 2915, 5300, 2],
+    ['lower', 0, 2920, 5274, 2919, 5274, 1],
+] as [string, number, number, number, number, number, number][]) {
+    const p: any = A.player(`up_${nm}`, sx, sz, lv);
+    H.setVar(p, 'tutorial', 1000);
+    H.tick(1);
+    A.op(p, lx, lz, 'osrsloc_26369', 1);
+    H.tick(8);
+    check(`  ${nm} rope climbs back to level ${wantLv}`, p.level, wantLv);
+    H.despawn(p);
+}
+
+console.log('\nTHE ARMADYL GRAPPLE GOES BOTH WAYS');
+for (const [label, sx, sz, want] of [
+    ['out to the pillar', 2871, 5279, 5269],
+    ['back again',        2871, 5269, 5279],
+] as [string, number, number, number][]) {
+    const p: any = A.player('grap' + sz, sx, sz, 2);
+    p.baseLevels[4] = 99; p.levels[4] = 99;
+    H.setVar(p, 'tutorial', 1000);
+    H.give(p, 'mith_grapple', 1);
+    H.equip(p, { rhand: 'crossbow' });
+    H.tick(1);
+    A.op(p, 2871, 5270, 'gwd_pillar_grapple', 1);
+    H.tick(8);
+    check(`  ${label}`, p.z, want);
+    H.despawn(p);
+}
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(0);

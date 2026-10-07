@@ -77,26 +77,33 @@ for (const [label, lv, x, z] of ROOMS) {
 const left = all.filter(n => !claimed.has(`${n.name}@${n.x},${n.z}`));
 console.log(`\nin none of the five regions (corridors and antechambers): ${left.length}`);
 
-console.log('\nEVERY ROOM IS GARRISONED, AND BY THE RIGHT GODS');
+console.log('\nTHE DUNGEON IS LAID OUT THE WAY OLD SCHOOL LAYS IT OUT');
+// A BOSS CHAMBER IS THE GENERAL AND THREE BODYGUARDS. Nothing else gets in: the rank and file
+// stand in the approach the killcount door opens onto, not in the room with the boss. Filling the
+// chambers instead was the thing reported as "there are followers in the boss room".
 for (const [label, lv, x, z] of ROOMS) {
+    if (label === 'main chamber') continue;
     const tiles = flood(lv, x, z);
     const here = all.filter(n => n.level === lv && tiles.has(`${n.x},${n.z}`));
     const by: Record<string, number> = {};
     for (const n of here) by[god(n.name)] = (by[god(n.name)] ?? 0) + 1;
-    const own = label.startsWith('Armadyl') ? 'armadyl' : label.startsWith('Bandos') ? 'bandos'
-              : label.startsWith('Zamorak') ? 'zamorak' : label.startsWith('Saradomin') ? 'saradomin' : null;
-    if (!own) {
-        check(`  ${label.padEnd(24)} has all four gods in it`,
-            ['armadyl', 'bandos', 'saradomin', 'zamorak'].every(g => (by[g] ?? 0) > 0), true);
-        continue;
-    }
-    check(`  ${label.padEnd(24)} is more than its boss and bodyguards`, here.length > 8, true);
-    check(`  ${label.padEnd(24)} is mostly its own god`, (by[own] ?? 0) * 2 >= here.length, true);
-    if (own === 'zamorak') {
-        check("  the Fortress holds nothing but Zamorak's", Object.keys(by).filter(g => g !== 'zamorak'), []);
-    } else {
-        check(`  ${label.padEnd(24)} has Zamorak minions in it too`, (by.zamorak ?? 0) > 0, true);
-    }
+    const own = label.split(/[' ]/)[0].toLowerCase();
+    check(`  ${label.padEnd(24)} is a general and three bodyguards`, here.length, 4);
+    check(`  ${label.padEnd(24)} and nobody else's god`, Object.keys(by), [own]);
 }
+
+// THE MAIN CHAMBER IS THE FREE-FOR-ALL: a crowd, of many kinds, with all four gods in it.
+{
+    const tiles = flood(2, 2880, 5310);
+    const here = all.filter(n => n.level === 2 && tiles.has(`${n.x},${n.z}`));
+    const kinds = new Set(here.map(n => n.name));
+    const gods = new Set(here.map(n => god(n.name)));
+    check('  the main chamber is a crowd', here.length >= 60, true);
+    check('  of many kinds', kinds.size >= 20, true);
+    check('  with all four gods in it', [...gods].sort(), ['armadyl', 'bandos', 'saradomin', 'zamorak']);
+}
+
+// AND THE APPROACHES ARE GARRISONED TOO - that is where most of Old School's spawns are.
+check('  the approaches outside the chambers are garrisoned', left.length >= 100, true);
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(0);
