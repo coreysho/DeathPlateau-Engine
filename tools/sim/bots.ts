@@ -523,6 +523,12 @@ for (const mode of ['smite', 'none'] as const) {
 BotManager.config.prayerMode = 'smite';
 
 console.log('DEATH');
+// THE DROP IS A LIVE-WORLD RULE, so this stretch says it is standing on one. A development world
+// keeps everything a death would have taken (content/scripts/player/scripts/death.rs2, 2026-10-07),
+// which is right for the world the bots run on and would turn every check below into "nothing
+// dropped" - a failure owned by the world the sim was started in rather than by the bots.
+const wasLive = Environment.NODE_PRODUCTION;
+Environment.NODE_PRODUCTION = true;
 const doomed = BotManager.spawn('pker', { kitId: 'mid-main-melee', at: { x: k.x + 1, z: k.z, level: 0 }, manual: true }) as BotPlayer;
 H.tick(3);
 const doomedName = doomed.username;
@@ -576,6 +582,7 @@ check(
 );
 check('  three things at most (bones, coins, sometimes one cheap piece)', dropped.length <= 3, true);
 check("  all of it the killer's to pick up first", receivers.length > 0 && receivers.every(r => r === 'killer'), true);
+Environment.NODE_PRODUCTION = wasLive;
 
 console.log('RESPAWN');
 let back: BotPlayer | undefined;

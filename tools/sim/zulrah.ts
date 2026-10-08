@@ -23,6 +23,7 @@
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import World from '#/engine/World.js';
+import Environment from '#/util/Environment.js';
 import ObjType from '#/cache/config/ObjType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import SpotanimType from '#/cache/config/SpotanimType.js';
@@ -888,7 +889,13 @@ console.log('DYING AT THE SHRINE');
     A.runProcProtected(p, '[proc,zulrah_stash_items]');
     H.tick(1);
     check('she is holding it again', H.getVar(p, 'zulrah_items_held'), 1);
+    // On a LIVE world. A development world keeps what she is holding, as it keeps what you were
+    // carrying (player/scripts/death.rs2, 2026-10-07), and this sim runs on one - so it names the
+    // world the rule belongs to instead of testing whichever it happened to be started in.
+    const wasLive = Environment.NODE_PRODUCTION;
+    Environment.NODE_PRODUCTION = true;
     A.runProcProtected(p, '[proc,zulrah_deathbank_lost]');
+    Environment.NODE_PRODUCTION = wasLive;
     check('an unsafe death anywhere else destroys the lot',
         [H.getVar(p, 'zulrah_items_held'), H.invCount(p, 'shark')], [0, 0]);
     H.despawn(p);
