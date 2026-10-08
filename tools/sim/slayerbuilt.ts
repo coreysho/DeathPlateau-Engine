@@ -79,18 +79,25 @@ console.log('\nTHE GATE ON EACH TASK');
     check('  a zygomite needs Lost City AND the unlock', can(ZYGOMITE), false);
     H.setVar(p, 'zanaris', 6);
     check('  Lost City alone is not enough - the fungicide is what kills one', can(ZYGOMITE), false);
-    H.setVar(p, 'slayer_unlocks', 1 << 5);
+    H.setVar(p, 'slayer_unlocks', 1 << 7); // 'Shroom Sprayer
     check("  with 'Shroom Sprayer bought, it is given", can(ZYGOMITE), true);
 
     H.setVar(p, 'slayer_unlocks', 0);
     check('  red dragons wait for Seeing Red', can(REDDRAGON), false);
-    H.setVar(p, 'slayer_unlocks', 1 << 6);
+    H.setVar(p, 'slayer_unlocks', 1 << 8); // Seeing Red
     check('  and arrive with it', can(REDDRAGON), true);
 
     H.setVar(p, 'slayer_unlocks', 0);
     check('  aviansies wait for Watch the Birdie', can(AVIANSIE), false);
-    H.setVar(p, 'slayer_unlocks', 1 << 7);
+    H.setVar(p, 'slayer_unlocks', 1 << 9); // Watch the Birdie
     check('  and arrive with it', can(AVIANSIE), true);
+
+    // THE BITS THE COSMETICS OWN. 5 is the Unholy Helmet recolour and 6 is Kalphite Khat, both
+    // 1,000 points; the three unlocks above were written as 5, 6 and 7 at first, so an 80-point
+    // 'Shroom Sprayer handed over a 1,000-point helmet colour. Neither of those bits may do
+    // anything to a task.
+    H.setVar(p, 'slayer_unlocks', (1 << 5) | (1 << 6));
+    check('  a helmet recolour buys no task', [can(ZYGOMITE), can(REDDRAGON), can(AVIANSIE)], [false, false, false]);
 
     // The one that is still a place rather than a monster.
     H.setVar(p, 'slayer_unlocks', -1);
