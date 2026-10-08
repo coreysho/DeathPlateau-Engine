@@ -4,7 +4,7 @@
 // towards a Slayer task AND happens in the Wilderness, and for nothing else. Either half alone is a
 // different game - on-task alone pays for standing in Zanaris, in-the-Wilderness alone pays for
 // killing rats under Edgeville - so the sim drives the real queue that counts a task kill, from
-// both sides of the ditch.
+// both sides of the Wilderness line.
 import * as H from './harness.ts';
 import { check, R, player } from './a1lib.ts';
 import InvType from '#/cache/config/InvType.js';
@@ -47,7 +47,7 @@ console.log('\nTHE TWO WHO STAND AT EITHER END');
 
 console.log('\nWHERE A TOKEN COMES FROM');
 {
-    // The roll is a proc, so it can be asked directly - once from each side of the ditch, many
+    // The roll is a proc, so it can be asked directly - once from each side of the line, many
     // times, because what is being tested is a rate and a single roll says nothing.
     const held = (p: Player) => H.invCount(p, 'death_token');
     const rolls = (p: Player, n: number): number => {
@@ -58,10 +58,10 @@ console.log('\nWHERE A TOKEN COMES FROM');
         return held(p);
     };
 
-    // Edgeville, one tile south of the ditch: not the Wilderness.
+    // Edgeville, one tile south of the Wilderness line: not the Wilderness.
     const safe: Player = player('tokensafesim', 3094, 3519);
     const got = rolls(safe, 400);
-    check('  no token is ever paid south of the ditch', got, 0);
+    check('  no token is ever paid south of the line', got, 0);
     H.despawn(safe);
 
     // Level 1 of the Wilderness, and then deep: the deep roll must be the better one.
@@ -69,13 +69,13 @@ console.log('\nWHERE A TOKEN COMES FROM');
     const deep: Player = player('tokendeepsim', 3094, 3900);
     const a = rolls(shallow, 4000);
     const b = rolls(deep, 4000);
-    check('  tokens are paid at the ditch', a > 0, true);
+    check('  tokens are paid at level 1', a > 0, true);
     check('  and more often deep in', b > a, true);
     // The rule is "three times as often by level 30", so the deep rate should be comfortably more
     // than double and not wildly more than treble. A loose band: a sim that demands an exact ratio
     // of a random process is a sim that fails on a Tuesday.
     check('  by roughly the factor the constant promises', b > a * 1.6 && b < a * 4.5, true);
-    console.log(`    (${a} tokens from 4,000 kills at the ditch, ${b} deep in)`);
+    console.log(`    (${a} tokens from 4,000 kills at level 1, ${b} deep in)`);
     H.despawn(shallow, deep);
 }
 
