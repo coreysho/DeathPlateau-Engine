@@ -208,6 +208,50 @@ console.log('\nAND THE OUTFIT IS LOST WHERE IT IS WORN');
     H.despawn(safe);
 }
 
+console.log('\nAND THE FOUR-PIECE SET PAYS - THE CANE IS NOT ONE OF THE FOUR');
+{
+    // The bonus is a percentage, so it can only be read off a rate, and a rate needs volume: a
+    // thousand rolls would not separate 10% from noise. Both runs sit on the same tile at the same
+    // depth, so the only difference between them is what the player is wearing.
+    const N = 40000;
+    const rolls = (p: Player): number => {
+        H.clearInv(p);
+        for (let i = 0; i < N; i++) {
+            H.runProc(p, '[proc,death_token_roll]', []);
+        }
+        return H.invCount(p, 'death_token');
+    };
+
+    const bare: Player = player('tokenbaresim', 3094, 3700);
+    const suited: Player = player('tokensuitsim', 3095, 3700);
+    H.equip(suited, {
+        hat: 'undertaker_hat', torso: 'undertaker_coat',
+        legs: 'undertaker_trousers', feet: 'undertaker_boots'
+    });
+    check('  the four pieces read as a set', H.runProc(suited, '[proc,undertaker_set_worn]', [])[0], 1);
+    check('  and three of them do not', H.runProc(bare, '[proc,undertaker_set_worn]', [])[0], 0);
+
+    // THE CANE IS NOT REQUIRED, which is the whole reason the set is four and not five: it takes
+    // the weapon hand, and a player who cannot fight cannot earn a token to be paid a bonus on.
+    H.equip(bare, {
+        hat: 'undertaker_hat', torso: 'undertaker_coat',
+        legs: 'undertaker_trousers', feet: 'undertaker_boots', rhand: 'undertaker_cane'
+    });
+    check('  the cane neither makes nor breaks it', H.runProc(bare, '[proc,undertaker_set_worn]', [])[0], 1);
+    H.despawn(bare);
+
+    const plain: Player = player('tokenplainsim', 3094, 3700);
+    const a = rolls(plain);
+    const b = rolls(suited);
+    const gain = Math.round(((b - a) / a) * 1000) / 10;
+    console.log(`    (${a} bare, ${b} suited over ${N.toLocaleString()} kills each: +${gain}%)`);
+    // The constant says 10. A band rather than a number, because this is a random process and a sim
+    // that demands an exact ratio of one is a sim that fails on a Tuesday - but a tight enough band
+    // that the OLD integer-odds roll, which turned a 10% bonus into 33%, would not pass it.
+    check('  the set pays about the ten per cent the constant promises', gain > 4 && gain < 18, true);
+    H.despawn(plain, suited);
+}
+
 console.log('\nAND THE SHELF SELLS THEM');
 {
     const shop = InvType.getId('death_token_shop');
@@ -222,6 +266,20 @@ console.log('\nAND THE SHELF SELLS THEM');
                         'undertaker_trousers', 'undertaker_boots', 'undertaker_cane']) {
         check(`  ${want}`, stocked.includes(want), true);
     }
+    // THE SHELF CANNOT RUN OUT. It held one of each, server-wide, so the first player to buy a hat
+    // left the next one waiting a minute for the restock - a shop whose stock is the limit, when the
+    // limit was always meant to be how many tokens you had earned. The engine has no unlimited flag;
+    // a big count topped up every tick is what unlimited means here.
+    const t = InvType.get(shop);
+    // Array.from, because these come off the cache as typed arrays - comparing a Uint16Array to a
+    // plain one by value fails on the type, not on the numbers, which is what the first run did.
+    const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []);
+    const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []);
+    check('  every row holds a thousand', counts.slice(0, 6), [1000, 1000, 1000, 1000, 1000, 1000]);
+    check('  and tops itself up every tick', rates.slice(0, 6), [1, 1, 1, 1, 1, 1]);
+    // Unstackable items a thousand at a time need ALWAYS_STACK or they want a thousand slots in a
+    // shelf that has eight.
+    check('  and the shelf always stacks, which is what lets it', !!(t as unknown as { stackall: boolean }).stackall, true);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
