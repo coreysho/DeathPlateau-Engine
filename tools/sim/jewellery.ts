@@ -431,6 +431,43 @@ console.log('== autoweed');
 }
 
 // ---------------------------------------------------------------------------------------------
+console.log("== the amulet of nature's yield bonus");
+{
+    // ~farming_cts is the chance-to-save roll out of 256, and it is where all three farming yield
+    // bonuses are applied. The amulet is the third and smallest; what matters is that it applies at
+    // all, that it needs to be WORN rather than carried, and that it stacks with the other two
+    // rather than replacing them.
+    const p = player('ctsnature');
+    H.clearInv(p);
+    settle(2);
+    const cts = () => runProtected(p, '[proc,farming_cts]', [ObjType.getId('ranarr_seed')])[0];
+
+    const bare = cts();
+    check('a bare roll is a real number', bare > 0, true);
+
+    // Carried, not worn: no bonus. This is the half that differs from the magic secateurs.
+    H.give(p, 'nature_amulet');
+    settle(2);
+    check('carried in the pack: no bonus', cts(), bare);
+
+    H.clearInv(p);
+    H.equip(p, { front: 'nature_amulet' });
+    settle(2);
+    const wornCts = cts();
+    check('worn: the roll goes up', wornCts > bare, true);
+    check('worn: by 3%', wornCts, Math.floor((bare * 103) / 100));
+
+    // And it stacks on top of the magic secateurs rather than replacing them.
+    H.give(p, 'fairy_enchanted_secateurs');
+    settle(2);
+    const both = cts();
+    const secOnly = Math.floor((bare * 11) / 10);
+    check('secateurs alone would be', secOnly > bare, true);
+    check('secateurs + amulet stacks', both, Math.floor((secOnly * 103) / 100));
+    check('and beats either alone', both > wornCts && both > secOnly, true);
+}
+
+// ---------------------------------------------------------------------------------------------
 console.log('== the amulet of nature');
 {
     const p = player('nature');
