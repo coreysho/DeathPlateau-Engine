@@ -221,7 +221,9 @@ let started: Player;
     // NpcStat: 0 attack, 1 defence, 2 strength, 3 hitpoints.
     for (const portal of portals) {
         const n = NpcType.get(portal.type).debugname ?? '?';
-        check(`${n}: 250 hitpoints and 120 defence`, [portal.levels[3], portal.levels[1]], [250, 120]);
+        // 50 and 10, not Old School's 250 and 120 - tuned for one player against the clock.
+        // See configs/pest_solo.constant and content tools/genpeststats.py for the measurement.
+        check(`${n}: 50 hitpoints and 10 defence`, [portal.levels[3], portal.levels[1]], [50, 10]);
         check(`${n}: cannot fight back`, [portal.levels[0], portal.levels[2]], [1, 1]);
         check(`${n}: op2 is Attack`, ((NpcType.get(portal.type) as unknown as Record<string, unknown>).op as string[])?.[1], 'Attack');
     }
@@ -241,11 +243,12 @@ console.log('== the knight drains while portals are open, and faster with more o
 {
     const p = started;
     const before = H.getVar(p, 'pest_solo_knight_hp');
-    settle(40);
+    // 36 ticks is three drains at the 12-tick interval, which is four portals x 3 = 12 hitpoints.
+    settle(36);
     const after = H.getVar(p, 'pest_solo_knight_hp');
     check('he lost hitpoints', after < before, true);
     // 4 portals, one hitpoint each per 8 ticks: 40 ticks is 5 drains of 4 = 20.
-    check('four portals cost him 20 over 40 ticks', before - after, 20);
+    check('four portals cost him 12 over 36 ticks', before - after, 12);
 
     // Kill two portals; the drain should halve.
     const portals = inGame(p, 'pest_portal_');
@@ -253,8 +256,8 @@ console.log('== the knight drains while portals are open, and faster with more o
     settle(2);
     check('two portals left', inGame(p, 'pest_portal_').length, 2);
     const mid = H.getVar(p, 'pest_solo_knight_hp');
-    settle(40);
-    check('two portals cost him 10 over 40 ticks', mid - H.getVar(p, 'pest_solo_knight_hp'), 10);
+    settle(36);
+    check('two portals cost him 6 over 36 ticks', mid - H.getVar(p, 'pest_solo_knight_hp'), 6);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -326,10 +329,11 @@ console.log('== doing nothing loses, before the clock runs out');
     settle(2);
     check('started', H.getVar(p, 'pest_solo_instance') !== -1, true);
     const pts = H.getVar(p, 'pest_commendation');
-    // 4 portals * 1 hp / 8 ticks = 0.5 hp a tick, so 200 hitpoints is gone in 400 ticks - before
-    // the 500-tick clock. This is the number configs/pest_solo.constant claims.
+    // 4 portals x 1 hitpoint every 12 ticks is a third of a hitpoint a tick, so 200 of them are
+    // gone in 600 - before the 800-tick clock. This is the arithmetic
+    // configs/pest_solo.constant claims, checked rather than trusted.
     let ended = -1;
-    for (let t = 1; t <= 520; t++) {
+    for (let t = 1; t <= 820; t++) {
         H.tick(1);
         dismiss(p);
         if (H.getVar(p, 'pest_solo_instance') === -1) {
@@ -338,7 +342,7 @@ console.log('== doing nothing loses, before the clock runs out');
         }
     }
     check('the game ended on its own', ended > 0, true);
-    check('it ended on the knight, around tick 400', ended >= 390 && ended <= 410 ? true : ended, true);
+    check('it ended on the knight, around tick 600', ended >= 580 && ended <= 620 ? true : ended, true);
     check('no points for a loss', H.getVar(p, 'pest_commendation'), pts);
 }
 
