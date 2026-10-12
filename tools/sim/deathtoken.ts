@@ -14,6 +14,7 @@ import ParamType from '#/cache/config/ParamType.js';
 import Player from '#/engine/entity/Player.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import World from '#/engine/World.js';
+import EnumType from '#/cache/config/EnumType.js';
 
 await H.boot();
 
@@ -352,6 +353,36 @@ console.log('\nTHE GRAVEDIGGER KIT CHANGES THE LOOK AND NOTHING ELSE');
         (ObjType.get(ObjType.getId('gravedigger_kit')) as unknown as { tradeable: boolean }).tradeable,
         (ObjType.get(ObjType.getId('slayer_helm_gravedigger')) as unknown as { tradeable: boolean }).tradeable
     ], [false, false]);
+}
+
+console.log('\nAND EVERYTHING ONLY HE SELLS IS ON THE COLLECTION LOG');
+{
+    // The page and the shelf are two lists of the same things, kept in two files, and nothing makes
+    // them agree. This is what makes them agree: add a row to the shop and forget the page, and the
+    // item is unloggable and the check says so.
+    //
+    // The Scroll of imbuing is the one exception and it is deliberate - he sells it, but it is a
+    // drop first and belongs to Slayer's page, not his.
+    // EnumType.values is a Map, not a plain object - the first version read it as one and found
+    // nothing, which passed as "0 items in the whole log" instead of failing honestly.
+    const logged = new Set<number>();
+    for (const v of EnumType.get(EnumType.getId('collection_log_items')).values.values()) {
+        logged.add(Number(v));
+    }
+    check('  the log has items in it at all', logged.size > 0, true);
+    const shop = InvType.getId('death_token_shop');
+    const missing: string[] = [];
+    for (let i = 0; i < 8; i++) {
+        const o = World.getInventory(shop)?.get(i);
+        if (!o || o.id === ObjType.getId('slayer_imbue_scroll')) {
+            continue;
+        }
+        if (!logged.has(o.id)) {
+            missing.push(ObjType.get(o.id).debugname ?? String(o.id));
+        }
+    }
+    check('  every row he alone sells can be logged', missing, []);
+    console.log(`    (${logged.size} items in the whole log)`);
 }
 
 console.log('\nAND THE SHELF SELLS THEM');
