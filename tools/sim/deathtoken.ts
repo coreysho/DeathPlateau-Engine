@@ -302,6 +302,58 @@ console.log('\nNOTHING YOU CAN SWING CRASHES THE MELEE SCRIPT');
     }
 }
 
+console.log('\nTHE GRAVEDIGGER KIT CHANGES THE LOOK AND NOTHING ELSE');
+{
+    // An ornament kit cannot sell power by construction - the result copies the base item's stats -
+    // but "by construction" holds only while somebody keeps typing the same numbers, so they are
+    // compared here rather than trusted. poh_battery makes this comparison for the fourteen OSRS
+    // colours; the Gravedigger is the one it does not know about, because it is not one of them.
+    const differs = (a: string, b: string): string[] => {
+        const A = ObjType.get(ObjType.getId(a));
+        const B = ObjType.get(ObjType.getId(b));
+        const out: string[] = [];
+        for (const pname of ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence',
+                             'rangedefence', 'stabattack', 'slashattack', 'crushattack',
+                             'magicattack', 'rangeattack', 'strengthbonus', 'prayerbonus',
+                             'slayer_headgear', 'slayer_helmet', 'slayer_imbued']) {
+            const pid = ParamType.getId(pname);
+            if (pid === -1) {
+                continue;
+            }
+            if (String(A.params.get(pid)) !== String(B.params.get(pid))) {
+                out.push(pname);
+            }
+        }
+        return out;
+    };
+    check('  the plain Gravedigger is the plain helmet, stat for stat',
+          differs('slayer_helm_gravedigger', 'slayer_helm'), []);
+    check('  and the imbued one is the imbued helmet',
+          differs('slayer_helm_gravedigger_i', 'slayer_helm_i'), []);
+
+    const par = (o: string, p: string) => ObjType.get(ObjType.getId(o)).params.get(ParamType.getId(p));
+    check('  the kit is named by both base helmets', [
+        par('slayer_helm', 'ornament_kit'), par('slayer_helm_i', 'ornament_kit')
+    ], [ObjType.getId('gravedigger_kit'), ObjType.getId('gravedigger_kit')]);
+    check('  each base turns into its own Gravedigger', [
+        par('slayer_helm', 'ornament_into'), par('slayer_helm_i', 'ornament_into')
+    ], [ObjType.getId('slayer_helm_gravedigger'), ObjType.getId('slayer_helm_gravedigger_i')]);
+    check('  and each Gravedigger remembers what it came from', [
+        par('slayer_helm_gravedigger', 'ornament_from'), par('slayer_helm_gravedigger_i', 'ornament_from')
+    ], [ObjType.getId('slayer_helm'), ObjType.getId('slayer_helm_i')]);
+
+    // Revert sits on iop5, because a slayer helmet already spends iop4 on Disassemble. A Revert
+    // trigger on a slot the item does not declare is an option that silently does nothing.
+    for (const n of ['slayer_helm_gravedigger', 'slayer_helm_gravedigger_i']) {
+        check('  ' + n + ' declares Revert where its trigger looks',
+              ObjType.get(ObjType.getId(n)).iop?.[4], 'Revert');
+    }
+    check('  neither it nor the kit can be traded', [
+        (ObjType.get(ObjType.getId('gravedigger_kit')) as unknown as { tradeable: boolean }).tradeable,
+        (ObjType.get(ObjType.getId('slayer_helm_gravedigger')) as unknown as { tradeable: boolean }).tradeable
+    ], [false, false]);
+}
+
 console.log('\nAND THE SHELF SELLS THEM');
 {
     const shop = InvType.getId('death_token_shop');
@@ -313,7 +365,8 @@ console.log('\nAND THE SHELF SELLS THEM');
         }
     }
     for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat',
-                        'undertaker_trousers', 'undertaker_boots', 'undertaker_cane']) {
+                        'undertaker_trousers', 'undertaker_boots', 'undertaker_cane',
+                        'gravedigger_kit']) {
         check(`  ${want}`, stocked.includes(want), true);
     }
     // THE SHELF CANNOT RUN OUT. It held one of each, server-wide, so the first player to buy a hat
@@ -325,8 +378,8 @@ console.log('\nAND THE SHELF SELLS THEM');
     // plain one by value fails on the type, not on the numbers, which is what the first run did.
     const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []);
     const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []);
-    check('  every row holds a thousand', counts.slice(0, 6), [1000, 1000, 1000, 1000, 1000, 1000]);
-    check('  and tops itself up every tick', rates.slice(0, 6), [1, 1, 1, 1, 1, 1]);
+    check('  every row holds a thousand', counts.slice(0, 7), new Array(7).fill(1000));
+    check('  and tops itself up every tick', rates.slice(0, 7), new Array(7).fill(1));
     // Unstackable items a thousand at a time need ALWAYS_STACK or they want a thousand slots in a
     // shelf that has eight.
     check('  and the shelf always stacks, which is what lets it', !!(t as unknown as { stackall: boolean }).stackall, true);
