@@ -252,6 +252,56 @@ console.log('\nAND THE FOUR-PIECE SET PAYS - THE CANE IS NOT ONE OF THE FOUR');
     H.despawn(plain, suited);
 }
 
+console.log('\nNOTHING YOU CAN SWING CRASHES THE MELEE SCRIPT');
+{
+    // From a live backtrace on 12 October: "sound_synth An input number was null(-1)",
+    // player_melee.rs2:91, swinging the Undertaker's cane.
+    //
+    // ~combat_swing_anim_and_synth sends a weapon with NO category to the unarmed swing, which is
+    // why the cache's own Black cane never did this. A weapon WITH a category goes on to read the
+    // anim and the sound for the damage type - and crushattack_anim defaults (to a kick) while
+    // crush_sound DEFAULTS TO NULL. The missing sound is the crash; the missing anim was only why
+    // it looked like a kick.
+    //
+    // Swept over every wieldable in the game rather than the one that broke, because the trap is
+    // the param default and not the cane: anything given a category without a sound is the same
+    // crash waiting for somebody to equip it.
+    // rangeattack_sound counts: a bow is read down the ranged branch of the same switch, and every
+    // bow, crossbow, dart and knife in the game would otherwise be reported here.
+    const SOUND_OF = ['stab_sound', 'slash_sound', 'crush_sound', 'rangeattack_sound'];
+    const silent: string[] = [];
+    for (let id = 0; id < ObjType.count; id++) {
+        const t = ObjType.get(id);
+        if (t.wearpos !== 3 || t.category === -1 || t.category === undefined) {
+            continue;   // not held in the right hand, or no category: the unarmed swing catches it
+        }
+        const has = SOUND_OF.some(p => {
+            const pid = ParamType.getId(p);
+            return pid !== -1 && t.params.get(pid) !== undefined;
+        });
+        if (!has) {
+            silent.push(t.debugname ?? String(id));
+        }
+    }
+    // NOT a failure any more, because player_melee.rs2 guards the call now - which is the fix that
+    // covers everything, including whatever gets a category next. Printed rather than asserted so
+    // the list stays visible: none of these ten wants a sound of its own, because none of them is a
+    // weapon, and inventing one for a banana would be inventing content to satisfy a check.
+    console.log(`    (${silent.length} held items carry a category and no swing sound, all of them`
+                + ` pre-existing and all of them harmless now: ${silent.join(', ')})`);
+    const cane = ObjType.get(ObjType.getId('undertaker_cane'));
+    check('  and the cane in particular', [
+        cane.params.get(ParamType.getId('crush_sound')) !== undefined,
+        cane.params.get(ParamType.getId('crushattack_anim')) !== undefined
+    ], [true, true]);
+    // A nicer animation and nothing else: attackrate is left at its default of 4, a bare fist's,
+    // and the cache cane's +16 crush and +13 strength are deliberately not copied.
+    for (const pname of ['attackrate', 'crushattack', 'stabattack', 'slashattack', 'strengthbonus']) {
+        const pid = ParamType.getId(pname);
+        check(`  the cane has no ${pname}`, pid === -1 || cane.params.get(pid) === undefined, true);
+    }
+}
+
 console.log('\nAND THE SHELF SELLS THEM');
 {
     const shop = InvType.getId('death_token_shop');
