@@ -366,7 +366,7 @@ console.log('\nAND THE SHELF SELLS THEM');
     }
     for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat',
                         'undertaker_trousers', 'undertaker_boots', 'undertaker_cane',
-                        'gravedigger_kit']) {
+                        'gravedigger_kit', 'undertaker_cape']) {
         check(`  ${want}`, stocked.includes(want), true);
     }
     // THE SHELF CANNOT RUN OUT. It held one of each, server-wide, so the first player to buy a hat
@@ -378,8 +378,8 @@ console.log('\nAND THE SHELF SELLS THEM');
     // plain one by value fails on the type, not on the numbers, which is what the first run did.
     const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []);
     const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []);
-    check('  every row holds a thousand', counts.slice(0, 7), new Array(7).fill(1000));
-    check('  and tops itself up every tick', rates.slice(0, 7), new Array(7).fill(1));
+    check('  every row holds a thousand', counts.slice(0, 8), new Array(8).fill(1000));
+    check('  and tops itself up every tick', rates.slice(0, 8), new Array(8).fill(1));
     // Unstackable items a thousand at a time need ALWAYS_STACK or they want a thousand slots in a
     // shelf that has eight.
     check('  and the shelf always stacks, which is what lets it', !!(t as unknown as { stackall: boolean }).stackall, true);
