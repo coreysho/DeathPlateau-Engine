@@ -62,16 +62,17 @@ function invButton(p: Player, comName: string, slot: number, op = 1): boolean {
 // "pop_varp %x requires protected access". In the game they are only ever reached through a click
 // handler that has already taken it. This is that, for a direct call: the same two pointers
 // ScriptRunner gives a trigger, plus Player.protect, which is what the real handlers set.
-function runProtected(p: Player, name: string, args: any[] = []): number[] {
+function runProtected(p: Player, name: string, args: unknown[] = []): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
     const was = p.protect;
     p.protect = true;
-    const state = ScriptRunner.init(script, p, null, args);
+    const state = ScriptRunner.init(script, p, null, args as never[]);
     for (const ptr of ProtectedActivePlayer) state.pointerAdd(ptr);
     ScriptRunner.execute(state);
     p.protect = was;
-    return (state as any).intStack.slice(0, (state as any).isp);
+    const st = state as unknown as { intStack: number[]; isp: number };
+    return st.intStack.slice(0, st.isp);
 }
 const mesSince = (p: Player, from: number) =>
     H.mesgs
@@ -117,11 +118,6 @@ console.log('== every new item exists and carries the params its script reads');
                 broken.push(`${base}_${n} missing`);
                 continue;
             }
-            const t = ObjType.get(o);
-            const charges = t.params.get(ObjType.getParamId?.('charges') ?? -1);
-            const next = t.params.get(ObjType.getParamId?.('next_obj_stage') ?? -1);
-            void charges;
-            void next;
         }
         check(`${base}: all ${top} charge objs exist`, broken, []);
     }
