@@ -14,6 +14,8 @@ import * as H from './harness.js';
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import NpcType from '#/cache/config/NpcType.js';
+import ParamType from '#/cache/config/ParamType.js';
+import SeqType from '#/cache/config/SeqType.js';
 import Npc from '#/engine/entity/Npc.js';
 import Player from '#/engine/entity/Player.js';
 import World from '#/engine/World.js';
@@ -586,6 +588,85 @@ console.log('== a portal does not fight back, and nothing on the island drops bo
         check('and left nothing either', groundNear(ex, ez), []);
     } else {
         check('a pest was available to kill', false, true);
+    }
+    H.despawn(p);
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log("== the block animation, the way out, and the squire's right-click");
+{
+    const SEQ_DEFEND = ParamType.getId('defend_anim');
+    const seqOf = (npcName: string): number | undefined => NpcType.get(NpcType.getId(npcName)).params.get(SEQ_DEFEND) as number | undefined;
+    const HUMAN_BLOCK = SeqType.getId('human_unarmed_def');
+
+    // A PORTAL DOES NOT FLINCH. Reported from play. defend_anim is a param whose DEFAULT is
+    // human_unarmed_def, so saying nothing meant a man's unarmed block played on a hole in the air
+    // every time it was hit - the same shape of fault as death_drop defaulting to bones.
+    const flinching = [1, 2, 3, 4].map(n => `pest_portal_${n}_active`).filter(n => seqOf(n) !== -1);
+    check('no portal has a block animation', flinching, []);
+    check('and the default it was inheriting really is the human one', HUMAN_BLOCK >= 0, true);
+
+    // THE PESTS DO, and they have had one in the cache all along - shifter_defend, ravager_defend
+    // and the rest. They were playing the human block too.
+    const FAMILIES = ['shifter', 'ravager', 'spinner', 'torcher', 'defiler', 'brawler', 'splatter'];
+    const wrongFamily: string[] = [];
+    for (const fam of FAMILIES) {
+        const want = SeqType.getId(`${fam}_defend`);
+        if (want < 0) {
+            wrongFamily.push(`${fam}_defend is not a seq`);
+            continue;
+        }
+        for (const t of [1, 5]) {
+            for (const suffix of ['', 'a']) {
+                const nm = `pest_${fam}_${t}${suffix}`;
+                if (NpcType.getId(nm) === -1) continue;
+                const got = seqOf(nm);
+                if (got !== want) wrongFamily.push(`${nm} blocks with ${got}, not ${fam}_defend (${want})`);
+            }
+        }
+    }
+    check('every pest family blocks with its own animation', wrongFamily, []);
+
+    // THE WAY OUT. The old one, (2660,2676), is not a tile a player can stand on - it reads blocked
+    // on the collision map, so every finish and every death put the player into scenery. It was
+    // described in a comment as "the outpost pier" and never measured.
+    const OUT: [number, number] = [2657, 2648];
+    check('the exit tile is walkable', isZoneAllocated(0, OUT[0], OUT[1]) && !isFlagged(OUT[0], OUT[1], 0, CollisionFlag.WALK_BLOCKED), true);
+    check('and the old one was not, which is the bug', isZoneAllocated(0, 2660, 2676) && !isFlagged(2660, 2676, 0, CollisionFlag.WALK_BLOCKED), false);
+    // Next to the squire, which is the point of moving it: you come out beside the man who sends
+    // you back down. Measured against his SPAWN rather than wherever he has wandered to.
+    check('and it is beside the lander squire', Math.max(Math.abs(OUT[0] - 2658), Math.abs(OUT[1] - 2647)) <= 2, true);
+
+    // Driven end to end: start a game, leave it, and land on that tile.
+    const p = player('pestexit');
+    runProtected(p, '[proc,pest_solo_start]');
+    settle(1);
+    dismiss(p);
+    settle(2);
+    check('a game started', H.getVar(p, 'pest_solo_instance') !== -1, true);
+    runProtected(p, '[proc,pest_solo_end]');
+    settle(3);
+    check('leaving puts the player on the exit tile', [p.x, p.z], OUT);
+    check('and frees the instance', H.getVar(p, 'pest_solo_instance'), -1);
+
+    // THE SQUIRE'S RIGHT-CLICK. op3 and not op2, because [opnpc2,_] is this build's global attack
+    // trigger - an op2 here would have made the squire attackable.
+    const squire = NpcType.get(NpcType.getId('pest_squire_lander'));
+    const ops = (squire as unknown as { op: (string | null)[] }).op ?? [];
+    check('the squire advertises Quick-start on op3', ops[2], 'Quick-start');
+    check('and nothing on op2, which would mean Attack', ops[1] ?? null, null);
+    check('the trigger exists', H.hasScript('[opnpc3,pest_squire_lander]'), true);
+
+    // And it starts a game. Same player, now back outside with no instance.
+    const npc = H.npcNear('pest_squire_lander', 2658, 2647);
+    check('the squire is on the island', !!npc, true);
+    if (npc) {
+        H.opNpc(p, npc, 3);
+        for (let t = 0; t < 25 && H.getVar(p, 'pest_solo_instance') === -1; t++) H.tick(1);
+        dismiss(p);
+        settle(2);
+        check('right-clicking Quick-start starts a game', H.getVar(p, 'pest_solo_instance') !== -1, true);
+        check('and it is a real one, with four portals', inGame(p, 'pest_portal_').length, 4);
     }
     H.despawn(p);
 }
