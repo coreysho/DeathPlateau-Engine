@@ -75,22 +75,29 @@ const EDGEVILLE: [number, number] = [3094, 3495];
 /** ^wearpos_* from content/scripts/player/configs/equip.constant. */
 const SLOT = { hat: 0, back: 1, front: 2, rhand: 3, torso: 4, lhand: 5, legs: 7, hands: 9, feet: 10, ring: 12 };
 
-type Dest = { name: string; level: number; x: number; z: number };
+/** `reach` is how many walkable tiles the arrival joins. 200 is the floor the measured arrivals
+ * were picked to clear; two of Corey's named coords are deliberately smaller and carry their real
+ * size, because the guard exists to catch a one-tile island and not to forbid a room. */
+type Dest = { name: string; level: number; x: number; z: number; reach?: number };
 type Op = { op: number; label: string; dest: Dest };
 type Item = { obj: string; price: number; slot: number; ops: Op[] };
 
 // ---------------------------------------------------------------- what the content says it does
 const D = {
-    monastery: { name: 'Ardougne monastery', level: 0, x: 2602, z: 3206 },
+    monastery: { name: 'Ardougne monastery', level: 0, x: 2606, z: 3222 },
     ardfarm: { name: 'Ardougne farm', level: 0, x: 2668, z: 3374 },
     nardah: { name: 'Nardah', level: 0, x: 3427, z: 2914 },
     kalphite: { name: 'Kalphite cave', level: 0, x: 3227, z: 3106 },
-    rellekka: { name: 'Rellekka', level: 0, x: 2645, z: 3709 },
+    rellekka: { name: 'Rellekka', level: 0, x: 2658, z: 3658 },
     seers: { name: "Seers' Village", level: 0, x: 2726, z: 3488 },
-    ecto: { name: 'Ectofuntus', level: 0, x: 3701, z: 3501 },
-    burgh: { name: 'Burgh de Rott', level: 0, x: 3496, z: 3232 },
-    gemmine: { name: 'Shilo gem mine', level: 0, x: 2756, z: 9296 },
-    duradel: { name: 'Duradel', level: 1, x: 2866, z: 2979 },
+    // THE SLIME CAVERN, not the Ectofuntus above it: a three-tile strip with gloop on both sides
+    // and the cavern stairs on the next tile. Collision cannot follow a stair, so the flood fill
+    // stops at 3 - which is why the number is written down rather than compared to the floor.
+    ecto: { name: 'Ectofuntus slime cavern', level: 0, x: 3683, z: 9888, reach: 3 },
+    burgh: { name: 'Burgh de Rott', level: 0, x: 3485, z: 3239 },
+    gemmine: { name: 'Shilo gem mine', level: 0, x: 2826, z: 2998 },
+    // Duradel's room, which is 37 tiles. Being put down beside him is the point of the option.
+    duradel: { name: 'Duradel', level: 1, x: 2869, z: 2980, reach: 37 },
     fountain: { name: 'Fountain of Rune', level: 0, x: 3370, z: 3894 }
 } satisfies Record<string, Dest>;
 
@@ -300,10 +307,18 @@ console.log('== every arrival is standable and part of somewhere');
 {
     const island: string[] = [];
     for (const d of Object.values(D)) {
-        const r = reach(d.level, d.x, d.z);
-        if (r < MIN_REACH) island.push(`${d.name} (${d.x},${d.z}) reaches only ${r}`);
+        const want = (d as Dest).reach ?? MIN_REACH;
+        // Cap the fill at the number being asserted, so a 37-tile room is measured exactly rather
+        // than being asked to prove it is not 200.
+        const r = reach(d.level, d.x, d.z, want);
+        if (r < want) island.push(`${d.name} (${d.x},${d.z}) reaches only ${r}, not ${want}`);
     }
-    check('all eleven destinations reach 200+ walkable tiles', island, []);
+    check('every destination joins the walkable area it is recorded as joining', island, []);
+    // AND THE TWO SMALL ONES ARE EXACTLY THAT SMALL, which is what stops "reach" being a place to
+    // hide a bad arrival: if the slime strip ever grows a way out, or Duradel's room is knocked
+    // through, this says so rather than passing because the number only has to be met.
+    check('the slime strip is three tiles and no more', reach(D.ecto.level, D.ecto.x, D.ecto.z, 50), 3);
+    check("and Duradel's room is 37", reach(D.duradel.level, D.duradel.x, D.duradel.z, 200), 37);
     check('and the Fountain of Rune really is deep Wilderness', wildy(D.fountain.z) > WILDY_MAX, true);
 }
 
