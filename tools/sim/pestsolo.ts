@@ -272,25 +272,48 @@ let started: Player;
     // was true; that is what this check now pins down.
     const base = [p.x - 35, p.z - 19]; // the landing is template 35,19
     const off = (n: Npc) => `${n.x - base[0]},${n.z - base[1]}`;
+    // THE FRAME'S SOUTH-WEST TILE, not its centre: npc_add anchors by the south-west corner and a
+    // portal is 3x3, so a portal placed on the ring's centre is drawn one tile north and one east
+    // of the ring it should fill. Reported from play as "they aren't sitting directly in their
+    // frame", and it was uniform across all four.
     const SITES: Record<string, string> = {
-        pest_portal_1_active: '57,29', // east, and the cache names its animation east
-        pest_portal_2_active: '6,31', // west, likewise
-        pest_portal_3_active: '22,10', // south-west
-        pest_portal_4_active: '46,11' // south-east
+        pest_portal_1_active: '4,31', // west, the range frame
+        pest_portal_2_active: '56,28', // east, the melee frame
+        pest_portal_3_active: '45,10', // south-east, the magic frame
+        pest_portal_4_active: '21,9' // south-west, the master frame
     };
     const wrong = portals
         .map(n => [NpcType.get(n.type).debugname ?? '?', off(n)] as [string, string])
         .filter(([nm, at]) => SITES[nm] !== at)
         .map(([nm, at]) => `${nm} at ${at}, not ${SITES[nm]}`);
-    check('every portal is on its own painted patch', wrong, []);
+    check('every portal is on its own frame', wrong, []);
+    // AND IT FILLS THE RING. A portal is 3x3 anchored south-west, so the ring's four corner vines
+    // sit at offset (-1,-1), (-1,3), (3,-1) and (3,3) from the portal's own tile. Checking the
+    // corners rather than the coordinate is what would have caught the one-tile offset: the
+    // coordinate looked right against a patch centre and was wrong against the frame.
+    const RINGS: Record<string, [number, number]> = {
+        pest_portal_1_active: [4, 31],
+        pest_portal_2_active: [56, 28],
+        pest_portal_3_active: [45, 10],
+        pest_portal_4_active: [21, 9]
+    };
+    const offCentre = portals
+        .map(n => [NpcType.get(n.type).debugname ?? '?', n] as [string, Npc])
+        .filter(([nm, n]) => {
+            const [rx, rz] = RINGS[nm];
+            // the portal's own 3x3 must be exactly the ring's 3x3
+            return n.x - base[0] !== rx || n.z - base[1] !== rz;
+        })
+        .map(([nm]) => nm);
+    check('and fills it rather than sitting a tile out of it', offCentre, []);
     // AND THE EAST ONE IS ACTUALLY EAST. The pairing of portal to patch is the half of this the
     // cache settles (portal 1 carries pest_portal_on_anim_east, portal 2 the west one), so it is
     // worth asserting as a direction and not only as a pair of numbers - a table can be
     // self-consistently backwards.
     const byName = Object.fromEntries(portals.map(n => [NpcType.get(n.type).debugname ?? '?', n]));
-    check('the east portal is east of the west one', byName['pest_portal_1_active'].x > byName['pest_portal_2_active'].x, true);
+    check('the melee frame portal is east of the range frame one', byName['pest_portal_2_active'].x > byName['pest_portal_1_active'].x, true);
     check(
-        'and the two southern ones are south of both',
+        'and the two southern frames hold the other two',
         [byName['pest_portal_3_active'], byName['pest_portal_4_active']].every(n => n.z < byName['pest_portal_1_active'].z && n.z < byName['pest_portal_2_active'].z),
         true
     );
@@ -321,81 +344,6 @@ console.log('== the island is multi-combat');
     check('the template square is marked', World.gameMap.isMulti(CoordGrid.packCoord(0, 41 * 64 + 32, 40 * 64 + 32)), true);
     check("and the player's own copy of it is multi-way too", World.gameMap.isMulti(CoordGrid.packCoord(0, base[0] + 32, base[1] + 32)), true);
     check('the tile the player is standing on, specifically', World.gameMap.isMulti(CoordGrid.packCoord(0, p.x, p.z)), true);
-}
-
-// ---------------------------------------------------------------------------------------------
-console.log('== a portal does not fight back, and nothing on the island drops bones');
-{
-    // BOTH REPORTED FROM PLAY, and both were one word missing from a config.
-    //
-    // THE BONES: death_drop is a param whose DEFAULT is bones, and npc_default_death hands that
-    // default to obj_add. Saying nothing does not mean "no drop", it means "bones" - so a minigame
-    // whose monsters pay commendation points was carpeting the island in them. Old School's pests
-    // and portals drop nothing at all.
-    //
-    // THE RETALIATION: [ai_queue1,_] is the retaliate hook every npc inherits, and it does not care
-    // that a portal has no huntmode and an attack of 1 - being hit queues it, and the player
-    // collects a stream of 0s from a hole in the air.
-    const p = player('pestnodrop');
-    runProtected(p, '[proc,pest_solo_start]');
-    settle(1);
-    dismiss(p);
-    settle(2);
-
-    const portals = inGame(p, 'pest_portal_');
-    check('four portals to test against', portals.length, 4);
-
-    // Each portal opts out of retaliating with an empty [ai_queue1] of its own, which is how a
-    // type-specific trigger replaces the global wildcard. Assert the scripts exist - an empty
-    // trigger is exactly the kind of thing a compiler could fold away.
-    const missing = [1, 2, 3, 4].map(n => `[ai_queue1,pest_portal_${n}_active]`).filter(n => !H.hasScript(n));
-    check('every portal has its own ai_queue1', missing, []);
-
-    // Then the behaviour: hit one, and see whether it turns on the player.
-    const target = portals[0];
-    const hpBefore = p.levels[PlayerStat.HITPOINTS];
-    H.attackNpc(p, target);
-    for (let t = 0; t < 30; t++) H.tick(1);
-    check('hitting a portal does not make it target the player', (target as unknown as { target: unknown }).target ?? null, null);
-    check('and the player takes nothing from it', p.levels[PlayerStat.HITPOINTS], hpBefore);
-
-    // And the drop. Kill a portal and a pest and sweep the ground around each.
-    /** Everything lying on the ground within three tiles, by name. Swept over the zones the area
-     * touches rather than asked per tile, so a drop that landed one tile off is still seen. */
-    const groundNear = (x: number, z: number): string[] => {
-        const out: string[] = [];
-        const seen = new Set<string>();
-        for (let dx = -8; dx <= 8; dx += 8) {
-            for (let dz = -8; dz <= 8; dz += 8) {
-                const zone = World.gameMap.getZone(x + dx, z + dz, 0);
-                const key = `${(x + dx) >> 3},${(z + dz) >> 3}`;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                for (const o of zone.getAllObjsSafe()) {
-                    if (Math.abs(o.x - x) <= 3 && Math.abs(o.z - z) <= 3) out.push(ObjType.get(o.type).debugname ?? '?');
-                }
-            }
-        }
-        return [...new Set(out)].sort();
-    };
-    const px = target.x;
-    const pz = target.z;
-    check('the portal died', killNpc(p, target), true);
-    settle(2);
-    check('and left nothing on the ground', groundNear(px, pz), []);
-
-    const pests = inGame(p, 'pest_');
-    const pest = pests.find(n => (NpcType.get(n.type).debugname ?? '').startsWith('pest_') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_portal') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_voidknight'));
-    if (pest) {
-        const ex = pest.x;
-        const ez = pest.z;
-        check('a pest died too', killNpc(p, pest), true);
-        settle(2);
-        check('and left nothing either', groundNear(ex, ez), []);
-    } else {
-        check('a pest was available to kill', false, true);
-    }
-    H.despawn(p);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -560,6 +508,86 @@ console.log('== the combat level gate and the exchange');
     }
     void InvType;
     void ObjType;
+}
+
+// ---------------------------------------------------------------------------------------------
+// LAST, AND THAT IS NOT TIDINESS. This section starts a second game and ticks the world thirty
+// times to see whether a portal hits back - and H.tick advances the whole world, including the
+// FIRST game, which the sections above are still measuring. Run in the middle of the file it
+// quietly pushed "never more than 2 pests per portal" over its bound and left a pest too far from
+// the player to reach, and both read as failures of the game rather than of where the test sat.
+console.log('== a portal does not fight back, and nothing on the island drops bones');
+{
+    // BOTH REPORTED FROM PLAY, and both were one word missing from a config.
+    //
+    // THE BONES: death_drop is a param whose DEFAULT is bones, and npc_default_death hands that
+    // default to obj_add. Saying nothing does not mean "no drop", it means "bones" - so a minigame
+    // whose monsters pay commendation points was carpeting the island in them. Old School's pests
+    // and portals drop nothing at all.
+    //
+    // THE RETALIATION: [ai_queue1,_] is the retaliate hook every npc inherits, and it does not care
+    // that a portal has no huntmode and an attack of 1 - being hit queues it, and the player
+    // collects a stream of 0s from a hole in the air.
+    const p = player('pestnodrop');
+    runProtected(p, '[proc,pest_solo_start]');
+    settle(1);
+    dismiss(p);
+    settle(2);
+
+    const portals = inGame(p, 'pest_portal_');
+    check('four portals to test against', portals.length, 4);
+
+    // Each portal opts out of retaliating with an empty [ai_queue1] of its own, which is how a
+    // type-specific trigger replaces the global wildcard. Assert the scripts exist - an empty
+    // trigger is exactly the kind of thing a compiler could fold away.
+    const missing = [1, 2, 3, 4].map(n => `[ai_queue1,pest_portal_${n}_active]`).filter(n => !H.hasScript(n));
+    check('every portal has its own ai_queue1', missing, []);
+
+    // Then the behaviour: hit one, and see whether it turns on the player.
+    const target = portals[0];
+    const hpBefore = p.levels[PlayerStat.HITPOINTS];
+    H.attackNpc(p, target);
+    for (let t = 0; t < 30; t++) H.tick(1);
+    check('hitting a portal does not make it target the player', (target as unknown as { target: unknown }).target ?? null, null);
+    check('and the player takes nothing from it', p.levels[PlayerStat.HITPOINTS], hpBefore);
+
+    // And the drop. Kill a portal and a pest and sweep the ground around each.
+    /** Everything lying on the ground within three tiles, by name. Swept over the zones the area
+     * touches rather than asked per tile, so a drop that landed one tile off is still seen. */
+    const groundNear = (x: number, z: number): string[] => {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        for (let dx = -8; dx <= 8; dx += 8) {
+            for (let dz = -8; dz <= 8; dz += 8) {
+                const zone = World.gameMap.getZone(x + dx, z + dz, 0);
+                const key = `${(x + dx) >> 3},${(z + dz) >> 3}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                for (const o of zone.getAllObjsSafe()) {
+                    if (Math.abs(o.x - x) <= 3 && Math.abs(o.z - z) <= 3) out.push(ObjType.get(o.type).debugname ?? '?');
+                }
+            }
+        }
+        return [...new Set(out)].sort();
+    };
+    const px = target.x;
+    const pz = target.z;
+    check('the portal died', killNpc(p, target), true);
+    settle(2);
+    check('and left nothing on the ground', groundNear(px, pz), []);
+
+    const pests = inGame(p, 'pest_');
+    const pest = pests.find(n => (NpcType.get(n.type).debugname ?? '').startsWith('pest_') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_portal') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_voidknight'));
+    if (pest) {
+        const ex = pest.x;
+        const ez = pest.z;
+        check('a pest died too', killNpc(p, pest), true);
+        settle(2);
+        check('and left nothing either', groundNear(ex, ez), []);
+    } else {
+        check('a pest was available to kill', false, true);
+    }
+    H.despawn(p);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
