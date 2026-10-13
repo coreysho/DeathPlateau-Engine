@@ -479,11 +479,13 @@ console.log('== the combat level gate and the exchange');
     void from;
 }
 {
-    // THE EXCHANGE, THROUGH THE REAL NPC. Calling [label,pest_buy] directly does not work from a
-    // sim: ~chatplayer suspends on a button, and a script run straight through ScriptRunner never
-    // registers that pause on the player, so there is nothing to answer. Clicking op3 on an actual
-    // Void Knight goes through OpNpcHandler like a client does, which is also the wiring worth
-    // testing - op3=Exchange on all four knights was a dead option until this round.
+    // THE EXCHANGE, THROUGH THE REAL NPC. op3=Exchange on all four Void Knights was a dead option
+    // until this minigame was built, so the wiring is worth driving the way a client drives it.
+    //
+    // WHAT IT OPENS CHANGED ON 13 OCTOBER: it was three dialogue steps and a confirm, and it is a
+    // window now (content scripts/pest_rewards.rs2). So this asserts the window OPENS and stops
+    // there - what the window then sells is tools/sim/voidrewards.ts's job, and testing it twice
+    // in two files would mean two places to update and one of them left behind.
     const p = player('pest4');
     p.teleport(2660, 2644, 0); // the outpost, where the four knights stand
     settle(4);
@@ -494,19 +496,24 @@ console.log('== the combat level gate and the exchange');
         settle(3);
         H.setVar(p, 'pest_commendation', 400);
         check('op3 was accepted', H.opNpc(p, knight, 3), true);
-        settle(2);
-        // THREE dialogue steps, not two: "You have 400 commendation points." is a line to click
-        // through, then the five-row shelf, then the confirmation. Option 1 is the right answer at
-        // every one of them - the 250 top on the shelf, "Yes, 250 points." on the confirmation -
-        // so this walks until the purchase lands rather than counting the steps.
-        let bought = false;
-        for (let step = 0; step < 6 && !bought; step++) {
-            answer(p, 1);
-            settle(2);
-            bought = H.invCount(p, 'void_knight_top') === 1;
-        }
-        check('the top was handed over', H.invCount(p, 'void_knight_top'), 1);
-        check('250 points were taken', H.getVar(p, 'pest_commendation'), 150);
+        for (let t = 0; t < 10 && p.modalMain !== Component.getId('pest_rewards'); t++) H.tick(1);
+        check('and it opens the reward window', p.modalMain, Component.getId('pest_rewards'));
+        check('with the points intact - opening it buys nothing', H.getVar(p, 'pest_commendation'), 400);
+    }
+
+    // AND WITH NO POINTS IT STILL SAYS SO IN CHAT rather than opening an empty window, which is the
+    // one branch of the old dialogue worth keeping.
+    const q = player('pest5');
+    q.teleport(2660, 2644, 0);
+    settle(4);
+    const knight2 = H.npcNear('pest_voidknight_1', q.x, q.z, 0);
+    if (knight2) {
+        q.teleport(knight2.x + 1, knight2.z, 0);
+        settle(3);
+        H.setVar(q, 'pest_commendation', 0);
+        H.opNpc(q, knight2, 3);
+        settle(4);
+        check('no points: no window', q.modalMain === Component.getId('pest_rewards'), false);
     }
     void InvType;
     void ObjType;
@@ -667,6 +674,23 @@ console.log("== the block animation, the way out, and the squire's right-click")
         settle(2);
         check('right-clicking Quick-start starts a game', H.getVar(p, 'pest_solo_instance') !== -1, true);
         check('and it is a real one, with four portals', inGame(p, 'pest_portal_').length, 4);
+        runProtected(p, '[proc,pest_solo_end]');
+        settle(3);
+
+        // AND THE SLOW ROUTE STILL WORKS. The right-click is a shortcut past the dialogue, not a
+        // replacement for it, so op1 and "Take me down." have to reach the same place - otherwise
+        // adding the shortcut would have quietly become the only way in.
+        H.opNpc(p, npc, 1);
+        let started = false;
+        for (let step = 0; step < 5 && !started; step++) {
+            answer(p, 1);
+            settle(2);
+            started = H.getVar(p, 'pest_solo_instance') !== -1;
+        }
+        dismiss(p);
+        settle(2);
+        check('and talking to him still does too', started, true);
+        check('with the same four portals', inGame(p, 'pest_portal_').length, 4);
     }
     H.despawn(p);
 }
