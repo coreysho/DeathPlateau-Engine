@@ -26,6 +26,7 @@ import { World, LocType, NpcType, check, R, player, Player } from './a1lib.ts';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { isFlagged, canTravel } from '#/engine/GameMap.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
+import fs from 'fs';
 
 await H.boot();
 
@@ -36,26 +37,29 @@ const ROOMS: [string, number, number, number, string][] = [
     ["Kree'arra (Armadyl)", 2821, 5301, 2, '44_82 (474)'],
     ['General Graardor (Bandos)', 2869, 5370, 2, '44_83 (474)'],
     ["K'ril Tsutsaroth (Zamorak)", 2937, 5323, 2, '45_83 (474)'],
-    ['Commander Zilyana (Saradomin)', 2885, 5267, 0, '45_82 (OSRS)'],
+    ['Commander Zilyana (Saradomin)', 2885, 5267, 0, '45_82 (OSRS)']
 ];
 
 // The four faction doors, and the rope you arrive on.
 const LANDING: [number, number, number] = [2881, 5311, 2];
-const DOORS: [string, number, number, number][] = [
+// Kept as the written-down door coords even though nothing reads it any more.
+const _DOORS: [string, number, number, number][] = [
     ['Armadyl', 2839, 5295, 2],
     ['Bandos', 2863, 5354, 2],
     ['Zamorak', 2925, 5332, 2],
-    ['Saradomin', 2908, 5265, 0],
+    ['Saradomin', 2908, 5265, 0]
 ];
 
 // isFlagged is (x, z, level, masks) - NOT (level, x, z, masks). The wrong way round it reads a tile
 // nobody asked about and answers "open" everywhere, which reported this dungeon as having no walls
 // in it. A control run said the same of Lumbridge castle, which is what gave it away.
 function around(x: number, z: number, lvl: number, r = 12) {
-    let open = 0, blocked = 0;
+    let open = 0,
+        blocked = 0;
     for (let dx = -r; dx <= r; dx++)
         for (let dz = -r; dz <= r; dz++)
-            isFlagged(x + dx, z + dz, lvl, CollisionFlag.WALK_BLOCKED) ? blocked++ : open++;
+            if (isFlagged(x + dx, z + dz, lvl, CollisionFlag.WALK_BLOCKED)) blocked++;
+            else open++;
     return { open, blocked };
 }
 
@@ -65,8 +69,7 @@ for (const [name, x, z, lvl, src] of ROOMS) {
     // A room is a chamber cut out of rock: floor to stand on AND rock around it. Space that never
     // loaded reads as floor everywhere and no rock at all, so the walled count is what separates
     // "built" from "not there" - counting open tiles alone passes for a square that is missing.
-    check(`  ${name.padEnd(30)} ${src.padEnd(14)} (${a.open} open, ${a.blocked} walled)`,
-        a.blocked > 100 && a.open > 100, true);
+    check(`  ${name.padEnd(30)} ${src.padEnd(14)} (${a.open} open, ${a.blocked} walled)`, a.blocked > 100 && a.open > 100, true);
 }
 
 // ---------------------------------------------------------------- the seam
@@ -86,7 +89,7 @@ function nearestOpen(x: number, z: number, lvl: number, r = 4): [number, number]
 // You walk UP TO a faction door, never through it - the room behind it is sealed, which is the
 // whole thing killcount exists to open. So the question is whether any tile beside the door can be
 // reached, not whether the room can.
-function canReachDoor(fx: number, fz: number, lvl: number, x: number, z: number) {
+function _canReachDoor(fx: number, fz: number, lvl: number, x: number, z: number) {
     for (let dx = -1; dx <= 1; dx++)
         for (let dz = -1; dz <= 1; dz++) {
             if (isFlagged(x + dx, z + dz, lvl, CollisionFlag.WALK_BLOCKED)) continue;
@@ -103,7 +106,10 @@ console.log('\nTHE SEAM BETWEEN THE TWO CACHES');
 const [lx, lz, llvl] = LANDING;
 check(`  there is standable floor beside the rope at (${lx},${lz})`, nearestOpen(lx, lz, llvl) !== null, true);
 for (const lvl of [0, 1, 2, 3]) {
-    let we = 0, ew = 0, ns = 0, sn = 0;
+    let we = 0,
+        ew = 0,
+        ns = 0,
+        sn = 0;
     for (let z = 5248; z < 5376; z++) {
         if (canTravel(lvl, 2879, z, 1, 0, 1, 0, CollisionType.NORMAL)) we++;
         if (canTravel(lvl, 2880, z, -1, 0, 1, 0, CollisionType.NORMAL)) ew++;
@@ -138,8 +144,7 @@ for (const reg of ['44_82', '44_83', '45_82', '45_83']) {
                     else seen.set(t.debugname, { ops, name: t.name ?? '', n: 1, where: `${lvl}_${mx}_${mz}_${x & 63}_${z & 63}` });
                 }
 }
-for (const [dbg, e] of [...seen].sort((a, b) => a[0].localeCompare(b[0])))
-    console.log(`  ${dbg.padEnd(22)} "${e.name}" [${e.ops.join('/')}] x${e.n} first at ${e.where}`);
+for (const [dbg, e] of [...seen].sort((a, b) => a[0].localeCompare(b[0]))) console.log(`  ${dbg.padEnd(22)} "${e.name}" [${e.ops.join('/')}] x${e.n} first at ${e.where}`);
 check('  all four faction altars are in', [...seen].filter(([, e]) => e.ops.includes('Pray-at') || e.ops.includes('Pray')).length, 4);
 check('  all four faction doors are in', [...seen].filter(([, e]) => e.name === 'Big door' && e.ops.includes('Open')).length, 4);
 
@@ -152,7 +157,7 @@ const BODYGUARDS: Record<string, string[]> = {
     Bandos: ['gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike'],
     Zamorak: ['gwd_tstanon_karlak', 'gwd_zakln_gritch', 'gwd_balfrug_kreeyath'],
     Armadyl: ['gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa'],
-    Saradomin: ['gwd_starlight', 'gwd_growler', 'gwd_bree'],
+    Saradomin: ['gwd_starlight', 'gwd_growler', 'gwd_bree']
 };
 const GODS = ['bandos', 'zamorak', 'armadyl', 'saradomin'];
 const ARMY = GODS.flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`));
@@ -161,7 +166,7 @@ const BOSSES = ['graardor', 'kril', 'zilyana', 'kreearra'];
 
 function npcOk(name: string) {
     const id = NpcType.getId(name);
-    if (id < 0) return `missing`;
+    if (id < 0) return 'missing';
     const t = NpcType.get(id);
     if (!t.models?.length) return 'no models';
     // A ready or walk seq that did not convert leaves the npc frozen or sliding, which is the
@@ -176,7 +181,11 @@ for (const [god, three] of Object.entries(BODYGUARDS)) {
     check(`  ${god.padEnd(10)} bodyguards (${three.length})`, bad.length, 0);
     broken.push(...bad.map(([n, e]) => `${n}: ${e}`));
 }
-for (const list of [['the four armies', ARMY], ['the Aviansies', AVIANSIES], ['the four bosses', BOSSES]] as const) {
+for (const list of [
+    ['the four armies', ARMY],
+    ['the Aviansies', AVIANSIES],
+    ['the four bosses', BOSSES]
+] as const) {
     const bad = (list[1] as string[]).map(n => [n, npcOk(n)] as const).filter(([, e]) => e);
     check(`  ${String(list[0]).padEnd(20)} (${(list[1] as string[]).length})`, bad.length, 0);
     broken.push(...bad.map(([n, e]) => `${n}: ${e}`));
@@ -190,10 +199,9 @@ const SPAWNED: [string, string[]][] = [
     ['Armadyl', ['kreearra', 'gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa']],
     ['Bandos', ['graardor', 'gwd_strongstack', 'gwd_steelwill', 'gwd_grimspike']],
     ['Zamorak', ['kril', 'gwd_tstanon_karlak', 'gwd_zakln_gritch', 'gwd_balfrug_kreeyath']],
-    ['Saradomin', ['zilyana', 'gwd_starlight', 'gwd_growler', 'gwd_bree']],
+    ['Saradomin', ['zilyana', 'gwd_starlight', 'gwd_growler', 'gwd_bree']]
 ];
-const inDungeon = (name: string) => World.npcs.filter(n => n && n.type === NpcType.getId(name)
-    && n.x >= 2816 && n.x < 2944 && n.z >= 5248 && n.z < 5376).length;
+const inDungeon = (name: string) => World.npcs.filter(n => n && n.type === NpcType.getId(name) && n.x >= 2816 && n.x < 2944 && n.z >= 5248 && n.z < 5376).length;
 for (const [god, who] of SPAWNED) {
     const missing = who.filter(n => inDungeon(n) === 0);
     check(`  ${god.padEnd(10)} boss and bodyguard are in the dungeon`, missing.join(',') || 'none', 'none');
@@ -210,22 +218,23 @@ for (const g of ['armadyl', 'bandos', 'zamorak', 'saradomin']) {
 // ever sees.
 {
     const perVariant = Array.from({ length: 15 }, (_, i) => inDungeon(`gwd_aviansie_${i + 1}`));
-    const absent = perVariant.map((n, i) => [n, i + 1] as const).filter(([n]) => n === 0).map(([, i]) => i);
+    const absent = perVariant
+        .map((n, i) => [n, i + 1] as const)
+        .filter(([n]) => n === 0)
+        .map(([, i]) => i);
     const total = perVariant.reduce((a, b) => a + b, 0);
     check(`  every Aviansie variant is in (${total} birds)`, absent.length ? absent.join(',') : 'yes', 'yes');
 }
 
 // Stats, which 474 does not carry - every one of them came from the Old School cache. An npc left
 // on the defaults is a punchbag, and a dungeon full of punchbags looks finished and is not.
-const noStats = [...SPAWNED.flatMap(([, w]) => w),
-    ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`))]
-    .filter(n => {
-        // NpcType keeps the six combat numbers in .stats, not as .hitpoints - reading the latter
-        // gives undefined for everyone, which is how the first version of this check reported the
-        // whole dungeon statless including Graardor, who plainly is not.
-        const t = NpcType.get(NpcType.getId(n));
-        return (t.stats?.[NpcStat.HITPOINTS] ?? 1) <= 1;
-    });
+const noStats = [...SPAWNED.flatMap(([, w]) => w), ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`))].filter(n => {
+    // NpcType keeps the six combat numbers in .stats, not as .hitpoints - reading the latter
+    // gives undefined for everyone, which is how the first version of this check reported the
+    // whole dungeon statless including Graardor, who plainly is not.
+    const t = NpcType.get(NpcType.getId(n));
+    return (t.stats?.[NpcStat.HITPOINTS] ?? 1) <= 1;
+});
 check('  everyone in the dungeon has real combat stats', noStats.join(',') || 'none', 'none');
 
 // ---------------------------------------------------------------- killcount
@@ -243,11 +252,10 @@ console.log('\nKILLCOUNT');
     // the room you need the killcount to reach. Bandos's army holds the approach.
     let killed = 0;
     for (let i = 0; i < 3; i++) {
-        const victim = World.npcs.find(n => n && n.isActive
-            && NpcType.get(n.type).debugname?.startsWith('gwd_spiritual_') === true
-            && NpcType.get(n.type).debugname?.endsWith('_bandos') === true);
+        const victim = World.npcs.find(n => n && n.isActive && NpcType.get(n.type).debugname?.startsWith('gwd_spiritual_') === true && NpcType.get(n.type).debugname?.endsWith('_bandos') === true);
         if (!victim) break;
-        p.teleport(victim.x + 1, victim.z, victim.level); H.tick(1);
+        p.teleport(victim.x + 1, victim.z, victim.level);
+        H.tick(1);
         if (A.fight(p, victim, 600)) killed++;
         H.tick(2); // the message is queued
     }
@@ -256,12 +264,16 @@ console.log('\nKILLCOUNT');
 
     // and nobody else's count moved - a death hook that credits the wrong god is worse than one
     // that credits nothing
-    check('  the other three gods are untouched',
-        ['armadyl', 'saradomin', 'zamorak'].map(g => p.getVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id)), [0, 0, 0]);
+    check(
+        '  the other three gods are untouched',
+        ['armadyl', 'saradomin', 'zamorak'].map(g => p.getVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id)),
+        [0, 0, 0]
+    );
 
     // the door, below the price
     const door = { x: 2863, z: 5354, lvl: 2 };
-    p.teleport(2862, 5354, 2); H.tick(1);
+    p.teleport(2862, 5354, 2);
+    H.tick(1);
     H.setVar(p, 'gwd_kc_bandos', 39);
     const before = A.mark();
     H.opLoc(p, door.x, door.z, 'gwd_door_bandos', 1);
@@ -278,8 +290,11 @@ console.log('\nKILLCOUNT');
     check('  40 kills opens it, and is spent', kc(), 0);
     check('  and puts you on the room side of the door', [p.x, p.z, p.level], [2864, 5354, 2]);
     // the altar is in there with you, which is what makes it the room and not the corridor
-    check('  with Graardor', World.npcs.some(n => n && n.type === NpcType.getId('graardor')
-        && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) < 30), true);
+    check(
+        '  with Graardor',
+        World.npcs.some(n => n && n.type === NpcType.getId('graardor') && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) < 30),
+        true
+    );
     H.despawn(p);
 }
 
@@ -318,7 +333,8 @@ console.log('\nTHE WAY IN');
     // and that multiloc draws as a flat black square in this client however it is wired - which is
     // the black hole that was reported. The plain child loc draws a proper rim and shaft, so that
     // is what the map places, and the single op ties the rope on the way down the first time.
-    p.teleport(2917, 3744, 0); H.tick(1);
+    p.teleport(2917, 3744, 0);
+    H.tick(1);
     H.opLoc(p, 2917, 3745, 'gwd_hole_untied', 1);
     H.tick(20);
     check('  the hole needs a rope', [p.x, p.z, p.level], [2917, 3744, 0]);
@@ -411,23 +427,20 @@ console.log('\nTHE ICE WOLVES');
     let wolves = 0;
     for (const n of World.npcs) {
         if (!n) continue;
-        if (n.level === 0 && n.x >= 2880 && n.x <= 2940 && n.z >= 3715 && n.z <= 3760 &&
-            (NpcType.get(n.type).debugname ?? '').startsWith('ice_wolf_')) wolves++;
+        if (n.level === 0 && n.x >= 2880 && n.x <= 2940 && n.z >= 3715 && n.z <= 3760 && (NpcType.get(n.type).debugname ?? '').startsWith('ice_wolf_')) wolves++;
     }
     check('  the battlefield is wolf country', wolves >= 15, true);
     // The config is the fact worth asserting - that all six carry an aggressive hunt rather than
     // the cowardly one they shipped with. Watching one walk is too flaky to assert on: a wandering
     // wolf may already be next to the bait, or may be busy with another wolf.
-    const cowards = ['ice_wolf_1', 'ice_wolf_2', 'ice_wolf_3', 'ice_wolf_4', 'ice_wolf_5', 'ice_wolf_6']
-        .filter(n => (HuntType.get(NpcType.getByName(n)!.huntmode).debugname ?? '').includes('coward'));
+    const cowards = ['ice_wolf_1', 'ice_wolf_2', 'ice_wolf_3', 'ice_wolf_4', 'ice_wolf_5', 'ice_wolf_6'].filter(n => (HuntType.get(NpcType.getByName(n)!.huntmode).debugname ?? '').includes('coward'));
     check('  none of the six are cowardly any more', cowards, []);
     const w = H.npcNear('ice_wolf_3', 2898, 3733, 0) ?? H.npcNear('ice_wolf_2', 2895, 3730, 0);
     check('  and one is standing in the way', w !== null, true);
     if (w) {
         const p = player('gwdbait', w.x + 4, w.z);
         H.tick(15);
-        const engaged = (w as any).target !== null || (w as any).mode !== 0 ||
-            Math.abs(w.x - p.x) + Math.abs(w.z - p.z) <= 1;
+        const engaged = (w as any).target !== null || (w as any).mode !== 0 || Math.abs(w.x - p.x) + Math.abs(w.z - p.z) <= 1;
         check('  and it engages you unprovoked', engaged, true);
         H.despawn(p);
     }
@@ -449,18 +462,45 @@ console.log('\nMULTI-COMBAT');
 // "Numerous monsters from different gods' factions inhabit this area." They were all behind the
 // four doors before this: the room they open onto had one npc standing in it.
 console.log('\nTHE CHAMBER');
+//
+// COUNTED FROM THE SPAWN RECORDS, NOT FROM WHERE THEY ARE STANDING, and that is the whole point
+// of this version. The first one walked World.npcs and asked who was inside the chamber box right
+// now, which made it FLAKY: an npc with a wander radius is placed at a random tile in range when
+// the world boots, so the count came out 37, 38, 39, 40 or 41 on consecutive runs against a
+// threshold of 40 - it passed about two runs in five and the build was never at fault. Growing the
+// box by maxrange does not fix it either, because then followers spawned OUTSIDE the chamber
+// wander in and the count moves the other way (61-67 measured).
+//
+// The .jm2 NPC sections are the fixed quantity: 42 records in the chamber, four factions, the
+// same answer on every boot. 42 is comfortably over the 40 the old check wanted, so the threshold
+// was right and only the measurement was wrong.
 {
     const gods = new Set<string>();
     let n = 0;
-    for (const npc of World.npcs) {
-        if (!npc) continue;
-        if (npc.level !== 2 || npc.x < 2846 || npc.x > 2912 || npc.z < 5279 || npc.z > 5347) continue;
-        const name = NpcType.get(npc.type).debugname ?? '';
-        if (!name.startsWith('gwd_spiritual_')) continue;
-        n++;
-        gods.add(name.split('_').pop()!);
+    for (const sq of ['m44_82', 'm45_82', 'm44_83', 'm45_83']) {
+        const m = /m(\d+)_(\d+)/.exec(sq)!;
+        const mx = +m[1];
+        const mz = +m[2];
+        let inNpc = false;
+        for (const line of fs.readFileSync(`../content/maps/${sq}.jm2`, 'utf8').split(/\r?\n/)) {
+            if (line.startsWith('====')) {
+                inNpc = line.includes('NPC');
+                continue;
+            }
+            if (!inNpc) continue;
+            const rec = /^(\d+) (\d+) (\d+): (\d+)$/.exec(line.trim());
+            if (!rec) continue;
+            const level = +rec[1];
+            const x = (mx << 6) + +rec[2];
+            const z = (mz << 6) + +rec[3];
+            if (level !== 2 || x < 2846 || x > 2912 || z < 5279 || z > 5347) continue;
+            const name = NpcType.get(+rec[4]).debugname ?? '';
+            if (!name.startsWith('gwd_spiritual_')) continue;
+            n++;
+            gods.add(name.split('_').pop()!);
+        }
     }
-    check('  followers stand in the chamber', n >= 40, true);
+    check('  followers are stationed in the chamber', n >= 40, true);
     check('  and all four gods are in there together', gods.size, 4);
 }
 
@@ -480,8 +520,7 @@ console.log('\nTHE KILLCOUNT PANEL');
     H.tick(2);
     const texts = H.ifaces.filter(f => f.kind === 'text').map(f => f.text);
     check('  it shows all four counts', texts.length, 4);
-    check('  with the numbers that are stored', texts,
-        ['Armadyl: 7', 'Bandos: 40', 'Saradomin: 0', 'Zamorak: 13']);
+    check('  with the numbers that are stored', texts, ['Armadyl: 7', 'Bandos: 40', 'Saradomin: 0', 'Zamorak: 13']);
     H.despawn(p);
 }
 
@@ -492,32 +531,38 @@ console.log('\nINTO THE ENCAMPMENTS');
 {
     const p = player('gwdcross', 2880, 5310, 2);
     const go = (x: number, z: number, lvl: number, loc: string) => {
-        p.teleport(x, z, lvl); H.tick(1);
+        p.teleport(x, z, lvl);
+        H.tick(1);
         const m = A.mark();
         H.opLoc(p, ...(LOCAT[loc] as [number, number]), loc, 1);
         H.tick(20);
         return A.mesSince(p, m);
     };
     const LOCAT: Record<string, [number, number]> = {
-        gwd_pillar_grapple: [2871, 5270], gwd_door_bang: [2851, 5333],
-        gwd_ice_bridge: [2885, 5333], gwd_rock_tierope_upper: [2913, 5300],
-        gwd_rock_tierope_lower: [2920, 5274],
+        gwd_pillar_grapple: [2871, 5270],
+        gwd_door_bang: [2851, 5333],
+        gwd_ice_bridge: [2885, 5333],
+        gwd_rock_tierope_upper: [2913, 5300],
+        gwd_rock_tierope_lower: [2920, 5274]
     };
 
     // Armadyl - 70 Ranged, crossbow, grapple
-    H.maxOut(p); H.clearInv(p);
+    H.maxOut(p);
+    H.clearInv(p);
     p.setLevel(PlayerStat.RANGED, 69);
     go(2871, 5279, 2, 'gwd_pillar_grapple');
     check('  Armadyl   69 Ranged cannot make the shot', p.z > 5275, true);
     p.setLevel(PlayerStat.RANGED, 70);
     go(2871, 5279, 2, 'gwd_pillar_grapple');
     check('  Armadyl   70 Ranged but no crossbow is refused', p.z > 5275, true);
-    H.equip(p, { rhand: 'rune_crossbow' }); H.give(p, 'mith_grapple', 1);
+    H.equip(p, { rhand: 'rune_crossbow' });
+    H.give(p, 'mith_grapple', 1);
     go(2871, 5279, 2, 'gwd_pillar_grapple');
     check('  Armadyl   70 Ranged + crossbow + grapple crosses the chasm', [p.x, p.z, p.level], [2871, 5269, 2]);
 
     // Bandos - 70 Strength and a hammer
-    H.clearInv(p); p.setLevel(PlayerStat.STRENGTH, 70);
+    H.clearInv(p);
+    p.setLevel(PlayerStat.STRENGTH, 70);
     go(2852, 5333, 2, 'gwd_door_bang');
     // "refused" means NOT ON THE FAR SIDE. Where the walk left you standing on the near side is
     // the router's business, and asserting x > 2851 was asserting that instead.
@@ -534,8 +579,10 @@ console.log('\nINTO THE ENCAMPMENTS');
     check('  Zamorak   and the crossing empties your prayer', p.levels[PlayerStat.PRAYER], 0);
 
     // Saradomin - 70 Agility, not boostable, and two ropes
-    H.maxOut(p); H.clearInv(p);
-    H.setVar(p, 'gwd_rope_upper', 0); H.setVar(p, 'gwd_rope_lower', 0);
+    H.maxOut(p);
+    H.clearInv(p);
+    H.setVar(p, 'gwd_rope_upper', 0);
+    H.setVar(p, 'gwd_rope_lower', 0);
     go(2912, 5300, 2, 'gwd_rock_tierope_upper');
     check('  Saradomin no rope, no way down', p.level, 2);
     H.give(p, 'rope', 2);
@@ -576,11 +623,17 @@ console.log('\nWHO COMES AFTER YOU');
         npc.huntAll(HuntType.get(npc.huntMode));
         return (npc as any).huntTarget === p;
     };
-    const FACES = [['bandos', 'gwd_spiritual_warrior_bandos'], ['zamorak', 'gwd_spiritual_warrior_zamorak'],
-                   ['armadyl', 'gwd_spiritual_warrior_armadyl'], ['saradomin', 'gwd_spiritual_warrior_saradomin']] as const;
+    const FACES = [
+        ['bandos', 'gwd_spiritual_warrior_bandos'],
+        ['zamorak', 'gwd_spiritual_warrior_zamorak'],
+        ['armadyl', 'gwd_spiritual_warrior_armadyl'],
+        ['saradomin', 'gwd_spiritual_warrior_saradomin']
+    ] as const;
     const WEAR: Record<string, string> = {
-        bandos: 'bandos_chestplate', zamorak: 'zamorak_cape',
-        armadyl: 'armadyl_chestplate', saradomin: 'saradomin_cape',
+        bandos: 'bandos_chestplate',
+        zamorak: 'zamorak_cape',
+        armadyl: 'armadyl_chestplate',
+        saradomin: 'saradomin_cape'
     };
 
     // nothing worn: everybody wants you
@@ -597,8 +650,14 @@ console.log('\nWHO COMES AFTER YOU');
         H.maxOut(p);
         H.equip(p, { [god === 'zamorak' || god === 'saradomin' ? 'back' : 'torso']: WEAR[god] });
         const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
-        check(`  wearing ${WEAR[god].padEnd(20)} only ${god} ignores you (hunted by ${after.join(',') || 'nobody'})`,
-            after.sort().join(','), FACES.map(([g]) => g).filter(g => g !== god).sort().join(','));
+        check(
+            `  wearing ${WEAR[god].padEnd(20)} only ${god} ignores you (hunted by ${after.join(',') || 'nobody'})`,
+            after.sort().join(','),
+            FACES.map(([g]) => g)
+                .filter(g => g !== god)
+                .sort()
+                .join(',')
+        );
         H.despawn(p);
     }
 }
@@ -610,22 +669,32 @@ console.log('\nWHO COMES AFTER YOU');
 // wrong, it folds the model inside out.
 console.log('\nSWINGING SOMETHING');
 {
-    const ALL = [...SPAWNED.flatMap(([, w]) => w.slice(1)),
+    const ALL = [
+        ...SPAWNED.flatMap(([, w]) => w.slice(1)),
         ...['armadyl', 'bandos', 'zamorak', 'saradomin'].flatMap(g => ['warrior', 'ranger', 'mage'].map(k => `gwd_spiritual_${k}_${g}`)),
-        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)];
+        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)
+    ];
     const P = (t: any, name: string) => t.params?.get(ParamType.getId(name));
-    const noAttack: string[] = [], noDefend: string[] = [], wrongRig: string[] = [];
+    const noAttack: string[] = [],
+        noDefend: string[] = [],
+        wrongRig: string[] = [];
     for (const n of ALL) {
         const t = NpcType.get(NpcType.getId(n));
-        const atk = P(t, 'attack_anim'), def = P(t, 'defend_anim');
+        const atk = P(t, 'attack_anim'),
+            def = P(t, 'defend_anim');
         if (atk === undefined) noAttack.push(n);
         if (def === undefined) noDefend.push(n);
         // same skeleton as its ready animation?
-        const base = (id: number) => { const s = SeqType.get(id); return s?.frames?.[0] !== undefined ? s.frames[0] >>> 16 : -1; };
-        for (const [what, id] of [['attack', atk], ['defend', def]] as const) {
+        const base = (id: number) => {
+            const s = SeqType.get(id);
+            return s?.frames?.[0] !== undefined ? s.frames[0] >>> 16 : -1;
+        };
+        for (const [what, id] of [
+            ['attack', atk],
+            ['defend', def]
+        ] as const) {
             if (id === undefined) continue;
-            if (base(id) !== -1 && base(t.readyanim) !== -1 && base(id) !== base(t.readyanim))
-                wrongRig.push(`${n} ${what}`);
+            if (base(id) !== -1 && base(t.readyanim) !== -1 && base(id) !== base(t.readyanim)) wrongRig.push(`${n} ${what}`);
         }
     }
     check(`  all ${ALL.length} have an attack animation`, noAttack.join(',') || 'none', 'none');
@@ -636,8 +705,9 @@ console.log('\nSWINGING SOMETHING');
 // ---------------------------------------------------------------- the altars
 console.log('\nTHE ALTARS');
 {
-    const p = player('gwdaltar', 2869, 5368, 2);   // inside Graardor's room, by the Bandos altar
-    H.maxOut(p); H.clearInv(p);
+    const p = player('gwdaltar', 2869, 5368, 2); // inside Graardor's room, by the Bandos altar
+    H.maxOut(p);
+    H.clearInv(p);
     const prayer = () => p.levels[PlayerStat.PRAYER];
     const ALTAR: [number, number, number] = [2869, 5370, 2];
 
@@ -661,8 +731,7 @@ console.log('\nTHE ALTARS');
     p.levels[PlayerStat.PRAYER] = 10;
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 1);
     H.tick(20);
-    check('  three Bandos pieces boost three above your level',
-        prayer(), p.baseLevels[PlayerStat.PRAYER] + 3);
+    check('  three Bandos pieces boost three above your level', prayer(), p.baseLevels[PlayerStat.PRAYER] + 3);
 
     // Teleport puts you out of the lair, not out of the dungeon
     H.opLoc(p, ALTAR[0], ALTAR[1], 'gwd_altar_bandos', 2);
@@ -675,7 +744,7 @@ console.log('\nTHE ALTARS');
 // He had one attack and Old School gives him two: crush for up to 60, and a ground slam that hits
 // EVERY player in the room for 15-35 on a 1-in-3 roll. The slam is what makes his room a team
 // fight rather than four separate ones.
-console.log("\nGENERAL GRAARDOR");
+console.log('\nGENERAL GRAARDOR');
 {
     const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('graardor'))!;
     const t = NpcType.get(boss.type);
@@ -702,15 +771,21 @@ console.log("\nGENERAL GRAARDOR");
     H.runNpcProc(boss, '[proc,graardor_slam_attack]', crowd[0]);
     H.tick(3);
     const hurt = crowd.map((p, i) => before[i] - p.levels[PlayerStat.HITPOINTS]);
-    check(`  the slam hits everyone in the room, not just his target (${hurt.join(', ')})`,
-        hurt.every(h => h > 0), true);
-    check(`  and each hit is between 15 and 35 (${hurt.join(', ')})`,
-        hurt.every(h => h >= 15 && h <= 35), true);
+    check(
+        `  the slam hits everyone in the room, not just his target (${hurt.join(', ')})`,
+        hurt.every(h => h > 0),
+        true
+    );
+    check(
+        `  and each hit is between 15 and 35 (${hurt.join(', ')})`,
+        hurt.every(h => h >= 15 && h <= 35),
+        true
+    );
 
     // Protect from Missiles stops it - it is a ranged attack, which is why a team brings that prayer
     const saved = crowd[0];
     saved.levels[PlayerStat.HITPOINTS] = saved.baseLevels[PlayerStat.HITPOINTS];
-    H.setVar(saved, 'prayer13', 1);   // Protect from Missiles - check_protect_prayer reads %prayer13 for ranged
+    H.setVar(saved, 'prayer13', 1); // Protect from Missiles - check_protect_prayer reads %prayer13 for ranged
     const hpBefore = saved.levels[PlayerStat.HITPOINTS];
     H.runNpcProc(boss, '[proc,graardor_slam_attack]', saved);
     H.tick(3);
@@ -741,21 +816,20 @@ console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
     const p = player('krilvictim', kril.x + 2, kril.z, kril.level);
     H.maxOut(p);
 
-    H.setVar(p, 'prayer12', 1);                       // Protect from Magic
+    H.setVar(p, 'prayer12', 1); // Protect from Magic
     p.levels[PlayerStat.HITPOINTS] = 99;
     H.runNpcProc(kril, '[proc,kril_magic_attack]', p);
     H.tick(3);
     check('  Protect from Magic stops his ordinary magic', p.levels[PlayerStat.HITPOINTS], 99);
 
-    H.setVar(p, 'prayer14', 1);                       // and Protect from Melee as well
+    H.setVar(p, 'prayer14', 1); // and Protect from Melee as well
     p.levels[PlayerStat.HITPOINTS] = 99;
     p.setLevel(PlayerStat.PRAYER, 80);
     H.runNpcProc(kril, '[proc,kril_special_attack]', p);
     H.tick(3);
     const hurt = 99 - p.levels[PlayerStat.HITPOINTS];
     check(`  the special goes through prayer anyway (${hurt})`, hurt >= 35 && hurt <= 49, true);
-    check(`  and takes half the prayer left (80 -> ${p.levels[PlayerStat.PRAYER]})`,
-        p.levels[PlayerStat.PRAYER], 40);
+    check(`  and takes half the prayer left (80 -> ${p.levels[PlayerStat.PRAYER]})`, p.levels[PlayerStat.PRAYER], 40);
     H.despawn(p);
 }
 
@@ -764,8 +838,7 @@ console.log("\nK'RIL TSUTSAROTH AND COMMANDER ZILYANA");
 console.log("\nKREE'ARRA");
 {
     const t = NpcType.get(NpcType.getId('kreearra'));
-    check('  he swings every 3 ticks and reaches 8 tiles',
-        [t.params?.get(ParamType.getId('attackrate')), t.attackrange], [3, 8]);
+    check('  he swings every 3 ticks and reaches 8 tiles', [t.params?.get(ParamType.getId('attackrate')), t.attackrange], [3, 8]);
 
     const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('kreearra'))!;
     const p = player('kreevictim', boss.x + 6, boss.z, boss.level);
@@ -788,9 +861,9 @@ console.log("\nKREE'ARRA");
     // how a 69-max attack measured 74 and 92, and how a blocked one measured 6.
     //
     // Retaliation off, and the FIRST hit recorded against this player after the shot is the shot.
-    H.setVar(p, 'option_nodef', 1);                   // ^player_auto_retaliate_off
+    H.setVar(p, 'option_nodef', 1); // ^player_auto_retaliate_off
     const shoot = (proc: string) => {
-        H.tick(12);                                   // let anything in flight land
+        H.tick(12); // let anything in flight land
         const from = H.hits.length;
         p.levels[PlayerStat.HITPOINTS] = 99;
         H.runNpcProc(boss, proc, p);
@@ -802,16 +875,15 @@ console.log("\nKREE'ARRA");
     const ranged = shoot('[proc,kreearra_ranged_attack]');
     check(`  he shoots you from 6 tiles away (${ranged})`, ranged > 0 && ranged <= 69, true);
 
-    H.setVar(p, 'prayer13', 1);                        // Protect from Missiles
+    H.setVar(p, 'prayer13', 1); // Protect from Missiles
     check('  Protect from Missiles stops it', shoot('[proc,kreearra_ranged_attack]'), 0);
 
     H.setVar(p, 'prayer13', 0);
-    H.setVar(p, 'prayer12', 1);                        // Protect from Magic
+    H.setVar(p, 'prayer12', 1); // Protect from Magic
     check('  and Protect from Magic stops the other one', shoot('[proc,kreearra_magic_attack]'), 0);
 
     // both projectiles resolve - a missing graphic is an attack with nothing leaving him
-    for (const n of ['kreearra_ranged_proj', 'kreearra_magic_proj'])
-        check(`  ${n} is a real spotanim`, SpotanimType.getId(n) >= 0, true);
+    for (const n of ['kreearra_ranged_proj', 'kreearra_magic_proj']) check(`  ${n} is a real spotanim`, SpotanimType.getId(n) >= 0, true);
     H.despawn(p);
 }
 
@@ -828,10 +900,7 @@ console.log('\nTHE ARMIES DROP SOMETHING');
     // wide enough to contain the whole fight, answers it whatever either of them did.
     const snapshot = (cx: number, cz: number, lvl: number, r = 40) => {
         const seen = new Set<string>();
-        for (let zx = cx - r; zx <= cx + r; zx += 8)
-            for (let zz = cz - r; zz <= cz + r; zz += 8)
-                for (const o of World.gameMap.getZone(zx, zz, lvl).getAllObjsUnsafe() as any)
-                    seen.add(`${o.x},${o.z},${o.type},${o.count}`);
+        for (let zx = cx - r; zx <= cx + r; zx += 8) for (let zz = cz - r; zz <= cz + r; zz += 8) for (const o of World.gameMap.getZone(zx, zz, lvl).getAllObjsUnsafe() as any) seen.add(`${o.x},${o.z},${o.type},${o.count}`);
         return seen;
     };
 
@@ -839,9 +908,9 @@ console.log('\nTHE ARMIES DROP SOMETHING');
     // and the five items this cache lacks add their weights to it: 33 of its 128 rolls drop
     // nothing at all, and the mage has 7. So one kill proving nothing is not a failure - it is the
     // table. Up to three of each are killed, and the check is that SOME kill drops.
-    for (const kind of ['gwd_spiritual_mage_bandos', 'gwd_spiritual_warrior_bandos',
-                        'gwd_spiritual_ranger_bandos', 'gwd_aviansie_1']) {
-        let dropped = 0, kills = 0;
+    for (const kind of ['gwd_spiritual_mage_bandos', 'gwd_spiritual_warrior_bandos', 'gwd_spiritual_ranger_bandos', 'gwd_aviansie_1']) {
+        let dropped = 0,
+            kills = 0;
         for (let attempt = 0; attempt < 3 && dropped === 0; attempt++) {
             const npc = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId(kind));
             if (!npc) break;
@@ -855,7 +924,9 @@ console.log('\nTHE ARMIES DROP SOMETHING');
             // A halberd, not a scimitar: the Armadylean flyers refuse anything with less than two
             // tiles of reach now, so a scimitar cannot kill an Aviansie at all.
             H.equip(p, { rhand: 'rune_halberd' });
-            const cx = npc.x, cz = npc.z, clvl = npc.level;
+            const cx = npc.x,
+                cz = npc.z,
+                clvl = npc.level;
             const before = snapshot(cx, cz, clvl);
             const dead = A.fight(p, npc, 1500);
             H.tick(20);
@@ -863,8 +934,7 @@ console.log('\nTHE ARMIES DROP SOMETHING');
             dropped += [...snapshot(cx, cz, clvl)].filter(k => !before.has(k)).length;
             H.despawn(p);
         }
-        check(`  ${kind.replace('gwd_', '').padEnd(26)} ${kills} killed, ${dropped} dropped`,
-            kills > 0 && dropped > 0, true);
+        check(`  ${kind.replace('gwd_', '').padEnd(26)} ${kills} killed, ${dropped} dropped`, kills > 0 && dropped > 0, true);
     }
 }
 
@@ -874,18 +944,23 @@ console.log('\nTHE ARMIES DROP SOMETHING');
 // build already says that - it is what keeps a short weapon off Zulrah across the water.
 console.log('\nARMADYL FLIES');
 {
-    const FLYERS = ['kreearra', 'gwd_wingman_skree', 'gwd_flockleader_geerin', 'gwd_flight_kilisa',
-        'gwd_spiritual_warrior_armadyl', 'gwd_spiritual_ranger_armadyl', 'gwd_spiritual_mage_armadyl',
-        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)];
+    const FLYERS = [
+        'kreearra',
+        'gwd_wingman_skree',
+        'gwd_flockleader_geerin',
+        'gwd_flight_kilisa',
+        'gwd_spiritual_warrior_armadyl',
+        'gwd_spiritual_ranger_armadyl',
+        'gwd_spiritual_mage_armadyl',
+        ...Array.from({ length: 15 }, (_, i) => `gwd_aviansie_${i + 1}`)
+    ];
     const reach = (n: string) => NpcType.get(NpcType.getId(n)).params?.get(ParamType.getId('min_attackrange'));
     const unguarded = FLYERS.filter(n => reach(n) !== 2);
     check(`  all ${FLYERS.length} Armadylean flyers refuse a short weapon`, unguarded.join(',') || 'none', 'none');
 
     // and the other three gods are NOT affected - this is Armadyl's rule, not a dungeon-wide one
-    const others = ['graardor', 'kril', 'zilyana', 'gwd_strongstack', 'gwd_spiritual_warrior_bandos',
-        'gwd_starlight', 'gwd_tstanon_karlak'];
-    check('  and nobody else in the dungeon is melee-proof',
-        others.filter(n => reach(n) === 2).join(',') || 'none', 'none');
+    const others = ['graardor', 'kril', 'zilyana', 'gwd_strongstack', 'gwd_spiritual_warrior_bandos', 'gwd_starlight', 'gwd_tstanon_karlak'];
+    check('  and nobody else in the dungeon is melee-proof', others.filter(n => reach(n) === 2).join(',') || 'none', 'none');
 
     // the refusal actually fires: a scimitar is turned away, a halberd is not
     const boss = World.npcs.find(n => n && n.isActive && n.type === NpcType.getId('gwd_flight_kilisa'))!;
@@ -902,7 +977,7 @@ console.log('\nARMADYL FLIES');
     H.equip(p, { rhand: 'dragon_scimitar' });
     let mark = A.mark();
     H.opNpc(p, boss, 2);
-    H.tick(20);   // the player walks to her first; the refusal fires on arrival, not on the click
+    H.tick(20); // the player walks to her first; the refusal fires on arrival, not on the click
     check('  a scimitar is told it cannot reach', A.said(p, mark, 'longer weapon'), true);
 
     H.equip(p, { rhand: 'rune_halberd' });
@@ -917,8 +992,7 @@ console.log('\nARMADYL FLIES');
     // once and failed once on identical code. The swing happening at all is the thing: no refusal,
     // and the player actually attacking rather than standing there.
     const swung = H.anims.slice(swings).some(a => a.who === p.username);
-    check('  a halberd is not, and the swing happens',
-        [A.said(p, mark, 'longer weapon'), swung], [false, true]);
+    check('  a halberd is not, and the swing happens', [A.said(p, mark, 'longer weapon'), swung], [false, true]);
     void hpBefore;
     H.despawn(p);
 }
@@ -962,8 +1036,7 @@ console.log('\nKILLING GRAARDOR');
     // scimitar does not always get through that in 2000. The test was passing and failing on
     // the same code depending on the damage rolls.
     const dead = A.fight(p, boss, 6000);
-    console.log(`    boss hp ${bossHp0} -> ${boss.levels[NpcStat.HITPOINTS]}, active ${boss.isActive}; `
-        + `player hp ${p.levels[PlayerStat.HITPOINTS]}, at ${p.x},${p.z},${p.level} (boss at ${boss.x},${boss.z},${boss.level})`);
+    console.log(`    boss hp ${bossHp0} -> ${boss.levels[NpcStat.HITPOINTS]}, active ${boss.isActive}; ` + `player hp ${p.levels[PlayerStat.HITPOINTS]}, at ${p.x},${p.z},${p.level} (boss at ${boss.x},${boss.z},${boss.level})`);
     H.tick(20);
     check('  Graardor can actually be killed', dead, true);
     const dropped = [...World.gameMap.getZone(boss.x, boss.z, boss.level).getAllObjsUnsafe()].length;
