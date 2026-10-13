@@ -16,7 +16,7 @@ import fs from 'fs';
 await H.boot();
 
 const CSV = '../content/maps/multiway.csv';
-const zoneKey = (level: number, x: number, z: number) => `${level}_${x >> 6}_${z >> 6}_${(x >> 3 << 3) & 63}_${(z >> 3 << 3) & 63}`;
+const zoneKey = (level: number, x: number, z: number) => `${level}_${x >> 6}_${z >> 6}_${((x >> 3) << 3) & 63}_${((z >> 3) << 3) & 63}`;
 
 /** Every zone maps/multiway.csv already covers. */
 function current(): Set<string> {
@@ -47,7 +47,8 @@ if (mode === 'npc') {
         if (!who) continue;
         const k = zoneKey(npc.level, npc.x, npc.z);
         const e = zones.get(k) ?? { who: new Set<string>(), n: 0 };
-        e.who.add(who); e.n++;
+        e.who.add(who);
+        e.n++;
         zones.set(k, e);
     }
     const missing = [...zones.keys()].filter(k => !have.has(k)).sort();
@@ -68,8 +69,12 @@ const KNOWN: Area[] = [
     { name: 'Corporeal Beast lair', level: 2, x1: 2496, z1: 4352, x2: 2559, z2: 4415 },
     { name: "Zulrah's shrine", level: 0, x1: 2256, z1: 3064, x2: 2280, z2: 3080 },
     { name: 'Fight Caves', level: 0, x1: 2368, z1: 5056, x2: 2431, z2: 5119 },
+    // The pest island, m41_40. Multi-combat in Old School and the shape of the minigame: pests
+    // come at you from four portals at once, and in a single-way area the first one to touch you
+    // locks out every other pest on the map.
+    { name: 'Pest Control island', level: 0, x1: 2624, z1: 2560, x2: 2687, z2: 2623 },
     { name: 'Barrows tunnels', level: 3, x1: 3520, z1: 9664, x2: 3583, z2: 9727 },
-    { name: 'Slayer Tower, top floor', level: 2, x1: 3408, z1: 3536, x2: 3456, z2: 3584 },
+    { name: 'Slayer Tower, top floor', level: 2, x1: 3408, z1: 3536, x2: 3456, z2: 3584 }
 ];
 
 console.log(`maps/multiway.csv covers ${have.size} zones\n`);
@@ -77,14 +82,10 @@ console.log('AREAS THIS BUILD IS MEANT TO TREAT AS MULTI-WAY');
 let gaps = 0;
 for (const a of KNOWN) {
     const want: string[] = [];
-    for (let x = a.x1; x <= a.x2; x += 8)
-        for (let z = a.z1; z <= a.z2; z += 8)
-            want.push(zoneKey(a.level, x, z));
+    for (let x = a.x1; x <= a.x2; x += 8) for (let z = a.z1; z <= a.z2; z += 8) want.push(zoneKey(a.level, x, z));
     const uniq = [...new Set(want)];
     const missing = uniq.filter(k => !have.has(k));
-    const state = missing.length === 0 ? 'all multi'
-        : missing.length === uniq.length ? 'NONE OF IT IS MULTI'
-            : `${uniq.length - missing.length}/${uniq.length} zones multi`;
+    const state = missing.length === 0 ? 'all multi' : missing.length === uniq.length ? 'NONE OF IT IS MULTI' : `${uniq.length - missing.length}/${uniq.length} zones multi`;
     if (missing.length) gaps++;
     console.log(`  ${a.name.padEnd(30)} ${state}`);
 }
