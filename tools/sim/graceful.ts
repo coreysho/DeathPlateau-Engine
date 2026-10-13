@@ -145,16 +145,21 @@ console.log("== Grace's shop");
     // item called inv.add, which skips the count-0 placeholder the purchase leaves behind and, in a
     // shop with all nine slots listed, had nowhere else to put it. So the first player to buy each
     // colour took the only one the world would ever have.
-    check('every row restocks at a rate that can actually fire', [...(shop.stockrate ?? [])].filter(r => r < 1).length, 0);
+    // A thousand a row at rate 1, which is how this engine spells "unlimited" - the idiom the Death
+    // token shelf settled on. Her limit is how many marks you have earned, not how fast she refills.
+    check('every row holds a thousand', [...(shop.stockcount ?? [])], new Array(9).fill(1000));
+    check('and tops itself up every tick', [...(shop.stockrate ?? [])], new Array(9).fill(1));
+    check('and the shelf always stacks, which is what lets it', !!(shop as unknown as { stackall: boolean }).stackall, true);
 }
 {
+    // ...and it really does come back, which is the half of this that only running it shows.
     const shop = World.getInventory(InvType.getId('grace_shop'))!;
     const kit = ObjType.getId('graceful_kit_varrock');
     const slot = [...(InvType.get(InvType.getId('grace_shop')).stockobj ?? [])].indexOf(kit);
     shop.remove(kit, 1, slot);
-    check('a bought kit leaves a placeholder', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 0]);
-    H.tick(4);
-    check('and is back in its own slot a few ticks later', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 1]);
+    check('a bought kit comes off its own row', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 999]);
+    H.tick(3);
+    check('and the row fills back up', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 1000]);
 }
 
 // ---------------------------------------------------------------------------------------------

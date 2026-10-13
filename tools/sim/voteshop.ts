@@ -299,18 +299,29 @@ console.log('== the shop');
     settle(p);
     check('exactly enough: bought, and the points are gone', [count(p, 'explorers_ring_4'), points(p)], [1, 0]);
 }
-console.log('== the ring comes back');
+console.log('== the shelf cannot run out');
 {
-    // THE BUG THIS SIM FOUND BY ACCIDENT. The shop is one ring in one shared slot, and a purchase
-    // leaves that slot holding the obj at count 0 rather than nulling it. World.cycle refills it
-    // with `count < stockcount && tick % stockrate == 0` - and with the stockrate at 0 that modulo
-    // is NaN, so the slot NEVER refills and the first buyer takes the only ring the world will ever
-    // have. Grace's nine recolour kits had the same 0 and the same fault.
+    // THE BUG THIS SIM FOUND BY ACCIDENT, when the shop was one ring in one shared slot. A purchase
+    // leaves the slot holding the obj at count 0 rather than nulling it, and restocking it hit two
+    // faults at once: a stockrate of 0 makes World's `tick % stockrate == 0` a NaN comparison that
+    // is never true, and restocking a NON-STACKABLE item called inv.add, which hunts for a null
+    // slot and skips that placeholder. So the first buyer took the only ring the world would ever
+    // have. Grace's nine recolour kits had both faults too.
+    //
+    // The engine side is fixed, and the shelf now also carries the Death token shop's idiom - a
+    // thousand a row at rate 1, which is how this engine spells "unlimited" - so the limit is the
+    // player's points and never a race between two buyers in the same tick.
+    const t = InvType.get(InvType.getId('vote_shop'));
+    check('every row holds a thousand', Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []).slice(0, 1), [1000]);
+    check('and tops itself up every tick', Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []).slice(0, 1), [1]);
+    check('and the shelf always stacks, which is what lets it', !!(t as unknown as { stackall: boolean }).stackall, true);
+
     const shop = World.getInventory(InvType.getId('vote_shop'))!;
     const ring = ObjType.getId('explorers_ring_4');
-    check('emptied by the purchases above', shop.getItemCount(ring), 0);
-    H.tick(3);
-    check('and back in stock within a few ticks', shop.getItemCount(ring), 1);
+    const held = shop.getItemCount(ring);
+    check('the purchases above came off the shelf', held < 1000, true);
+    H.tick(1000 - held + 2);
+    check('and it fills back to a thousand', shop.getItemCount(ring), 1000);
 }
 {
     // THE EXEMPTION THAT HAD TO BE MADE WALLET-SPECIFIC. Exactly the price, and not one free slot.
