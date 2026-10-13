@@ -1351,9 +1351,20 @@ class World {
                 if (!item) {
                     continue;
                 }
-                // Item stock is under min
+                // Item stock is under min.
+                //
+                // THIS WRITES THE SLOT RATHER THAN CALLING inv.add, and it has to. A shop slot is
+                // seeded as { id: stockobj[i], count: stockcount[i] } whatever the obj's own
+                // stackability (Inventory's constructor), and a slot bought down to zero KEEPS the
+                // obj at count 0 - Inventory.remove deliberately leaves listed stock in place so
+                // the shop still shows it. inv.add on a NON-STACKABLE obj then takes the
+                // "find a null slot" branch, skips that count-0 placeholder because it is not
+                // null, and restocks into some unrelated empty slot further down the grid - or,
+                // in a shop with no spare slots, does nothing at all and the item is gone for the
+                // lifetime of the world. Both the Vote clerk's single ring and Grace's nine
+                // recolour kits were permanently buyable exactly once.
                 if (item.count < invType.stockcount[index] && tick % invType.stockrate[index] === 0) {
-                    inv.add(item.id, 1, index);
+                    inv.set(index, { id: item.id, count: item.count + 1 });
                     inv.update = true;
                     continue;
                 }
@@ -1812,10 +1823,7 @@ class World {
         // using the logout button. Bots are skipped - a sim spawns hundreds.
         const connected = isClientConnected(player);
         if (!player.isBot) {
-            printInfo(
-                `logout ${player.username} at ${player.level},${player.x},${player.z}` +
-                    ` - ${player.logoutReason}${connected ? '' : ' (socket already gone)'}`
-            );
+            printInfo(`logout ${player.username} at ${player.level},${player.x},${player.z}` + ` - ${player.logoutReason}${connected ? '' : ' (socket already gone)'}`);
         }
 
         if (connected) {

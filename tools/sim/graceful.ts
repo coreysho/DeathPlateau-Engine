@@ -14,6 +14,7 @@ import NpcType from '#/cache/config/NpcType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import Player from '#/engine/entity/Player.js';
+import World from '#/engine/World.js';
 
 await H.boot();
 H.loginOrder();
@@ -138,6 +139,22 @@ console.log("== Grace's shop");
     check('shop_currency is the mark', ObjType.get(Number(cur)).debugname, 'mark_of_grace');
     // Untradeable, so ~can_sell_obj refuses them: she cannot buy a kit back and turn it into marks.
     check('kits are untradeable, so there is no buy-back', (ObjType.get(ObjType.getId('graceful_kit_varrock')) as unknown as Record<string, unknown>).tradeable, false);
+    // A BOUGHT KIT HAS TO COME BACK, and when this shop shipped it did not - two separate faults,
+    // both found later by tools/sim/voteshop.ts. The rate was 0, which makes World's
+    // `tick % stockrate == 0` a NaN comparison that is never true; and restocking a NON-STACKABLE
+    // item called inv.add, which skips the count-0 placeholder the purchase leaves behind and, in a
+    // shop with all nine slots listed, had nowhere else to put it. So the first player to buy each
+    // colour took the only one the world would ever have.
+    check('every row restocks at a rate that can actually fire', [...(shop.stockrate ?? [])].filter(r => r < 1).length, 0);
+}
+{
+    const shop = World.getInventory(InvType.getId('grace_shop'))!;
+    const kit = ObjType.getId('graceful_kit_varrock');
+    const slot = [...(InvType.get(InvType.getId('grace_shop')).stockobj ?? [])].indexOf(kit);
+    shop.remove(kit, 1, slot);
+    check('a bought kit leaves a placeholder', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 0]);
+    H.tick(4);
+    check('and is back in its own slot a few ticks later', [shop.get(slot)?.id, shop.get(slot)?.count], [kit, 1]);
 }
 
 // ---------------------------------------------------------------------------------------------
