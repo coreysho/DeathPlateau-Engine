@@ -395,6 +395,36 @@ console.log('\nAND EVERYTHING ONLY HE SELLS IS ON THE COLLECTION LOG');
     console.log(`    (${logged.size} items in the whole log)`);
 }
 
+console.log('\nTHE ROYAL SEED POD STOPS AT LEVEL 30');
+{
+    // Old School's own cap for this item, and the same one the amulet of glory carries here. It is
+    // also the whole reason a teleport is allowed on a shelf whose rule says no escape from the
+    // Wilderness: below 30 a player can already leave with runes or jewellery, so the pod sells
+    // convenience and not capability. Above 30 it must refuse, or that argument is worth nothing.
+    const podAt = (tag: string, z: number): boolean => {
+        const p: Player = player('podsim' + tag, 3094, z);
+        H.clearInv(p);
+        H.give(p, 'royal_seed_pod', 1);
+        const from = { x: p.x, z: p.z };
+        H.opheld(p, 'royal_seed_pod', 1);
+        for (let i = 0; i < 8; i++) {
+            World.cycle(false);   // the teleport sits behind a p_delay
+        }
+        const moved = p.x !== from.x || p.z !== from.z;
+        H.despawn(p);
+        return moved;
+    };
+    const deep: Player = player('podlevelprobe', 3094, 3760);
+    const shallow: Player = player('podlevelprobe2', 3094, 3650);
+    const deepLvl = H.runProc(deep, '[proc,wilderness_level]', [deep.coord])[0];
+    const shallowLvl = H.runProc(shallow, '[proc,wilderness_level]', [shallow.coord])[0];
+    H.despawn(deep, shallow);
+    console.log(`    (z 3650 is wilderness level ${shallowLvl}, z 3760 is ${deepLvl})`);
+    check('  the two test tiles straddle the cap', [shallowLvl <= 30, deepLvl > 30], [true, true]);
+    check('  it works below the cap', podAt('lo', 3650), true);
+    check('  and is blocked above it', podAt('hi', 3760), false);
+}
+
 console.log('\nAND THE SHELF SELLS THEM');
 {
     const shop = InvType.getId('death_token_shop');
@@ -405,7 +435,7 @@ console.log('\nAND THE SHELF SELLS THEM');
             stocked.push(ObjType.get(o.id).debugname ?? String(o.id));
         }
     }
-    for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane', 'gravedigger_kit', 'undertaker_cape']) {
+    for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane', 'gravedigger_kit', 'undertaker_cape', 'royal_seed_pod']) {
         check(`  ${want}`, stocked.includes(want), true);
     }
     // THE SHELF CANNOT RUN OUT. It held one of each, server-wide, so the first player to buy a hat
