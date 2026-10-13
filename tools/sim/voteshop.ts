@@ -35,8 +35,11 @@ import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import { ProtectedActivePlayer } from '#/engine/script/ScriptPointer.js';
 import World from '#/engine/World.js';
+import { CoordGrid } from '#/engine/CoordGrid.js';
 import { isFlagged, isZoneAllocated } from '#/engine/GameMap.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
+import Environment from '#/util/Environment.js';
+import fs from 'fs';
 
 await H.boot();
 H.loginOrder();
@@ -49,7 +52,7 @@ const check = (what: string, got: unknown, want: unknown) => {
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
-const CLERK: [number, number] = [3093, 3496];
+const CLERK: [number, number] = [3091, 3492];
 const RING_PRICE = 50; // ^vote_price_explorers_ring
 const invButtonHandler = new InvButtonHandler();
 
@@ -101,6 +104,33 @@ function pickMenu(q: Player, pick: number): boolean {
     }
     return false;
 }
+/** Answer a p_countdialog with `n`, exactly as ResumePCountDialogHandler does. */
+function answerCount(q: Player, n: number): boolean {
+    for (let t = 0; t < 6; t++) {
+        const s = q.activeScript;
+        if (s && s.execution === ScriptState.COUNTDIALOG) {
+            s.lastInt = n;
+            q.executeScript(s, true, true);
+            return true;
+        }
+        H.tick(1);
+    }
+    return false;
+}
+
+/** The option text the server last wrote into the open chat menu, option 1 first. */
+function chatOptions(q: Player): string[] {
+    const open = q.modalChat === -1 ? '' : (Component.get(q.modalChat).comName ?? '');
+    const iface = open.split(':')[0];
+    const out: string[] = [];
+    for (const e of H.ifaces) {
+        if (e.kind !== 'text' || e.who !== q.username) continue;
+        const m = new RegExp(`^${iface}:com_(\\d+)$`).exec(Component.get(e.com)?.comName ?? '');
+        if (m && +m[1] >= 1) out[+m[1] - 1] = e.text ?? '';
+    }
+    return out.filter(t => t !== undefined && t !== '');
+}
+
 /** What a client sends when you click option `op` on slot `slot` of an interface's inv strip. */
 function invButton(q: Player, comName: string, slot: number, op = 1): boolean {
     const com = Component.getId(comName);
@@ -117,6 +147,30 @@ function openShop(q: Player, npc: Npc): boolean {
     }
     return false;
 }
+// ============================================================ 0. the spawn facing
+// FIRST, BEFORE ANYTHING HAPPENS TO ANYBODY. An npc faces whoever last interacted with it, so a
+// resting facing can only be asked of a world nothing has been done in yet - ask it after the
+// dialogue tests below and you measure the last player who said hello.
+console.log('== the Vote clerk faces east, and only he does');
+{
+    H.tick(2); // ai_spawn runs on an npc's first turn
+    const [x, z] = CLERK;
+    const npc = H.npcNear('vote_clerk', x, z);
+    const t = NpcType.get(NpcType.getId('vote_clerk'));
+    check('param=spawn_face is east', t.params.get(ParamType.getId('spawn_face')), 1);
+    // faceAngleX/Z are what a client is told when it first sees him (World.processInfo), in fine
+    // coords - two per tile, plus the npc's size.
+    check('and he is looking at the tile to his east', [npc?.faceAngleX, npc?.faceAngleZ], [CoordGrid.fine(x + 1, 1), CoordGrid.fine(z, 1)]);
+    // AND IT IS OPT-IN: an npc that asks for no facing is left exactly as it was, which is south.
+    // Not the -1 the field starts at - PathingEntity.unfocus writes the tile one step SOUTH of the
+    // npc, and that is what every npc in the game has always carried. So the banker four tiles away
+    // proves two things at once: [ai_spawn,_] gaining a line changed nothing for the other 16,000
+    // npcs, and east really is a different direction from the default rather than a no-op that
+    // happened to pass.
+    const banker = H.npcNear('banker1', 3096, 3489)!;
+    check('a banker four tiles away still faces south', [banker.faceAngleX, banker.faceAngleZ], [CoordGrid.fine(banker.x, 1), CoordGrid.fine(banker.z - 1, 1)]);
+}
+
 // ============================================================ 1. the ticket
 console.log('== the vote ticket');
 {
@@ -147,18 +201,14 @@ console.log('== redeeming');
     H.clearLogs();
     H.opheld(p, 'vote_ticket', 1);
     H.tick(1);
-    check(
-        'a stack asks first, and names the number',
-        H.ifaces.filter(e => e.kind === 'text' && e.who === p.username && /:com_[1-3]$/.test(Component.get(e.com)?.comName ?? '')).map(e => e.text),
-        ['Redeem one ticket.', 'Redeem all 40 tickets.', 'Cancel.']
-    );
+    check('a stack asks first, and names the number', chatOptions(p), ['Redeem one ticket.', 'Redeem all 40 tickets.', 'Redeem X.', 'Cancel.']);
     pickMenu(p, 1);
     settle(p);
     check('"one" takes one', [count(p, 'vote_ticket'), points(p)], [39, 1]);
 
     H.clearLogs();
     H.opheld(p, 'vote_ticket', 1);
-    pickMenu(p, 3);
+    pickMenu(p, 4);
     settle(p);
     check('"cancel" takes none', [count(p, 'vote_ticket'), points(p)], [39, 1]);
     check('and says so', said(p, 'You decide to keep your tickets.'), true);
@@ -169,6 +219,50 @@ console.log('== redeeming');
     settle(p);
     check('"all" takes the lot', [count(p, 'vote_ticket'), points(p)], [0, 40]);
     check('and reads back the balance', said(p, '40 vote points.'), true);
+}
+console.log('== Redeem X');
+{
+    // The chatbox amount prompt, driven the way ResumePCountDialogHandler drives it.
+    const p = player('redeemx');
+    H.give(p, 'vote_ticket', 40);
+    H.clearLogs();
+    H.opheld(p, 'vote_ticket', 1);
+    H.tick(1);
+    check('the menu offers four options now', chatOptions(p), ['Redeem one ticket.', 'Redeem all 40 tickets.', 'Redeem X.', 'Cancel.']);
+    pickMenu(p, 3);
+    check('and asks for a number', answerCount(p, 12), true);
+    settle(p);
+    check('twelve of forty', [count(p, 'vote_ticket'), points(p)], [28, 12]);
+
+    // Nothing, which is how a player backs out of the prompt.
+    H.clearLogs();
+    H.opheld(p, 'vote_ticket', 1);
+    pickMenu(p, 3);
+    answerCount(p, 0);
+    settle(p);
+    check('zero takes none', [count(p, 'vote_ticket'), points(p)], [28, 12]);
+    check('and says so', said(p, 'You decide to keep your tickets.'), true);
+
+    // MORE THAN YOU HOLD IS A REQUEST, NOT A PROMISE. Clamped to the pack, as the bank does.
+    H.clearLogs();
+    H.opheld(p, 'vote_ticket', 1);
+    pickMenu(p, 3);
+    answerCount(p, 999);
+    settle(p);
+    check('999 takes the 28 that are there', [count(p, 'vote_ticket'), points(p)], [0, 40]);
+
+    // THE PROMPT IS A SECOND SUSPEND, and a longer one than a menu click - the player is typing. A
+    // figure typed about a stack that has since been banked must not pay out.
+    const q = player('rugx');
+    H.give(q, 'vote_ticket', 10);
+    H.clearLogs();
+    H.opheld(q, 'vote_ticket', 1);
+    pickMenu(q, 3);
+    q.invDel(InvType.INV, ObjType.getId('vote_ticket'), 10);
+    answerCount(q, 10);
+    settle(q);
+    check('an emptied pack pays nothing', [count(q, 'vote_ticket'), points(q)], [0, 0]);
+    check('and says why', said(q, "You don't have any vote tickets."), true);
 }
 {
     // THE MENU SUSPENDS THE SCRIPT, so the stack it asked about is not necessarily the stack it
@@ -238,7 +332,7 @@ console.log('== the Vote clerk');
     const [x, z] = CLERK;
     check('his tile is allocated and standable', isZoneAllocated(0, x, z) && !isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED), true);
     const npc = H.npcNear('vote_clerk', x, z);
-    check('he is spawned', npc ? `${npc.x},${npc.z}` : 'nowhere', `${x},${z}`);
+    check('he is spawned where the map says', npc ? `${npc.x},${npc.z}` : 'nowhere', `${x},${z}`);
     const t = NpcType.get(NpcType.getId('vote_clerk'));
     check('he does not wander', t.wanderrange, 0);
     check('op3 is Trade', t.op[2], 'Trade');
@@ -268,6 +362,54 @@ console.log('== the Vote clerk');
 }
 
 // ============================================================ 3. buying the ring
+console.log('== vote points on the Player Statistics tab');
+{
+    // A vote point is a varp, so there is no stack in the inventory to look at and a player who has
+    // spent every ticket has nothing left to click. The quest tab's Player Statistics page is where
+    // it can always be read.
+    const p = player('statstab');
+    H.setVar(p, 'vote_points', 1234);
+    const com = Component.getId('questtab_pstats:votepoints');
+    check('the row exists on the page', com !== -1, true);
+    check('and has a label beside it', Component.getId('questtab_pstats:votepoints_label') !== -1, true);
+    H.clearLogs();
+    runProtected(p, '[proc,questtab_select]', [3]); // ^questtab_pstats
+    H.tick(1);
+    const written = H.ifaces.filter(e => e.kind === 'text' && e.who === p.username && e.com === com).map(e => e.text ?? '');
+    check(
+        'opening the page writes the balance',
+        written.some(t => t.includes('1,234')),
+        true
+    );
+
+    // ...and it tracks the varp rather than being written once.
+    H.setVar(p, 'vote_points', 0);
+    H.clearLogs();
+    runProtected(p, '[proc,questtab_select]', [3]);
+    H.tick(1);
+    const again = H.ifaces.filter(e => e.kind === 'text' && e.who === p.username && e.com === com).map(e => e.text ?? '');
+    check(
+        'and re-reads it on the next open',
+        again.some(t => t.includes('0')),
+        true
+    );
+
+    // FIFTEEN ROWS NOW, and the page is 211px inside (BODY_TOP 46 .. BODY_BOTTOM 257) - so the
+    // pitch had to come down from 15 to 14 to fit the new one. Read off the generated interface,
+    // because Component carries no x/y: the client takes a child's position from its parent's list.
+    // If a sixteenth row is ever wanted, this is the check that says it does not fit.
+    const iff = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/scripts/questtab/interfaces/questtab_pstats.if`, 'ascii');
+    const rowGeom = (name: string): [number, number] => {
+        const block = new RegExp(`\\[${name}\\]([^[]*)`).exec(iff)?.[1] ?? '';
+        return [Number(/^y=(\d+)$/m.exec(block)?.[1]), Number(/^height=(\d+)$/m.exec(block)?.[1])];
+    };
+    const [firstY] = rowGeom('mode_label');
+    const [lastY, lastH] = rowGeom('bank');
+    check('the first row starts just inside the box', firstY, 47);
+    check('and the fifteenth ends on its bottom edge', lastY + lastH, 257);
+    check('vote points sits between Slayer points and Bank value', [rowGeom('slpoints')[0], rowGeom('votepoints')[0], lastY], [215, 229, 243]);
+}
+
 console.log('== the shop');
 {
     const npc = H.npcNear('vote_clerk', CLERK[0], CLERK[1])!;
