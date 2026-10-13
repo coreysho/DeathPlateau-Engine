@@ -23,6 +23,9 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import Component from '#/cache/config/Component.js';
 import { ProtectedActivePlayer } from '#/engine/script/ScriptPointer.js';
+import { isFlagged, isZoneAllocated } from '#/engine/GameMap.js';
+import { CollisionFlag } from '#/engine/routefinder/index.js';
+import { CoordGrid } from '#/engine/CoordGrid.js';
 
 await H.boot();
 H.loginOrder();
@@ -47,6 +50,37 @@ function player(name: string): Player {
 const settle = (n = 1) => {
     for (let t = 0; t < n; t++) H.tick(1);
 };
+
+/** How many of the eight directions out of this tile hit a wall within five steps.
+ *
+ * "He is in a building" is the readable half of "he is on the coordinate Old School gives" - a
+ * number is easy to mistype, a room is not. It is counted over eight rays and not asserted on four
+ * because the Void Knight's base is an octagon with a doorway at each cardinal point: due east and
+ * due west out of his tile are open corridor for more than five tiles, and a four-ray test reads
+ * his throne room as open field. The diagonals are the walls. */
+function wallsAround(x: number, z: number, level = 0): number {
+    const blocked = (dx: number, dz: number) => !isZoneAllocated(level, x + dx, z + dz) || isFlagged(x + dx, z + dz, level, CollisionFlag.WALK_BLOCKED);
+    const dirs: [number, number][] = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1]
+    ];
+    let hit = 0;
+    for (const [sx, sz] of dirs) {
+        for (let d = 1; d <= 5; d++) {
+            if (blocked(sx * d, sz * d)) {
+                hit++;
+                break;
+            }
+        }
+    }
+    return hit;
+}
 
 // H.runProc runs a proc UNPROTECTED and ~pest_solo_start writes varps and teleports, both of which
 // the engine refuses without protected access. This is the two pointers a real trigger is given
@@ -228,14 +262,140 @@ let started: Player;
         check(`${n}: op2 is Attack`, ((NpcType.get(portal.type) as unknown as Record<string, unknown>).op as string[])?.[1], 'Attack');
     }
 
-    // The scan picked these tiles; this is the part no compile can check. Portal positions are
-    // template-relative, so compare the offsets rather than the absolute coords.
+    // WHERE THEY STAND. Positions are template-relative, so compare offsets rather than absolute
+    // coords - the instance sits wherever the allocator put it.
+    //
+    // THESE ARE THE ISLAND'S OWN PORTAL SITES, not tiles a scan liked the look of. m41_40's ground
+    // is painted in four patches of their own underlay, one per portal, and these are their
+    // centres. The first version of this game spread four portals over "tiles with a clear 3x3" by
+    // greedy farthest-point and put all four in the wrong place while every measurement about them
+    // was true; that is what this check now pins down.
     const base = [p.x - 35, p.z - 19]; // the landing is template 35,19
-    const offsets = portals.map(n => `${n.x - base[0]},${n.z - base[1]}`).sort();
-    check('portals are on the scanned tiles', offsets, ['10,55', '21,4', '54,51', '58,11'].sort());
+    const off = (n: Npc) => `${n.x - base[0]},${n.z - base[1]}`;
+    const SITES: Record<string, string> = {
+        pest_portal_1_active: '57,29', // east, and the cache names its animation east
+        pest_portal_2_active: '6,31', // west, likewise
+        pest_portal_3_active: '22,10', // south-west
+        pest_portal_4_active: '46,11' // south-east
+    };
+    const wrong = portals
+        .map(n => [NpcType.get(n.type).debugname ?? '?', off(n)] as [string, string])
+        .filter(([nm, at]) => SITES[nm] !== at)
+        .map(([nm, at]) => `${nm} at ${at}, not ${SITES[nm]}`);
+    check('every portal is on its own painted patch', wrong, []);
+    // AND THE EAST ONE IS ACTUALLY EAST. The pairing of portal to patch is the half of this the
+    // cache settles (portal 1 carries pest_portal_on_anim_east, portal 2 the west one), so it is
+    // worth asserting as a direction and not only as a pair of numbers - a table can be
+    // self-consistently backwards.
+    const byName = Object.fromEntries(portals.map(n => [NpcType.get(n.type).debugname ?? '?', n]));
+    check('the east portal is east of the west one', byName['pest_portal_1_active'].x > byName['pest_portal_2_active'].x, true);
+    check(
+        'and the two southern ones are south of both',
+        [byName['pest_portal_3_active'], byName['pest_portal_4_active']].every(n => n.z < byName['pest_portal_1_active'].z && n.z < byName['pest_portal_2_active'].z),
+        true
+    );
+
+    // THE KNIGHT IS OLD SCHOOL'S OWN COORDINATE - (2656,2592), template 32,32 - off the wiki's
+    // LocLine row through tools/models/osrsnpcspawns.py. The measured guess had him at 32,22, ten
+    // tiles south and outside his own building.
     const k = knights[0];
-    check('the knight is on his tile', `${k.x - base[0]},${k.z - base[1]}`, '32,22');
-    check('the player landed 3 tiles from him', Math.max(Math.abs(p.x - k.x), Math.abs(p.z - k.z)), 3);
+    check("the knight is on Old School's tile", off(k), '32,32');
+    check('which is inside his building: walls on 4+ of 8 sides', wallsAround(k.x, k.z) >= 4, true);
+    check('and the player lands outside it, looking at him', Math.max(Math.abs(p.x - k.x), Math.abs(p.z - k.z)) > 3, true);
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log('== the island is multi-combat');
+{
+    // REPORTED FROM PLAY: "the island needs to be multi". Old School's is, and it is the shape of
+    // the minigame - pests come at you from four portals at once. In a single-way area the first
+    // pest to touch you locks out every other one AND refuses you a re-attack for eight ticks,
+    // which is the fault GameMap.isMulti's own comment describes from Zulrah and the Fight Cave
+    // had until this week.
+    const p = started;
+    const base = [p.x - 35, p.z - 19];
+    // The TEMPLATE square is what carries the flag; an instance sits past x 6400 where no map
+    // square exists, so a csv line addressed to its own coordinates could never match. The lookup
+    // goes back to the zone the instance was copied from, which is why marking the template works
+    // and why both are asserted.
+    check('the template square is marked', World.gameMap.isMulti(CoordGrid.packCoord(0, 41 * 64 + 32, 40 * 64 + 32)), true);
+    check("and the player's own copy of it is multi-way too", World.gameMap.isMulti(CoordGrid.packCoord(0, base[0] + 32, base[1] + 32)), true);
+    check('the tile the player is standing on, specifically', World.gameMap.isMulti(CoordGrid.packCoord(0, p.x, p.z)), true);
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log('== a portal does not fight back, and nothing on the island drops bones');
+{
+    // BOTH REPORTED FROM PLAY, and both were one word missing from a config.
+    //
+    // THE BONES: death_drop is a param whose DEFAULT is bones, and npc_default_death hands that
+    // default to obj_add. Saying nothing does not mean "no drop", it means "bones" - so a minigame
+    // whose monsters pay commendation points was carpeting the island in them. Old School's pests
+    // and portals drop nothing at all.
+    //
+    // THE RETALIATION: [ai_queue1,_] is the retaliate hook every npc inherits, and it does not care
+    // that a portal has no huntmode and an attack of 1 - being hit queues it, and the player
+    // collects a stream of 0s from a hole in the air.
+    const p = player('pestnodrop');
+    runProtected(p, '[proc,pest_solo_start]');
+    settle(1);
+    dismiss(p);
+    settle(2);
+
+    const portals = inGame(p, 'pest_portal_');
+    check('four portals to test against', portals.length, 4);
+
+    // Each portal opts out of retaliating with an empty [ai_queue1] of its own, which is how a
+    // type-specific trigger replaces the global wildcard. Assert the scripts exist - an empty
+    // trigger is exactly the kind of thing a compiler could fold away.
+    const missing = [1, 2, 3, 4].map(n => `[ai_queue1,pest_portal_${n}_active]`).filter(n => !H.hasScript(n));
+    check('every portal has its own ai_queue1', missing, []);
+
+    // Then the behaviour: hit one, and see whether it turns on the player.
+    const target = portals[0];
+    const hpBefore = p.levels[PlayerStat.HITPOINTS];
+    H.attackNpc(p, target);
+    for (let t = 0; t < 30; t++) H.tick(1);
+    check('hitting a portal does not make it target the player', (target as unknown as { target: unknown }).target ?? null, null);
+    check('and the player takes nothing from it', p.levels[PlayerStat.HITPOINTS], hpBefore);
+
+    // And the drop. Kill a portal and a pest and sweep the ground around each.
+    /** Everything lying on the ground within three tiles, by name. Swept over the zones the area
+     * touches rather than asked per tile, so a drop that landed one tile off is still seen. */
+    const groundNear = (x: number, z: number): string[] => {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        for (let dx = -8; dx <= 8; dx += 8) {
+            for (let dz = -8; dz <= 8; dz += 8) {
+                const zone = World.gameMap.getZone(x + dx, z + dz, 0);
+                const key = `${(x + dx) >> 3},${(z + dz) >> 3}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                for (const o of zone.getAllObjsSafe()) {
+                    if (Math.abs(o.x - x) <= 3 && Math.abs(o.z - z) <= 3) out.push(ObjType.get(o.type).debugname ?? '?');
+                }
+            }
+        }
+        return [...new Set(out)].sort();
+    };
+    const px = target.x;
+    const pz = target.z;
+    check('the portal died', killNpc(p, target), true);
+    settle(2);
+    check('and left nothing on the ground', groundNear(px, pz), []);
+
+    const pests = inGame(p, 'pest_');
+    const pest = pests.find(n => (NpcType.get(n.type).debugname ?? '').startsWith('pest_') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_portal') && !(NpcType.get(n.type).debugname ?? '').startsWith('pest_voidknight'));
+    if (pest) {
+        const ex = pest.x;
+        const ez = pest.z;
+        check('a pest died too', killNpc(p, pest), true);
+        settle(2);
+        check('and left nothing either', groundNear(ex, ez), []);
+    } else {
+        check('a pest was available to kill', false, true);
+    }
+    H.despawn(p);
 }
 
 // ---------------------------------------------------------------------------------------------
