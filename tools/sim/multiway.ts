@@ -192,6 +192,10 @@ const KNOWN: Area[] = [
     // jungle snakes too and is Crash Island, so it is not here.
     { name: 'Ape Atoll', osrs: 'listed', exact: true, boxes: [...sq([0], 42, 42), ...sq([0], 43, 42), ...sq([0], 42, 43), ...sq([0], 43, 43)] },
     { name: 'Piscatoris Fishing Colony', osrs: 'listed', exact: true, boxes: sq([0], 36, 57) },
+    // The WHOLE jungle, on Corey's call (13 October). The OSRS list says "western Kharazi
+    // Jungle" and defines no boundary for western, so this is deliberately wider than the
+    // wording - see the csv's own comment.
+    { name: 'Kharazi Jungle', osrs: "listed (whole, this build's call)", exact: true, boxes: [...sq([0], 43, 45), ...sq([0], 44, 45), ...sq([0], 45, 45)] },
     { name: 'Pest Control island', osrs: 'listed', exact: true, boxes: sq([0], 41, 40) },
     // The sewers are the EASTERN three quarters of m49_154. The western two columns of zones
     // (local x0-15) are the Edgeville Dungeon - Vannaka stands there, with the skeletons and
@@ -236,12 +240,6 @@ const KNOWN: Area[] = [
 //                                 carried a box for it and reported it as a gap on every run.
 //   Forgotten Cemetery (ankou)    The OSRS list names the Graveyard of Shadows, not this
 //                                 graveyard, and the build's ankou stand at m46_58. Left single.
-//   Western Kharazi Jungle        Listed by OSRS as "western Kharazi Jungle" and no source here
-//                                 says where western ends. The jungle is m43_45, m44_45 and
-//                                 m45_45; this build's jungle_wolf and jungle_savage stand mostly
-//                                 in the middle and eastern two, so "western" would either cover
-//                                 almost none of them or almost all, and the two readings are a
-//                                 different game. Left single-way until Corey draws the line.
 //   Emir's Arena / Duel Arena     Listed by OSRS, but as "Emir's Arena" - the modern rebuild.
 //                                 This is a 377 server and the question is a decision about PvP
 //                                 furniture rather than a boss fight, so it is Corey's to make.
@@ -299,10 +297,25 @@ for (const strict of [true, false]) {
 // 'squares' narrows the check where an npc record is shared between places. mm_jungle_snake
 // stands on Ape Atoll AND on Crash Island, and only one of those is multi-way, so without the
 // filter this reports nine failures that are the correct answer.
+//
+// THESE POSITIONS ARE NOT THE SAME EVERY BOOT. An npc with a wander radius is placed at a random
+// tile in range when the world starts, so this check samples rather than proves. For the four
+// whole-square areas that is not a risk and it was measured rather than assumed: every tile
+// within maxrange of every one of their spawns is multi - 0 of 7,100 reachable tiles single-way
+// across lava_dragon, mole_giant, horror_dagannoth_medium and dagcave_melee_boss. Kharazi is the
+// one that needed the filter, for the reason given on its line.
 const LIVE: { area: string; npcs: string[]; squares?: string[] }[] = [
     { area: 'Mole Hole', npcs: ['mole_giant', 'mole_baby_01', 'mole_baby_02', 'mole_baby_03'] },
     { area: 'Lighthouse Dungeon', npcs: ['horror_dagannoth_medium', 'horror_dagannoth_medium_darker', 'horror_dagannoth_medium_lighter', 'horror_dagannoth_jr1', 'horror_dagannoth_jr2', 'horror_dagannoth_jr3'] },
     { area: 'Ape Atoll', npcs: ['mm_jungle_spider', 'mm_jungle_scorpion', 'mm_jungle_snake'], squares: ['m42_42', 'm43_42', 'm42_43', 'm43_43'] },
+    // Scoped to the jungle for a second reason: jungle_savage has wanderrange=38 (maxrange 40),
+    // the widest in the cache, so a savage spawned near the jungle's east edge is routinely
+    // placed out past x2943 and onto the Karamja coast. That is not a gap - a multi-way area is a
+    // PLACE, and a monster that walks out of it is in single-way ground, which is how Old School
+    // behaves too. Without this filter the check failed on 3 runs in 5 and the csv was right
+    // every time. Widening the csv to chase the savage would have marked coast multi on the
+    // strength of one npc's wander radius.
+    { area: 'Kharazi Jungle', npcs: ['jungle_wolf', 'jungle_savage', 'oomlie_bird'], squares: ['m43_45', 'm44_45', 'm45_45'] },
     { area: 'Dagannoth Kings', npcs: ['dagcave_melee_boss', 'dagcave_magic_boss', 'dagcave_ranged_boss'] },
     { area: 'Lava Dragon Isle', npcs: ['lava_dragon'] }
 ];
