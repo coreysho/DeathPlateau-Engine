@@ -31,7 +31,10 @@ function viaNpc(npcName: string, items: string[], tries: number) {
         H.setVar(p, 'action_delay', 0);
         H.tick(1);
         H.opNpc(p, npc, 3);
-        H.tick(4);
+        // Long enough for the whole attempt to resolve. At 4 ticks one pocket in ~370 landed its
+        // item AFTER the count and showed up as a second kind in the next attempt's window, which
+        // looks exactly like a double pay and is not one.
+        H.tick(10);
         let got = 0;
         for (const it of items) {
             const c = H.invCount(p, it);
