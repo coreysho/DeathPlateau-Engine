@@ -103,11 +103,8 @@ console.log('\nTHE OUTFIT: STATUS, NOT POWER');
     // Corey's rule, 12 October: the shelf sells status and never power - nothing that changes a
     // combat number, nothing that can be pointed at another player. A rule nothing checks is a rule
     // that lasts until the next tired evening, so this walks the pieces and reads their params.
-    const PIECES = ['undertaker_hat', 'undertaker_coat', 'undertaker_trousers',
-                    'undertaker_boots', 'undertaker_cane'];
-    const COMBAT = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack',
-                    'stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence',
-                    'strengthbonus', 'rangedbonus', 'magicdamage', 'prayerbonus'];
+    const PIECES = ['undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane'];
+    const COMBAT = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack', 'stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence', 'strengthbonus', 'rangedbonus', 'magicdamage', 'prayerbonus'];
     const armed: string[] = [];
     const sellable: string[] = [];
     const keepable: string[] = [];
@@ -128,7 +125,11 @@ console.log('\nTHE OUTFIT: STATUS, NOT POWER');
             keepable.push(name);
         }
     }
-    check('  all five pieces exist', PIECES.every(n => ObjType.getId(n) !== -1), true);
+    check(
+        '  all five pieces exist',
+        PIECES.every(n => ObjType.getId(n) !== -1),
+        true
+    );
     check('  and not one carries a combat bonus', armed, []);
     check('  none of them can be traded', sellable, []);
     check('  and none can be kept on death or saved by Protect Item', keepable, []);
@@ -226,8 +227,10 @@ console.log('\nAND THE FOUR-PIECE SET PAYS - THE CANE IS NOT ONE OF THE FOUR');
     const bare: Player = player('tokenbaresim', 3094, 3700);
     const suited: Player = player('tokensuitsim', 3095, 3700);
     H.equip(suited, {
-        hat: 'undertaker_hat', torso: 'undertaker_coat',
-        legs: 'undertaker_trousers', feet: 'undertaker_boots'
+        hat: 'undertaker_hat',
+        torso: 'undertaker_coat',
+        legs: 'undertaker_trousers',
+        feet: 'undertaker_boots'
     });
     check('  the four pieces read as a set', H.runProc(suited, '[proc,undertaker_set_worn]', [])[0], 1);
     check('  and three of them do not', H.runProc(bare, '[proc,undertaker_set_worn]', [])[0], 0);
@@ -235,8 +238,11 @@ console.log('\nAND THE FOUR-PIECE SET PAYS - THE CANE IS NOT ONE OF THE FOUR');
     // THE CANE IS NOT REQUIRED, which is the whole reason the set is four and not five: it takes
     // the weapon hand, and a player who cannot fight cannot earn a token to be paid a bonus on.
     H.equip(bare, {
-        hat: 'undertaker_hat', torso: 'undertaker_coat',
-        legs: 'undertaker_trousers', feet: 'undertaker_boots', rhand: 'undertaker_cane'
+        hat: 'undertaker_hat',
+        torso: 'undertaker_coat',
+        legs: 'undertaker_trousers',
+        feet: 'undertaker_boots',
+        rhand: 'undertaker_cane'
     });
     check('  the cane neither makes nor breaks it', H.runProc(bare, '[proc,undertaker_set_worn]', [])[0], 1);
     H.despawn(bare);
@@ -274,7 +280,7 @@ console.log('\nNOTHING YOU CAN SWING CRASHES THE MELEE SCRIPT');
     for (let id = 0; id < ObjType.count; id++) {
         const t = ObjType.get(id);
         if (t.wearpos !== 3 || t.category === -1 || t.category === undefined) {
-            continue;   // not held in the right hand, or no category: the unarmed swing catches it
+            continue; // not held in the right hand, or no category: the unarmed swing catches it
         }
         const has = SOUND_OF.some(p => {
             const pid = ParamType.getId(p);
@@ -288,13 +294,9 @@ console.log('\nNOTHING YOU CAN SWING CRASHES THE MELEE SCRIPT');
     // covers everything, including whatever gets a category next. Printed rather than asserted so
     // the list stays visible: none of these ten wants a sound of its own, because none of them is a
     // weapon, and inventing one for a banana would be inventing content to satisfy a check.
-    console.log(`    (${silent.length} held items carry a category and no swing sound, all of them`
-                + ` pre-existing and all of them harmless now: ${silent.join(', ')})`);
+    console.log(`    (${silent.length} held items carry a category and no swing sound, all of them` + ` pre-existing and all of them harmless now: ${silent.join(', ')})`);
     const cane = ObjType.get(ObjType.getId('undertaker_cane'));
-    check('  and the cane in particular', [
-        cane.params.get(ParamType.getId('crush_sound')) !== undefined,
-        cane.params.get(ParamType.getId('crushattack_anim')) !== undefined
-    ], [true, true]);
+    check('  and the cane in particular', [cane.params.get(ParamType.getId('crush_sound')) !== undefined, cane.params.get(ParamType.getId('crushattack_anim')) !== undefined], [true, true]);
     // A nicer animation and nothing else: attackrate is left at its default of 4, a bare fist's,
     // and the cache cane's +16 crush and +13 strength are deliberately not copied.
     for (const pname of ['attackrate', 'crushattack', 'stabattack', 'slashattack', 'strengthbonus']) {
@@ -313,10 +315,23 @@ console.log('\nTHE GRAVEDIGGER KIT CHANGES THE LOOK AND NOTHING ELSE');
         const A = ObjType.get(ObjType.getId(a));
         const B = ObjType.get(ObjType.getId(b));
         const out: string[] = [];
-        for (const pname of ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence',
-                             'rangedefence', 'stabattack', 'slashattack', 'crushattack',
-                             'magicattack', 'rangeattack', 'strengthbonus', 'prayerbonus',
-                             'slayer_headgear', 'slayer_helmet', 'slayer_imbued']) {
+        for (const pname of [
+            'stabdefence',
+            'slashdefence',
+            'crushdefence',
+            'magicdefence',
+            'rangedefence',
+            'stabattack',
+            'slashattack',
+            'crushattack',
+            'magicattack',
+            'rangeattack',
+            'strengthbonus',
+            'prayerbonus',
+            'slayer_headgear',
+            'slayer_helmet',
+            'slayer_imbued'
+        ]) {
             const pid = ParamType.getId(pname);
             if (pid === -1) {
                 continue;
@@ -327,32 +342,24 @@ console.log('\nTHE GRAVEDIGGER KIT CHANGES THE LOOK AND NOTHING ELSE');
         }
         return out;
     };
-    check('  the plain Gravedigger is the plain helmet, stat for stat',
-          differs('slayer_helm_gravedigger', 'slayer_helm'), []);
-    check('  and the imbued one is the imbued helmet',
-          differs('slayer_helm_gravedigger_i', 'slayer_helm_i'), []);
+    check('  the plain Gravedigger is the plain helmet, stat for stat', differs('slayer_helm_gravedigger', 'slayer_helm'), []);
+    check('  and the imbued one is the imbued helmet', differs('slayer_helm_gravedigger_i', 'slayer_helm_i'), []);
 
     const par = (o: string, p: string) => ObjType.get(ObjType.getId(o)).params.get(ParamType.getId(p));
-    check('  the kit is named by both base helmets', [
-        par('slayer_helm', 'ornament_kit'), par('slayer_helm_i', 'ornament_kit')
-    ], [ObjType.getId('gravedigger_kit'), ObjType.getId('gravedigger_kit')]);
-    check('  each base turns into its own Gravedigger', [
-        par('slayer_helm', 'ornament_into'), par('slayer_helm_i', 'ornament_into')
-    ], [ObjType.getId('slayer_helm_gravedigger'), ObjType.getId('slayer_helm_gravedigger_i')]);
-    check('  and each Gravedigger remembers what it came from', [
-        par('slayer_helm_gravedigger', 'ornament_from'), par('slayer_helm_gravedigger_i', 'ornament_from')
-    ], [ObjType.getId('slayer_helm'), ObjType.getId('slayer_helm_i')]);
+    check('  the kit is named by both base helmets', [par('slayer_helm', 'ornament_kit'), par('slayer_helm_i', 'ornament_kit')], [ObjType.getId('gravedigger_kit'), ObjType.getId('gravedigger_kit')]);
+    check('  each base turns into its own Gravedigger', [par('slayer_helm', 'ornament_into'), par('slayer_helm_i', 'ornament_into')], [ObjType.getId('slayer_helm_gravedigger'), ObjType.getId('slayer_helm_gravedigger_i')]);
+    check('  and each Gravedigger remembers what it came from', [par('slayer_helm_gravedigger', 'ornament_from'), par('slayer_helm_gravedigger_i', 'ornament_from')], [ObjType.getId('slayer_helm'), ObjType.getId('slayer_helm_i')]);
 
     // Revert sits on iop5, because a slayer helmet already spends iop4 on Disassemble. A Revert
     // trigger on a slot the item does not declare is an option that silently does nothing.
     for (const n of ['slayer_helm_gravedigger', 'slayer_helm_gravedigger_i']) {
-        check('  ' + n + ' declares Revert where its trigger looks',
-              ObjType.get(ObjType.getId(n)).iop?.[4], 'Revert');
+        check('  ' + n + ' declares Revert where its trigger looks', ObjType.get(ObjType.getId(n)).iop?.[4], 'Revert');
     }
-    check('  neither it nor the kit can be traded', [
-        (ObjType.get(ObjType.getId('gravedigger_kit')) as unknown as { tradeable: boolean }).tradeable,
-        (ObjType.get(ObjType.getId('slayer_helm_gravedigger')) as unknown as { tradeable: boolean }).tradeable
-    ], [false, false]);
+    check(
+        '  neither it nor the kit can be traded',
+        [(ObjType.get(ObjType.getId('gravedigger_kit')) as unknown as { tradeable: boolean }).tradeable, (ObjType.get(ObjType.getId('slayer_helm_gravedigger')) as unknown as { tradeable: boolean }).tradeable],
+        [false, false]
+    );
 }
 
 console.log('\nAND EVERYTHING ONLY HE SELLS IS ON THE COLLECTION LOG');
@@ -372,7 +379,10 @@ console.log('\nAND EVERYTHING ONLY HE SELLS IS ON THE COLLECTION LOG');
     check('  the log has items in it at all', logged.size > 0, true);
     const shop = InvType.getId('death_token_shop');
     const missing: string[] = [];
-    for (let i = 0; i < 8; i++) {
+    // THE WHOLE SHELF, not a hardcoded eight. The shelf grew to 17 rows when the nine whip colour
+    // kits landed, and a fixed bound here would have gone on passing while checking none of them -
+    // which is the one way a check like this fails silently.
+    for (let i = 0; i < InvType.get(shop).size; i++) {
         const o = World.getInventory(shop)?.get(i);
         if (!o || o.id === ObjType.getId('slayer_imbue_scroll')) {
             continue;
@@ -389,15 +399,13 @@ console.log('\nAND THE SHELF SELLS THEM');
 {
     const shop = InvType.getId('death_token_shop');
     const stocked: string[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < InvType.get(shop).size; i++) {
         const o = World.getInventory(shop)?.get(i);
         if (o) {
             stocked.push(ObjType.get(o.id).debugname ?? String(o.id));
         }
     }
-    for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat',
-                        'undertaker_trousers', 'undertaker_boots', 'undertaker_cane',
-                        'gravedigger_kit', 'undertaker_cape']) {
+    for (const want of ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane', 'gravedigger_kit', 'undertaker_cape']) {
         check(`  ${want}`, stocked.includes(want), true);
     }
     // THE SHELF CANNOT RUN OUT. It held one of each, server-wide, so the first player to buy a hat
@@ -409,8 +417,9 @@ console.log('\nAND THE SHELF SELLS THEM');
     // plain one by value fails on the type, not on the numbers, which is what the first run did.
     const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []);
     const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []);
-    check('  every row holds a thousand', counts.slice(0, 8), new Array(8).fill(1000));
-    check('  and tops itself up every tick', rates.slice(0, 8), new Array(8).fill(1));
+    const rowCount = InvType.get(shop).size;
+    check('  every row holds a thousand', counts.slice(0, rowCount), new Array(rowCount).fill(1000));
+    check('  and tops itself up every tick', rates.slice(0, rowCount), new Array(rowCount).fill(1));
     // Unstackable items a thousand at a time need ALWAYS_STACK or they want a thousand slots in a
     // shelf that has eight.
     check('  and the shelf always stacks, which is what lets it', !!(t as unknown as { stackall: boolean }).stackall, true);
