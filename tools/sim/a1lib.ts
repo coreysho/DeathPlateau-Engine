@@ -394,18 +394,35 @@ export function fight(p: Player, npc: Npc, maxTicks = 600): boolean {
     }
     return false;
 }
-/** Pick up a ground obj at the player's feet or next to it (the take op, minus the route). */
-export function take(p: Player, objName: string, radius = 3): boolean {
+/**
+ * Pick up a ground obj at the player's feet or next to it (the take op, minus the route).
+ *
+ * IT WAITS FOR THE DROP. A kill's loot is not on the floor the instant the npc's hitpoints reach
+ * zero: fight() returns as soon as levels[3] hits 0 and ticks three more, while the death script
+ * runs its animation and its queue before anything is added. Looking once, on whichever tick the
+ * caller happens to be on, is a race - and it is the race behind "the crab dies to a real fight:
+ * true" followed by "crab meat: false" and an exception on the next line. Ten ticks of looking
+ * costs nothing when the obj is already there, which is the usual case.
+ */
+export function take(p: Player, objName: string, radius = 3, waitTicks = 10): boolean {
     const id = ObjType.getId(objName);
-    for (let dx = -radius; dx <= radius; dx++)
-        for (let dz = -radius; dz <= radius; dz++) {
-            const o = World.getObj(p.x + dx, p.z + dz, p.level, id, p.hash64 ?? -1n) ?? World.getObj(p.x + dx, p.z + dz, p.level, id, -1n);
-            if (o) {
-                World.removeObj(o, 0);
-                H.give(p, objName, o.count);
-                return true;
+    const look = () => {
+        for (let dx = -radius; dx <= radius; dx++)
+            for (let dz = -radius; dz <= radius; dz++) {
+                const o = World.getObj(p.x + dx, p.z + dz, p.level, id, p.hash64 ?? -1n) ?? World.getObj(p.x + dx, p.z + dz, p.level, id, -1n);
+                if (o) return o;
             }
+        return null;
+    };
+    for (let t = 0; t <= waitTicks; t++) {
+        const o = look();
+        if (o) {
+            World.removeObj(o, 0);
+            H.give(p, objName, o.count);
+            return true;
         }
+        if (t < waitTicks) H.tick(1);
+    }
     return false;
 }
 /** Run a proc the way an op script would: with protected access to the player. */

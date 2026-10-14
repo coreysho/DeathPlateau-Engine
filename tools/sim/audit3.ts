@@ -850,11 +850,17 @@ if (run('dt')) {
     sv(s, 'deserttreasure', 11);
     talk(s, 'shadow_warrior_rasool');
     check('Rasolo wants his cross', gv(s, 'fd_shadowwarrior_quest'), 1);
-    H.give(s, 'lockpick', 5);
+    // THIRTY LOCKPICKS, NOT FIVE. The chest has three locks and [oploc1,fd_bandit_shutchest] picks
+    // all three inside one click: any single stat_random miss snaps the pick, poisons you and
+    // returns, so an attempt needs three in a row and costs a pick when it does not get them. With
+    // five picks the sim ran out of picks long before it ran out of its six retries - "the cross,
+    // out of the chest: 0" - and the ring-of-visibility check below it went down with the cross.
+    // Thirty picks and a dozen tries put the odds of a clean run past anything worth worrying about.
+    H.give(s, 'lockpick', 30);
     check('the bandit chest can be walked to from the camp', reaches(0, 3163, 2980, 3169, 2967), true);
     standBy(s, 3169, 2967, 0);
-    for (let i = 0; i < 6 && H.invCount(s, 'fd_sword_cross') === 0; i++) {
-        s.levels[3] = 99;
+    for (let i = 0; i < 12 && H.invCount(s, 'fd_sword_cross') === 0; i++) {
+        s.levels[3] = 99; // the needle jab, and the poison it queues
         op(s, 3169, 2967, 'fd_bandit_shutchest', 1);
     }
     check('the cross, out of the chest', H.invCount(s, 'fd_sword_cross'), 1);
