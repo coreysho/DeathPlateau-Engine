@@ -809,38 +809,10 @@ if (rfd) {
             }
             H.tick(3);
             check(`${name} dies to a real fight (her melee form)`, dead, true);
-        } else if (i === order.length - 1) {
-            // THE LAST ONE GETS A NUDGE WHEN IT STALLS. fight() only re-issues an attack while the
-            // player has NO target, and a target that is set but out of reach never lands a blow -
-            // so the loop can spin out its whole budget with the boss barely scratched, which is
-            // how 120 hitpoints survived 900 ticks about one run in five. This watches the boss's
-            // hitpoints instead of the player's target and only steps in when they stop moving.
-            let dead = false;
-            let lastHp = npc.levels[3];
-            let stale = 0;
-            for (let t = 0; t < 1500 && !dead; t++) {
-                H.tick(1);
-                if (!npc.isActive || npc.levels[3] === 0) {
-                    dead = true;
-                    break;
-                }
-                if (p.levels[3] < 50) p.levels[3] = 99;
-                if (npc.levels[3] < lastHp) {
-                    lastHp = npc.levels[3];
-                    stale = 0;
-                } else if (++stale > 12) {
-                    if (Math.max(Math.abs(p.x - npc.x), Math.abs(p.z - npc.z)) > 1) {
-                        p.teleport(npc.x + npc.width, npc.z, npc.level);
-                        H.tick(1);
-                    }
-                    H.attackNpc(p, npc);
-                    stale = 0;
-                }
-            }
-            H.tick(3);
-            check(`${name} dies to a real fight`, dead, true);
         } else {
-            check(`${name} dies to a real fight`, fight(p, npc, 900), true);
+            // 1500 rather than 900 because the last one is 120 hitpoints; the stall nudge that used
+            // to be written out here lives in fight() now, under every caller.
+            check(`${name} dies to a real fight`, fight(p, npc, i === order.length - 1 ? 1500 : 900), true);
         }
         H.tick(3);
         check('  the tally counts it', V(p, 'hundred_minionskilled_tally'), i + 1);
