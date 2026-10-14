@@ -10,6 +10,18 @@ import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import World from '#/engine/World.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+import fs from 'fs';
+
+// THE QUEST STAGES ARE READ, NOT TYPED. The Ghosts Ahoy rebuild renumbered them - the manual went
+// from 5 to 7 and the translation from 6 to 8 - and this file had both written out as digits, so
+// the translate section seeded a stage that is now the map, watched the content correctly refuse to
+// advance it, and called that a failure. Reading the names out of the constant file cannot rot.
+const AHOY = ((): Record<string, number> => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/quests/quest_ahoy/configs/quest_ahoy.constant', 'utf8');
+    for (const m of src.matchAll(/\^(ahoy_\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
 
 // A ~mesbox is interface text, not a chat line, and it is drawn INSIDE the click - before drive()
 // starts watching - so the mark has to be taken before the click and the slice read afterwards.
@@ -66,7 +78,7 @@ console.log('\n================ ZANARIS: the mushroom gate');
 console.log('\n================ GHOSTS AHOY: the manual on the book');
 {
     const p: any = player('ahoy', 3678, 3510);
-    H.setVarBit(p, 'ahoy_questvar', 5); // ^ahoy_manual
+    H.setVarBit(p, 'ahoy_questvar', AHOY.ahoy_manual);
     H.give(p, 'ahoy_translation_manual');
     H.give(p, 'ahoy_book_of_haricanto');
     H.tick(1);
@@ -74,7 +86,7 @@ console.log('\n================ GHOSTS AHOY: the manual on the book');
     H.useHeldOn(p, 'ahoy_translation_manual', 'ahoy_book_of_haricanto');
     H.tick(14);
     check('translating pays no Prayer experience', xp(p, PlayerStat.PRAYER) - before, 0);
-    check('  ...and still advances the quest', H.getVarBit(p, 'ahoy_questvar'), 6);
+    check('  ...and still advances the quest', H.getVarBit(p, 'ahoy_questvar'), AHOY.ahoy_translated);
     const im = ifaceMark();
     H.useHeldOn(p, 'ahoy_translation_manual', 'ahoy_book_of_haricanto');
     A.drive(p);
@@ -172,7 +184,11 @@ console.log('\n================ THE ECTOFUNTUS');
     H.give(p, 'amulet_of_ghostspeak');
     H.equip(p, { front: 'amulet_of_ghostspeak' });
     H.tick(2);
-    const lines = talk(p, 'ahoy_disciple', [1], 1, false);
+    // NO MENU FOR THIS PLAYER. The rebuild gave the disciple a p_choice2 - the Book of Haricanto, or
+    // the tokens - but only between ^ahoy_crone_told and ^ahoy_translated. This player has never
+    // started the quest, so the handler falls straight through to ~ecto_collect_tokens and there is
+    // nothing to pick; demanding a pick threw and took the ectophial section below down with it.
+    const lines = talk(p, 'ahoy_disciple', [], 1, false);
     H.tick(10);
     console.log('  ', lines.slice(0, 6));
     check('the disciple hands the tokens over', H.invCount(p, 'ectotoken'), 5);
@@ -212,7 +228,7 @@ console.log('\n================ THE ECTOFUNTUS');
     // with it every use for bonemeal - permanently.
     console.log('-- Velorina replaces a lost one');
     const v: any = player('velo', 3678, 3512, 0);
-    H.setVarBit(v, 'ahoy_questvar', 10); // ^ahoy_complete
+    H.setVarBit(v, 'ahoy_questvar', AHOY.ahoy_complete);
     // She cannot be heard without it, and that IS the condition Old School puts on the
     // replacement - so wearing it is part of the test, not setup around it.
     H.equip(v, { front: 'amulet_of_ghostspeak' });
