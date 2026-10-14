@@ -29,12 +29,14 @@ import VarBitType from '#/cache/config/VarBitType.js';
 import { canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import LocType from '#/cache/config/LocType.js';
-import { findNpc, drive, useOn, take } from './a1lib.js';
+import ObjType from '#/cache/config/ObjType.js';
+import InvType from '#/cache/config/InvType.js';
+import { findNpc, drive, useOn, useOnNpc, take } from './a1lib.js';
 
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
-    | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
+    | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
@@ -48,6 +50,7 @@ export type Step =
     | { take: string; why?: string }
     | { setpos: [number, number, number]; why: string }
     | { has: string; n?: number }
+    | { worn: string }
     | { hasnt: string }
     | { fight: string }
     | { note: string };
@@ -274,6 +277,24 @@ export function play(m: Manifest, p: Player): Result[] {
             soft('carrying ' + (s.n ?? 1) + ' x ' + s.has, got >= (s.n ?? 1), 'has ' + got);
             continue;
         }
+        if ('worn' in s) {
+            // WEARING IT IS NOT THE SAME AS CLICKING WEAR, and the difference is invisible from
+            // outside: [opheld2,_] matches every obj in the game, so a `held` step on something
+            // with no wearpos reports ok, ~equip bails on the DEBUG line, and the player walks on
+            // in their own face. The Feud's own disguise is exactly that - the cache has one
+            // unwearable combined obj and one with three wearpos entries - and the playthrough
+            // only found out eleven steps later, at a cactus.
+            const inv = p.getInventory(InvType.WORN);
+            let on = 0;
+            if (inv) {
+                for (let i = 0; i < inv.capacity; i++) {
+                    const o = inv.get(i);
+                    if (o && ObjType.get(o.id).debugname === s.worn) on++;
+                }
+            }
+            soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
         if ('hasnt' in s) {
             const got = H.invCount(p, s.hasnt);
             soft(s.hasnt + ' is gone', got === 0, 'still has ' + got);
@@ -386,7 +407,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     continue;
                 }
                 reached = true;
-                lines = run(s.picks ?? []);
+                lines = run(('picks' in s ? s.picks : undefined) ?? []);
                 dbg('said ' + JSON.stringify(lines.slice(0, 2)) + ' unreached=' + JSON.stringify(unreached));
                 // With until, the item arriving is the signal and a leftover pick is not a
                 // fault: Robin deals one hand per click, so most clicks consume one menu and
@@ -430,7 +451,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('held' in s) {
             what = s.held + ' op' + (s.op ?? 1) + (s.why ? ' - ' + s.why : '');
             let heldok = false;
@@ -445,7 +466,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             quiet(p);
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('use' in s) {
             what = 'use ' + s.use[0] + ' on ' + s.use[1] + (s.why ? ' - ' + s.why : '');
             let useok = false;
@@ -460,7 +481,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             quiet(p);
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('useLoc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useLoc + (s.why ? ' - ' + s.why : '');
             let lw = 1;
@@ -478,7 +499,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
@@ -491,12 +512,23 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'no ' + s.useNpc + ' anywhere near ' + p.x + ',' + p.z);
                 continue;
             }
-            H.opNpc(p, npc, 5);
-            if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                hard(what, false, 'never reached ' + s.useNpc + '; player at ' + p.x + ',' + p.z);
+            // USE-ON-NPC IS ITS OWN PACKET, not op 5. Sending op 5 reached the npc, reported a
+            // delivered click and never fired [opnpcu,...] at all - three beers handed to Drunken
+            // Ali with nothing to show for it. a1lib.useOnNpc sets lastUseItem and the APNPCU
+            // interaction, which is what the real client does.
+            try {
+                lines = useOnNpc(p, s.useNpc, s.obj, s.picks ?? []);
+            } catch (e) {
+                hard(what, false, String(e).replace('Error: ', ''));
                 continue;
             }
-            lines = run(s.picks ?? []);
+            const joinedUse = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+            if (s.want && !joinedUse.includes(s.want)) {
+                soft(what, false, 'nothing said "' + s.want + '"');
+            } else {
+                hard(what, true);
+            }
+            continue;
         }
 
         const joined = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');

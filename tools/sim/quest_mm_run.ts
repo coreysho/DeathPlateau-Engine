@@ -236,7 +236,10 @@ const m: Manifest = {
         { go: [2892, 2724], r: 64 },
         { talk: 'mm_lumdo', picks: [1] },
         { go: [2722, 2763], r: 250, why: 'Kruk again, from the only standable side' },
-        { talk: 'mm_kruk', picks: [1], tries: 30 },
+        // NO PICK THE SECOND TIME. By now you are a monkey with Awowogei's business to finish, and
+        // Kruk does not ask - he picks you up by the scruff of the neck and puts you through the
+        // gate. Asking for option 1 here reported a failure for a conversation that went perfectly.
+        { talk: 'mm_kruk', tries: 30, why: 'he carries you through without asking' },
         { talk: 'mm_awowogei_cutscene', tries: 20, why: 'hand over the monkey' },
         { stage: 13 },
         { go: [2804, 2761], r: 250, why: 'Garkor' },
