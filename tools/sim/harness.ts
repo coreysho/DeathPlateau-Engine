@@ -442,6 +442,25 @@ export function ifButton(p: Player, comName: string) {
 }
 
 /**
+ * What clicking one of a component's inventory options does - Make 1, Make 5, Make 10 on a crafting
+ * panel, which is an INV_BUTTON and not an IF_BUTTON. ifButton cannot reach these: the trigger type
+ * is different, and a panel slot that looks like a button to the player is an inv.
+ */
+export function invButton(p: Player, comName: string, op = 1, slot = 0) {
+    const comId = Component.getId(comName);
+    if (comId === -1) throw new Error('no such component: ' + comName);
+    p.lastCom = comId;
+    p.lastSlot = slot;
+    const trigger = ServerTriggerType.INV_BUTTON1 + (op - 1);
+    const script = ScriptProvider.getByTriggerSpecific(trigger, comId, -1);
+    if (!script) throw new Error('no inv_button' + op + ' trigger for ' + comName);
+    const com = Component.get(comId);
+    const root = Component.get(com.rootLayer);
+    p.executeScript(ScriptRunner.init(script, p), root.overlay == false);
+    return true;
+}
+
+/**
  * What "Cast on" a player does: OpPlayerTHandler, minus the visibility checks - the spell's
  * component rides with the interaction and the engine fires [applayert,<com>] / [opplayert,<com>].
  */
