@@ -5,6 +5,7 @@ import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
+import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
@@ -294,10 +295,24 @@ export function fillInv(p: Player) {
     }
 }
 
-export function runProc(p: Player, name: string, args: any[] = [], secondary?: Player): number[] {
+/**
+ * Run a proc by name, as `[proc,name]`.
+ *
+ * PROTECTED ACCESS: a transmitted varp can only be written by a script that has it, and every
+ * op trigger does - so a proc that writes one works in game and throws "requires protected access"
+ * here, which is a difference in the CALLER and not a bug in the proc. Pass protect to stand in for
+ * the trigger. (Mourning's End Part II's door table is the case that found this: ~m2_doors writes
+ * the fourteen mourning_door_* bits, and testing it any other way means solving the light puzzle
+ * from the inside five times over.)
+ */
+export function runProc(p: Player, name: string, args: any[] = [], secondary?: Player, protect = false): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
     const state = ScriptRunner.init(script, p, secondary ?? null, args);
+    if (protect) {
+        state.pointerAdd(ScriptPointer.ProtectedActivePlayer);
+        state.pointerAdd(ScriptPointer.ProtectedActivePlayer2);
+    }
     ScriptRunner.execute(state);
     return (state as any).intStack.slice(0, (state as any).isp);
 }
