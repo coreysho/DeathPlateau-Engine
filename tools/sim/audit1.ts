@@ -585,16 +585,18 @@ if (rfd) {
     check('Evil Dave is reachable on foot', connected(0, p.x, p.z, 3080, 9891) || connected(0, p.x, p.z, 3081, 9890) || connected(0, p.x, p.z, 3079, 9890), true);
     talk(p, 'hundred_evil_dave', [], 1, false);
     check('Dave names the stew: stage 3', V(p, 'hundred_dave_main'), 3);
-    // the spice: the cat catches four hell-rats and the fourth is a behemoth that drops a shaker
+    // THE SPICE COMES OFF THE CAT'S CATCHES - a shaker a rat, one of four colours, one to four
+    // doses. This block used to assert that the fourth catch brought out a Hell-Rat Behemoth, which
+    // [proc,hundred_dave_hellrat_caught] has never done and cannot: it hands over a shaker and
+    // counts towards corrupting the cat, and that is all of it. The behemoths are four curtains in
+    // the crypt, gated on the subquest being FINISHED - the original makes them a reward rather
+    // than a step - so they are tested below the plinth, where they actually happen.
+    const SPICE = ['red', 'orange', 'yellow', 'brown'];
+    const shakers = () => SPICE.reduce((n, c) => n + [1, 2, 3, 4].reduce((m, d) => m + H.invCount(p, `hundred_dave_spice_${c}_${d}`), 0), 0);
+    const spice0 = shakers();
     for (let i = 0; i < 4; i++) runProcProtected(p, '[proc,hundred_dave_hellrat_caught]'); // what [opnpc5,_petcat] calls on each hell-rat the cat catches
     H.tick(2);
-    const behemoth = H.npcNear('hundred_dave_hellrat_behemoth', p.x, p.z, 0);
-    check('four catches bring out a behemoth', behemoth !== null, true);
-    if (behemoth) {
-        check('the behemoth dies to a real fight', fight(p, behemoth), true);
-        const got = ['red', 'orange', 'yellow', 'brown'].some(c => take(p, `hundred_dave_spice_${c}_4`, 4));
-        check('and drops a spice shaker', got, true);
-    }
+    check('four catches off the cat, four shakers of spice', shakers() - spice0, 4);
     H.clearInv(p);
     const want: Record<string, number> = {};
     for (const c of ['red', 'orange', 'yellow', 'brown']) want[c] = V(p, `hundred_dave_${c}_target`);
@@ -618,6 +620,61 @@ if (rfd) {
     check('the cellar stairs back up', [p.z < 4000, walkable(0, p.x, p.z)], [true, true]);
     plinth('hundred_dave_base', 1865, 5323, 'hundred_dave_stew');
     check('Evil Dave is freed', tally(p), 7);
+
+    // THE BEHEMOTHS, now that the subquest is done and the ability is his reward for it. Four
+    // curtains in the crypt, a colour each; three are the left-hand loc and the yellow one is the
+    // right. A cat has to be with you, because in the original it is the cat the thing comes out
+    // for, and only one can be out anywhere within fourteen tiles.
+    //
+    // WHY THIS DOES NOT USE op(): op() ends in drive(), which ticks until the chat settles - about
+    // thirty ticks here - and the behemoth is a 40-hitpoint melee attacker that spawns ON the
+    // player and opens with opplayer2. The player auto-retaliates, and by the time drive() returns
+    // the thing is dead and npc_del'd, which is why this read as "the behemoth never comes out":
+    // it came out, fought, and died inside the click. The pull below ticks one at a time and stops
+    // the moment it sees one.
+    {
+        const RED: [number, number] = [3073, 9886];
+        const ORANGE: [number, number] = [3073, 9888];
+        const BEH = 'hundred_dave_hellrat_behemoth';
+        const pull = (x: number, z: number, type: string) => {
+            p.teleport(x + 1, z, 0);
+            H.tick(2);
+            const m = mark();
+            H.opLoc(p, x, z, type, 1);
+            let npc: ReturnType<typeof H.npcNear> = null;
+            for (let t = 0; t < 8 && !npc; t++) {
+                H.tick(1);
+                npc = H.npcNear(BEH, x, z, 0);
+            }
+            return { said: mesSince(p, m).join(' '), npc };
+        };
+        H.clearInv(p);
+        p.teleport(3074, 9890, 0);
+        H.tick(1);
+        const nocat = pull(RED[0], RED[1], '100_dave_crypt_curtainsl');
+        check('with no cat, the curtain stays shut', saw([nocat.said], 'not coming out for you'), true);
+        check('  and nothing came out of it', nocat.npc, null);
+        H.give(p, 'kittenobject');
+        H.opheld(p, 'kittenobject', 5); // dropping a kitten makes it the follower
+        H.tick(3);
+        check('a kitten dropped in the crypt follows the player', H.invCount(p, 'kittenobject'), 0);
+        const red = pull(RED[0], RED[1], '100_dave_crypt_curtainsl');
+        check('  and now the red curtain gives one up', saw([red.said], 'comes out of it'), true);
+        check('  a Hell-Rat Behemoth, size 2, 40 hitpoints', red.npc ? [red.npc.width, NpcType.get(red.npc.type).stats[3]] : null, [2, 40]);
+        const second = pull(ORANGE[0], ORANGE[1], '100_dave_crypt_curtainsl');
+        check('  and no second one while it is still out', saw([second.said], 'already out'), true);
+        if (red.npc) {
+            check('  it dies to a real fight', fight(p, red.npc), true);
+            H.tick(4);
+            // always four doses, always the colour of the curtain it came out from
+            check("  and pays a four-dose shaker in the curtain's own colour", H.invCount(p, 'hundred_dave_spice_red_4') > 0 || take(p, 'hundred_dave_spice_red_4', 4), true);
+            check(
+                '  with no shaker of any other colour',
+                SPICE.filter(c => c !== 'red').reduce((n, c) => n + H.invCount(p, `hundred_dave_spice_${c}_4`), 0),
+                0
+            );
+        }
+    }
 
     console.log('RECIPE FOR DISASTER - Skrach Uglogwee');
     H.clearInv(p);
