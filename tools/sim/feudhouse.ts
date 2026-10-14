@@ -25,10 +25,11 @@ const SV = (n: string, v: number) => (VarBitType.getId(n) !== -1 ? H.setVarBit(p
 const worn = () => {
     const inv = p.getInventory(InvType.WORN);
     const out: string[] = [];
-    if (inv) for (let i = 0; i < inv.capacity; i++) {
-        const o = inv.get(i);
-        if (o) out.push(i + ':' + ObjType.get(o.id).debugname);
-    }
+    if (inv)
+        for (let i = 0; i < inv.capacity; i++) {
+            const o = inv.get(i);
+            if (o) out.push(i + ':' + ObjType.get(o.id).debugname);
+        }
     return out.join(', ') || '(nothing)';
 };
 const show = (label: string, lines: string[]) => {
@@ -36,7 +37,7 @@ const show = (label: string, lines: string[]) => {
     for (const l of lines.slice(0, 4)) console.log('      "' + l.slice(0, 110) + '"');
 };
 
-SV('feud_var', 36);          // ^feud_heist
+SV('feud_var', 36); // ^feud_heist
 SV('macro_event', 1);
 H.give(p, 'feud_mayors_house_keys', 1);
 H.give(p, 'feud_karidian_fakebeard_and_hat', 1);
@@ -44,12 +45,13 @@ H.give(p, 'leather_gloves', 1);
 
 console.log('');
 console.log('the cactus');
-H.opheld(p, 'feud_karidian_fakebeard_and_hat', 2); a1lib.drive(p);
-H.opheld(p, 'leather_gloves', 2); a1lib.drive(p);
+H.opheld(p, 'feud_karidian_fakebeard_and_hat', 2);
+a1lib.drive(p);
+H.opheld(p, 'leather_gloves', 2);
+a1lib.drive(p);
 console.log('  worn: ' + worn());
 const lt: any = LocType.get(LocType.getId('feud_cactus_row'));
-console.log('  cactus forceapproach=' + lt.forceapproach + ' w=' + lt.width + ' l=' + lt.length
-    + ' ops=' + JSON.stringify(lt.op));
+console.log('  cactus forceapproach=' + lt.forceapproach + ' w=' + lt.width + ' l=' + lt.length + ' ops=' + JSON.stringify(lt.op));
 H.opLoc(p, 3363, 2967, 'feud_cactus_row', 1);
 show('after the click, at ' + p.x + ',' + p.z + ', mayorsdoor=' + V('feud_var_mayorsdoor'), a1lib.drive(p));
 H.tick(8);
@@ -60,9 +62,12 @@ console.log('the staircase');
 p.teleport(3373, 2977, 0);
 H.tick(2);
 const st: any = LocType.get(LocType.getId('feud_insidestairs_base'));
-console.log('  stairs forceapproach=' + st.forceapproach + ' w=' + st.width + ' l=' + st.length
-    + ' ops=' + JSON.stringify(st.op));
+console.log('  stairs forceapproach=' + st.forceapproach + ' w=' + st.width + ' l=' + st.length + ' ops=' + JSON.stringify(st.op));
 H.opLoc(p, 3373, 2978, 'feud_insidestairs_base', 1);
 show('after the click, at ' + p.x + ',' + p.z + ' L' + p.level, a1lib.drive(p));
 H.tick(8);
 console.log('  settled at ' + p.x + ',' + p.z + ' L' + p.level);
+
+// Exit rather than running off the end of the file: the world's worker threads and timers keep the
+// process alive, so without this the sim hangs after its last line instead of finishing.
+process.exit(0);

@@ -27,7 +27,6 @@ import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { findPathToLoc, findPathToEntity, canTravel, findPath } from '#/engine/GameMap.js';
-import CategoryType from '#/cache/config/CategoryType.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import Player from '#/engine/entity/Player.js';
@@ -55,10 +54,26 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
-const var_ = (p: Player, v: string) => { try { return H.getVar(p, v); } catch { return H.getVarBit(p, v); } };
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
+const var_ = (p: Player, v: string) => {
+    try {
+        return H.getVar(p, v);
+    } catch {
+        return H.getVarBit(p, v);
+    }
+};
 const vb = (p: Player, v: string) => H.getVarBit(p, v);
-const setV = (p: Player, v: string, n: number) => { try { H.setVar(p, v, n); } catch { H.setVarBit(p, v, n); } };
+const setV = (p: Player, v: string, n: number) => {
+    try {
+        H.setVar(p, v, n);
+    } catch {
+        H.setVarBit(p, v, n);
+    }
+};
 
 /** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
 function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
@@ -85,17 +100,24 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function nearestNpc(name: string, x: number, z: number, level: number): Npc | null {
     const id = NpcType.getId(name);
     if (id === -1) throw new Error('no npc type ' + name);
-    let best: Npc | null = null, bd = 1e9;
+    let best: Npc | null = null,
+        bd = 1e9;
     for (const n of World.npcs) {
         if (!n || !n.isActive || n.type !== id || n.level !== level) continue;
         const d = Math.max(Math.abs(n.x - x), Math.abs(n.z - z));
-        if (d < bd) { bd = d; best = n; }
+        if (d < bd) {
+            bd = d;
+            best = n;
+        }
     }
     return best;
 }
@@ -103,7 +125,13 @@ function nearestNpc(name: string, x: number, z: number, level: number): Npc | nu
 /** Click an npc from where the player stands (no teleporting next to it) and run the dialogue. */
 function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = nearestNpc(npcName, p.x, p.z, p.level);
-    if (!npc) throw new Error(`no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs].filter(n => n && n.type === NpcType.getId(npcName)).map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`).join(' ')}`);
+    if (!npc)
+        throw new Error(
+            `no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs]
+                .filter(n => n && n.type === NpcType.getId(npcName))
+                .map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`)
+                .join(' ')}`
+        );
     const m0 = H.mesgs.length;
     drive(p, [], 2);
     const i0 = H.ifaces.length;
@@ -113,14 +141,38 @@ function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): str
     }
     if (!p.activeScript) console.log(`    [talk ${npcName} did not start]`, at(p), [npc.x, npc.z], mesSince(p, m0));
     drive(p, picks);
-    return H.ifaces.slice(i0).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(i0)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 /** Stand next to the npc first, then talk. */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
-    const npc = [0, 1, 2, 3].map(l => nearestNpc(npcName, p.x, p.z, l)).filter(n => n).sort((a, b) => Math.max(Math.abs(a!.x - p.x), Math.abs(a!.z - p.z)) - Math.max(Math.abs(b!.x - p.x), Math.abs(b!.z - p.z)))[0];
-    if (!npc) throw new Error(`no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs].filter(n => n && n.type === NpcType.getId(npcName)).map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`).join(' ')}`);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2]]) {
-        if (!canTravel(npc.level, npc.x + dx, npc.z + dz, 0, 0, 1, 0, CollisionType.NORMAL) && false) continue;
+    const npc = [0, 1, 2, 3]
+        .map(l => nearestNpc(npcName, p.x, p.z, l))
+        .filter(n => n)
+        .sort((a, b) => Math.max(Math.abs(a!.x - p.x), Math.abs(a!.z - p.z)) - Math.max(Math.abs(b!.x - p.x), Math.abs(b!.z - p.z)))[0];
+    if (!npc)
+        throw new Error(
+            `no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs]
+                .filter(n => n && n.type === NpcType.getId(npcName))
+                .map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`)
+                .join(' ')}`
+        );
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2]
+    ]) {
+        // The collision test on the approach tile is deliberately NOT applied - it was `&& false`,
+        // which eslint reads as a dead condition and is right to. Left as a comment rather than a
+        // disabled expression so the next person does not have to work out which half was meant:
+        // if (!canTravel(npc.level, npc.x + dx, npc.z + dz, 0, 0, 1, 0, CollisionType.NORMAL)) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -163,14 +215,19 @@ function useOnNpc(p: Player, npc: Npc, objName: string) {
     return drive(p);
 }
 function itemOnItem(p: Player, a: string, b: string) {
-    const A = slotOf(p, a), B = slotOf(p, b);
-    p.lastUseItem = A.obj; p.lastUseSlot = A.slot;
-    p.lastItem = B.obj; p.lastSlot = B.slot;
-    const script = (ScriptProviderRef.getByTrigger(ServerTriggerType.OPHELDU, B.obj, ObjType.get(B.obj).category)
-        ?? ScriptProviderRef.getByTrigger(ServerTriggerType.OPHELDU, A.obj, ObjType.get(A.obj).category));
+    const A = slotOf(p, a),
+        B = slotOf(p, b);
+    p.lastUseItem = A.obj;
+    p.lastUseSlot = A.slot;
+    p.lastItem = B.obj;
+    p.lastSlot = B.slot;
+    const script = ScriptProviderRef.getByTrigger(ServerTriggerType.OPHELDU, B.obj, ObjType.get(B.obj).category) ?? ScriptProviderRef.getByTrigger(ServerTriggerType.OPHELDU, A.obj, ObjType.get(A.obj).category);
     if (!script) throw new Error(`no opheldu for ${a} on ${b}`);
     if (!ScriptProviderRef.getByTrigger(ServerTriggerType.OPHELDU, B.obj, ObjType.get(B.obj).category)) {
-        p.lastUseItem = B.obj; p.lastUseSlot = B.slot; p.lastItem = A.obj; p.lastSlot = A.slot;
+        p.lastUseItem = B.obj;
+        p.lastUseSlot = B.slot;
+        p.lastItem = A.obj;
+        p.lastSlot = A.slot;
     }
     p.executeScript(ScriptRunnerRef.init(script, p), true);
     return drive(p);
@@ -185,10 +242,20 @@ function connected(level: number, x: number, z: number, tx: number, tz: number, 
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (Math.abs(cx - tx) + Math.abs(cz - tz) <= 1) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
@@ -260,7 +327,15 @@ if (run('tog')) {
     check('a light held up to a light creature carries you over the chasm', at(p), [3225, 9503, 2]);
     // mine the blue stone
     let mined = false;
-    for (const [x, z] of [[3228, 9496], [3229, 9497], [3229, 9495], [3227, 9495], [3226, 9494], [3233, 9496], [3228, 9494]]) {
+    for (const [x, z] of [
+        [3228, 9496],
+        [3229, 9497],
+        [3229, 9495],
+        [3227, 9495],
+        [3226, 9494],
+        [3233, 9496],
+        [3228, 9494]
+    ]) {
         for (const n of ['tog_blue_stone_rocks1', 'tog_blue_stone_rocks2', 'tog_blue_stone_rocks3']) {
             if (!World.getLoc(x, z, 2, LocType.getId(n))) continue;
             if (!connected(2, p.x, p.z, x, z)) continue;
@@ -283,12 +358,17 @@ if (run('tog')) {
     const xpBefore = p.stats[PlayerStat.PRAYER];
     H.tick(95);
     drive(p);
-    check('the run ends with nothing caught - and still completes the quest (it returned before)', [vb(p, 'tog_minigame_collecting'), H.runProc(p, '[proc,tog_progress]')[0], p.stats[PlayerStat.PRAYER] - xpBefore, H.ifaces.some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes('Tears of Guthix'))], [0, 4, 20000, true]);
+    check(
+        'the run ends with nothing caught - and still completes the quest (it returned before)',
+        [vb(p, 'tog_minigame_collecting'), H.runProc(p, '[proc,tog_progress]')[0], p.stats[PlayerStat.PRAYER] - xpBefore, H.ifaces.some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes('Tears of Guthix'))],
+        [0, 4, 20000, true]
+    );
     check('  back at the top of the rocks down to her', at(p), [3240, 9498, 2]);
     // from the top of those rocks you can get back out
     op(p, 3239, 9498, 'tog_climbing_rocks_down');
     check('and the rocks by her ledge lead back up to the entrance', connected(1, p.x, p.z, 3241, 9524), true);
-    void qpBefore; void m;
+    void qpBefore;
+    void m;
 }
 
 // =============================================================================================
@@ -308,14 +388,20 @@ if (run('wanted')) {
     check('Scan: the stage moves on to hunting (a jump used to stop it short)', var_(p, 'wanted_main'), 30);
     for (let i = 0; i < 5; i++) {
         const place = H.runProc(p, '[proc,wanted_current_location]')[0];
-        if (!place) { check('the orb has a location', place, '>0'); break; }
+        if (!place) {
+            check('the orb has a location', place, '>0');
+            break;
+        }
         const shell = `wanted_solus${place}`;
         const npc = nearestNpc(shell, 3000, 3300, 0);
         const spawn = npc ? [npc.x, npc.z] : null;
         // walk up to him the way a player would, from a few tiles off
         p.teleport(npc!.x + 3, npc!.z, 0);
         H.tick(1);
-        if (!connected(0, p.x, p.z, npc!.x, npc!.z, 10)) { p.teleport(npc!.x, npc!.z + 1, 0); H.tick(1); }
+        if (!connected(0, p.x, p.z, npc!.x, npc!.z, 10)) {
+            p.teleport(npc!.x, npc!.z + 1, 0);
+            H.tick(1);
+        }
         const m0 = H.mesgs.length;
         const said = talkHere(p, shell);
         if (H.runProc(p, '[proc,wanted_sightings]')[0] !== i + 1) console.log('    [debug]', said, mesSince(p, m0), at(p), [npc!.x, npc!.z], connected(0, p.x, p.z, npc!.x, npc!.z, 10));
@@ -333,12 +419,29 @@ if (run('wanted')) {
         const npc = nearestNpc('wanted_solus' + place, 3000, 3300, 0)!;
         // stand on a walkable tile a few steps off, then click him from there
         let stood = false;
-        for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3], [2, 2], [-2, -2], [1, 0], [0, 1]]) {
-            if (bfsRoute(0, npc.x + dx, npc.z + dz, npc.x, npc.z, 12)) { q.teleport(npc.x + dx, npc.z + dz, 0); stood = true; break; }
+        for (const [dx, dz] of [
+            [3, 0],
+            [-3, 0],
+            [0, 3],
+            [0, -3],
+            [2, 2],
+            [-2, -2],
+            [1, 0],
+            [0, 1]
+        ]) {
+            if (bfsRoute(0, npc.x + dx, npc.z + dz, npc.x, npc.z, 12)) {
+                q.teleport(npc.x + dx, npc.z + dz, 0);
+                stood = true;
+                break;
+            }
         }
         H.tick(1);
         const said = stood ? talkHere(q, 'wanted_solus' + place) : [];
-        check(`location ${place} (${H.runProc(q, '[proc,wanted_place_name]', [place]).length ? '' : ''}${npc.x},${npc.z}): Solus can be walked up to and spoken to`, [stood, said.length > 0, H.runProc(q, '[proc,wanted_sightings]')[0]], [true, true, 1]);
+        check(
+            `location ${place} (${H.runProc(q, '[proc,wanted_place_name]', [place]).length ? '' : ''}${npc.x},${npc.z}): Solus can be walked up to and spoken to`,
+            [stood, said.length > 0, H.runProc(q, '[proc,wanted_sightings]')[0]],
+            [true, true, 1]
+        );
         H.despawn(q);
     }
     check('he is cornered, and the hat is yours', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_solus_trophy')], [40, 1]);
@@ -395,11 +498,22 @@ if (run('gd')) {
     check('down again', p.level, 0);
     // the Black Guard: the Supreme Commander is on a first floor in the west of the city
     let up = false;
-    for (const [sx, sz] of [[2828, 10215], [2828, 10225], [2834, 10224], [2835, 10196]]) {
+    for (const [sx, sz] of [
+        [2828, 10215],
+        [2828, 10225],
+        [2834, 10224],
+        [2835, 10196]
+    ]) {
         if (!goTo(p, sx, sz, 0)) continue;
         op(p, sx, sz, 'dwarf_keldagrim_stairs_lower');
-        if (p.level === 1 && goTo(p, 2828, 10211, 1)) { up = true; break; }
-        if (p.level === 1) { const u = nearestLoc(p, 'dwarf_keldagrim_stairs_upper'); if (u) op(p, u.x, u.z, 'dwarf_keldagrim_stairs_upper'); }
+        if (p.level === 1 && goTo(p, 2828, 10211, 1)) {
+            up = true;
+            break;
+        }
+        if (p.level === 1) {
+            const u = nearestLoc(p, 'dwarf_keldagrim_stairs_upper');
+            if (u) op(p, u.x, u.z, 'dwarf_keldagrim_stairs_upper');
+        }
     }
     check('the Supreme Commander can be reached', up, true);
     talkHere(p, 'dwarf_city_black_guard_supreme_leader');
@@ -420,7 +534,11 @@ if (run('abyss')) {
     H.setVar(p, 'abyssal_miniquest', 3);
     const before = p.stats[PlayerStat.RUNECRAFT];
     talk(p, 'rcu_zammy_mage1_edge');
-    check('the Varrock mage finishes it: book, pouch and the promised 1000 Runecrafting xp', [var_(p, 'abyssal_miniquest'), H.invCount(p, 'rcu_instruction_book'), H.invCount(p, 'rcu_pouch_small'), p.stats[PlayerStat.RUNECRAFT] - before], [4, 1, 1, 10000]);
+    check(
+        'the Varrock mage finishes it: book, pouch and the promised 1000 Runecrafting xp',
+        [var_(p, 'abyssal_miniquest'), H.invCount(p, 'rcu_instruction_book'), H.invCount(p, 'rcu_pouch_small'), p.stats[PlayerStat.RUNECRAFT] - before],
+        [4, 1, 1, 10000]
+    );
 }
 
 // =============================================================================================
@@ -431,6 +549,18 @@ if (run('mm')) {
     H.setVar(p, 'grandtree', 160);
     talk(p, 'grandtree_narnode');
     check('King Narnode starts it and hands over the seal', [st(), H.invCount(p, 'mm_gnome_royal_seal')], [1, 1]);
+    // THE KARAMJA LEG IS NOT WALKED HERE, and Daero will not talk without what it produces. The
+    // rebuild put G.L.O. Caranock's shipyard between the King and Daero: Narnode writes the orders
+    // only once you have been told who signed for the shipment, and Daero's first line is a refusal
+    // until you are carrying them ("If the King has something to say to me he can write it down").
+    // Driving that leg is tools/sim/quest_mm_run.ts's job - it plays the whole quest on foot, with
+    // the warehouse and the jail - and what THIS block is for is the geography further in: the
+    // bamboo gate that was a dead click, Garkor being unreachable from the beach, Kruk's closed
+    // yard, the aunt's wander range. So the quest is advanced through Narnode's own replacement
+    // branch, which is also the only test that branch gets.
+    setV(p, 'mm_narnode', 1); // ^mm_narnode_briefed
+    talk(p, 'grandtree_narnode');
+    check('  and writes the orders again for anyone who has lost them', H.invCount(p, 'mm_narnode_orders'), 1);
     talk(p, 'mm_daero', [1, 2, 3, 1]);
     check('Daero, three questions, and down to the hangar', [st(), at(p)], [3, [2584, 4516, 0]]);
     talkHere(p, 'mm_waydar', [1]);
@@ -471,8 +601,24 @@ if (run('mm')) {
     H.give(p, 'banana', 5);
     // move the aunt away for the test, as her wander eventually does
     aunt.teleport(2730, 2780, 0);
-    { const c = nearestNpc('mm_monkey_child', p.x, p.z, 0)!; let said: string[] = [];
-      try { said = talk(p, 'mm_monkey_child', [1]); } catch (e) { console.log('    [debug child]', String(e), at(p), [c.x, c.z], [aunt.x, aunt.z], H.ifaces.filter(i => i.who === p.username && i.kind === 'text').slice(-4).map(i => i.text)); } }
+    {
+        const c = nearestNpc('mm_monkey_child', p.x, p.z, 0)!;
+        try {
+            talk(p, 'mm_monkey_child', [1]);
+        } catch (e) {
+            console.log(
+                '    [debug child]',
+                String(e),
+                at(p),
+                [c.x, c.z],
+                [aunt.x, aunt.z],
+                H.ifaces
+                    .filter(i => i.who === p.username && i.kind === 'text')
+                    .slice(-4)
+                    .map(i => i.text)
+            );
+        }
+    }
     aunt.teleport(2730, 2780, 0);
     talk(p, 'mm_monkey_child');
     check('five bananas for the talisman', [st(), H.invCount(p, 'mm_monkey_talisman')], [9, 1]);
@@ -554,27 +700,40 @@ if (run('death')) {
     check('the pub stairs go up', [pub, p.level], [true, 1]);
     const hd = goTo(p, 2907, 3543, 1);
     op(p, 2906, 3543, 'death_harold_door');
-    check('Harold\'s door: knock and come in', [hd, connected(1, p.x, p.z, 2905, 3539)], [true, true]);
+    check("Harold's door: knock and come in", [hd, connected(1, p.x, p.z, 2905, 3539)], [true, true]);
     talkHere(p, 'death_guard_equiproom', [1]);
     check('Harold talks', st(), 30);
     // skip the drinking and the dice - straight to having read the IOU
     setV(p, 'death_equiproom', 60);
-    { const s2 = nearestLoc(p, 'loc_1723'); if (s2) { goTo(p, s2.x, s2.z, 1); op(p, s2.x, s2.z, 'loc_1723'); } }
+    {
+        const s2 = nearestLoc(p, 'loc_1723');
+        if (s2) {
+            goTo(p, s2.x, s2.z, 1);
+            op(p, s2.x, s2.z, 'loc_1723');
+        }
+    }
     check('and back down the pub stairs', p.level, 0);
     // the stone balls and the mechanism
     const balls = ['death_cannonball_yellow', 'death_cannonball_green', 'death_cannonball_purple', 'death_cannonball_blue', 'death_cannonball_red'];
     const room = goTo(p, 2893, 3560, 0);
-    check('the stone balls\' room can be walked into', room, true);
+    check("the stone balls' room can be walked into", room, true);
     for (const b of balls) {
         const obj = [3561, 3562, 3563, 3564, 3565].map(z => World.getObj(2893, z, 0, ObjType.getId(b), p.hash64)).find(o => o);
-        if (!obj) { check('ball on the floor: ' + b, false, true); continue; }
+        if (!obj) {
+            check('ball on the floor: ' + b, false, true);
+            continue;
+        }
         p.clearPendingAction();
         p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, obj.x, obj.z, 1, 1, 1));
         p.setInteraction(Interaction.ENGINE, obj, ServerTriggerType.APOBJ3);
         (p as unknown as { opcalled: boolean }).opcalled = true;
         drive(p);
     }
-    check('all five balls picked up', balls.map(b => H.invCount(p, b)), [1, 1, 1, 1, 1]);
+    check(
+        'all five balls picked up',
+        balls.map(b => H.invCount(p, b)),
+        [1, 1, 1, 1, 1]
+    );
     // Red N of Blue, Yellow S of Purple, Green N of Purple, Blue W of Yellow, Purple E of Red
     const place: Record<string, [number, number, string]> = {
         death_cannonball_blue: [2894, 3562, 'death_stone_mechanism_corner'],
@@ -591,13 +750,13 @@ if (run('death')) {
     p.teleport(2857, 3576, 0);
     H.tick(1);
     op(p, 2857, 3578, 'death_hermitcave_entrance');
-    check('Saba\'s cave: in, and Saba can be walked to', [p.x < 2300, connected(0, p.x, p.z, 2270, 4759)], [true, true]);
+    check("Saba's cave: in, and Saba can be walked to", [p.x < 2300, connected(0, p.x, p.z, 2270, 4759)], [true, true]);
     op(p, 2268, 4750, 'death_hermitcave_exit');
     check('and out', p.x > 2800, true);
     p.teleport(2826, 3555, 0);
     H.tick(1);
     const ten = goTo(p, 2820, 3555, 0);
-    check('Tenzing\'s hut (its doors are OSRS doors now) can be walked into', ten, true);
+    check("Tenzing's hut (its doors are OSRS doors now) can be walked into", ten, true);
     const back = goTo(p, 2817, 3561, 0);
     check('out of his back door to the stile', back, true);
     op(p, 2817, 3562, 'death_fullstyle');
@@ -646,12 +805,12 @@ if (run('fairy')) {
     check('the diagnosis', st(), 40);
     goTo(p, 2381, 4456, 0);
     op(p, 2380, 4456, 'fairy_chest_closed');
-    check('the chest gives up the Queen\'s secateurs', H.invCount(p, 'fairy_queen_secateurs'), 1);
+    check("the chest gives up the Queen's secateurs", H.invCount(p, 'fairy_queen_secateurs'), 1);
     H.give(p, 'secateurs');
     goTo(p, 2391, 4467, 0);
     talkHere(p, 'fairy_nuff');
     talkHere(p, 'fairy_nuff');
-    check('Nuff enchants a farmer\'s pair, and asks for a skull', [st(), H.invCount(p, 'fairy_enchanted_secateurs')], [60, 1]);
+    check("Nuff enchants a farmer's pair, and asks for a skull", [st(), H.invCount(p, 'fairy_enchanted_secateurs')], [60, 1]);
     p.teleport(3104, 3380, 0);
     H.tick(1);
     check('the gravestone can be walked up to', goTo(p, 3106, 3382, 0), true);
@@ -663,7 +822,9 @@ if (run('fairy')) {
     p.teleport(2391, 4467, 0);
     H.tick(1);
     talkHere(p, 'fairy_nuff');
-    H.give(p, 'logs'); H.give(p, 'onion'); H.give(p, 'potato');
+    H.give(p, 'logs');
+    H.give(p, 'onion');
+    H.give(p, 'potato');
     talkHere(p, 'fairy_nuff');
     check('the three dull things, and the Tanglefoot', st(), 80);
     talkHere(p, 'fairy_nuff');
@@ -683,10 +844,20 @@ function bfsRoute(level: number, x: number, z: number, tx: number, tz: number, r
             for (let k = cx + ',' + cz; k; k = prev.get(k)!) out.unshift(k.split(',').map(Number));
             return out;
         }
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (prev.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { prev.set(k, cx + ',' + cz); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                prev.set(k, cx + ',' + cz);
+                q.push([nx, nz]);
+            }
         }
     }
     return null;
@@ -695,14 +866,19 @@ function bfsRoute(level: number, x: number, z: number, tx: number, tz: number, r
 /** The nearest placed loc of a type on the player's level, within 30 tiles. */
 function nearestLoc(p: Player, name: string) {
     const id = LocType.getId(name);
-    let best: any = null, bd = 1e9;
-    for (let x = p.x - 32; x <= p.x + 32; x += 8) for (let z = p.z - 32; z <= p.z + 32; z += 8) {
-        for (const loc of (World as any).gameMap.getZone(x, z, p.level).getAllLocsUnsafe()) {
-            if (loc.type !== id) continue;
-            const d = Math.max(Math.abs(loc.x - p.x), Math.abs(loc.z - p.z));
-            if (d < bd) { bd = d; best = loc; }
+    let best: any = null,
+        bd = 1e9;
+    for (let x = p.x - 32; x <= p.x + 32; x += 8)
+        for (let z = p.z - 32; z <= p.z + 32; z += 8) {
+            for (const loc of (World as any).gameMap.getZone(x, z, p.level).getAllLocsUnsafe()) {
+                if (loc.type !== id) continue;
+                const d = Math.max(Math.abs(loc.x - p.x), Math.abs(loc.z - p.z));
+                if (d < bd) {
+                    bd = d;
+                    best = loc;
+                }
+            }
         }
-    }
     return best;
 }
 
@@ -714,14 +890,34 @@ function goTo(p: Player, x: number, z: number, level: number): boolean {
     return ok;
 }
 function isZoneAllocatedTile(level: number, x: number, z: number) {
-    return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => canTravel(level, x + a, z + b, -a, -b, 1, 0, CollisionType.NORMAL));
+    return [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([a, b]) => canTravel(level, x + a, z + b, -a, -b, 1, 0, CollisionType.NORMAL));
 }
 function goTo0(p: Player, x: number, z: number, level: number): boolean {
     if (p.level !== level) return false;
     const tried = new Set<string>();
     // a target that cannot be stood on (an npc's or a loc's own tile) means "next to it"
     if (!isZoneAllocatedTile(level, x, z)) {
-        const near = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, 2], [0, -2], [2, 0], [-2, 0]].map(([a, b]) => [x + a, z + b]).filter(([a, b]) => isZoneAllocatedTile(level, a, b));
+        const near = [
+            [0, 1],
+            [0, -1],
+            [1, 0],
+            [-1, 0],
+            [1, 1],
+            [-1, 1],
+            [1, -1],
+            [-1, -1],
+            [0, 2],
+            [0, -2],
+            [2, 0],
+            [-2, 0]
+        ]
+            .map(([a, b]) => [x + a, z + b])
+            .filter(([a, b]) => isZoneAllocatedTile(level, a, b));
         for (const [a, b] of near) {
             if (bfsRoute(level, p.x, p.z, a, b)) return goTo0(p, a, b, level);
         }
@@ -745,21 +941,37 @@ function goTo0(p: Player, x: number, z: number, level: number): boolean {
         }
         // the nearest reachable closed door that is nearer the target than we are
         const isDoor = (t: LocType) => t.op?.[0] === 'Open' && /door|gate/i.test(t.name ?? '');
-        let door: any = null, bd = 1e9;
-        for (let zx = Math.min(p.x, x) - 16; zx <= Math.max(p.x, x) + 16; zx += 8) for (let zz = Math.min(p.z, z) - 16; zz <= Math.max(p.z, z) + 16; zz += 8) {
-            for (const loc of (World as any).gameMap.getZone(zx, zz, level).getAllLocsUnsafe()) {
-                if (!loc.isActive || !isDoor(LocType.get(loc.type)) || tried.has(loc.x + ',' + loc.z)) continue;
-                if (!bfsRoute(level, p.x, p.z, loc.x, loc.z, 60) && ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => bfsRoute(level, p.x, p.z, loc.x + a, loc.z + b, 60))) continue;
-                const dd = Math.abs(loc.x - x) + Math.abs(loc.z - z) + (Math.abs(loc.x - p.x) + Math.abs(loc.z - p.z)) / 4;
-                if (dd < bd) { bd = dd; door = loc; }
+        let door: any = null,
+            bd = 1e9;
+        for (let zx = Math.min(p.x, x) - 16; zx <= Math.max(p.x, x) + 16; zx += 8)
+            for (let zz = Math.min(p.z, z) - 16; zz <= Math.max(p.z, z) + 16; zz += 8) {
+                for (const loc of (World as any).gameMap.getZone(zx, zz, level).getAllLocsUnsafe()) {
+                    if (!loc.isActive || !isDoor(LocType.get(loc.type)) || tried.has(loc.x + ',' + loc.z)) continue;
+                    if (
+                        !bfsRoute(level, p.x, p.z, loc.x, loc.z, 60) &&
+                        ![
+                            [1, 0],
+                            [-1, 0],
+                            [0, 1],
+                            [0, -1]
+                        ].some(([a, b]) => bfsRoute(level, p.x, p.z, loc.x + a, loc.z + b, 60))
+                    )
+                        continue;
+                    const dd = Math.abs(loc.x - x) + Math.abs(loc.z - z) + (Math.abs(loc.x - p.x) + Math.abs(loc.z - p.z)) / 4;
+                    if (dd < bd) {
+                        bd = dd;
+                        door = loc;
+                    }
+                }
             }
-        }
         if (!door) {
             const seen: string[] = [];
-            for (let zx = p.x - 8; zx <= p.x + 8; zx += 8) for (let zz = p.z - 8; zz <= p.z + 8; zz += 8) for (const loc of (World as any).gameMap.getZone(zx, zz, level).getAllLocsUnsafe()) {
-                const t = LocType.get(loc.type);
-                if (/door/i.test(t.debugname ?? '')) seen.push(`${t.debugname}@${loc.x},${loc.z} active=${loc.isActive} op=${t.op?.[0]} name=${t.name}`);
-            }
+            for (let zx = p.x - 8; zx <= p.x + 8; zx += 8)
+                for (let zz = p.z - 8; zz <= p.z + 8; zz += 8)
+                    for (const loc of (World as any).gameMap.getZone(zx, zz, level).getAllLocsUnsafe()) {
+                        const t = LocType.get(loc.type);
+                        if (/door/i.test(t.debugname ?? '')) seen.push(`${t.debugname}@${loc.x},${loc.z} active=${loc.isActive} op=${t.op?.[0]} name=${t.name}`);
+                    }
             console.log('    [goTo no door]', at(p), seen.join(' | '));
             return false;
         }
@@ -788,7 +1000,15 @@ function giveQuestPoints(p: Player, want: number, skip: string[] = []) {
     for (const m of body.matchAll(/if \(%(\w+) (?:=|>=) \^(\w+)\)/g)) {
         if (H.runProc(p, '[proc,count_questpoints]')[0] >= want) return;
         if (skip.includes(m[1]) || !consts.has(m[2])) continue;
-        try { H.setVar(p, m[1], consts.get(m[2])!); } catch { try { H.setVarBit(p, m[1], consts.get(m[2])!); } catch { /* not a plain var */ } }
+        try {
+            H.setVar(p, m[1], consts.get(m[2])!);
+        } catch {
+            try {
+                H.setVarBit(p, m[1], consts.get(m[2])!);
+            } catch {
+                /* not a plain var */
+            }
+        }
     }
 }
 
