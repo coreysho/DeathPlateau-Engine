@@ -299,7 +299,6 @@ if (run('ahoy')) {
     console.log('GHOSTS AHOY');
     const p = player('ahoy1', 3648, 3485);
     wear(p, { front: 'amulet_of_ghostspeak' });
-    const stage = () => gv(p, 'ahoy_questvar');
     const door = (who: Player, x: number, z: number, l: number) => {
         op(who, x, z, 'ahoy_harbour_door', 1);
         return World.getLoc(x, z, l, LocType.getId('ahoy_harbour_door')) === null;
@@ -346,7 +345,16 @@ if (run('ahoy')) {
     check('climbs to the temple upper floor, walkable', [p.level, walkable(p.x, p.z, p.level)], [1, true]);
     const upstairs = [p.x, p.z] as const;
     check('  the coffin is behind a door...', reaches(1, p.x, p.z, 3659, 3513, 2), false);
-    check('  ...which opens', door(player('ahoydoor2', 3657, 3514, 1), 3656, 3514, 1), true);
+    // AND THE DOOR IS LOCKED, which it was not when these two lines were written. The Ghosts Ahoy
+    // rebuild put the upstairs door behind %ahoy_templedoor_unlocked, which only the bone key
+    // Necrovarus drops can set - and that is the quest, not a fault. A bare player clicking it gets
+    // "The door is locked, and the lock is bone", so the click has to carry the key to say anything
+    // about the geometry on the far side of it.
+    check('  ...and a player with no key does not get through it', door(player('ahoydoor2a', 3657, 3514, 1), 3656, 3514, 1), false);
+    const keyed = player('ahoydoor2', 3657, 3514, 1);
+    H.give(keyed, 'ahoy_bone_key');
+    H.tick(1);
+    check('  ...which opens for whoever carries the bone key', door(keyed, 3656, 3514, 1), true);
     check('  and the coffin can be reached', reaches(1, upstairs[0], upstairs[1], 3659, 3513, 2), true);
     op(p, 3666, 3520, 'ahoy_tower_stairs_lv1_top', 1);
     check('and back down, walkable', [p.level, walkable(p.x, p.z, p.level)], [0, true]);
@@ -371,78 +379,21 @@ if (run('ahoy')) {
     op(p, 3609, 3543, 'ahoy_ghostship_laddertop', 1);
     check('and down to the ground, walkable', [p.level, walkable(p.x, p.z, 0)], [0, true]);
 
-    console.log('The quest:');
-    p.teleport(inside[0], inside[1], 0);
-    H.tick(1);
-    talk(p, 'ahoy_velorina', [1]);
-    check('Velorina: stage 1', stage(), 1);
-    talk(p, 'ahoy_necrovarus');
-    check('Necrovarus refuses: stage 2', stage(), 2);
-    talk(p, 'ahoy_velorina');
-    check('Velorina: petition, stage 3', [stage(), H.invCount(p, 'ahoy_petition')], [3, 1]);
-    talk(p, 'ahoy_robin');
-    check('Robin asks for his model ship', gv(p, 'ahoy_subquest_toyboat'), 1);
-    talk(p, 'ahoy_oldman');
-    talk(p, 'ahoy_crone');
-    p.teleport(3621, 3543, 1);
-    H.tick(1);
-    op(p, 3622, 3543, 'ahoy_skull_captain', 1);
-    check('the pirate captain has the chest key', H.invCount(p, 'ahoy_chest_key'), 1);
-    p.teleport(3617, 3541, 2);
-    H.tick(1);
-    op(p, 3618, 3541, 'ahoy_chest_locked', 1);
-    check('the chest has the model ship in it', H.invCount(p, 'ahoy_toy_boat'), 1);
-    check('Repair has a handler now', hasOp('obj', 'ahoy_toy_boat', 1), true);
-    held(p, 'ahoy_toy_boat', 1);
-    check('  no silk: still broken', [H.invCount(p, 'ahoy_toy_boat'), H.invCount(p, 'ahoy_toy_boat_repaired')], [1, 0]);
-    H.give(p, 'silk');
-    held(p, 'ahoy_toy_boat', 1);
-    check('  with silk: mended, silk used', [H.invCount(p, 'ahoy_toy_boat'), H.invCount(p, 'ahoy_toy_boat_repaired'), H.invCount(p, 'silk')], [0, 1, 0]);
-    talk(p, 'ahoy_robin');
-    check('Robin signs', gv(p, 'ahoy_signaturecounter'), 1);
-    H.give(p, 'cup_of_nettletea');
-    talk(p, 'ahoy_oldman');
-    check('the old man signs for his tea', gv(p, 'ahoy_signaturecounter'), 2);
-    talk(p, 'ahoy_ghost_innkeeper');
-    check('the innkeeper hands over a bedsheet', H.invCount(p, 'ahoy_bedsheet'), 1);
-    talk(p, 'ahoy_crone');
-    check('the crone signs: petition full, stage 4', [gv(p, 'ahoy_signaturecounter'), stage()], [3, 4]);
-    talk(p, 'ahoy_necrovarus');
-    check('Necrovarus names the book: stage 5', stage(), 5);
-    talk(p, 'ahoy_disciple');
-    check('the disciple has the Book of Haricanto', H.invCount(p, 'ahoy_book_of_haricanto'), 1);
-    H.give(p, 'magic_longbow');
-    talk(p, 'ahoy_akharanu_multi');
-    check('Ak-Haranu trades the manual for a magic longbow', H.invCount(p, 'ahoy_translation_manual'), 1);
-    useOnHeld(p, 'ahoy_book_of_haricanto', 'ahoy_translation_manual');
-    check('book translated: stage 6', stage(), 6);
-    p.teleport(3621, 3543, 1);
-    H.tick(1);
-    op(p, 3622, 3543, 'ahoy_skull_captain', 1);
-    check('scrap 1 off the pirate captain', H.invCount(p, 'ahoy_map_scrap_1'), 1);
-    p.teleport(upstairs[0], upstairs[1], 1);
-    H.tick(1);
-    op(p, 3659, 3513, 'ahoy_coffin', 1);
-    check('scrap 2 out of the coffin, walked to on the upper floor', H.invCount(p, 'ahoy_map_scrap_2'), 1);
-    talk(p, 'ahoy_ghost_captain_2');
-    check('scrap 3 off the harbour captain', H.invCount(p, 'ahoy_map_scrap_3'), 1);
-    useOnHeld(p, 'ahoy_map_scrap_1', 'ahoy_map_scrap_2');
-    check('the map joined: stage 7', [stage(), H.invCount(p, 'ahoy_map_complete')], [7, 1]);
-    talk(p, 'ahoy_ghost_captain_1');
-    check('the ghost captain sails to Dragontooth, walkable landing', [p.x > 3770, walkable(p.x, p.z, 0)], [true, true]);
-    check('  the dig spot is walkable from the landing', connected(0, p.x, p.z, 3803, 3530), true);
-    H.give(p, 'spade');
-    p.teleport(3803, 3530, 0);
-    H.tick(1);
-    held(p, 'spade', 1);
-    check('dig: the robes, stage 8', [stage(), H.invCount(p, 'ahoy_robes_of_necrovarus')], [8, 1]);
-    talk(p, 'ahoy_ghost_captain_1');
-    check('sailed back to the port', [p.x > 3690 && p.x < 3720, walkable(p.x, p.z, 0)], [true, true]);
-    const pray = p.stats[5];
-    talk(p, 'ahoy_necrovarus');
-    H.tick(3);
-    check('Necrovarus shown the robes: complete, ectophial, prayer xp', [stage(), H.invCount(p, 'ectophial'), p.stats[5] - pray], [10, 1, 25000]);
-    check('quest points counted', H.runProc(p, '[proc,count_questpoints]')[0] >= 2, true);
+    // THE WALKTHROUGH THAT USED TO BE HERE IS GONE, and deliberately.
+    //
+    // It played Ghosts Ahoy end to end - Velorina handing out the petition, the crone signing it,
+    // Necrovarus naming the book, stages 1 through 10 - and every one of those is a statement about
+    // the quest that WAS here. The 13 October rebuild replaced it with the quest the wiki describes:
+    // Gravingas hands out the petition, the stages run 0 to 15, and ^ahoy_complete is 15 rather than
+    // 10. Re-pinning each line to the new numbers would leave two walkthroughs of one quest in the
+    // tree, and tools/sim/quest_ahoy_run.ts already IS the new one - played on foot, with each step
+    // carrying its wiki step number, and covering every item this block covered (the toy boat and
+    // its silk, the chest key, the three map scraps, the coffin, the bedsheet, the manual, the
+    // robes, the ectophial). Two walkthroughs where one is wrong is worse than one.
+    //
+    // What stays here is what audit3 is for and quest_ahoy_run.ts does not assert: that the town's
+    // geometry is walkable and its locs have handlers - the barriers, the doors, the ladders and the
+    // stairs above. Run the quest itself with:  npx tsx tools/sim/quest_ahoy_run.ts
 }
 
 // =============================================================================== Eadgar's Ruse

@@ -197,6 +197,32 @@ class World {
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
 
     constructor() {
+        // A WORKER ERROR MUST NOT BE AN UNCAUGHT EXCEPTION. These three workers had 'message'
+        // handlers and no 'error' handler, and an unhandled 'error' event on a Worker is rethrown
+        // as an uncaught exception - so anything going wrong inside one of them took the whole
+        // process down with it, with only the worker's own stack to go on.
+        //
+        // It is not hypothetical. Under tsx the worker entries cannot resolve their own "#/"
+        // imports (package.json maps "#/*", and Node's imports field forbids keys starting with
+        // "#/", so only tsx's transform of a static import resolves them - and a worker entry is
+        // loaded by Node directly). So in EVERY tools/sim run all three of these fail to start.
+        // It stayed invisible because the rejection only lands once something yields to the event
+        // loop: a sim that runs straight through to process.exit() never gives it the chance. The
+        // ones that did yield - a dynamic import, or simply having no process.exit() and reaching
+        // teardown - died with ERR_INVALID_MODULE_SPECIFIER and no summary, which is how
+        // blowpipe.ts and huntgaps.ts came to print nothing at all for however long.
+        //
+        // Logged loudly rather than swallowed: a server running without its logger or login worker
+        // is degraded and the operator needs to know, but it is still better than a process that
+        // exits on a worker nobody was watching.
+        for (const [name, worker] of [
+            ['login', this.loginThread],
+            ['friend', this.friendThread],
+            ['logger', this.loggerThread]
+        ] as const) {
+            worker.on('error', err => printError(`${name} worker failed: ${err instanceof Error ? err.message : String(err)}`));
+        }
+
         this.loginThread.on('message', msg => {
             try {
                 this.onLoginMessage(msg);
