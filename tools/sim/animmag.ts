@@ -35,19 +35,20 @@ await H.boot();
 H.loginOrder();
 const { check, R } = A;
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? R.ok++ : R.bad++;
+    if (pass) R.ok++;
+    else R.bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
 const AVA = [3093, 3358];
 const WITCH = [3093, 3369];
 const TREE = [3100, 3345];
-const FARM = [3617, 3528];       // Alice's husband
+const FARM = [3617, 3528]; // Alice's husband
 const ALICE = [3627, 3526];
 const CRONE = [3461, 3558];
 const TURAEL = [2931, 3536];
-const MINE = [2975, 3243];       // the iron mine north-east of Rimmington
-const ELSEWHERE = [3222, 3218];  // Lumbridge, which is not the mine
+const MINE = [2975, 3243]; // the iron mine north-east of Rimmington
+const ELSEWHERE = [3222, 3218]; // Lumbridge, which is not the mine
 
 const stage = (p: Player) => H.getVar(p, 'animmag');
 const farm = (p: Player) => H.getVar(p, 'animmag_farm');
@@ -55,9 +56,16 @@ const journal = (p: Player): string => {
     const from = H.ifaces.length;
     H.ifButton(p, 'questlist:animmag');
     H.tick(1);
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!).join(' ');
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .join(' ');
 };
-const goto = (p: Player, [x, z]: number[], level = 0) => { p.teleport(x, z, level); H.tick(1); };
+const goto = (p: Player, [x, z]: number[], level = 0) => {
+    p.teleport(x, z, level);
+    H.tick(1);
+};
 /** One conversation's chat lines joined - a mesbox arrives split across several of them. */
 const all = (lines: string[]) => lines.join(' ');
 /**
@@ -68,7 +76,8 @@ const all = (lines: string[]) => lines.join(' ');
 const say = (p: Player, npc: string, picks: (number | string)[] = [], op = 1): string[] => {
     const from = H.ifaces.length;
     A.talk(p, npc, picks, op);
-    return H.ifaces.slice(from)
+    return H.ifaces
+        .slice(from)
         .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
         .map(i => i.text!);
 };
@@ -103,13 +112,11 @@ q.setLevel(PlayerStat.SLAYER, 18);
 q.setLevel(PlayerStat.CRAFTING, 19);
 q.setLevel(PlayerStat.RANGED, 30);
 q.setLevel(PlayerStat.WOODCUTTING, 35);
-truthy('journal before starting names Ava and the levels',
-    journal(q).includes('Ava') && journal(q).includes('Level 30 Ranged'), journal(q).slice(0, 80));
+truthy('journal before starting names Ava and the levels', journal(q).includes('Ava') && journal(q).includes('Level 30 Ranged'), journal(q).slice(0, 80));
 said = say(q, 'animmag_ava', ['happy to make your home']);
 truthy('accepted: she asks for two undead chickens', all(said).includes('undead chickens'), said.slice(-1)[0]);
 check('accepted: stage 1', stage(q), 1);
-truthy('journal at stage 1 names the farm and the tokens',
-    journal(q).includes('ecto-tokens'), journal(q).slice(0, 80));
+truthy('journal at stage 1 names the farm and the tokens', journal(q).includes('ecto-tokens'), journal(q).slice(0, 80));
 
 // Ava's Trade op before the quest is done is her brush-off, not a dead click
 const tradeScript = ScriptProvider.getByTrigger(ServerTriggerType.OPNPC3, NpcType.getId('animmag_ava'), -1);
@@ -141,7 +148,7 @@ truthy('husband: the cash is in the bank', all(said).includes('putted the cash i
 check('farm stage: bank', farm(q), 4);
 goto(q, ALICE);
 said = say(q, 'farming_shopkeeper_4', ['here about a quest']);
-truthy('Alice: I\'ll need his bank pass', all(said).includes('bank pass'), said.slice(-1)[0]);
+truthy("Alice: I'll need his bank pass", all(said).includes('bank pass'), said.slice(-1)[0]);
 check('farm stage: pass', farm(q), 5);
 goto(q, FARM);
 said = say(q, 'ahoy_ghost_farmer');
@@ -234,9 +241,11 @@ check('another 50 Crafting xp for the magnet', q.stats[PlayerStat.CRAFTING] - cr
 // =============================================================== the trees
 
 console.log('\n-- the undead trees');
-truthy('four undead trees stand in the manor grounds',
+truthy(
+    'four undead trees stand in the manor grounds',
     NpcType.getId('animmag_undead_tree') !== -1 && [...World.npcs].filter(n => n && n.isActive && n.type === NpcType.getId('animmag_undead_tree')).length >= 4,
-    [...World.npcs].filter(n => n && n.isActive && n.type === NpcType.getId('animmag_undead_tree')).length);
+    [...World.npcs].filter(n => n && n.isActive && n.type === NpcType.getId('animmag_undead_tree')).length
+);
 goto(q, [TREE[0] + 1, TREE[1]]);
 from = A.mark();
 say(q, 'animmag_undead_tree');
@@ -277,7 +286,7 @@ said = say(q, 'animmag_ava');
 truthy('Ava takes the twigs and mentions the notes', all(said).includes('research notes'), said.slice(-1)[0]);
 check('stage 10', stage(q), 10);
 said = say(q, 'animmag_ava');
-truthy('Ava hands the notes over', all(said).includes('head doesn\'t explode'), said.slice(-1)[0]);
+truthy('Ava hands the notes over', all(said).includes("head doesn't explode"), said.slice(-1)[0]);
 check('research notes in the pack', H.invCount(q, 'animmag_research_notes'), 1);
 // lose them: she has copies
 q.invDel(InvType.INV, ObjType.getId('animmag_research_notes'), 1);
@@ -315,8 +324,47 @@ truthy('Ava takes the translation and gives a pattern', all(said).includes('poli
 check('pattern in the pack', H.invCount(q, 'animmag_pattern'), 1);
 check('stage 12', stage(q), 12);
 
+// =============================================================== the buttons
+//
+// THIS SECTION EXISTS BECAUSE THE LINE BELOW IT USED TO BE H.give(q, 'polished_buttons', 1).
+// Nothing in the build gave polished buttons out - no drop, no shop, no action - so the quest
+// could not be finished, and this sim could not tell, because it handed itself the one item the
+// game had no way to produce. A sim that conjures an ingredient cannot see a missing source. So
+// the container below is now made from buttons that were actually polished, and the whole chain
+// is under test rather than just its last link.
+console.log('\n-- the buttons');
+{
+    // A separate player, because the quester is already past the 19 Crafting the quest wants and
+    // so can never fail the polish gate.
+    const b = A.player('buttons', AVA[0] + 2, AVA[1]);
+    b.setLevel(PlayerStat.CRAFTING, 2);
+    H.give(b, 'digsitebuttons', 1);
+    let xp = b.stats[PlayerStat.CRAFTING];
+    from = A.mark();
+    H.opheld(b, 'digsitebuttons', 1);
+    truthy("below 3: the game says they aren't improved", A.said(b, from, "aren't improved by the process"), A.mesSince(b, from).slice(-1)[0]);
+    check('below 3: nothing polished', H.invCount(b, 'polished_buttons'), 0);
+    check('below 3: the buttons are still there', H.invCount(b, 'digsitebuttons'), 1);
+    check('below 3: and no experience for trying', b.stats[PlayerStat.CRAFTING] - xp, 0);
+
+    // Exactly 3, the real gate rather than a comfortable margin.
+    b.setLevel(PlayerStat.CRAFTING, 3);
+    xp = b.stats[PlayerStat.CRAFTING];
+    from = A.mark();
+    H.opheld(b, 'digsitebuttons', 1);
+    truthy('at 3: they become more shiny', A.said(b, from, 'become more shiny'), A.mesSince(b, from).slice(-1)[0]);
+    check('at 3: a polished pair', H.invCount(b, 'polished_buttons'), 1);
+    check('at 3: the plain pair is spent', H.invCount(b, 'digsitebuttons'), 0);
+    // TENTHS. The wiki's 5 experience is ^animmag_polish_xp = 50, because stat_advance counts
+    // tenths of a point - the same unit trap as every other award in this build. Asserting the
+    // stored delta is what catches a 5 written where 50 belongs, which would pay a tenth of it.
+    check('at 3: five experience, stored as fifty tenths', b.stats[PlayerStat.CRAFTING] - xp, 50);
+}
+
 console.log('\n-- the container');
-H.give(q, 'polished_buttons', 1);
+H.give(q, 'digsitebuttons', 1);
+H.opheld(q, 'digsitebuttons', 1);
+check('the quester polishes a pair of their own', H.invCount(q, 'polished_buttons'), 1);
 from = A.mark();
 A.useHeld(q, 'polished_buttons', 'animmag_pattern');
 truthy('no leather: the game says so', A.said(q, from, 'need hard leather'), A.mesSince(q, from).slice(-1)[0]);
@@ -326,16 +374,17 @@ A.useHeld(q, 'hard_leather', 'animmag_pattern');
 truthy('all three: a container', A.said(q, from, 'fasten it with the buttons'), A.mesSince(q, from).slice(-1)[0]);
 check('container made', H.invCount(q, 'animmag_container'), 1);
 check('the three parts are gone', [H.invCount(q, 'animmag_pattern'), H.invCount(q, 'hard_leather'), H.invCount(q, 'polished_buttons')], [0, 0, 0]);
-truthy('journal at stage 12 names the container',
-    journal(q).includes('container'), journal(q).slice(0, 80));
+truthy('journal at stage 12 names the container', journal(q).includes('container'), journal(q).slice(0, 80));
 
 // =============================================================== the reward
 
 console.log('\n-- the reward');
 A.runProcProtected(q, '[proc,update_questpoints]');
 const before = {
-    craft: q.stats[PlayerStat.CRAFTING], fletch: q.stats[PlayerStat.FLETCHING],
-    slayer: q.stats[PlayerStat.SLAYER], wc: q.stats[PlayerStat.WOODCUTTING],
+    craft: q.stats[PlayerStat.CRAFTING],
+    fletch: q.stats[PlayerStat.FLETCHING],
+    slayer: q.stats[PlayerStat.SLAYER],
+    wc: q.stats[PlayerStat.WOODCUTTING],
     qp: H.getVar(q, 'qp')
 };
 say(q, 'animmag_ava');
@@ -352,7 +401,9 @@ truthy('journal after the quest says QUEST COMPLETE', journal(q).includes('QUEST
 
 // 50 Ranged gets the accumulator straight away
 const r50 = A.player('ranger50', AVA[0] + 1, AVA[1]);
-H.setVar(r50, 'prieststart', 5); H.setVar(r50, 'haunted', 3); H.setVar(r50, 'priestperil', 60);
+H.setVar(r50, 'prieststart', 5);
+H.setVar(r50, 'haunted', 3);
+H.setVar(r50, 'priestperil', 60);
 H.setVar(r50, 'animmag', 12);
 r50.setLevel(PlayerStat.RANGED, 50);
 H.give(r50, 'animmag_container', 1);
@@ -362,7 +413,7 @@ check('50 Ranged gets the accumulator', H.invCount(r50, 'avas_accumulator'), 1);
 check('and not the attractor', H.invCount(r50, 'avas_attractor'), 0);
 
 // Ava upgrades an attractor for 75 steel arrows, but not below 50 Ranged
-console.log('\n-- Ava\'s counter');
+console.log("\n-- Ava's counter");
 said = say(q, 'animmag_ava', [], 3);
 truthy('below 50 Ranged she will not upgrade', all(said).includes('Ranged level is 50'), said.slice(-1)[0]);
 q.setLevel(PlayerStat.RANGED, 50);
@@ -467,7 +518,7 @@ const attract = (p: Player, device: string, torso?: string) => {
     H.equip(p, torso ? { back: device, torso } : { back: device });
     if (!torso) p.invDel(InvType.WORN, p.getInventory(InvType.WORN)!.get(4)?.id ?? 0, 1);
     H.setVar(p, 'animmag_attract_clock', 0);
-    A.enqueue(p, '[queue,animmag_attract]');       // starts the clock
+    A.enqueue(p, '[queue,animmag_attract]'); // starts the clock
     H.tick(2);
     H.setVar(p, 'animmag_attract_clock', 1);
     p.teleport(p.x + 8, p.z, p.level);
@@ -484,9 +535,17 @@ const attract = (p: Player, device: string, torso?: string) => {
 };
 const magnet = A.player('magnet', 3220, 3220);
 const gotSteel = attract(magnet, 'avas_accumulator');
-truthy('the accumulator attracts steel', gotSteel.some(n => n.startsWith('steel_')), gotSteel);
+truthy(
+    'the accumulator attracts steel',
+    gotSteel.some(n => n.startsWith('steel_')),
+    gotSteel
+);
 const gotIron = attract(magnet, 'avas_attractor');
-truthy('the attractor attracts iron', gotIron.some(n => n.startsWith('iron_')), gotIron);
+truthy(
+    'the attractor attracts iron',
+    gotIron.some(n => n.startsWith('iron_')),
+    gotIron
+);
 const gotPlate = attract(magnet, 'avas_accumulator', 'rune_platebody');
 check('a rune platebody interferes', gotPlate, []);
 const gotStud = attract(magnet, 'avas_accumulator', 'studded_body');
@@ -510,14 +569,10 @@ check('without the Max hood nothing is fused', held(fuser, 'accumulator_max_cape
 truthy('...and it says which piece is missing', A.lastMes(fuser).includes('Max hood'), A.lastMes(fuser));
 H.give(fuser, 'max_hood');
 A.useHeld(fuser, 'avas_accumulator', 'max_cape');
-check('accumulator + Max cape + Max hood = the Accumulator max cape and its own hood',
-    held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'),
-    [1, 1, 0, 0, 0]);
+check('accumulator + Max cape + Max hood = the Accumulator max cape and its own hood', held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'), [1, 1, 0, 0, 0]);
 H.give(fuser, 'knife');
 A.useHeld(fuser, 'knife', 'accumulator_max_cape');
-check('and a knife takes it apart again, losing nothing',
-    held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'),
-    [0, 0, 1, 1, 1]);
+check('and a knife takes it apart again, losing nothing', held(fuser, 'accumulator_max_cape', 'accumulator_max_hood', 'max_cape', 'max_hood', 'avas_accumulator'), [0, 0, 1, 1, 1]);
 
 console.log('\n-- and then it is an accumulator');
 const accMax = saveRate(bare, 'accumulator_max_cape');
@@ -535,7 +590,11 @@ truthy('thrown knives are saved with it on', knivesAccMax * 2 < knivesNone, { no
 const bpAccMax = bpDarts('accumulator_max_cape');
 truthy('the toxic blowpipe spends 28% of its darts with it on', Math.abs(bpAccMax - 28) < 3, bpAccMax);
 const steelMax = attract(magnet, 'accumulator_max_cape');
-truthy('and it attracts steel like the device it was made from', steelMax.some(n => n.startsWith('steel_')), steelMax);
+truthy(
+    'and it attracts steel like the device it was made from',
+    steelMax.some(n => n.startsWith('steel_')),
+    steelMax
+);
 check('with the same metal interference rule', attract(magnet, 'accumulator_max_cape', 'rune_platebody'), []);
 check('and a god max cape attracts nothing at all', attract(magnet, 'saradomin_max_cape'), []);
 
@@ -551,12 +610,31 @@ for (const name of ['animmag_ava', 'animmag_witch', 'animmag_undead_tree', 'anim
         if (!script) npcOps.push([`${name} op${i + 1} (${t.op[i]})`, i + 1]);
     }
 }
-check('every new npc op answers something', npcOps.map(o => o[0]), []);
+check(
+    'every new npc op answers something',
+    npcOps.map(o => o[0]),
+    []
+);
 
 const objOps: string[] = [];
-for (const name of ['animmag_undead_chicken', 'animmag_selected_iron', 'animmag_bar_magnet', 'animmag_undead_twigs',
-    'animmag_blessed_axe', 'animmag_research_notes', 'animmag_translated_notes', 'animmag_pattern',
-    'animmag_container', 'polished_buttons', 'avas_attractor', 'avas_accumulator', 'animmag_crone_amulet']) {
+for (const name of [
+    'animmag_undead_chicken',
+    'animmag_selected_iron',
+    'animmag_bar_magnet',
+    'animmag_undead_twigs',
+    'animmag_blessed_axe',
+    'animmag_research_notes',
+    'animmag_translated_notes',
+    'animmag_pattern',
+    'animmag_container',
+    'polished_buttons',
+    'avas_attractor',
+    'avas_accumulator',
+    'animmag_crone_amulet',
+    // digsitebuttons is not the quest's item - it is older Digsite loot - but the quest is what
+    // gave it its Polish option, so this is where that op has to answer something.
+    'digsitebuttons'
+]) {
     const t = ObjType.get(ObjType.getId(name));
     for (let i = 0; i < 5; i++) {
         const label = t.iop?.[i];

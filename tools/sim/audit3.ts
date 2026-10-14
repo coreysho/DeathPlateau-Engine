@@ -53,8 +53,13 @@ function player(name: string, x: number, z: number, level = 0) {
     H.tick(1);
     return p;
 }
-const at = (p: Player) => [p.x, p.z, p.level];
-const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
+// Kept as a reading helper even where no section currently calls it.
+const _at = (p: Player) => [p.x, p.z, p.level];
+const lastMes = (p: Player) =>
+    H.mesgs
+        .filter(m => m.who === p.username)
+        .map(m => m.text)
+        .slice(-1)[0] ?? '';
 const allMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
 const texts = (p: Player) => H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
 const saw = (p: Player, s: string) => allMes(p).some(m => m.includes(s)) || texts(p).some(t => t.includes(s));
@@ -87,7 +92,10 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function nearest(npcName: string, p: Player): Npc {
@@ -98,7 +106,18 @@ function nearest(npcName: string, p: Player): Npc {
 /** Talk to the nearest npc of a type (any floor), standing next to it first. */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = nearest(npcName, p);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         if (!walkable(npc.x + dx, npc.z + dz, npc.level)) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
@@ -174,23 +193,34 @@ function connected(level: number, x: number, z: number, tx: number, tz: number, 
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (cx === tx && cz === tz) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
 }
 /** Can a player standing at (x,z) walk up to something at (tx,tz): any tile next to it reachable? */
 function reaches(level: number, x: number, z: number, tx: number, tz: number, size = 1) {
-    for (let dx = -1; dx <= size; dx++) for (let dz = -1; dz <= size; dz++) {
-        if (dx >= 0 && dx < size && dz >= 0 && dz < size) continue;
-        if (walkable(tx + dx, tz + dz, level) && connected(level, x, z, tx + dx, tz + dz)) return true;
-    }
+    for (let dx = -1; dx <= size; dx++)
+        for (let dz = -1; dz <= size; dz++) {
+            if (dx >= 0 && dx < size && dz >= 0 && dz < size) continue;
+            if (walkable(tx + dx, tz + dz, level) && connected(level, x, z, tx + dx, tz + dz)) return true;
+        }
     return false;
 }
-function enqueue(p: Player, name: string, args: number[] = []) {
+function _enqueue(p: Player, name: string, args: number[] = []) {
     const s = ScriptProvider.getByName(name);
     if (!s) throw new Error('no script ' + name);
     p.enqueueScript(s, PlayerQueueType.NORMAL, 0, args);
@@ -200,12 +230,14 @@ function wear(p: Player, slots: Record<string, string>) {
 }
 /** Stand the player on the nearest walkable tile to (x,z,level). */
 function standBy(p: Player, x: number, z: number, level: number) {
-    for (let r = 1; r < 6; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r || !walkable(x + dx, z + dz, level)) continue;
-        p.teleport(x + dx, z + dz, level);
-        H.tick(1);
-        return;
-    }
+    for (let r = 1; r < 6; r++)
+        for (let dx = -r; dx <= r; dx++)
+            for (let dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) !== r || !walkable(x + dx, z + dz, level)) continue;
+                p.teleport(x + dx, z + dz, level);
+                H.tick(1);
+                return;
+            }
     throw new Error(`nowhere to stand near ${x},${z},${level}`);
 }
 /** Stand the player on the side of a loc its forceapproach allows (rotated by the loc's angle). */
@@ -216,8 +248,14 @@ function standAt(p: Player, locName: string, x: number, z: number, level: number
     const t = LocType.get(id);
     const f = t.forceapproach;
     const r = ((f << loc.angle) & 0xf) | (f >> (4 - loc.angle));
-    const w = loc.angle & 1 ? t.length : t.width, len = loc.angle & 1 ? t.width : t.length;
-    for (const [bit, dx, dz] of [[1, 0, len], [2, w, 0], [4, 0, -1], [8, -1, 0]]) {
+    const w = loc.angle & 1 ? t.length : t.width,
+        len = loc.angle & 1 ? t.width : t.length;
+    for (const [bit, dx, dz] of [
+        [1, 0, len],
+        [2, w, 0],
+        [4, 0, -1],
+        [8, -1, 0]
+    ]) {
         if (r & bit || !walkable(x + dx, z + dz, level)) continue;
         p.teleport(x + dx, z + dz, level);
         H.tick(1);
@@ -227,14 +265,17 @@ function standAt(p: Player, locName: string, x: number, z: number, level: number
 }
 const hasOp = (kind: 'loc' | 'npc' | 'obj', name: string, op: number) => {
     if (kind === 'loc') {
-        const id = LocType.getId(name), t = LocType.get(id);
+        const id = LocType.getId(name),
+            t = LocType.get(id);
         return !!(ScriptProvider.getByTrigger(ServerTriggerType.OPLOC1 + op - 1, id, t.category) || ScriptProvider.getByTrigger(ServerTriggerType.APLOC1 + op - 1, id, t.category));
     }
     if (kind === 'npc') {
-        const id = NpcType.getId(name), t = NpcType.get(id);
+        const id = NpcType.getId(name),
+            t = NpcType.get(id);
         return !!(ScriptProvider.getByTrigger(ServerTriggerType.OPNPC1 + op - 1, id, t.category) || ScriptProvider.getByTrigger(ServerTriggerType.APNPC1 + op - 1, id, t.category));
     }
-    const id = ObjType.getId(name), t = ObjType.get(id);
+    const id = ObjType.getId(name),
+        t = ObjType.get(id);
     return !!ScriptProvider.getByTrigger(ServerTriggerType.OPHELD1 + op - 1, id, t.category);
 };
 /** Fight an npc to the death with maxed stats and a dragon scimitar. */
@@ -248,7 +289,7 @@ function kill(p: Player, npc: Npc, maxTicks = 600): boolean {
     }
     return !npc.isActive;
 }
-const npcsNear = (name: string, x: number, z: number, level: number, range = 30) => {
+const _npcsNear = (name: string, x: number, z: number, level: number, range = 30) => {
     const id = NpcType.getId(name);
     return World.npcs.filter(n => n && n.isActive && n.type === id && n.level === level && Math.max(Math.abs(n.x - x), Math.abs(n.z - z)) <= range);
 };
@@ -272,7 +313,10 @@ if (run('ahoy')) {
     H.tick(1);
     op(p, 3652, 3485, 'ahoy_town_barrier', 1);
     check('and back out beside its other tile, straight west', [p.x < 3652, walkable(p.x, p.z, 0)], [true, true]);
-    for (const [x, z] of [[3659, 3506], [3660, 3506]]) {
+    for (const [x, z] of [
+        [3659, 3506],
+        [3660, 3506]
+    ]) {
         p.teleport(x, z, 0);
         H.tick(1);
         op(p, 3659, 3508, 'ahoy_town_barrier', 1);
@@ -281,7 +325,14 @@ if (run('ahoy')) {
     check('  the temple stairs in reach too', reaches(0, p.x, p.z, 3666, 3517), true);
     op(p, 3659, 3508, 'ahoy_town_barrier', 1);
     check('  and back out south', p.z < 3508, true);
-    for (const [n, x, z] of [['Velorina', 3678, 3510], ['the old crone', 3665, 3493], ['the innkeeper', 3681, 3496], ['Ak-Haranu', 3689, 3495], ['the pier captain', 3703, 3487], ['the harbour captain', 3691, 3513]] as const) {
+    for (const [n, x, z] of [
+        ['Velorina', 3678, 3510],
+        ['the old crone', 3665, 3493],
+        ['the innkeeper', 3681, 3496],
+        ['Ak-Haranu', 3689, 3495],
+        ['the pier captain', 3703, 3487],
+        ['the harbour captain', 3691, 3513]
+    ] as const) {
         check(`${n} can be walked to from inside the west barrier`, reaches(0, inside[0], inside[1], x, z), true);
     }
     check('Robin is behind a door...', reaches(0, inside[0], inside[1], 3672, 3491), false);
@@ -314,7 +365,7 @@ if (run('ahoy')) {
     H.tick(1);
     op(p, 3615, 3541, 'ahoy_ghostship_ladder', 1);
     check('walk to the next ladder and up to the top deck, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
-    check('  Robin\'s chest reachable on the top deck', reaches(2, p.x, p.z, 3618, 3541), true);
+    check("  Robin's chest reachable on the top deck", reaches(2, p.x, p.z, 3618, 3541), true);
     op(p, 3615, 3541, 'ahoy_ghostship_laddertop', 1);
     check('and down again, walkable', [p.level, walkable(p.x, p.z, 1)], [1, true]);
     op(p, 3609, 3543, 'ahoy_ghostship_laddertop', 1);
@@ -403,7 +454,16 @@ if (run('eadgar')) {
     check('no Troll Stronghold or Druidic Ritual: Sanfew will not start it', stage(), 0);
     sv(p, 'druidquest', 4);
     sv(p, 'troll_quest', 50);
-    talk(p, 'sanfew', [1]);
+    // TWO PICKS, NOT ONE, and the second is why this file used to die here. Starting the quest
+    // walks through two separate menus: Sanfew's own multi2 ("Have you any more work for me")
+    // and then the p_choice2 inside ~eadgar_sanfew_offer ("What's goutweed?"). With a single pick
+    // queued, drive() reached the goutweed menu with nothing to answer it and threw
+    // "unexpected menu: multi2" - which killed the whole run, so every section after Eadgar's
+    // Ruse had not been measured at all.
+    //
+    // The run above it, with no Druidic Ritual, needs only one pick: that branch goes to
+    // sanfew_teach_herblore, which asks nothing further. So the two calls look alike and are not.
+    talk(p, 'sanfew', [1, 1]);
     check('Sanfew starts it: stage 10', stage(), 10);
     standBy(p, 2890, 10086, 2);
     talk(p, 'troll_eadgar');
@@ -500,7 +560,12 @@ if (run('zogre')) {
     op(p, 2447, 3039, 'ogre_coffin', 1);
     check('the coffin key opens the way into the tomb, walkable landing', [stage(), p.level, p.z > 9000, walkable(p.x, p.z, p.level)], [4, 2, true, true]);
     const landing = [p.x, p.z] as const;
-    for (const [n, x, z] of [['Brentle Vahn', 2442, 9459], ['the special coffin', 2438, 9458], ['the lectern', 2443, 9459], ['the way out', 2442, 9433]] as const) {
+    for (const [n, x, z] of [
+        ['Brentle Vahn', 2442, 9459],
+        ['the special coffin', 2438, 9458],
+        ['the lectern', 2443, 9459],
+        ['the way out', 2442, 9433]
+    ] as const) {
         check(`${n} can be walked to from the landing`, reaches(2, landing[0], landing[1], x, z), true);
     }
     op(p, 2442, 9459, 'zogre_brentle_skeleton', 1);
@@ -525,7 +590,7 @@ if (run('zogre')) {
     check('Rarve reads the evidence: the potion, stage 8', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [8, 1]);
     standBy(p, 2597, 3107, 0);
     op(p, 2597, 3107, 'ladder', 1);
-    check('up the ladder in Sithik\'s house', p.level, 1);
+    check("up the ladder in Sithik's house", p.level, 1);
     op(p, 2591, 3105, 'loc_1530', 1);
     check('  his bed reachable up there, through his door', reaches(1, p.x, p.z, 2591, 3103), true);
     op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
@@ -582,11 +647,16 @@ if (run('fever')) {
 
     console.log('Every ship ladder lands on a walkable tile the other end can be climbed back from:');
     for (const [lo, hi, x, z, lv] of [
-        ['fever_ship_ladder', 'fever_ship_laddertop', 1815, 4836, 0], ['fever_ship_ladder', 'fever_ship_laddertop', 1824, 4829, 0],
-        ['fever_shipladder_angled', 'fever_shipladder_top_angled', 1813, 4828, 1], ['fever_shipladder_angled', 'fever_shipladder_top_angled', 1826, 4837, 1],
-        ['fever_climbing_net', 'fever_climb_down_location', 1816, 4831, 1], ['fever_climbing_net', 'fever_climb_down_location', 1823, 4834, 1],
-        ['fever_ship_ladder', 'fever_ship_laddertop', 3714, 3502, 0], ['fever_shipladder_angled', 'fever_shipladder_top_angled', 3712, 3494, 1],
-        ['fever_ship_ladder', 'fever_ship_laddertop', 3678, 2948, 0], ['fever_shipladder_angled', 'fever_shipladder_top_angled', 3686, 2950, 1],
+        ['fever_ship_ladder', 'fever_ship_laddertop', 1815, 4836, 0],
+        ['fever_ship_ladder', 'fever_ship_laddertop', 1824, 4829, 0],
+        ['fever_shipladder_angled', 'fever_shipladder_top_angled', 1813, 4828, 1],
+        ['fever_shipladder_angled', 'fever_shipladder_top_angled', 1826, 4837, 1],
+        ['fever_climbing_net', 'fever_climb_down_location', 1816, 4831, 1],
+        ['fever_climbing_net', 'fever_climb_down_location', 1823, 4834, 1],
+        ['fever_ship_ladder', 'fever_ship_laddertop', 3714, 3502, 0],
+        ['fever_shipladder_angled', 'fever_shipladder_top_angled', 3712, 3494, 1],
+        ['fever_ship_ladder', 'fever_ship_laddertop', 3678, 2948, 0],
+        ['fever_shipladder_angled', 'fever_shipladder_top_angled', 3686, 2950, 1],
         ['ahoy_ghostship_ladder', 'ahoy_ghostship_laddertop', 3613, 3543, 0]
     ] as const) {
         const c = player(`lad${x}${z}`, x, z - 3, lv);
@@ -605,7 +675,11 @@ if (run('fever')) {
     standBy(p, 1816, 4833, 0);
     op(p, 1816, 4833, 'fever_weapons_locker', 1);
     op(p, 1814, 4832, 'fever_repair_locker', 1);
-    check('lockers below deck: ramrod, fuses, shot, tinderbox, planks, paste, hammer', ['fever_cannon_prod', 'fever_fuse', 'fever_cannon_ball', 'fever_tinderbox', 'fever_repair_plank', 'swamppaste', 'hammer'].map(o => H.invCount(p, o) > 0), [true, true, true, true, true, true, true]);
+    check(
+        'lockers below deck: ramrod, fuses, shot, tinderbox, planks, paste, hammer',
+        ['fever_cannon_prod', 'fever_fuse', 'fever_cannon_ball', 'fever_tinderbox', 'fever_repair_plank', 'swamppaste', 'hammer'].map(o => H.invCount(p, o) > 0),
+        [true, true, true, true, true, true, true]
+    );
     check('the cannon and our own powder barrel can both be walked to from the deck', [reaches(1, deck[0], deck[1], 1816, 4833), reaches(1, deck[0], deck[1], 1817, 4832)], [true, true]);
     check('  (the barrel that had the script is on the enemy ship)', reaches(1, deck[0], deck[1], 1822, 4831), false);
     check('  our barrel has a Take-Powder script now', hasOp('loc', 'fever_your_gunpowder_barrel', 1), true);
@@ -619,7 +693,11 @@ if (run('fever')) {
     };
     for (let shot = 0; shot < 3; shot++) shoot();
     check('three clean shots: she sheers away, stage 5', stage(), 5);
-    for (const [n, x, z] of [['fever_multi_hole_1', 1816, 4834], ['fever_multi_hole_2', 1816, 4832], ['fever_multi_hole_3', 1816, 4830]] as const) {
+    for (const [n, x, z] of [
+        ['fever_multi_hole_1', 1816, 4834],
+        ['fever_multi_hole_2', 1816, 4832],
+        ['fever_multi_hole_3', 1816, 4830]
+    ] as const) {
         standBy(p, x, z, 0);
         op(p, x, z, n, 1);
         op(p, x, z, n, 1);
@@ -633,7 +711,7 @@ if (run('fever')) {
     talk(p, 'fever_port_ship_teach');
     check('and the port ship takes you back out to the fight', [p.x < 2000, stage()], [true, 5]);
     talk(p, 'fever_quest_ship_teach');
-    check('Teach at the wheel: Mos Le\'Harmless, stage 6, walkable', [stage(), p.z < 3000, walkable(p.x, p.z, p.level)], [6, true, true]);
+    check("Teach at the wheel: Mos Le'Harmless, stage 6, walkable", [stage(), p.z < 3000, walkable(p.x, p.z, p.level)], [6, true, true]);
     const smith = p.stats[13];
     talk(p, 'fever_harmless_teach');
     H.tick(3);
@@ -644,7 +722,7 @@ if (run('fever')) {
     check('Teach on the island sails you home to the pier, walkable', [p.x > 3600 && p.z > 3400, p.level, walkable(p.x, p.z, p.level)], [true, 0, true]);
     op(p, 3710, 3496, 'fever_gangplank', 1);
     talk(p, 'fever_port_ship_teach');
-    check('the port ship sails you to Mos Le\'Harmless', [p.z < 3000, walkable(p.x, p.z, p.level)], [true, true]);
+    check("the port ship sails you to Mos Le'Harmless", [p.z < 3000, walkable(p.x, p.z, p.level)], [true, true]);
     check('the dock gangplank can be walked to from there', reaches(0, p.x, p.z, 3684, 2952), true);
     op(p, 3684, 2952, 'fever_gangplank_harmless', 1);
     check('the dock gangplank boards the moored ship (it put you back on the island), walkable deck', [p.level, walkable(p.x, p.z, 1), reaches(1, p.x, p.z, 3684, 2947)], [1, true, true]);
@@ -708,7 +786,7 @@ if (run('troll')) {
         talkHere(p, nearest('troll_prison_guard1', p), [], 3);
         H.tick(6);
     }
-    check('Godric\'s cell key off the sleeping guard', H.invCount(p, 'troll_key_godric'), 1);
+    check("Godric's cell key off the sleeping guard", H.invCount(p, 'troll_key_godric'), 1);
     standBy(p, 2833, 10078, 0);
     op(p, 2832, 10078, 'troll_celldoor_godric', 1);
     H.tick(5);
@@ -748,7 +826,15 @@ if (run('dt')) {
     talk(p, 'fourdiamonds_elder');
     check('Eblis wants materials: stage 5', st(), 5);
     const eblis = nearest('fourdiamonds_elder', p);
-    for (const [o, n] of [['magic_logs', 12], ['molten_glass', 6], ['steel_bar', 6], ['ashes', 1], ['charcoal', 1], ['bones', 1], ['bloodrune', 1]] as const) {
+    for (const [o, n] of [
+        ['magic_logs', 12],
+        ['molten_glass', 6],
+        ['steel_bar', 6],
+        ['ashes', 1],
+        ['charcoal', 1],
+        ['bones', 1],
+        ['bloodrune', 1]
+    ] as const) {
         H.give(p, o, n);
         useOnNpc(p, o, eblis);
     }
@@ -798,7 +884,12 @@ if (run('dt')) {
     console.log('The obelisks:');
     for (const d of ['fd_blood_diamond', 'fd_icediamond', 'fd_diamond_fire', 'fd_dark_diamond']) H.give(p, d);
     talk(p, 'fourdiamonds_elder2');
-    const obs: [string, number, number][] = [['desert_treasure_oblix1', 3220, 2909], ['desert_treasure_oblix2', 3244, 2909], ['desert_treasure_oblix3', 3244, 2885], ['desert_treasure_oblix4', 3220, 2885]];
+    const obs: [string, number, number][] = [
+        ['desert_treasure_oblix1', 3220, 2909],
+        ['desert_treasure_oblix2', 3244, 2909],
+        ['desert_treasure_oblix3', 3244, 2885],
+        ['desert_treasure_oblix4', 3220, 2885]
+    ];
     for (const [n, x, z] of obs) {
         check(`${n} can be walked to from the pyramid door`, reaches(0, 3233, 2902, x, z), true);
         standBy(p, x, z, 0);
@@ -817,10 +908,24 @@ function walkDist(level: number, x: number, z: number, tx: number, tz: number, r
         const nq: [number, number][] = [];
         for (const [cx, cz] of q) {
             if (Math.abs(cx - tx) <= 1 && Math.abs(cz - tz) <= 1) return d;
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-                const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1],
+                [1, 1],
+                [1, -1],
+                [-1, 1],
+                [-1, -1]
+            ]) {
+                const nx = cx + dx,
+                    nz = cz + dz,
+                    k = nx + ',' + nz;
                 if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-                if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.set(k, d + 1); nq.push([nx, nz]); }
+                if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                    seen.set(k, d + 1);
+                    nq.push([nx, nz]);
+                }
             }
         }
         q = nq;
@@ -870,13 +975,22 @@ if (run('dt')) {
         op(p, 3310, 2962, 'sword_haunted_well', 1);
         check('down the well onto a walkable tile (was the ladder loc tile)', [p.z > 9000, walkable(p.x, p.z, 0)], [true, true]);
         const bottom = [p.x, p.z] as const;
-        const torches = [[3323, 9398], [3321, 9355], [3204, 9350], [3207, 9395]];
+        const torches = [
+            [3323, 9398],
+            [3321, 9355],
+            [3204, 9350],
+            [3207, 9395]
+        ];
         let route = walkDist(0, bottom[0], bottom[1], torches[3][0], torches[3][1]);
         for (let i = 0; i < 3; i++) route += walkDist(0, torches[(i + 3) % 4][0], torches[(i + 3) % 4][1], torches[i][0], torches[i][1]);
-        const lap = walkDist(0, torches[3][0], torches[3][1], torches[0][0], torches[0][1]) + walkDist(0, torches[0][0], torches[0][1], torches[1][0], torches[1][1]) + walkDist(0, torches[1][0], torches[1][1], torches[2][0], torches[2][1]) + walkDist(0, torches[2][0], torches[2][1], 3248, 9364);
+        const lap =
+            walkDist(0, torches[3][0], torches[3][1], torches[0][0], torches[0][1]) +
+            walkDist(0, torches[0][0], torches[0][1], torches[1][0], torches[1][1]) +
+            walkDist(0, torches[1][0], torches[1][1], torches[2][0], torches[2][1]) +
+            walkDist(0, torches[2][0], torches[2][1], 3248, 9364);
         console.log(`    four torches and back to the chest: ${lap} tiles`);
         check('the four torches and the chest can be lit and opened inside the burn time, running', Math.ceil(lap / 2) + 4 * 4 < 400 + 0 * route, true);
-        check('Fareed\'s gate can be walked to from the bottom of the well', reaches(0, bottom[0], bottom[1], 3305, 9375), true);
+        check("Fareed's gate can be walked to from the bottom of the well", reaches(0, bottom[0], bottom[1], 3305, 9375), true);
         H.give(p, 'fd_firekey');
         standBy(p, 3304, 9375, 0);
         op(p, 3305, 9375, 'fd_fw_metalgateclosed_l', 1);
@@ -919,7 +1033,11 @@ if (run('dt')) {
         op(p, 2629, 5072, 'fd_shadowladder', 1);
         check('up again onto a walkable tile', [p.z < 4000, walkable(p.x, p.z, 0)], [true, true]);
         op(p, 2547, 3421, 'fd_shadowladder1', 1);
-        check('coming back down after: no second Damis', [H.npcNear('fd_damis_normal', 2626, 5065, 0), H.npcNear('fd_damis_tougher', 2626, 5065, 0)].every(n => n === null || !n.isActive), true);
+        check(
+            'coming back down after: no second Damis',
+            [H.npcNear('fd_damis_normal', 2626, 5065, 0), H.npcNear('fd_damis_tougher', 2626, 5065, 0)].every(n => n === null || !n.isActive),
+            true
+        );
     }
 
     console.log('Ice: the gate both ways:');
@@ -943,13 +1061,18 @@ if (run('dt')) {
         op(p, 3233, 2899, 'four_diamonds_door_1', 1);
         check('  and out again', p.z > 2899, true);
         op(p, 3233, 2899, 'four_diamonds_door_1', 1);
-        const steps: [string, number, number, number][] = [['desert_laddertop', 3233, 2897, 0], ['desert_laddertop3_2', 2909, 4964, 3], ['desert_laddertop2_1', 2846, 4973, 2], ['desert_laddertop1_0', 2784, 4941, 1]];
+        const steps: [string, number, number, number][] = [
+            ['desert_laddertop', 3233, 2897, 0],
+            ['desert_laddertop3_2', 2909, 4964, 3],
+            ['desert_laddertop2_1', 2846, 4973, 2],
+            ['desert_laddertop1_0', 2784, 4941, 1]
+        ];
         for (const [loc, x, z, l] of steps) {
             const from = [p.x, p.z, p.level];
             check(`${loc} can be walked to from where the last ladder left you`, p.level === l && reaches(l, p.x, p.z, x, z), true);
             standBy(p, x, z, l);
             op(p, x, z, loc, 1);
-            check(`  and climbed down onto a walkable tile`, [p.level !== l || p.z !== from[1], walkable(p.x, p.z, p.level)], [true, true]);
+            check('  and climbed down onto a walkable tile', [p.level !== l || p.z !== from[1], walkable(p.x, p.z, p.level)], [true, true]);
         }
         check('the altar room is shut off from the ladder...', reaches(0, p.x, p.z, 3232, 9311), false);
         check('...but its doorway can be walked to', reaches(0, p.x, p.z, 3234, 9324), true);
@@ -1014,11 +1137,18 @@ if (run('rd')) {
         op(p, bx, 4972, bx === 2483 ? 'rd_bridge_left' : 'rd_bridge_right', 1);
     };
     check('the bridge can be walked to from the arrival tile', reaches(p.level, p.x, p.z, 2483, 4972), true);
-    take('chicken', false); cross(); cross();
-    take('fox', false); cross();
-    take('chicken', true); cross();
-    take('grain', false); cross(); cross();
-    take('chicken', false); cross();
+    take('chicken', false);
+    cross();
+    cross();
+    take('fox', false);
+    cross();
+    take('chicken', true);
+    cross();
+    take('grain', false);
+    cross();
+    cross();
+    take('chicken', false);
+    cross();
     check('all three across: room 1 passed', gv(p, 'rd_room1_complete'), 1);
     check('the exit door can be walked to', reaches(0, p.x, p.z, 2472, 4972), true);
     op(p, 2472, 4972, 'rd_room1_exitdoor', 1);
@@ -1075,13 +1205,19 @@ if (run('rd')) {
     talk(q, 'rd_teleporter_guy', [1]);
     check('room 6: arrived, walkable', [walkable(q.x, q.z, 0), q.z < 4950], [true, true]);
     const lab: [string, number, number][] = [];
-    for (let x = 2455; x < 2482; x++) for (let z = 4932; z < 4948; z++) for (const n of ['rd_shelves_chemicals_1', 'rd_shelves_chemicals_2', 'rd_shelves_chemicals_3', 'rd_shelves_chemicals_4', 'rd_shelves_chemicals_5', 'rd_large_crate', 'rd_large_crates', 'rd_small_crates']) {
-        if (World.getLoc(x, z, 0, LocType.getId(n))) lab.push([n, x, z]);
-    }
+    for (let x = 2455; x < 2482; x++)
+        for (let z = 4932; z < 4948; z++)
+            for (const n of ['rd_shelves_chemicals_1', 'rd_shelves_chemicals_2', 'rd_shelves_chemicals_3', 'rd_shelves_chemicals_4', 'rd_shelves_chemicals_5', 'rd_large_crate', 'rd_large_crates', 'rd_small_crates']) {
+                if (World.getLoc(x, z, 0, LocType.getId(n))) lab.push([n, x, z]);
+            }
     for (const [n, x, z] of lab) {
         op(q, x, z, n, 1);
     }
-    check('shelves and crates: water, gypsum, cupric sulfate, both ores, spade, tin, knife', ['rd_dihydrogen_monoxide', 'rd_gypsum', 'rd_cupric_sulphate', 'rd_tin_ore_powder', 'rd_copper_ore_powder', 'rd_metal_spade', 'rd_tin', 'rd_knife'].map(o => H.invCount(q, o) > 0), [true, true, true, true, true, true, true, true]);
+    check(
+        'shelves and crates: water, gypsum, cupric sulfate, both ores, spade, tin, knife',
+        ['rd_dihydrogen_monoxide', 'rd_gypsum', 'rd_cupric_sulphate', 'rd_tin_ore_powder', 'rd_copper_ore_powder', 'rd_metal_spade', 'rd_tin', 'rd_knife'].map(o => H.invCount(q, o) > 0),
+        [true, true, true, true, true, true, true, true]
+    );
     useOn(q, 2472, 4940, 'rd_wooden_table_bunsen_burner', 'rd_metal_spade');
     useOn(q, 2477, 4940, 'rd_stone_door', 'rd_metal_spade_no_handle');
     useOn(q, 2477, 4940, 'rd_stone_door', 'rd_cupric_sulphate');

@@ -6,6 +6,8 @@ import * as H from './harness.js';
 import * as A from './a1lib.js';
 import { check, R, player, talk, useOn, connected } from './a1lib.js';
 import LocType from '#/cache/config/LocType.js';
+import InvType from '#/cache/config/InvType.js';
+import ObjType from '#/cache/config/ObjType.js';
 import World from '#/engine/World.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 
@@ -13,7 +15,10 @@ import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 // starts watching - so the mark has to be taken before the click and the slice read afterwards.
 const ifaceMark = () => H.ifaces.length;
 const shownSince = (p: any, from: number) =>
-    H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!);
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
 
 await H.boot();
 const JAIL = [2464, 3496] as const;
@@ -23,7 +28,7 @@ console.log('\n================ THE GRAND TREE CELL');
 {
     const glough = H.npcNear('grandtree_glough', 2478, 3463, 1)!;
     const p: any = player('gt', glough.x + 1, glough.z, glough.level);
-    H.setVar(p, 'grandtree', 70);          // ^grandtree_found_journal
+    H.setVar(p, 'grandtree', 70); // ^grandtree_found_journal
     H.tick(1);
     // The arrest and the release are one continuous scene: Glough calls the guards, you are put in
     // the cage, Charlie tells you about the shipyard, and King Narnode comes down and lets you out.
@@ -31,20 +36,15 @@ console.log('\n================ THE GRAND TREE CELL');
     const lines = talk(p, 'grandtree_glough', [], 1, false);
     H.tick(40);
     check('Glough calls the guards', A.saw(lines, 'Guards! Guards!'), true);
-    check('Charlie greets you as a fellow prisoner in the cage',
-        A.saw(lines, 'So they got you as well'), true);
+    check('Charlie greets you as a fellow prisoner in the cage', A.saw(lines, 'So they got you as well'), true);
     check('  ...which only fires on the jail tile itself', true, true);
     check('Charlie gives up the shipyard password', A.saw(lines, 'Ka-Lu-Min'), true);
-    check('the King comes down and frees you (stage -> released_prison)',
-        H.getVar(p, 'grandtree'), 80);
+    check('the King comes down and frees you (stage -> released_prison)', H.getVar(p, 'grandtree'), 80);
     console.log('  after the release the player is at', [p.level, p.x, p.z]);
-    check('  ...one tile out of the cage, at the jail coord + 1 east',
-        [p.level, p.x, p.z], [3, JAIL[0] + 1, JAIL[1]]);
+    check('  ...one tile out of the cage, at the jail coord + 1 east', [p.level, p.x, p.z], [3, JAIL[0] + 1, JAIL[1]]);
     const pilot = H.npcNear('pilot_grand_tree', 2467, 3497, 3);
-    check('  ...and able to reach the glider pilot',
-        pilot ? connected(3, p.x, p.z, pilot.x, pilot.z, 24) : null, true);
-    check('while the cage itself is sealed on all four sides',
-        connected(3, JAIL[0], JAIL[1], pilot!.x, pilot!.z, 24), false);
+    check('  ...and able to reach the glider pilot', pilot ? connected(3, p.x, p.z, pilot.x, pilot.z, 24) : null, true);
+    check('while the cage itself is sealed on all four sides', connected(3, JAIL[0], JAIL[1], pilot!.x, pilot!.z, 24), false);
 }
 
 console.log('\n================ ZANARIS: the mushroom gate');
@@ -52,12 +52,11 @@ console.log('\n================ ZANARIS: the mushroom gate');
     const p: any = player('zan', 2452, 4471);
     const jukat = H.npcNear('jakut', 2483, 4453, 0)!;
     console.log('  Jukat at', [jukat.x, jukat.z]);
-    check('his half of Zanaris is sealed off with the gate shut',
-        connected(0, p.x, p.z, jukat.x, jukat.z, 140), false);
+    check('his half of Zanaris is sealed off with the gate shut', connected(0, p.x, p.z, jukat.x, jukat.z, 140), false);
     const lid = LocType.getId('fairy_mushroom_gate_door_l');
     console.log(`  the door: category=${LocType.get(lid).category} "${LocType.get(lid).name}"`);
     H.opLoc(p, 2469, 4438, 'fairy_mushroom_gate_door_l', 1);
-    H.tick(60);     // it is about thirty tiles from the shed to the gate
+    H.tick(60); // it is about thirty tiles from the shed to the gate
     check('the left door leaves its tile', World.getLoc(2469, 4438, 0, lid) === null, true);
     const rid = LocType.getId('fairy_mushroom_gate_door_r');
     check('  ...and its partner swings with it', World.getLoc(2469, 4437, 0, rid) === null, true);
@@ -67,7 +66,7 @@ console.log('\n================ ZANARIS: the mushroom gate');
 console.log('\n================ GHOSTS AHOY: the manual on the book');
 {
     const p: any = player('ahoy', 3678, 3510);
-    H.setVarBit(p, 'ahoy_questvar', 5);          // ^ahoy_manual
+    H.setVarBit(p, 'ahoy_questvar', 5); // ^ahoy_manual
     H.give(p, 'ahoy_translation_manual');
     H.give(p, 'ahoy_book_of_haricanto');
     H.tick(1);
@@ -81,10 +80,8 @@ console.log('\n================ GHOSTS AHOY: the manual on the book');
     A.drive(p);
     const again = shownSince(p, im);
     console.log('  second use said:', again.filter(s => s.length > 20).slice(0, 2));
-    check('  ...and a second use says so instead of repeating',
-        A.saw(again, 'already worked through'), true);
-    check('  ...with no experience the second time either',
-        xp(p, PlayerStat.PRAYER) - before, 0);
+    check('  ...and a second use says so instead of repeating', A.saw(again, 'already worked through'), true);
+    check('  ...with no experience the second time either', xp(p, PlayerStat.PRAYER) - before, 0);
 }
 
 console.log('\n================ THE ECTOFUNTUS');
@@ -103,26 +100,21 @@ console.log('\n================ THE ECTOFUNTUS');
     const flights: [number, number, number[], number[]][] = [
         [3, 3689, [3692, 9887], [2, 3688, 9887]],
         [2, 3672, [3671, 9887], [1, 3675, 9887]],
-        [1, 3684, [3687, 9887], [0, 3683, 9887]],
+        [1, 3684, [3687, 9887], [0, 3683, 9887]]
     ];
     for (const [lv, x, approach, want] of flights) {
         p.teleport(approach[0], approach[1], lv);
         H.tick(2);
-        check(`  level ${lv}: the tile beside the flight at ${x},9887 is walkable`,
-            A.walkable(lv, approach[0], approach[1]), true);
+        check(`  level ${lv}: the tile beside the flight at ${x},9887 is walkable`, A.walkable(lv, approach[0], approach[1]), true);
         H.opLoc(p, x, 9887, 'ahoy_cavern_stairs_top', 1);
         H.tick(12);
         check(`  ...and the flight takes you down to level ${want[0]}`, [p.level, p.x, p.z], want);
     }
     console.log('-- and the rim is walkable end to end');
-    check('from the ladder you can walk to the first flight',
-        connected(3, 3669, 9888, 3692, 9887, 48), true);
-    check('from the second flight you can walk to the third',
-        connected(2, 3688, 9887, 3671, 9887, 48), true);
-    check('from the third you can walk to the last',
-        connected(1, 3675, 9887, 3687, 9887, 48), true);
-    check('and the floor by the slime is where the last one puts you',
-        connected(0, 3683, 9887, 3683, 9889, 8), true);
+    check('from the ladder you can walk to the first flight', connected(3, 3669, 9888, 3692, 9887, 48), true);
+    check('from the second flight you can walk to the third', connected(2, 3688, 9887, 3671, 9887, 48), true);
+    check('from the third you can walk to the last', connected(1, 3675, 9887, 3687, 9887, 48), true);
+    check('and the floor by the slime is where the last one puts you', connected(0, 3683, 9887, 3683, 9889, 8), true);
     p.teleport(3683, 9887, 0);
     H.tick(2);
 
@@ -130,8 +122,7 @@ console.log('\n================ THE ECTOFUNTUS');
     const pool = A.locsNamed('green_gloop', 3670, 9880, 3690, 9895, [0]);
     // The nearest one to where the last flight puts you - the ledge at the bottom is three tiles
     // and the pool spreads west of it, so most of the 28 are across the slime and out of reach.
-    const near = pool.slice().sort((a, b) =>
-        (Math.abs(a[0] - p.x) + Math.abs(a[1] - p.z)) - (Math.abs(b[0] - p.x) + Math.abs(b[1] - p.z)))[0];
+    const near = pool.slice().sort((a, b) => Math.abs(a[0] - p.x) + Math.abs(a[1] - p.z) - (Math.abs(b[0] - p.x) + Math.abs(b[1] - p.z)))[0];
     console.log(`  ${pool.length} green_gloop locs down here; nearest to the ledge`, near);
     H.give(p, 'bucket_empty', 5);
     const m = A.mark();
@@ -171,12 +162,10 @@ console.log('\n================ THE ECTOFUNTUS');
     const worship = A.drive(p);
     H.tick(6);
     console.log('  ', A.mesSince(p, w).slice(0, 2), worship.slice(0, 2));
-    check('worship pays four times the bury value (big bones 15 -> 60)',
-        xp(p, PlayerStat.PRAYER) - before, 600);
+    check('worship pays four times the bury value (big bones 15 -> 60)', xp(p, PlayerStat.PRAYER) - before, 600);
     check('  ...takes the bonemeal', H.invCount(p, 'pot_bonemeal_big'), 0);
     check('  ...takes a bucket of slime', H.invCount(p, 'bucket_ectoplasm'), 4);
-    check('  ...hands back the empties',
-        [H.invCount(p, 'pot_empty'), H.invCount(p, 'bucket_empty')], [2, 1]);
+    check('  ...hands back the empties', [H.invCount(p, 'pot_empty'), H.invCount(p, 'bucket_empty')], [2, 1]);
     check('  ...and banks 5 ecto-tokens', H.getVar(p, 'ecto_tokens_pending'), 5);
 
     console.log('-- the Ghost Disciple');
@@ -189,6 +178,17 @@ console.log('\n================ THE ECTOFUNTUS');
     check('the disciple hands the tokens over', H.invCount(p, 'ectotoken'), 5);
     check('  ...and the till is empty', H.getVar(p, 'ecto_tokens_pending'), 0);
 
+    // THE ECTOPHIAL REFILLS ITSELF, and this section used to say the opposite.
+    //
+    // It was written the same day the behaviour changed: content 423363d1 dropped the
+    // inv_del(ectophial) / inv_add(ectophial_empty) pair for the auto-refill Corey asked for
+    // ("add ectophial auto refill"), and this sim kept asserting the pour left you holding an
+    // empty one. So it demanded [0, 1], got the correct [1, 0], and then THREW on the next line -
+    // useOn with an ectophial_empty nothing can give you any more - which killed the whole file
+    // and took every section below this one down with it, untested, for a day.
+    //
+    // A stale expectation that throws is worse than one that just fails: a FAIL is a line in a
+    // report, an exception is a sim that stops measuring.
     console.log('-- the ectophial');
     p.teleport(3222, 3218, 0);
     H.tick(2);
@@ -196,11 +196,64 @@ console.log('\n================ THE ECTOFUNTUS');
     H.opheld(p, 'ectophial', 1);
     H.tick(10);
     check('the ectophial teleports you to the Ectofuntus', [p.level, p.x, p.z], [0, 3658, 3517]);
-    check('  ...and comes back empty',
-        [H.invCount(p, 'ectophial'), H.invCount(p, 'ectophial_empty')], [0, 1]);
+    check('  ...and refills itself rather than coming back empty', [H.invCount(p, 'ectophial'), H.invCount(p, 'ectophial_empty')], [1, 0]);
+
+    // The manual refill is still wired, and still has to be: nothing creates an ectophial_empty
+    // now, so the only ones in the world are the ones already sitting in somebody's bank from
+    // before the change. Handing one over is the only way to reach that path, which is the point -
+    // if [oplocu,ahoy_ectofunctus] ever stopped working those phials would be bricked.
+    H.give(p, 'ectophial_empty');
     useOn(p, 3658, 3518, 'ahoy_ectofunctus', 'ectophial_empty');
     H.tick(6);
-    check('  ...and refills on the Ectofuntus itself', H.invCount(p, 'ectophial'), 1);
+    check('  ...and an empty one left over from before still refills on the Ectofuntus', [H.invCount(p, 'ectophial'), H.invCount(p, 'ectophial_empty')], [2, 0]);
+
+    // AND IT IS REPLACEABLE, which it was not: the phial is handed over once on quest completion
+    // and nothing gave out another, so dropping it or dying with it shut off the Ectofuntus - and
+    // with it every use for bonemeal - permanently.
+    console.log('-- Velorina replaces a lost one');
+    const v: any = player('velo', 3678, 3512, 0);
+    H.setVarBit(v, 'ahoy_questvar', 10); // ^ahoy_complete
+    // She cannot be heard without it, and that IS the condition Old School puts on the
+    // replacement - so wearing it is part of the test, not setup around it.
+    H.equip(v, { front: 'amulet_of_ghostspeak' });
+    H.tick(2);
+    check('a finished player carrying no phial has none to start with', H.invCount(v, 'ectophial'), 0);
+    // HER LINES ARE READ WITH ifaceMark/shownSince, NOT from talk()'s return. Her replacement
+    // dialogue is one chatnpc with no choice in it, so the whole script finishes inside the click -
+    // before drive() starts watching - and talk() hands back an empty list. That is the same trap
+    // the note at the top of this file describes for ~mesbox, and it cost three red lines here:
+    // the phial arrived every time while the text looked missing.
+    //
+    // AND THE LINES ARE JOINED BEFORE SEARCHING, because the chat box wraps: her line came back as
+    // "...the Ectofuntus has never once run" and "dry." in two separate components, so a phrase
+    // that straddles the break matches neither half. The two Necrovarus checks below passed
+    // without joining only because their phrase happened to land inside one line - which is luck,
+    // not a test.
+    let from = ifaceMark();
+    talk(v, 'ahoy_velorina', [], 1, false);
+    H.tick(4);
+    let shown = shownSince(v, from).join(' ');
+    check('  she hands over another', H.invCount(v, 'ectophial'), 1);
+    check('  ...and says so', shown.includes('never once run dry'), true);
+
+    // NOT A DUPLICATOR. Asking again while holding one gets her post-quest line instead, and so
+    // does asking with one in the bank - a phial in your bank is not a lost phial, and without
+    // that check this is a one-click duplicator.
+    from = ifaceMark();
+    talk(v, 'ahoy_velorina', [], 1, false);
+    H.tick(4);
+    shown = shownSince(v, from).join(' ');
+    check('  asking again with one in hand gives nothing', H.invCount(v, 'ectophial'), 1);
+    check('  ...she talks about Necrovarus instead', shown.includes('about four seconds'), true);
+
+    H.clearInv(v);
+    v.invSet(InvType.getId('bank'), ObjType.getId('ectophial'), 1, 0);
+    from = ifaceMark();
+    talk(v, 'ahoy_velorina', [], 1, false);
+    H.tick(4);
+    shown = shownSince(v, from).join(' ');
+    check('  and one in the BANK is not a lost one either', H.invCount(v, 'ectophial'), 0);
+    check('  ...so she talks about Necrovarus again', shown.includes('about four seconds'), true);
 }
 
 console.log('\n================ H.A.M. MEMBERS');
@@ -223,19 +276,53 @@ console.log('\n================ H.A.M. MEMBERS');
         A.drive(p);
         const refused = shownSince(p, im).filter(s => s.includes('thieving'));
         console.log('  at level 1:', refused);
-        check('level 1 is refused, and the message names 15',
-            refused.some(s => s.includes('15')), true);
+        check(
+            'level 1 is refused, and the message names 15',
+            refused.some(s => s.includes('15')),
+            true
+        );
         p.setLevel(PlayerStat.THIEVING, 99);
         H.clearInv(p);
         H.tick(2);
         const before = xp(p, PlayerStat.THIEVING);
-        const names = ['coins', 'digsitebuttons', 'digsitearmour1', 'digsitesword', 'bronze_arrow',
-            'bronze_axe', 'bronze_dagger', 'bronze_pickaxe', 'iron_axe', 'iron_dagger',
-            'iron_pickaxe', 'leather_armour', 'feather', 'logs', 'thread', 'cow_hide',
-            'steel_arrow', 'steel_axe', 'steel_dagger', 'steel_pickaxe', 'knife', 'needle',
-            'raw_anchovies', 'raw_chicken', 'tinderbox', 'uncut_opal', 'uncut_jade', 'coal',
-            'iron_ore', 'ham_shirt', 'ham_robe', 'ham_gloves', 'ham_boots', 'ham_cloak',
-            'ham_badge', 'ham_hood'];
+        const names = [
+            'coins',
+            'digsitebuttons',
+            'digsitearmour1',
+            'digsitesword',
+            'bronze_arrow',
+            'bronze_axe',
+            'bronze_dagger',
+            'bronze_pickaxe',
+            'iron_axe',
+            'iron_dagger',
+            'iron_pickaxe',
+            'leather_armour',
+            'feather',
+            'logs',
+            'thread',
+            'cow_hide',
+            'steel_arrow',
+            'steel_axe',
+            'steel_dagger',
+            'steel_pickaxe',
+            'knife',
+            'needle',
+            'raw_anchovies',
+            'raw_chicken',
+            'tinderbox',
+            'uncut_opal',
+            'uncut_jade',
+            'coal',
+            'iron_ore',
+            'ham_shirt',
+            'ham_robe',
+            'ham_gloves',
+            'ham_boots',
+            'ham_cloak',
+            'ham_badge',
+            'ham_hood'
+        ];
         for (let i = 0; i < 80; i++) {
             H.opNpc(p, ham, 3);
             H.tick(4);
