@@ -779,11 +779,40 @@ if (run('troll')) {
     standBy(p, 2848, 10107, 1);
     op(p, 2848, 10107, 'troll_stronghold_prison_door_closed', 1);
     check('the prison door: stage 30', st(), 30);
-    const g1 = nearest('troll_prison_guard1', p);
+    // THE GUARD CYCLES, so he is waited for rather than demanded.
+    // troll_stronghold_camp_guard.rs2 puts an [ai_timer] on BOTH forms: troll_prison_guard1
+    // changetypes into troll_prison_guard1_awake and back again every 500 ticks, and a failed
+    // steal wakes him immediately as well. Only the sleeping form carries the opnpc3 that can be
+    // robbed, so when he is awake there is no npc of that type in the world at all and
+    // nearest() threw "no npc troll_prison_guard1", killing the whole file.
+    //
+    // It looked solid for years of section-only runs because barely any ticks pass there and he
+    // is still asleep where he spawned. It only shows up in a FULL run, after thousands of ticks
+    // of earlier sections have let him cycle - the same shared-world trap as anything else in
+    // this file that ticks.
+    //
+    // The wait happens from the prison door rather than from his elbow: the awake form fights
+    // back, and standing next to it for up to 700 ticks is a good way to die holding the key.
+    const whenSleeping = () => {
+        let g = H.npcNear('troll_prison_guard1', p.x, p.z, 0);
+        if (g) return g;
+        p.teleport(2848, 10107, 0);
+        for (let w = 0; w < 700 && !g; w++) {
+            H.tick(1);
+            g = H.npcNear('troll_prison_guard1', p.x, p.z, 0);
+        }
+        return g;
+    };
+    const g1 = whenSleeping();
+    if (!g1) throw new Error('troll_prison_guard1 never came back round to asleep');
     p.teleport(g1.x + 1, g1.z, 0);
     H.tick(1);
     for (let i = 0; i < 10 && H.invCount(p, 'troll_key_godric') === 0; i++) {
-        talkHere(p, nearest('troll_prison_guard1', p), [], 3);
+        const g = whenSleeping();
+        if (!g) break;
+        p.teleport(g.x + 1, g.z, 0);
+        H.tick(1);
+        talkHere(p, g, [], 3);
         H.tick(6);
     }
     check("Godric's cell key off the sleeping guard", H.invCount(p, 'troll_key_godric'), 1);
