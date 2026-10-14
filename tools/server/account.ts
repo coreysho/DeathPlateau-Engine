@@ -46,6 +46,7 @@
  *   npx tsx tools/server/account.ts rename bob robert
  *   npx tsx tools/server/account.ts delete bob
  *   npx tsx tools/server/account.ts password bob hunter2
+ *   npx tsx tools/server/account.ts deaths bob --days 3
  *
  * --profile <name> picks the world profile (default: NODE_PROFILE, or "main").
  */
@@ -101,6 +102,10 @@ function parseArgs(argv: string[]): Args {
 const args = parseArgs(process.argv.slice(2));
 const command = args._[0];
 const profile = typeof args.profile === 'string' ? args.profile : Environment.NODE_PROFILE;
+
+// WealthEventType.DEATH. Not imported: WealthEventType is a const enum, which erases at compile
+// time, and this file is run through tsx where that import would resolve to nothing at runtime.
+const DEATH_EVENT_TYPE = 3;
 
 function fail(msg: string): never {
     console.error(msg);
@@ -782,6 +787,79 @@ async function cmdPassword(username: string) {
     if (ok) console.log(`  password set for ${username}`);
 }
 
+/**
+ * The wealth log, read by time rather than through the account.
+ *
+ * session_wealth names a player only by session_uuid, and the uuid -> account mapping lives in
+ * the `session` table, which only LoginServer writes. A world running without it still logs every
+ * death - World gives each player a session from their client uuid regardless - but those rows
+ * cannot be attributed, which is why `show` lists nothing for them. Going by time instead still
+ * answers the question that actually gets asked, which is "X died about an hour ago, what did
+ * they drop".
+ */
+async function cmdDeaths() {
+    // parseArgs hands back every flag as a string, so this has to convert rather than typeof-test
+    // for a number - a test that is always false, and a --days that silently does nothing.
+    let days = 7;
+    if (typeof args.days === 'string') {
+        days = parseInt(args.days, 10);
+        if (!Number.isFinite(days) || days < 1) fail('--days takes a whole number of days, 1 or more');
+    }
+    const since = toDbDate(Date.now() - days * 86400000);
+    const username = args._[1];
+
+    let uuids: string[] | null = null;
+    if (username) {
+        const account = await getAccount(username);
+        if (!account) fail(`no account called ${username}`);
+        const sessions = await tryDb('sessions', () => db.selectFrom('session').select('uuid').where('account_id', '=', account!.id).where('profile', '=', profile).execute());
+        uuids = sessions?.map(x => x.uuid) ?? [];
+        if (!uuids.length) {
+            console.log(`  no session rows for ${username} - the login server is not recording them, so deaths cannot be tied to an account.`);
+            console.log('  showing every death in the window instead; match it by the time they went down.');
+            uuids = null;
+        }
+    }
+
+    let query = db.selectFrom('session_wealth').select(['timestamp', 'session_uuid', 'coord', 'account_items', 'account_value']).where('event_type', '=', DEATH_EVENT_TYPE).where('timestamp', '>=', since).orderBy('timestamp', 'desc').limit(40);
+    if (uuids) query = query.where('session_uuid', 'in', uuids);
+
+    const rows = await tryDb('the wealth log', () => query.execute());
+    if (rows === null) return;
+
+    if (!rows.length) {
+        console.log(`  no deaths logged in the last ${days} day${days === 1 ? '' : 's'}.`);
+        console.log('  if that is a surprise: LOGGER_SERVER must be true AND `npm run logger` must be running.');
+        return;
+    }
+
+    for (const row of rows) {
+        const level = (row.coord >> 28) & 0x3;
+        const x = (row.coord >> 14) & 0x3fff;
+        const z = row.coord & 0x3fff;
+
+        console.log(`  ${new Date(row.timestamp).toISOString()}  at ${x}, ${z}, level ${level}  worth ${row.account_value}gp  (session ${row.session_uuid})`);
+
+        // Written by the engine as JSON; a row from a future version that is not is still worth
+        // printing raw rather than throwing away the one record of what somebody lost.
+        let items: { name: string | null; id: number | undefined; count: number }[];
+        try {
+            items = JSON.parse(row.account_items);
+        } catch {
+            console.log(`      ${row.account_items}`);
+            continue;
+        }
+
+        for (const item of items) {
+            console.log(`      ${String(item.count).padStart(8)}  ${item.name ?? `id ${item.id}`}`);
+        }
+    }
+
+    console.log('');
+    console.log('  these are the items that DROPPED. Anything protected on death stayed on the character,');
+    console.log('  and anything they ran back for is already theirs again - check against `show` before giving.');
+}
+
 async function main() {
     const username = args._[1];
 
@@ -843,6 +921,10 @@ async function main() {
         case 'delete':
             if (!username) fail('usage: delete <user> [--out backup.json]');
             await cmdDelete(username);
+            break;
+
+        case 'deaths':
+            await cmdDeaths();
             break;
 
         case 'password':
