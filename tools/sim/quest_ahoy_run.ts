@@ -257,6 +257,13 @@ p.teleport(m.start[0], m.start[1], m.start[2]);
 // auditing whether the quest can be completed, not whether it can be survived, and a death loses
 // the pack. Damage going the OTHER way is untouched, so the lobster still has to be killed.
 (p as any).applyDamage = function () {};
+// AND NO RANDOM EVENTS. These runs walk for hundreds of ticks at a stretch and a random event
+// teleports the player out of the middle of it - one run lost the walk to Zooknock at 2523,4780,
+// 262 tiles into a 628-tile route, which reads as a pathing failure and is not one.
+// ~macro_event_allowed refuses to spawn one while %macro_event is already set, so setting it is
+// the switch. A player being interrupted by a random event is real; it is just not what is
+// under test here.
+H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
 H.equip(p, { front: 'amulet_of_ghostspeak', rhand: 'rune_scimitar' });
 H.tick(1);

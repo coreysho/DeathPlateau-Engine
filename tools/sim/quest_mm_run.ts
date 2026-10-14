@@ -81,9 +81,17 @@ const m: Manifest = {
         { talk: 'mm_daero', picks: [1, 2, 3, 1], why: 'all three questions, then the trip down' },
         { stage: 3 },
 
-        { note: 'real step 8: Daero in the hangar. Real step 9 (the sliding puzzle, or 200,000 to Glough) IS NOT BUILT' },
+        { note: 'wiki step 8: Daero in the hangar' },
         { go: [2586, 4516], r: 64, why: 'Daero, in the hangar' },
         { talk: 'mm_daero' },
+
+        { note: 'wiki step 9: the launch panel - solve it, or buy the code off Glough' },
+        // Both routes have their own sim: tools/sim/mmpanel.ts drives the panel, the zone guard
+        // that stops a clue puzzle in Varrock opening it, and Glough taking the 200,000 through
+        // the bars of his cage. Neither belongs here - the puzzle is a hundred clicks that test
+        // the puzzle rather than the quest, and the walked runner cannot get line of sight to
+        // Glough through a cage that is sealed by design.
+        { setvar: 'mm_hangar_puzzle_complete', to: 1, why: 'the panel, done in mmpanel.ts' },
 
         { note: 'real step 10: Waydar, and the glider to Crash Island' },
         { go: [2585, 4518], why: 'Waydar' },
@@ -92,7 +100,13 @@ const m: Manifest = {
 
         { note: 'real steps 11-12: Lumdo. The real quest needs Waydar talked to TWICE to convince him' },
         { go: [2892, 2724], r: 64, why: 'Lumdo, on the Crash Island beach' },
-        { talk: 'mm_lumdo', picks: [1] },
+        { talk: 'mm_lumdo', why: 'he wants a reference' },
+        { go: [2893, 2729], r: 64, why: 'Waydar' },
+        { talk: 'mm_waydar', why: 'who has a word with him' },
+        { talk: 'mm_waydar', why: 'and another' },
+        { varis: 'mm_waydar', to: 2 },
+        { go: [2892, 2724], r: 64 },
+        { talk: 'mm_lumdo', picks: [1], why: 'and now he will row' },
         { stage: 5 },
 
         { note: 'wiki steps 13-14: shot at the gate, arrested, and pick the cell lock' },
@@ -100,12 +114,22 @@ const m: Manifest = {
         { note: 'the Marim gate. Ape Atoll is TWO disconnected walkable regions and this gate is the only join' },
         ...marimArrest(1),
 
-        { note: 'real step 15: Garkor. Real steps 16-20 (the dentures and the mould from the crates in the U-shaped building) ARE NOT BUILT - he hands both over instead' },
+        { note: 'wiki step 15: Garkor, who now tells you where the mould and the dentures are instead of handing them over' },
         { go: [2804, 2761], r: 200, why: 'Garkor, by the temple' },
         { talk: 'mm_garkor' },
         { stage: 6 },
-        { has: 'mm_monkey_amulet_mould' },
+
+        { note: 'wiki steps 16-19: the warehouse, the crate with no bottom, and the cave under it' },
+        { go: [2767, 2770], r: 250, why: "the monkeys' warehouse" },
+        { loc: 'mm_denture_crate', at: [2767, 2769], why: 'search the stacked crates' },
         { has: 'mm_monkey_dentures' },
+        { go: [2769, 2766], r: 64, why: 'the crate in the south-east corner' },
+        { loc: 'mm_crate_over_hole', at: [2769, 2765], why: 'and go through it' },
+        { go: [2782, 9173], r: 64, why: 'across the cave to the moulds' },
+        { loc: 'mm_monkey_amulet_mould_crate', at: [2782, 9172], why: 'the amulet mould' },
+        { has: 'mm_monkey_amulet_mould' },
+        { go: [2764, 9166], r: 64, why: 'the rope under the western warehouse' },
+        { loc: 'mm_climbing_rope_bottom_western_warehouse', at: [2764, 9165], why: 'climb out' },
 
         { note: 'real steps 23-26: the tunnel to Zooknock' },
         ...marimOut(),
@@ -174,7 +198,7 @@ const m: Manifest = {
         // walk stops short and the conversation happens across the palisade.
         { go: [2722, 2763], r: 250, why: 'as close to Kruk as the ground allows - four tiles' },
         { talk: 'mm_kruk', picks: [1], tries: 30, why: 'across the palisade, as he wanders' },
-        { talk: 'mm_awowogei_cutscene', why: 'the first audience' },
+        { talk: 'mm_awowogei_cutscene', tries: 20, why: 'the first audience - he shifts about on the dais' },
         { stage: 11 },
 
         { note: 'real steps 43-46: the Ardougne Zoo, and the walk back with no teleports' },
@@ -213,7 +237,7 @@ const m: Manifest = {
         { talk: 'mm_lumdo', picks: [1] },
         { go: [2722, 2763], r: 250, why: 'Kruk again, from the only standable side' },
         { talk: 'mm_kruk', picks: [1], tries: 30 },
-        { talk: 'mm_awowogei_cutscene', why: 'hand over the monkey' },
+        { talk: 'mm_awowogei_cutscene', tries: 20, why: 'hand over the monkey' },
         { stage: 13 },
         { go: [2804, 2761], r: 250, why: 'Garkor' },
         { talk: 'mm_garkor' },
@@ -239,6 +263,13 @@ p.teleport(m.start[0], m.start[1], m.start[2]);
 // whether it can be survived. The Jungle Demon still has to die properly - damage going the other
 // way is untouched.
 (p as any).applyDamage = function () {};
+// AND NO RANDOM EVENTS. These runs walk for hundreds of ticks at a stretch and a random event
+// teleports the player out of the middle of it - one run lost the walk to Zooknock at 2523,4780,
+// 262 tiles into a 628-tile route, which reads as a pathing failure and is not one.
+// ~macro_event_allowed refuses to spawn one while %macro_event is already set, so setting it is
+// the switch. A player being interrupted by a random event is real; it is just not what is
+// under test here.
+H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
 H.equip(p, { rhand: 'dragon_scimitar', torso: 'rune_platebody', legs: 'rune_platelegs', hat: 'rune_full_helm' });
 H.tick(1);
