@@ -56,5 +56,28 @@ Content developers should run `npm start`. The server will watch for changes to 
 
 Engine developers should run `npm run dev`. This does what `npm start` does above, but also completely restarts the server when engine code has changed.
 
+## Branches
+
+Upstream organizes historical versions into branches; this fork keeps that and adds one of its own.
+
+- **`377-wip`** - where engine work lands, and what the Content repo's `377-wip` is matched against.
+- **`dev-logging`** - what the live server runs. Nothing is committed here directly; merge `377-wip`
+  into it with `--no-ff` once a change is ready to go out.
+
+The name is borrowed from the client repo, but it does not behave the same way. There, a push to
+`dev-logging` fires `release.yml` and publishes a GitHub Release that every player's launcher picks
+up on its own. There is no such workflow here and no launcher fetching an engine build, so a push
+to this branch publishes nothing and moves nothing. The server only changes when someone pulls on
+the box:
+
+```sh
+cd /opt/deathplateau/engine
+git fetch origin dev-logging
+git checkout dev-logging && git pull
+```
+
+That difference is the point of writing it down: merging here is safe at any hour, and is not the
+same act as merging `dev-logging` in the client.
+
 ## License
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](LICENSE) file for details.
