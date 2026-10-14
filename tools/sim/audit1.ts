@@ -1,7 +1,7 @@
 // Quest audit, batch 1: every quest the audit FIXED is driven here through its real triggers on the
 // real map, and where it was practical the whole quest runs start to finish.
 // Usage: npx tsx tools/sim/audit1.ts [section ...]      (no args = every section)
-import { R, check, player, at, lastMes, mark, mesSince, said, drive, saw, talk, useOn, useOnNpc, useHeld, op, held, connected, reachLoc, walkable, enqueue, H, World, findNpc, LocType, fight, take, NpcType, runProcProtected, locsNamed, addLoc } from './a1lib.js';
+import { R, check, player, at, lastMes, mark, mesSince, said, drive, saw, talk, useOn, useOnNpc, useHeld, op, held, connected, reachLoc, walkable, H, World, findNpc, LocType, fight, take, NpcType, runProcProtected, addLoc } from './a1lib.js';
 import Player from '#/engine/entity/Player.js';
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -18,7 +18,11 @@ function journal(p: Player, com: string): string {
     const from = H.ifaces.length;
     H.ifButton(p, com);
     drive(p);
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text').map(i => i.text).join(' ');
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => i.text)
+        .join(' ');
 }
 /** Every stage of a quest has journal text (the row click neither crashes nor leaves the page blank). */
 function journalStages(p: Player, varp: string, com: string, stages: number[]) {
@@ -31,7 +35,13 @@ function journalStages(p: Player, varp: string, com: string, stages: number[]) {
     check(`${com}: every stage has journal text`, blank, []);
 }
 /** A varp or a varbit, whichever the name is. */
-const V = (p: Player, name: string): number => { try { return H.getVar(p, name); } catch { return H.getVarBit(p, name); } };
+const V = (p: Player, name: string): number => {
+    try {
+        return H.getVar(p, name);
+    } catch {
+        return H.getVarBit(p, name);
+    }
+};
 function journalStagesBit(p: Player, varbit: string, com: string, stages: number[]) {
     const blank: number[] = [];
     for (const s of stages) {
@@ -64,7 +74,11 @@ if (run('fenk')) {
     p.teleport(3572, 3525, 0);
     H.tick(2);
     for (let i = 0; i < 3; i++) op(p, 3572, 3527, 'fenk_grave', 2);
-    check('three digs: arms, legs, torso', ['fenk_arms', 'fenk_legs', 'fenk_torso'].map(o => H.invCount(p, o)), [1, 1, 1]);
+    check(
+        'three digs: arms, legs, torso',
+        ['fenk_arms', 'fenk_legs', 'fenk_torso'].map(o => H.invCount(p, o)),
+        [1, 1, 1]
+    );
 
     H.equip(p, { front: 'amulet_of_ghostspeak' });
     talk(p, 'fenk_gardener_multi_2');
@@ -183,11 +197,19 @@ if (run('rag')) {
         H.give(p, `rag_${b}_bone`);
         useHeld(p, `rag_${b}_bone`, 'rag_pot_vinegar');
     }
-    check('five bones steeping in vinegar', bones.map(b => H.invCount(p, `rag_pot_${b}_bone`)), [1, 1, 1, 1, 1]);
+    check(
+        'five bones steeping in vinegar',
+        bones.map(b => H.invCount(p, `rag_pot_${b}_bone`)),
+        [1, 1, 1, 1, 1]
+    );
     p.teleport(3230, 3197, 0);
     H.tick(2);
     for (const b of bones) useOn(p, 3230, 3196, 'range', `rag_pot_${b}_bone`);
-    check('boiled clean on a range', bones.map(b => H.invCount(p, `rag_polished_${b}_bone`)), [1, 1, 1, 1, 1]);
+    check(
+        'boiled clean on a range',
+        bones.map(b => H.invCount(p, `rag_polished_${b}_bone`)),
+        [1, 1, 1, 1, 1]
+    );
     p.invDel(InvType.INV, ObjType.getId('rag_polished_ram_bone'), 1);
     const lines = talk(p, 'rag_odd_old_man');
     check('four of five: he says what is still wanted', [saw(lines, 'Still wanting'), saw(lines, "ram's skull"), H.getVar(p, 'rag_quest')], [true, true, 1]);
@@ -284,7 +306,11 @@ if (run('mourning')) {
     check("the head mourner's desk: key and letter, stage 9", [H.invCount(p, 'mourning_head_mourner_key'), H.getVar(p, 'mourning_quest')], [1, 9]);
     op(p, 2039, 4633, 'mourning_office_chest_closed', 1);
     op(p, 2039, 4633, 'mourning_office_chest_open', 1);
-    check('the office chest: device, rack key, excavation key', ['mourning_paint_gun_broken', 'mourning_gnome_key', 'mourning_excavation_key'].map(o => H.invCount(p, o)), [1, 1, 1]);
+    check(
+        'the office chest: device, rack key, excavation key',
+        ['mourning_paint_gun_broken', 'mourning_gnome_key', 'mourning_excavation_key'].map(o => H.invCount(p, o)),
+        [1, 1, 1]
+    );
     op(p, 2042, 4633, 'mourner_hideout_door2', 1);
     p.teleport(2037, 4634, 0);
     H.tick(2);
@@ -300,7 +326,12 @@ if (run('mourning')) {
     check('the hideout ladder back up lands on a walkable tile in the yard', [p.level, walkable(0, p.x, p.z), Math.abs(p.x - 2542) < 3], [0, true, true]);
 
     // four flocks, four colours
-    const flocks: [string, string, number, number][] = [['plaguesheep_1', 'red', 2609, 3344], ['plaguesheep_2', 'green', 2621, 3367], ['plaguesheep_3', 'blue', 2560, 3389], ['plaguesheep_4', 'yellow', 2610, 3391]];
+    const flocks: [string, string, number, number][] = [
+        ['plaguesheep_1', 'red', 2609, 3344],
+        ['plaguesheep_2', 'green', 2621, 3367],
+        ['plaguesheep_3', 'blue', 2560, 3389],
+        ['plaguesheep_4', 'yellow', 2610, 3391]
+    ];
     for (const [sheep, colour, x, z] of flocks) {
         H.give(p, 'empty_ogre_bellows');
         H.give(p, `${colour}dye`);
@@ -312,7 +343,11 @@ if (run('mourning')) {
         H.tick(2);
         useOnNpc(p, sheep, 'mourning_paint_gun');
     }
-    check('all four flocks dyed: stage 12', [H.getVarBit(p, 'mourning_sheep_red'), H.getVarBit(p, 'mourning_sheep_green'), H.getVarBit(p, 'mourning_sheep_blue'), H.getVarBit(p, 'mourning_sheep_yellow'), H.getVar(p, 'mourning_quest')], [1, 1, 1, 1, 12]);
+    check(
+        'all four flocks dyed: stage 12',
+        [H.getVarBit(p, 'mourning_sheep_red'), H.getVarBit(p, 'mourning_sheep_green'), H.getVarBit(p, 'mourning_sheep_blue'), H.getVarBit(p, 'mourning_sheep_yellow'), H.getVar(p, 'mourning_quest')],
+        [1, 1, 1, 1, 12]
+    );
     talk(p, 'elena2');
     check('Elena has seen them: stage 13', H.getVar(p, 'mourning_quest'), 13);
     H.give(p, 'mourning_teleport_crystal_4'); // (the sim emptied the pack before the HQ)
@@ -337,11 +372,13 @@ function nearestCat(p: Player, cat: string, radius = 40): [number, number, strin
                 const t = LocType.get(l.type);
                 if (t.category !== catId) continue;
                 const d = Math.max(Math.abs(l.x - p.x), Math.abs(l.z - p.z));
-                if (d < bd && World.getLoc(l.x, l.z, p.level, l.type)) { bd = d; best = [l.x, l.z, t.debugname!]; }
+                if (d < bd && World.getLoc(l.x, l.z, p.level, l.type)) {
+                    bd = d;
+                    best = [l.x, l.z, t.debugname!];
+                }
             }
     return best;
 }
-const chatLogX = () => H.ifaces.slice(-8).map(i => i.text);
 const tally = (p: Player) => H.runProc(p, '[proc,hundred_subquests_done]')[0];
 const rfd = run('rfd') ? player('rfd1', 3208, 3214) : null;
 if (rfd) {
@@ -361,12 +398,25 @@ if (rfd) {
     check('Aris explains: stage 4 (the Cook sub-quest ticks it on), 1 sub-quest', [V(p, 'hundred_main_quest_var'), tally(p)], [4, 1]);
     p.teleport(1861, 5318, 0); // the barrier landing: every plinth is walked to from here
     H.tick(2);
-    for (const [loc, x, z] of [['hundred_dwarf_ambassador_base', 1862, 5321], ['hundred_goblin1_base', 1862, 5325], ['hundred_pirate_base', 1862, 5323], ['hundred_guide_base', 1865, 5325], ['hundred_dave_base', 1865, 5323], ['hundred_ogre_base', 1863, 5328], ['hundred_varze_base', 1865, 5321], ['hundred_monkey_base', 1865, 5319]] as [string, number, number][]) {
+    for (const [loc, x, z] of [
+        ['hundred_dwarf_ambassador_base', 1862, 5321],
+        ['hundred_goblin1_base', 1862, 5325],
+        ['hundred_pirate_base', 1862, 5323],
+        ['hundred_guide_base', 1865, 5325],
+        ['hundred_dave_base', 1865, 5323],
+        ['hundred_ogre_base', 1863, 5328],
+        ['hundred_varze_base', 1865, 5321],
+        ['hundred_monkey_base', 1865, 5319]
+    ] as [string, number, number][]) {
         const from = mark();
         op(p, x, z, loc, 1);
         if (said(p, from, "can't reach")) check(`inspect ${loc}`, 'unreachable', 'ok');
     }
-    check('inspecting the plinths starts the sub-quests', [V(p, 'hundred_dwarf_quest'), V(p, '100goblin'), V(p, '100_pirate_quest_var'), V(p, '100guide_prog'), V(p, 'hundred_dave_main'), V(p, '100_ogre_prog'), V(p, 'hundred_ilm_quest')], [1, 1, 1, 1, 1, 1, 1]);
+    check(
+        'inspecting the plinths starts the sub-quests',
+        [V(p, 'hundred_dwarf_quest'), V(p, '100goblin'), V(p, '100_pirate_quest_var'), V(p, '100guide_prog'), V(p, 'hundred_dave_main'), V(p, '100_ogre_prog'), V(p, 'hundred_ilm_quest')],
+        [1, 1, 1, 1, 1, 1, 1]
+    );
     op(p, 1861, 5316, 'hundred_portal_door1', 1);
     check('the barrier leads back to Lumbridge', [p.x, p.z, walkable(0, p.x, p.z)], [3208, 3218, true]);
     p.teleport(3218, 9624, 0);
@@ -402,7 +452,11 @@ if (rfd) {
     talk(p, 'cook');
     talk(p, 'lumbridge_guide2_man');
     talk(p, 'lumbridge_guide2_woman');
-    check('flour from the Cook, an egg from Gee, milk from Donie', ['pot_flour', 'egg', 'bucket_milk'].map(o => H.invCount(p, o)), [1, 1, 1]);
+    check(
+        'flour from the Cook, an egg from Gee, milk from Donie',
+        ['pot_flour', 'egg', 'bucket_milk'].map(o => H.invCount(p, o)),
+        [1, 1, 1]
+    );
     H.give(p, 'cake_tin');
     useHeld(p, 'pot_flour', 'cake_tin');
     check('the cake mixed', H.invCount(p, 'uncooked_cake'), 1);
@@ -410,13 +464,26 @@ if (rfd) {
     H.tick(2);
     useOn(p, 3230, 3196, 'range', 'uncooked_cake');
     check('baked', H.invCount(p, 'cake'), 1);
+    // A PLAIN CAKE IS NOT THE DISH, and this section used to stop one step short of knowing that.
+    // The wiki's dish is a cake of GUIDANCE, and Wizard Traiborn is the one who makes it; the plinth
+    // says so in as many words ("It is only a cake. He needs something with more direction in it.").
+    // So the plain cake is now offered first, to assert that refusal, and then taken to Traiborn.
     p.teleport(1861, 5318, 0); // the barrier landing: every plinth is walked to from here
     H.tick(2);
     useOn(p, 1865, 5325, 'hundred_guide_base', 'cake');
+    check('a plain cake is refused, and he stays frozen', [H.invCount(p, 'cake'), tally(p)], [1, 2]);
+    talk(p, 'traiborn', [2]);
+    check('Traiborn enchants it into a cake of guidance', [H.invCount(p, 'hundred_cake_of_guidance'), H.invCount(p, 'cake')], [1, 0]);
+    p.teleport(1861, 5318, 0);
+    H.tick(2);
+    useOn(p, 1865, 5325, 'hundred_guide_base', 'hundred_cake_of_guidance');
     check('the Lumbridge Guide is freed', tally(p), 3);
 
     console.log('RECIPE FOR DISASTER - Sir Amik Varze');
-    talk(p, 'sir_amik_varze');
+    // HE IS ASKED, NOT TAKEN OVER - option 2 of his menu. The quest branch used to run first and
+    // return, which left him with no other conversation and Black Knights' Fortress unstartable;
+    // the fix gave him a p_choice2, and this call passed no pick for it.
+    talk(p, 'sir_amik_varze', [2]);
     H.give(p, 'fruit_blast');
     H.give(p, 'ashes');
     useHeld(p, 'ashes', 'fruit_blast');
@@ -434,7 +501,11 @@ if (rfd) {
     useHeld(p, 'bucket_water', 'bread');
     useHeld(p, 'spicespot', 'fishing_bait');
     useHeld(p, 'reddye', 'orange_slices');
-    check('soggy bread, spicy maggots, dyed oranges', ['100goblin_soggy_bread', '100goblin_spicey_maggots', '100goblin_dyed_oranges'].map(o => H.invCount(p, o)), [1, 1, 1]);
+    check(
+        'soggy bread, spicy maggots, dyed oranges',
+        ['100goblin_soggy_bread', '100goblin_spicey_maggots', '100goblin_dyed_oranges'].map(o => H.invCount(p, o)),
+        [1, 1, 1]
+    );
     p.teleport(2961, 3506, 0);
     H.tick(2);
     op(p, 2960, 3507, '100_goblin_ladder_down', 1);
@@ -461,12 +532,15 @@ if (rfd) {
     };
 
     console.log('RECIPE FOR DISASTER - Pirate Pete');
+    // MURPHY IS ASKED, NOT TAKEN OVER - option 2, "Do you know anything about the seabed out
+    // here?". Running the quest branch first left no way to take the trawler out while the
+    // subquest was open, so it became a question, and these two calls passed no pick for it.
     H.clearInv(p);
-    talk(p, 'murphy');
+    talk(p, 'murphy', [2]);
     check('Murphy kits you out: stage 2', [V(p, '100_pirate_quest_var'), H.invCount(p, 'hundred_pirate_diving_helmet'), H.invCount(p, 'hundred_pirate_diving_backpack')], [2, 1, 1]);
     H.clearInv(p);
     H.equip(p, { hat: 'hundred_pirate_diving_helmet', back: 'hundred_pirate_diving_backpack', rhand: 'rune_scimitar' });
-    talk(p, 'murphy', [1]);
+    talk(p, 'murphy', [2, 1]);
     check('lowered to the seabed: stage 3, a walkable tile', [V(p, '100_pirate_quest_var'), p.level, walkable(p.level, p.x, p.z)], [3, 1, true]);
     op(p, 2949, 9480, 'kelp_pickingpoint', 1);
     check('kelp', H.invCount(p, 'hundred_pirate_kelp'), 1);
@@ -487,7 +561,11 @@ if (rfd) {
     check('up the anchor chain to Port Khazard', [p.level, walkable(0, p.x, p.z), Math.abs(p.x - 2669) < 3], [0, true, true]);
     for (const o of ['raw_cod', 'bread', 'pestle_and_mortar']) H.give(p, o);
     for (const o of ['hundred_pirate_kelp', 'hundred_pirate_giant_crab_meat', 'raw_cod', 'bread']) useHeld(p, 'pestle_and_mortar', o);
-    check('all four ground', ['hundred_pirate_ground_kelp', 'hundred_pirate_ground_giant_crab_meat', 'hundred_pirate_ground_cod', 'hundred_pirate_breadcrumbs'].map(o => H.invCount(p, o)), [1, 1, 1, 1]);
+    check(
+        'all four ground',
+        ['hundred_pirate_ground_kelp', 'hundred_pirate_ground_giant_crab_meat', 'hundred_pirate_ground_cod', 'hundred_pirate_breadcrumbs'].map(o => H.invCount(p, o)),
+        [1, 1, 1, 1]
+    );
     useHeld(p, 'hundred_pirate_ground_kelp', 'hundred_pirate_breadcrumbs');
     p.teleport(3230, 3197, 0);
     H.tick(2);
@@ -529,7 +607,11 @@ if (rfd) {
             first = false;
         }
     }
-    check('the stew spiced to his three doses', ['red', 'orange', 'yellow', 'brown'].map(c => V(p, `hundred_dave_${c}`)), Object.values(want));
+    check(
+        'the stew spiced to his three doses',
+        ['red', 'orange', 'yellow', 'brown'].map(c => V(p, `hundred_dave_${c}`)),
+        Object.values(want)
+    );
     useOnNpc(p, 'hundred_evil_dave', 'hundred_dave_stew');
     check('Dave approves: stage 4', V(p, 'hundred_dave_main'), 4);
     op(p, 3076, 9893, '100_dave_celler_stairs', 1);
@@ -655,7 +737,10 @@ if (rfd) {
                 H.attackNpc(p, npc);
                 for (let t = 0; t < 30; t++) {
                     H.tick(1);
-                    if (!npc.isActive || npc.levels[3] === 0) { dead = true; break; }
+                    if (!npc.isActive || npc.levels[3] === 0) {
+                        dead = true;
+                        break;
+                    }
                     if (!p.target && t % 5 === 4) H.attackNpc(p, npc);
                     if (p.levels[3] < 50) p.levels[3] = 99;
                 }
@@ -666,7 +751,7 @@ if (rfd) {
             check(`${name} dies to a real fight`, fight(p, npc, 900), true);
         }
         H.tick(3);
-        check(`  the tally counts it`, V(p, 'hundred_minionskilled_tally'), i + 1);
+        check('  the tally counts it', V(p, 'hundred_minionskilled_tally'), i + 1);
     }
     drive(p);
     check('complete: stage 5, all ten, 1 more quest point, the lamp', [V(p, 'hundred_main_quest_var'), tally(p), qp(p) - start, H.invCount(p, 'hundred_rewardlamp')], [5, 10, 1, 1]);
@@ -690,7 +775,7 @@ if (run('demon')) {
     check('Traiborn wants bones: stage 3', V(p, 'demonstart'), 3);
     H.give(p, 'bones', 25);
     talk(p, 'traiborn');
-    check('25 bones: Traiborn\'s key', [V(p, 'demonstart'), H.invCount(p, 'silverlight_key_1')], [28, 1]);
+    check("25 bones: Traiborn's key", [V(p, 'demonstart'), H.invCount(p, 'silverlight_key_1')], [28, 1]);
     // the drain: a bucket of water washes the key down to the sewer
     p.teleport(3225, 3496, 0);
     H.tick(2);
@@ -775,7 +860,14 @@ if (run('waterfall')) {
     check('the key opens the south door', p.z >= 9894, true);
     useOn(p, door[0], door[1], 'baxtorian_door_2_waterfall_quest', 'baxtorian_key_waterfall_quest');
     check('through the key door into the puzzle room: stage 6', [V(p, 'waterfall_quest'), p.z >= door[1]], [6, true]);
-    for (const [x, z] of [[2562, 9910], [2562, 9912], [2562, 9914], [2569, 9910], [2569, 9912], [2569, 9914]])
+    for (const [x, z] of [
+        [2562, 9910],
+        [2562, 9912],
+        [2562, 9914],
+        [2569, 9910],
+        [2569, 9912],
+        [2569, 9914]
+    ])
         for (const r of ['airrune', 'earthrune', 'waterrune']) useOn(p, x, z, 'stonepillar_small_waterfall_quest', r);
     check('a rune of each on all six pillars', [H.invCount(p, 'airrune'), H.invCount(p, 'earthrune'), H.invCount(p, 'waterrune')], [0, 0, 0]);
     H.clearInv(p);
@@ -802,7 +894,7 @@ if (run('monk')) {
     H.tick(4);
     check('the hidden ladder appears in the ring of stones', World.getLoc(2561, 3222, 0, LocType.getId('loc_1765')) !== null, true);
     op(p, 2561, 3222, 'loc_1765', 1);
-    check('down into the thieves\' cave, a walkable tile', [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
+    check("down into the thieves' cave, a walkable tile", [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
     op(p, 2565, 9612, 'loc_1530', 1);
     check('through the door, the blanket table is reachable on foot', connected(0, p.x, p.z, 2569, 9604, 60), true);
     p.teleport(2569, 9604, 0);
@@ -866,16 +958,20 @@ if (run('scorp')) {
     talk(p, 'thormac', ['What do you need assistance', 'how would I go about catching', 'I will do it']);
     check('Thormac: stage 1 and a cage', [V(p, 'scorpcatcher'), H.invCount(p, 'scorpioncageempty')], [1, 1]);
     talk(p, 'seer', ['locate some scorpions']);
-    check('the Seer\'s first hint: stage 2', V(p, 'scorpcatcher'), 2);
+    check("the Seer's first hint: stage 2", V(p, 'scorpcatcher'), 2);
     p.teleport(2875, 9800, 0);
     H.tick(2);
     check('the secret wall is reachable from the dungeon side', reachLoc(0, 2875, 9800, 'scorpionwall', 2875, 9799) || reachLoc(0, 2876, 9799, 'scorpionwall', 2875, 9799), true);
     op(p, 2875, 9799, 'scorpionwall', 1);
-    check('through the secret wall', mesSince(p, 0).some(m => m.includes('secret door')), true);
+    check(
+        'through the secret wall',
+        mesSince(p, 0).some(m => m.includes('secret door')),
+        true
+    );
     useOnNpc(p, 'questscorpiona', 'scorpioncageempty');
     check('the Taverley scorpion', H.invCount(p, 'scorpioncagea'), 1);
     talk(p, 'seer');
-    check('the Seer\'s second hint: stage 3', V(p, 'scorpcatcher'), 3);
+    check("the Seer's second hint: stage 3", V(p, 'scorpcatcher'), 3);
     talk(p, 'peksa', ['small scorpion']);
     p.teleport(2552, 3572, 0);
     H.tick(2);
@@ -912,7 +1008,13 @@ if (run('totem')) {
     check('Cromperty teleports you into the mansion: stage 4, a walkable tile', [V(p, 'totemquest'), p.x, p.z, walkable(0, p.x, p.z)], [4, 2638, 3321, true]);
     op(p, 2636, 3323, 'loc_1533', 1);
     op(p, 2634, 3323, 'combodoor', 1);
-    for (const [lock, n] of [[1, 10], [2, 20], [3, 17], [4, 19]]) for (let i = 0; i < n; i++) H.ifButton(p, `tribal_door2:com_${46 + 2 * lock}`);
+    for (const [lock, n] of [
+        [1, 10],
+        [2, 20],
+        [3, 17],
+        [4, 19]
+    ])
+        for (let i = 0; i < n; i++) H.ifButton(p, `tribal_door2:com_${46 + 2 * lock}`);
     H.ifButton(p, 'tribal_door2:com_57');
     check('KURT opens the combination lock', lastMes(p), 'The combination seems correct!');
     op(p, 2634, 3323, 'combodoor', 1);
@@ -952,7 +1054,7 @@ if (run('arrav')) {
     p.teleport(3246, 9782, 0);
     H.tick(2);
     talk(p, 'straven', ['I know who you are', 'offer you my services']);
-    check('Straven\'s mission: stage 8', V(p, 'phoenixgang'), 8);
+    check("Straven's mission: stage 8", V(p, 'phoenixgang'), 8);
     H.equip(p, { rhand: 'rune_scimitar' });
     const j = findNpc('jonny_the_beard', p);
     check('Jonny the Beard can be fought', j.levels[3] > 1, true);
@@ -1022,9 +1124,9 @@ if (run('hero')) {
     }
     H.setVar(p, 'phoenixgang', 10);
     H.setVar(b, 'blackarmgang', 4);
-    talk(p, 'achietties', ["I'm a hero", "start looking"]);
+    talk(p, 'achietties', ["I'm a hero", 'start looking']);
     check('Achietties starts it for a Phoenix member', V(p, 'heroquest'), 1);
-    talk(b, 'achietties', ["I'm a hero", "start looking"]);
+    talk(b, 'achietties', ["I'm a hero", 'start looking']);
     check('and for a Black Arm member', V(b, 'heroquest'), 1);
 
     // the feather: ice gloves, the Entrana firebird
@@ -1195,8 +1297,18 @@ if (run('watchtower')) {
     op(p, 2527, 3011, 'skavid_cave6', 1);
     check('into the skavid caves with the map and a light', [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
     talk(p, 'scared_skavid', ['Okay, okay']);
-    for (const [s, w] of [['skavidtalker1', 'Ig'], ['skavidtalker2', 'Ar'], ['skavidtalker3', 'Cur'], ['skavidtalker4', 'Nod']] as [string, string][]) talk(p, s, [w]);
-    check('the four skavid words', [13, 14, 15, 16].map(b => (V(p, 'itwatchtower_bits') >> b) & 1), [1, 1, 1, 1]);
+    for (const [s, w] of [
+        ['skavidtalker1', 'Ig'],
+        ['skavidtalker2', 'Ar'],
+        ['skavidtalker3', 'Cur'],
+        ['skavidtalker4', 'Nod']
+    ] as [string, string][])
+        talk(p, s, [w]);
+    check(
+        'the four skavid words',
+        [13, 14, 15, 16].map(b => (V(p, 'itwatchtower_bits') >> b) & 1),
+        [1, 1, 1, 1]
+    );
     // it says one of three phrases at random; each has one right reply, so try the replies in turn
     for (let i = 0; i < 20 && V(p, 'itwatchtower') < 7; i++) talk(p, 'mad_skavid', [(i % 5) + 1]);
     check('the mad skavid gives the second crystal: stage 7', [V(p, 'itwatchtower'), H.invCount(p, 'powering_crystal2')], [7, 1]);
@@ -1226,7 +1338,10 @@ if (run('watchtower')) {
     let shamans = 0;
     for (let i = 0; i < 6; i++) {
         let s: any = null;
-        for (let t = 0; t < 200 && !s; t++) { s = H.npcNear('ogre_shaman', p.x, p.z, 0); if (!s) H.tick(1); }
+        for (let t = 0; t < 200 && !s; t++) {
+            s = H.npcNear('ogre_shaman', p.x, p.z, 0);
+            if (!s) H.tick(1);
+        }
         if (!s) break;
         p.teleport(s.x + 1, s.z, 0);
         H.tick(1);
