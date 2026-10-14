@@ -35,7 +35,12 @@ import OpHeldU from '#/network/game/client/model/OpHeldU.js';
 import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
 import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
 
-export type Hit = { tick: number; who: string; damage: number; type: number };
+// 'nid' is the npc's own index, so a hit can be attributed to ONE npc rather than to every npc
+// sharing its debugname. Without it a sim measuring "how often does my target get poisoned per
+// hit" counted hits on every npc in the world: huntpolish read 53 poisons in "1345 hits" - 3.9%
+// against a real rate of about 25% - because 1,200 ticks of a live world is full of other npcs
+// hitting each other. It is optional so nothing that only wants `who` has to change.
+export type Hit = { tick: number; who: string; damage: number; type: number; nid?: number };
 export type Say = { tick: number; who: string; text: string };
 export type Sound = { tick: number; who: string; synth: string; loops: number; delay: number };
 // 'invop' is an if_setinvop: the server rewriting one right-click option of a server-side
@@ -89,7 +94,7 @@ export async function boot() {
     };
     const origNpcApply = (Npc.prototype as any).applyDamage;
     (Npc.prototype as any).applyDamage = function (damage: number, type: number) {
-        npcHits.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), damage: Math.min(damage, this.levels[3]), type });
+        npcHits.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), damage: Math.min(damage, this.levels[3]), type, nid: this.nid });
         return origNpcApply.call(this, damage, type);
     };
     const origSay = (Player.prototype as any).say;
@@ -523,7 +528,11 @@ export function castOnHeld(p: Player, objName: string, comName: string) {
     if (id === -1 || comId === -1) throw new Error(`no ${objName} / ${comName}`);
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
-    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === id) { slot = i; break; }
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === id) {
+            slot = i;
+            break;
+        }
     if (slot === -1) throw new Error('not carrying ' + objName);
     p.lastItem = id;
     p.lastSlot = slot;
