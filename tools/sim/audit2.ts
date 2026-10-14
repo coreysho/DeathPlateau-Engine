@@ -629,8 +629,11 @@ if (run('mourning2')) {
     place(p, ...T(1, 31), 0);
     opLoc(p, ...T(0, 30), 'mourning_temple_light_wall_with_hole');
     check('out through the hole in the west wall, back at the tunnel', [p.x, p.z, p.level, standing(p)], [2311, 9793, 0, true]);
+    // THE LIGHT IS NO LONGER THE END OF THE QUEST. What it opens is the black door at the west end
+    // of the bottom floor, and behind that are Thorgel, the Death Altar and the crystal that goes
+    // back into the black one on the top floor. tools/sim/templealtar.ts drives that half.
     talkNear(p, 'mourning_arianwyn', ari.x, ari.z, [], ari.level);
-    check("Arianwyn: Mourning's End Part II complete", Q(), 50);
+    check('Arianwyn sends you back for a piece of the black crystal, and the quest is not over', Q(), 40);
     check('  no script errors', errorsSince(e0), []);
     H.despawn(p);
 }
