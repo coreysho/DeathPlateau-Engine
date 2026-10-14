@@ -3,6 +3,7 @@
 //   End Part II - start to finish where the quest allows, with each new landing, door and staircase
 //   held to the collision map. The Feud has its own walking playthrough now: quest_feud_run.ts.
 // Usage: npx tsx tools/sim/audit2.ts
+import fs from 'fs';
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
@@ -84,7 +85,7 @@ function settle(p: Player, picks: number[] = [], max = 300): void {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -110,31 +111,49 @@ function findNpc(name: string, x: number, z: number, level = 0): Npc {
     return n;
 }
 
-/** Walk to an npc from where the player stands and talk (no teleport: the route has to exist). */
-function talk(p: Player, npc: Npc, picks: number[] = []) {
-    H.opNpc(p, npc, 1);
-    settle(p, picks);
-}
 /** Stand beside the npc (any open side it can be talked to from) and talk. */
 function talkNear(p: Player, name: string, x: number, z: number, picks: number[] = [], level = 0) {
     const npc = findNpc(name, x, z, level);
-    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+    const sides = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1]
+    ];
     for (const [dx, dz] of [...sides, ...sides]) {
         if (blocked(level, npc.x + dx, npc.z + dz)) continue;
         p.teleport(npc.x + dx, npc.z + dz, level);
         H.tick(1);
         const f = H.ifaces.length;
-        const m = H.mesgs.length;
         H.opNpc(p, npc, 1);
         H.tick(1);
         const spoke = () => p.modalChat !== -1;
         let fired = spoke();
-        for (let t = 0; t < 12 && !fired; t++) { H.tick(1); fired = spoke(); }
-        if (!fired) { p.clearPendingAction(); continue; }
+        for (let t = 0; t < 12 && !fired; t++) {
+            H.tick(1);
+            fired = spoke();
+        }
+        if (!fired) {
+            p.clearPendingAction();
+            continue;
+        }
         try {
             settle(p, picks);
         } catch (e) {
-            console.log('   dialogue was:', H.ifaces.slice(f).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text).slice(-6), 'inv pole', H.invCount(p, 'vc_rat_pole'));
+            console.log(
+                '   dialogue was:',
+                H.ifaces
+                    .slice(f)
+                    .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+                    .map(i => i.text)
+                    .slice(-6),
+                'inv pole',
+                H.invCount(p, 'vc_rat_pole')
+            );
             throw e;
         }
         return;
@@ -200,14 +219,15 @@ function held(p: Player, objName: string, op: number, picks: number[] = []) {
 /** Put the player on the nearest open tile to (x, z). */
 function place(p: Player, x: number, z: number, level = 0) {
     for (let r = 0; r < 6; r++) {
-        for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-            if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-            if (!blocked(level, x + dx, z + dz)) {
-                p.teleport(x + dx, z + dz, level);
-                H.tick(1);
-                return;
+        for (let dx = -r; dx <= r; dx++)
+            for (let dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+                if (!blocked(level, x + dx, z + dz)) {
+                    p.teleport(x + dx, z + dz, level);
+                    H.tick(1);
+                    return;
+                }
             }
-        }
     }
     throw new Error(`nowhere open near ${x},${z},${level}`);
 }
@@ -216,14 +236,30 @@ const errorsSince = (n: number) => errors.slice(n);
 const only = process.argv[2];
 const run = (name: string) => !only || name.toLowerCase().includes(only.toLowerCase());
 
+// Quest-stage constants, read rather than typed: a digit copied into a sim is a line that fails
+// for the wrong reason the next time somebody renumbers a quest.
+const QUEST: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
+    for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
+
 // =============================================================================================
 if (run('golem')) {
-console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are back');
+    console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are back');
     const locs: [string, number, number, number][] = [
-        ['golem_insidestairs_top', 3492, 3090, 0], ['golem_black_mushrooms', 3495, 3088, 0], ['agrith_kiln_1', 3467, 3123, 0],
-        ['agrith_kiln_2', 3478, 3082, 0], ['golem_insidestairs_base', 2721, 4884, 0], ['golem_statuettea', 2718, 4899, 0],
-        ['golem_statuetted', 2725, 4896, 0], ['golem_portal', 2720, 4912, 0], ['golem_demon_portal', 2719, 4883, 2],
-        ['golem_demon_throne', 2719, 4913, 2], ['agrith_wizard_rubble', 2724, 4897, 0]
+        ['golem_insidestairs_top', 3492, 3090, 0],
+        ['golem_black_mushrooms', 3495, 3088, 0],
+        ['agrith_kiln_1', 3467, 3123, 0],
+        ['agrith_kiln_2', 3478, 3082, 0],
+        ['golem_insidestairs_base', 2721, 4884, 0],
+        ['golem_statuettea', 2718, 4899, 0],
+        ['golem_statuetted', 2725, 4896, 0],
+        ['golem_portal', 2720, 4912, 0],
+        ['golem_demon_portal', 2719, 4883, 2],
+        ['golem_demon_throne', 2719, 4913, 2],
+        ['agrith_wizard_rubble', 2724, 4897, 0]
     ];
     for (const [n, x, z, l] of locs) check(`${n} at ${x},${z},${l}`, World.getLoc(x, z, l, LocType.getId(n)) !== null, true);
 
@@ -268,7 +304,7 @@ console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are b
 
 // =============================================================================================
 if (run('agrith')) {
-console.log('Shadow of the Storm');
+    console.log('Shadow of the Storm');
     const p = player('agrithq', 3272, 3158);
     const e0 = errors.length;
     const Q = () => v(p, 'agrith_quest');
@@ -298,11 +334,11 @@ console.log('Shadow of the Storm');
     place(p, 3467, 3121);
     useOnHeld(p, 'agrith_sigil_mould', 'silver_bar'); // the mould ON the bar: lands on Fenkenstrain's [opheldu,silver_bar]
     check('mould on the bar, beside the kiln: cast (stage sigil)', [Q(), H.invCount(p, 'silver_bar')], [60, 0]);
-    check('  the kiln at 3467,3123 is the cache\'s agrith_kiln_1', World.getLoc(3467, 3123, 0, LocType.getId('agrith_kiln_1')) !== null, true);
+    check("  the kiln at 3467,3123 is the cache's agrith_kiln_1", World.getLoc(3467, 3123, 0, LocType.getId('agrith_kiln_1')) !== null, true);
     opLoc(p, 3467, 3123, 'agrith_kiln_1');
     check('Look-in on the kiln: sigil and the tome, and the early-stained sword counts (stage sword)', [H.invCount(p, 'agrith_sigil'), H.invCount(p, 'agrith_book'), Q()], [1, 1, 70]);
     held(p, 'agrith_sigil', 1, [1, 3, 4, 2, 5]); // Tar Naar Rekt Agrith Secare
-    check('the chant in the tome\'s order: Darklight (stage darklight)', [H.invCount(p, 'darklight'), Q()], [1, 120]);
+    check("the chant in the tome's order: Darklight (stage darklight)", [H.invCount(p, 'darklight'), Q()], [1, 120]);
     p.levels[3] = 99;
     talkNear(p, 'agrith_reen_uzer', 3483, 3093);
     check('Father Reen at the ruins: complete', Q(), 125);
@@ -325,24 +361,68 @@ console.log('Shadow of the Storm');
 
 // =============================================================================================
 if (run('feud')) {
-console.log('The Feud');
-    // THIS BLOCK DROVE A QUEST THAT NO LONGER EXISTS. It walked the invented Feud - the Mayor
-    // handing over his own keys, a blackjacked villager dropping the turban and beard, stages
-    // 5/10/25/28/32/36/40 - and The Feud was rebuilt on 14 October 2026 from what the 377 cache
-    // configures: Ali Morrisane's thieving apprenticeship, feud_var 0 to 62.
+    console.log('The Feud');
+    // THE PLAYTHROUGH THAT USED TO BE HERE IS GONE, and for the same reason the Ghosts Ahoy one
+    // went out of audit3. It played The Feud stage by stage - Ali Morrisane, the two gang leaders,
+    // the Mayor's safe, the blackjack, the disguise, the champion - with the stage numbers of the
+    // quest that WAS here, 5 through 50. The rebuild replaced that quest with the one the wiki
+    // describes: its stages run to 62, it has the camels and the two receipts this never had, and
+    // Ali Morrisane now asks three questions before he will sell the disguise rather than one. So
+    // every line of it was wrong in a way that re-pinning would only hide, and
+    // tools/sim/quest_feud_run.ts already plays the new quest on foot with the wiki's step numbers
+    // against each step. One walkthrough, not two.
     //
-    // It is not re-written here, because the replacement is better than anything this file could
-    // do: tools/sim/quest_feud_run.ts plays the whole quest ON FOOT through the real triggers,
-    // 146 checks, with no teleport but the magic carpet.
-    console.log('  -- see tools/sim/quest_feud_run.ts: the rebuilt quest, walked end to end');
+    // What audit2 keeps is its own subject: Pollnivneach's stairs and ladders, walked up and back
+    // down. The abort that used to stand here - "no feud_ladder at 3356,2981" - is gone with the
+    // rebuild, which is what sent me to re-run this in the first place.
+    // The quest itself:  npx tsx tools/sim/quest_feud_run.ts
+
+    // Pollnivneach's stairs and ladders, walked: up from the ground, then back down from the landing
+    const w = player('feudwalk', 3353, 2957);
+    const hops: [string, string, number, number, number, number, number][] = [
+        ['feud_outsidestairs_base', 'feud_outsidestairs_top', 3353, 2958, 0, 3353, 2961],
+        ['feud_insidestairs_base', 'feud_insidestairs_top', 3373, 2978, 0, 3371, 2970], // walked from inside the Mayor's door
+        ['feud_ladder', 'feud_laddertop_norim', 3350, 2963, 0, 3349, 2963],
+        ['feud_ladder', 'feud_laddertop_norim', 3364, 3003, 0, 3364, 3002],
+        ['feud_ladder', 'feud_laddertop_norim', 3369, 2991, 0, 3368, 2991],
+        // THE LADDER ON THIS TILE IS NOT A feud_ladder, which is why this line used to throw
+        // ("no feud_ladder at 3356,2981") and take the rest of the file with it. m52_46 was
+        // re-imported for the Pollnivneach rooftop course and osrsloc_6261 - OSRS loc 6261, where
+        // the 377 cache's feud_ladder is also 6261 - took the tile. Its Climb-up had no trigger
+        // until this run found it, so the floor above could be climbed down from and never up to.
+        ['osrsloc_6261', 'feud_laddertop_norim', 3356, 2981, 1, 3356, 2982]
+    ];
+    for (const [up, down, x, z, l, sx, sz] of hops) {
+        place(w, sx, sz, l);
+        opLoc(w, x, z, up);
+        const went = [w.level, standing(w)];
+        if (w.level === l + 1) opLoc(w, x, z, down);
+        check(
+            `${up} at ${x},${z},${l}: up onto an open tile, and back down`,
+            [went, [w.level, standing(w)]],
+            [
+                [l + 1, true],
+                [l, true]
+            ]
+        );
+    }
+    H.despawn(w);
 }
 
 // =============================================================================================
 if (run('ratcatch')) {
-console.log('Rat Catchers');
+    console.log('Rat Catchers');
     const p = player('ratq', 2563, 3320);
     const e0 = errors.length;
     const Q = () => v(p, 'ratcatch_var');
+    // RAT CATCHERS HAS REQUIREMENTS NOW, and that is why Jimmy refused and the Gertrude call
+    // below it threw. ~ratcatch_requirements wants Gertrude's Cat and Icthlarin's Little Helper
+    // completed - the wiki's own pair - and this player had done neither, so he turned the job
+    // down ("You have never taken a rat off a floor in your life") and Gertrude opened her own
+    // quest's menu instead of handing over the weed pot.
+    set(p, 'fluffs', QUEST.fluffs_complete);
+    set(p, 'ics_little_var', QUEST.icslittle_complete);
+    H.tick(1);
     talkNear(p, 'vc_jimmy_dazzler', 2562, 3320, [1]);
     check('Jimmy Dazzler hires the player', [Q(), H.invCount(p, 'vc_rat_pole')], [10, 1]);
     talkNear(p, 'gertrude', 3151, 3410);
@@ -352,10 +432,24 @@ console.log('Rat Catchers');
     place(p, 3268, 3378);
     opLoc(p, 3268, 3379, 'vc_ladder');
     check('up the ladder in the rat house (it had no trigger)', [p.level, standing(p)], [1, true]);
-    for (const [n, x, z] of [['ratcatchers_rathole1', 3264, 3378], ['ratcatchers_rathole2', 3273, 3377], ['ratcatchers_rathole3', 3274, 3381], ['ratcatchers_rathole4', 3271, 3384]] as [string, number, number][]) {
+    for (const [n, x, z] of [
+        ['ratcatchers_rathole1', 3264, 3378],
+        ['ratcatchers_rathole2', 3273, 3377],
+        ['ratcatchers_rathole3', 3274, 3381],
+        ['ratcatchers_rathole4', 3271, 3384]
+    ] as [string, number, number][]) {
         const m0 = H.mesgs.length;
         useOnLoc(p, 'ratcatchers_smokey_weedpot', x, z, n);
-        if (process.env.A2DEBUG) console.log('   ', n, at(p), H.mesgs.slice(m0).filter(m => m.who === p.username).map(m => m.text));
+        if (process.env.A2DEBUG)
+            console.log(
+                '   ',
+                n,
+                at(p),
+                H.mesgs
+                    .slice(m0)
+                    .filter(m => m.who === p.username)
+                    .map(m => m.text)
+            );
     }
     check('four holes smoked out on foot from the ladder: stage trained', Q(), 30);
     opLoc(p, 3268, 3379, 'vc_laddertop');
@@ -405,7 +499,7 @@ console.log('Rat Catchers');
 
 // =============================================================================================
 if (run('mourning2')) {
-console.log('Mourning\'s End Part II');
+    console.log("Mourning's End Part II");
     const B = [1856, 4608];
     const T = (x: number, z: number) => [B[0] + x, B[1] + z] as const;
     const p = player('mtq', 2311, 9794);
@@ -426,9 +520,8 @@ console.log('Mourning\'s End Part II');
     check('through the tunnel: the east corridor, on an open tile, stage inside', [p.x, p.z, p.level, standing(p), Q()], [...T(60, 31), 0, true, 20]);
     // THE FITTINGS COME OUT OF THE COLLECTOR, not out of a chest: every chest in the building is
     // behind a door of light, so the first mirrors cannot be chest mirrors. The cache's tray holds
-    // four of them and the orange (yellow) crystal, and the lever beside it is the reset.
-    // the lever and the collector are fittings on the east wall of a corridor on floor 2, so the
-    // tile to stand on is west of them
+    // four of them and the orange (yellow) crystal, and the lever beside it is the reset. Both are
+    // fittings on the east wall of a corridor on floor 2, so you stand west of them.
     p.teleport(...T(56, 31), 1);
     H.tick(1);
     opLoc(p, ...T(58, 31), 'mourning_temple_light_wall_collector');
@@ -476,22 +569,30 @@ console.log('Mourning\'s End Part II');
         const [X, Z] = T(tx, tz);
         const loc = locAt(X, Z, tl, top);
         const t = LocType.get(loc.type);
-        let tried = 0, down: number[] = [], up: number[] = [];
+        let down: number[] = [],
+            up: number[] = [];
         // any open tile beside the top that it can actually be used from
-        for (let dx = -1; dx <= Math.max(t.width, t.length) && !down.length; dx++) for (let dz = -1; dz <= Math.max(t.width, t.length) && !down.length; dz++) {
-            if (blocked(tl, X + dx, Z + dz)) continue;
-            p.teleport(X + dx, Z + dz, tl);
-            H.tick(1);
-            tried++;
-            opLoc(p, X, Z, top);
-            if (p.level !== tl) down = [p.level, standing(p) ? 1 : 0];
-        }
+        for (let dx = -1; dx <= Math.max(t.width, t.length) && !down.length; dx++)
+            for (let dz = -1; dz <= Math.max(t.width, t.length) && !down.length; dz++) {
+                if (blocked(tl, X + dx, Z + dz)) continue;
+                p.teleport(X + dx, Z + dz, tl);
+                H.tick(1);
+                opLoc(p, X, Z, top);
+                if (p.level !== tl) down = [p.level, standing(p) ? 1 : 0];
+            }
         if (down.length) {
             const [BX, BZ] = T(bx, bz);
             opLoc(p, BX, BZ, base);
             up = [p.level, standing(p) ? 1 : 0];
         }
-        check(`${top} at ${tx},${tz},${tl}: down onto an open tile, and ${base} straight back up from there`, [down, up], [[tl - 1, 1], [tl, 1]]);
+        check(
+            `${top} at ${tx},${tz},${tl}: down onto an open tile, and ${base} straight back up from there`,
+            [down, up],
+            [
+                [tl - 1, 1],
+                [tl, 1]
+            ]
+        );
     }
     // THE DOORS OF LIGHT ARE LOCKS NOW. Each one is open only while the beam standing in its
     // doorway is the colour it shows when shut, so "it lets you through" is only true with the
@@ -529,14 +630,14 @@ console.log('Mourning\'s End Part II');
     opLoc(p, ...T(0, 30), 'mourning_temple_light_wall_with_hole');
     check('out through the hole in the west wall, back at the tunnel', [p.x, p.z, p.level, standing(p)], [2311, 9793, 0, true]);
     talkNear(p, 'mourning_arianwyn', ari.x, ari.z, [], ari.level);
-    check('Arianwyn: Mourning\'s End Part II complete', Q(), 50);
+    check("Arianwyn: Mourning's End Part II complete", Q(), 50);
     check('  no script errors', errorsSince(e0), []);
     H.despawn(p);
 }
 
 // =============================================================================================
 if (run('dwarfrock')) {
-console.log('Between a Rock... (not changed - checked start to finish)');
+    console.log('Between a Rock... (not changed - checked start to finish)');
     const p = player('rockq', 2825, 10168);
     const e0 = errors.length;
     const Q = () => v(p, 'dwarfrock_quest');
