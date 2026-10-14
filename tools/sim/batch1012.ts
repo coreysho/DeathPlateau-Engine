@@ -274,17 +274,44 @@ console.log('\n================ THE ECTOFUNTUS');
 
 console.log('\n================ H.A.M. MEMBERS');
 {
-    const ham = (() => {
-        for (const npc of World.npcs) {
-            if (!npc || !npc.isActive) continue;
-            if (npc.type === (A.NpcType as any).getId('favour_male_ham_civilian')) return npc;
+    // PICK ONE THE PLAYER CAN ACTUALLY STAND NEXT TO. This took the first H.A.M. member out of
+    // World.npcs and put the player on the tile due east of it, which is not a tile at all when the
+    // member happens to be standing against the hideout's east wall - and where it is standing is
+    // decided at boot, at random, within its wander range. Every one of the 80 attempts below then
+    // spent itself on "I can't reach that!", and the section reported H.A.M. pickpocketing as doing
+    // nothing: no loot, no experience, no refusal message. It does work (a probe at 99 Thieving
+    // takes coins, 222 experience a success and plays seq 881); the sim was standing in a wall.
+    //
+    // So: walk the members, take the first with a walkable neighbour that is connected to it, and
+    // stand there. The four-way test is the same collision map the route finder uses.
+    const members: any[] = [];
+    for (const npc of World.npcs) {
+        if (!npc || !npc.isActive) continue;
+        if (npc.type === (A.NpcType as any).getId('favour_male_ham_civilian')) members.push(npc);
+        if (npc.type === (A.NpcType as any).getId('favour_female_ham_civilian')) members.push(npc);
+    }
+    const pick = (() => {
+        for (const npc of members) {
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ]) {
+                const x = npc.x + dx,
+                    z = npc.z + dz;
+                if (A.walkable(npc.level, x, z) && A.connected(npc.level, x, z, npc.x, npc.z, 4)) {
+                    return { npc, at: [x, z] as const };
+                }
+            }
         }
         return null;
     })();
-    check('a H.A.M. member is spawned somewhere', ham !== null, true);
-    if (ham) {
-        console.log('  found one at', [ham.level, ham.x, ham.z]);
-        const p: any = player('ham', ham.x + 1, ham.z, ham.level);
+    check('a H.A.M. member is spawned somewhere a player can stand beside', pick !== null, true);
+    if (pick) {
+        const ham = pick.npc;
+        console.log(`  ${members.length} members about; using the one at`, [ham.level, ham.x, ham.z], 'from', pick.at);
+        const p: any = player('ham', pick.at[0], pick.at[1], ham.level);
         p.setLevel(PlayerStat.THIEVING, 1);
         H.tick(2);
         const im = ifaceMark();
@@ -339,9 +366,12 @@ console.log('\n================ H.A.M. MEMBERS');
             'ham_badge',
             'ham_hood'
         ];
+        // TEN TICKS BETWEEN ATTEMPTS, not four. A failed pickpocket stuns for stun_ticks=8 and
+        // [label,attempt_pick_pocket] returns at once while %stunned holds, so at four ticks apart
+        // roughly half the clicks were thrown away against the stun.
         for (let i = 0; i < 80; i++) {
             H.opNpc(p, ham, 3);
-            H.tick(4);
+            H.tick(10);
         }
         const kinds = names.filter(n => H.invCount(p, n) > 0);
         console.log(`  80 attempts at 99 Thieving produced ${kinds.length} kinds:`, kinds.join(', '));
