@@ -3,6 +3,7 @@
 //   Mourning's End Part II - start to finish where the quest allows, with each new landing, door and
 //   staircase held to the collision map.
 // Usage: npx tsx tools/sim/audit2.ts
+import fs from 'fs';
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
@@ -235,6 +236,15 @@ const errorsSince = (n: number) => errors.slice(n);
 const only = process.argv[2];
 const run = (name: string) => !only || name.toLowerCase().includes(only.toLowerCase());
 
+// Quest-stage constants, read rather than typed: a digit copied into a sim is a line that fails
+// for the wrong reason the next time somebody renumbers a quest.
+const QUEST: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
+    for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
+
 // =============================================================================================
 if (run('golem')) {
     console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are back');
@@ -405,6 +415,14 @@ if (run('ratcatch')) {
     const p = player('ratq', 2563, 3320);
     const e0 = errors.length;
     const Q = () => v(p, 'ratcatch_var');
+    // RAT CATCHERS HAS REQUIREMENTS NOW, and that is why Jimmy refused and the Gertrude call
+    // below it threw. ~ratcatch_requirements wants Gertrude's Cat and Icthlarin's Little Helper
+    // completed - the wiki's own pair - and this player had done neither, so he turned the job
+    // down ("You have never taken a rat off a floor in your life") and Gertrude opened her own
+    // quest's menu instead of handing over the weed pot.
+    set(p, 'fluffs', QUEST.fluffs_complete);
+    set(p, 'ics_little_var', QUEST.icslittle_complete);
+    H.tick(1);
     talkNear(p, 'vc_jimmy_dazzler', 2562, 3320, [1]);
     check('Jimmy Dazzler hires the player', [Q(), H.invCount(p, 'vc_rat_pole')], [10, 1]);
     talkNear(p, 'gertrude', 3151, 3410);
