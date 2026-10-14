@@ -28,27 +28,47 @@ const seen = new Set<string>([START.join(',')]);
 const q = [START];
 while (q.length) {
     const [cx, cz] = q.pop()!;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
+        const nx = cx + dx,
+            nz = cz + dz,
+            k = nx + ',' + nz;
         if (seen.has(k) || nx < X1 - 4 || nx > X2 + 4 || nz < Z1 - 4 || nz > Z2 + 10) continue;
-        if (canTravel(LEVEL, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+        if (canTravel(LEVEL, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+            seen.add(k);
+            q.push([nx, nz]);
+        }
     }
 }
 
 /** Can an npc of this size stand here - every square of its footprint walkable and inside? */
 const fits = (x: number, z: number, size: number) => {
-    for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) {
-        if (!seen.has((x + dx) + ',' + (z + dz))) return false;
-        if (x + dx > X2 || z + dz > Z2) return false;
-    }
+    for (let dx = 0; dx < size; dx++)
+        for (let dz = 0; dz < size; dz++) {
+            if (!seen.has(x + dx + ',' + (z + dz))) return false;
+            if (x + dx > X2 || z + dz > Z2) return false;
+        }
     return true;
 };
 
-const one: string[] = [], two: string[] = [];
-for (let x = X1; x <= X2; x++) for (let z = Z1; z <= Z2; z++) {
-    if (!seen.has(x + ',' + z)) continue;
-    if (fits(x, z, 1)) one.push(`${x},${z}`);
-    if (fits(x, z, 2)) two.push(`${x},${z}`);
-}
+const one: string[] = [],
+    two: string[] = [];
+for (let x = X1; x <= X2; x++)
+    for (let z = Z1; z <= Z2; z++) {
+        if (!seen.has(x + ',' + z)) continue;
+        if (fits(x, z, 1)) one.push(`${x},${z}`);
+        if (fits(x, z, 2)) two.push(`${x},${z}`);
+    }
 console.log('SIZE1 ' + one.join(' '));
 console.log('SIZE2 ' + two.join(' '));
+
+// EXIT, or this never ends. The world keeps worker threads and timers alive, so a sim that just
+// runs off the end of the file leaves the process sitting there - and since World now REPORTS a
+// worker that failed to start instead of dying on it, "sits there" lasts until something kills it.
+// Every other sim in this directory exits; these two did not, and they were the only two the
+// sweep had to time out at forty minutes apiece.
+process.exit(0);
