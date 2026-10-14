@@ -179,6 +179,28 @@ for (const [what, seg, colour] of DOORS) {
 console.log('');
 console.log('  the temple kit, waiting in the collector: 4 mirrors - and every chest holds two more');
 
+// ---------------------------------------------------------------- can magenta be made at all?
+// A crystal is a filter and no filter puts a colour back, so no single beam in this building can be
+// magenta - and three of its doors are. Two beams crossing add, which means magenta needs a crossing
+// tile with both axes live, a red beam down one of them and a blue beam down the other, and a
+// fractured crystal to make the second beam in the first place. This says whether the two halves can
+// be reached and coloured; the crossing arithmetic itself is driven in tools/sim/templecross.ts.
+console.log('');
+console.log('MAGENTA: A CROSSING WITH BOTH AXES LIVE, ONE BEAM RED AND THE OTHER BLUE');
+const CROSSINGS: [string, string, string][] = [
+    ['floor 1 room 15', 'mourning_light_temple_1_14_east', 'mourning_light_temple_1_11_south'],
+    ['floor 3 room 14', 'mourning_light_temple_3_13_15', 'mourning_light_temple_3_10_south'],
+    ['floor 3 room 4', 'mourning_light_temple_3_3_east', 'mourning_light_temple_3_16_north']
+];
+for (const [where, ew, ns] of CROSSINGS) {
+    const a = coloured.get(ew);
+    const b = coloured.get(ns);
+    console.log('  ' + where.padEnd(16)
+        + 'east-west ' + (a === undefined ? 'no colourable route' : a + ' mirrors').padEnd(22)
+        + 'north-south ' + (b === undefined ? 'no colourable route' : b + ' mirrors')
+        + (a !== undefined && b !== undefined ? '   <- magenta can be made here' : ''));
+}
+
 // ---------------------------------------------------------------- and the routes themselves
 // The cheapest route is no use as a number alone: the sims have to place the mirrors, and so does
 // a player. This walks the parents back from the state that lights the wanted corridor.
