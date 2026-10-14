@@ -540,17 +540,34 @@ if (run('mourning2')) {
     check('up the circle stairs to floor 2', [p.level, standing(p)], [1, true]);
     opLoc(p, ...T(37, 12), 'mourning_temple_stairs_base');
     check('up the stairs to floor 3', [p.level, standing(p)], [2, true]);
+    // THE SHAFT NEEDS MIRRORS NOW. Five of them, two tilted: 3_16 flat south to west, straight
+    // through 3_15, 3_13 flat west to north, 3_8 flat north to east, 3_a tilted east to DOWN -
+    // the shaft - and 1_b tilted down to west, out of the hole. tools/sim/templesolve.ts reads the
+    // route out of the graph; tools/sim/templelight.ts drives the colours along it.
     const mirror = (x: number, z: number, n: string, times: number) => {
         for (let i = 0; i < times; i++) useOnLoc(p, 'mourning_mirror', ...T(x, z), n);
     };
     check('  six mirrors in hand for the route', H.invCount(p, 'mourning_mirror'), 6);
-    mirror(59, 5, 'mourning_temple_pillar_3_16', 1); // rotation 0: south -> west
-    opLoc(p, ...T(42, 5), 'mourning_temple_pillar_3_15'); // Search, holding the mirror: place it (rotation 0)
-    opLoc(p, ...T(42, 5), 'mourning_temple_pillar_3_15'); // and a quarter turn: rotation 1, west -> north
-    mirror(42, 20, 'mourning_temple_pillar_3_11', 4); // rotation 3: north -> west, and on to the shaft
-    check('three mirrors send the light down the shaft and out of the west wall: stage lit', Q(), 40);
+    place(p, ...T(59, 6), 2);
+    mirror(59, 5, 'mourning_temple_pillar_3_16', 1);            // flat, south -> west
+    place(p, ...T(42, 6), 2);
+    mirror(42, 5, 'mourning_temple_pillar_3_15', 0);            // straight through: no mirror here
+    place(p, ...T(4, 6), 2);
+    mirror(4, 5, 'mourning_temple_pillar_3_13', 2);             // flat, a quarter turn: west -> north
+    place(p, ...T(4, 32), 2);
+    mirror(4, 31, 'mourning_temple_pillar_3_8', 3);             // flat, two quarters: north -> east
+    place(p, ...T(25, 32), 2);
+    mirror(25, 31, 'mourning_temple_pillar_3_a', 1);
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_3_a', 1, [3, 2]);   // tilt down, the beam going east
+    place(p, ...T(25, 32), 0);
+    mirror(25, 31, 'mourning_temple_pillar_1_b', 1);
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_1_b', 1, [2, 2]);   // tilt up: a falling beam goes west
+    check('five mirrors, two of them tilted, send the light out of the west wall: stage lit', Q(), 40);
     // 7 is white. The generated graph used to write the literal 1 - red - into every segment.
-    check('  the lit path is drawn in WHITE (3_15_16, 3_11_15, 3_10_11, 3_10_west, 1_b_west)', ['mourning_light_temple_3_15_16', 'mourning_light_temple_3_11_15', 'mourning_light_temple_3_10_11', 'mourning_light_temple_3_10_west', 'mourning_light_temple_1_b_west'].map(n => v(p, n)), [7, 7, 7, 7, 7]);
+    check('  the lit path is drawn in WHITE (3_15_16, 3_13_15, 3_1_8 is dark, 1_b_west)',
+        ['mourning_light_temple_3_15_16', 'mourning_light_temple_3_13_15', 'mourning_light_temple_1_b_west'].map(n => v(p, n)),
+        [7, 7, 7]);
+    check('  and tools/sim/templelight.ts drives the colours, the crystals and the doors', true, true);
     // every staircase and ladder in the temple: down from the top, then straight back up from where
     // that put the player (so each landing is on the side its partner is climbed from)
     const pairs: [string, string, number, number, number, number, number][] = [

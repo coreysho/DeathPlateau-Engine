@@ -14,6 +14,7 @@ import Player from '#/engine/entity/Player.js';
 import LocType from '#/cache/config/LocType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ScriptState from '#/engine/script/ScriptState.js';
+import Component from '#/cache/config/Component.js';
 import { isFlagged, findPathToLoc } from '#/engine/GameMap.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
 import World from '#/engine/World.js';
@@ -37,13 +38,24 @@ const B = [29 * 64, 72 * 64];
 const T = (x: number, z: number) => [B[0] + x, B[1] + z] as [number, number];
 const standing = (p: Player) => !isFlagged(p.x, p.z, p.level, CollisionFlag.WALK_BLOCKED);
 
-function settle(p: Player, max = 200) {
+function settle(p: Player, picks: number[] = [], max = 200) {
     let idle = 0;
     for (let g = 0; g < max; g++) {
         const s = p.activeScript;
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
-            p.executeScript(s, true, true);
             idle = 0;
+            // the pillar's Search is a chat menu now: a quarter turn, a tilt up, a tilt down or
+            // take it out, and then which beam the tilt lifts
+            const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
+            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
+            if (multi) {
+                const pick = picks.shift();
+                if (pick === undefined) throw new Error('unexpected menu: ' + names.join(','));
+                H.choose(p, `${multi.split(':')[0]}:com_${pick}`);
+                continue;
+            }
+            p.executeScript(s, true, true);
             continue;
         }
         H.tick(1);
@@ -51,6 +63,7 @@ function settle(p: Player, max = 200) {
             if (++idle >= 3) break;
         } else idle = 0;
     }
+    if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
     p.closeModal();
 }
 
@@ -63,9 +76,9 @@ H.clearInv(p);
 H.tick(2);
 p.closeModal();
 
-const opLoc = (x: number, z: number, name: string, op = 1) => {
+const opLoc = (x: number, z: number, name: string, op = 1, picks: number[] = []) => {
     H.opLoc(p, x, z, name, op);
-    settle(p);
+    settle(p, picks);
 };
 // Using an item on a loc is its own packet (APLOCU) and the harness has no helper for it, so this
 // is OpLocUHandler's own setup, the same few lines audit2.ts uses.
@@ -90,6 +103,7 @@ const useOn = (obj: string, x: number, z: number, name: string) => {
     (p as unknown as { opcalled: boolean }).opcalled = true;
     settle(p);
 };
+const seg = (n: string) => v(p, 'mourning_light_temple_' + n);
 
 // ----------------------------------------------------------------- the way in, and the fittings
 console.log('');
@@ -150,61 +164,75 @@ opLoc(...T(61, 5), 'mourning_temple_light_parts_2_open');
 check('the blue room: two more mirrors and the RED crystal',
     [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_red')], [10, 1]);
 
-// ----------------------------------------------------------------- the route, in white
+// ----------------------------------------------------------------- the route out of the wall
 console.log('');
-console.log('THE OLD ROUTE, STILL WHITE');
-p.teleport(...T(59, 5), 2);
-H.tick(1);
-const seg = (n: string) => v(p, 'mourning_light_temple_' + n);
-// pillar 35 (floor 3 room 16) is where the light comes in, travelling south, and it has no south
-// corridor - so the first mirror is what starts the beam moving at all.
-useOn('mourning_mirror', ...T(59, 5), 'mourning_temple_pillar_3_16');     // rotation 0: south -> west
-check('a mirror in the entry pillar: the mirror leaves your hands', H.invCount(p, 'mourning_mirror'), 9);
+console.log('THE ROUTE OUT OF THE WEST WALL: FIVE MIRRORS, TWO OF THEM TILTED');
+// tools/sim/templesolve.ts reads this out of the graph itself: pillar 35 flat, south to west;
+// straight through 34; 33 flat, west to north; 28 flat, north to east; then 29 TILTED, east to
+// down - which is the shaft - and 6 TILTED, down to west, which is the hole in the wall. The shaft
+// stopped being a free chute when the third dimension went in: a beam only leaves a corridor for it
+// if a tilted mirror puts it there, which is what the walkthrough does at every shaft.
+//
+// Pillar 35 is floor 3 room 16 at (59,5); 34 is room 15 at (42,5); 33 is room 13 at (4,5); 28 is
+// room 8 at (4,31); 29 is the shaft head, floor 3 pillar a, at (25,31); 6 is the shaft foot, floor
+// 1 pillar b, on the same tile two floors down.
+const putMirror = (lx: number, lz: number, lvl: number, name: string, turns: number) => {
+    p.teleport(...T(lx, lz + 1), lvl);
+    H.tick(1);
+    useOn('mourning_mirror', ...T(lx, lz), name);
+    for (let i = 0; i < turns; i++) useOn('mourning_mirror', ...T(lx, lz), name);
+};
+const tiltMirror = (lx: number, lz: number, lvl: number, name: string, down: boolean, dir: number) => {
+    p.teleport(...T(lx, lz + 1), lvl);
+    H.tick(1);
+    useOn('mourning_mirror', ...T(lx, lz), name);
+    opLoc(...T(lx, lz), name, 1, [down ? 3 : 2, dir]);
+};
+putMirror(59, 5, 2, 'mourning_temple_pillar_3_16', 0);
+check('one mirror in the entry pillar lights the top-floor corridor white', seg('3_15_16'), 7);
+putMirror(4, 5, 2, 'mourning_temple_pillar_3_13', 1);
+check('  and on through room 15 to room 13, where it turns north', seg('3_13_15'), 7);
+putMirror(4, 31, 2, 'mourning_temple_pillar_3_8', 2);
+// room 13 to room 8 is the segment 3_8_13; 3_1_8 is the one NORTH of room 8, which this route
+// does not use and the mixing test below does
+check('  north to room 8, where it turns east towards the shaft', [seg('3_8_13'), seg('3_8_east')], [7, 7]);
+tiltMirror(25, 31, 2, 'mourning_temple_pillar_3_a', true, 2);
+check('a TILTED mirror at the shaft head sends the beam down it', seg('1_b_east') >= 0, true);
+tiltMirror(25, 31, 0, 'mourning_temple_pillar_1_b', false, 2);
+check('and a tilted mirror at the foot sends it west, out of the hole: stage lit',
+    [v(p, 'mourning_quest_main'), seg('1_b_west'), seg('1_d_west')], [40, 7, 7]);
+check('  five mirrors, and four left in hand', H.invCount(p, 'mourning_mirror'), 5);
+
+// ----------------------------------------------------------------- colour, along that route
+console.log('');
+console.log('ONE CRYSTAL, IN THE SOCKET THE ROUTE LEAVES SPARE');
+// Room 15 is the pillar the beam goes straight through, so its socket is free for a crystal - and
+// the solver counts that, because a route that turns a corner at every pillar it touches cannot be
+// coloured at all, however few mirrors it uses.
 p.teleport(...T(42, 6), 2);
 H.tick(1);
-useOn('mourning_mirror', ...T(42, 5), 'mourning_temple_pillar_3_15');     // rotation 0
-useOn('mourning_mirror', ...T(42, 5), 'mourning_temple_pillar_3_15');     // a quarter turn: west -> north
-p.teleport(...T(42, 21), 2);
-H.tick(1);
-for (let i = 0; i < 4; i++) useOn('mourning_mirror', ...T(42, 20), 'mourning_temple_pillar_3_11'); // rot 3
-check('three mirrors send the light down the shaft and out of the west wall',
-    [v(p, 'mourning_quest_main'), seg('1_b_west')], [40, 7]);
-check('  and every segment on the way is WHITE, not the old hardcoded red',
-    ['3_15_16', '3_11_15', '3_10_11', '3_10_west', '1_b_west', '1_d_west'].map(seg), [7, 7, 7, 7, 7, 7]);
-
-// ----------------------------------------------------------------- colour
-console.log('');
-console.log('ONE CRYSTAL');
-p.teleport(...T(31, 21), 2);
-H.tick(1);
-useOn('mourning_crystal_yellow', ...T(31, 20), 'mourning_temple_pillar_3_10');
-check('the yellow crystal goes into the pass-through pillar', H.invCount(p, 'mourning_crystal_yellow'), 0);
-check('  before it the light is white, after it the light is yellow',
-    [seg('3_10_11'), seg('3_10_west'), seg('1_b_west'), seg('1_d_west')], [7, 2, 2, 2]);
-check('  and the pillar itself draws yellow', v(p, 'mourning_light_temple_3_10_up'), 2);
+useOn('mourning_crystal_yellow', ...T(42, 5), 'mourning_temple_pillar_3_15');
+check('the yellow crystal goes in the spare socket', H.invCount(p, 'mourning_crystal_yellow'), 0);
+check('  before it white, after it yellow, all the way out of the wall',
+    [seg('3_15_16'), seg('3_13_15'), seg('1_b_west')], [7, 2, 2]);
+check('  and the light is still getting out', v(p, 'mourning_quest_main'), 40);
 
 console.log('');
 console.log('TWO CRYSTALS: THE MIXING THE WALKTHROUGH DESCRIBES');
-p.teleport(...T(25, 31), 0);
+// A second spare socket: room 8 turns the beam east with a mirror, but the beam also has a
+// straight-on edge north out of room 8, so taking that mirror out and letting it run north gives a
+// second pass-through - 34 and 28 - with a segment beyond both of them to read the colour off.
+p.teleport(...T(4, 32), 2);
 H.tick(1);
-useOn('mourning_crystal_cyan', ...T(25, 31), 'mourning_temple_pillar_1_b');
-check('cyan in the pillar at the foot of the shaft - which the first trace skipped entirely',
-    H.invCount(p, 'mourning_crystal_cyan'), 0);
-check('  yellow and then cyan leaves GREEN', [seg('1_b_west'), seg('1_d_west')], [3, 3]);
-check('  and the light still gets out of the hole', v(p, 'mourning_quest_main'), 40);
-
-console.log('');
-console.log('A CRYSTAL THAT LEAVES NOTHING');
-opLoc(...T(25, 31), 'mourning_temple_pillar_1_b');   // Search: take the cyan back out
-check('the cyan comes back out of the socket', H.invCount(p, 'mourning_crystal_cyan'), 1);
-useOn('mourning_crystal_red', ...T(25, 31), 'mourning_temple_pillar_1_b');
-check('yellow light through a red crystal keeps the red the two have in common', seg('1_b_west'), 1);
-opLoc(...T(25, 31), 'mourning_temple_pillar_1_b');
-useOn('mourning_crystal_blue', ...T(25, 31), 'mourning_temple_pillar_1_b');
-check('yellow light through a BLUE crystal has nothing left: the beam dies at that pillar',
-    [seg('1_b_west'), seg('1_d_west')], [0, 0]);
-opLoc(...T(25, 31), 'mourning_temple_pillar_1_b');
-check('  and taking it out brings the yellow beam back', [seg('1_b_west'), H.invCount(p, 'mourning_crystal_blue')], [2, 1]);
+opLoc(...T(4, 31), 'mourning_temple_pillar_3_8', 1, [4]);      // take the mirror back out
+check('the mirror out of room 8: the beam runs straight north instead', seg('3_1_8'), 2);
+useOn('mourning_crystal_cyan', ...T(4, 31), 'mourning_temple_pillar_3_8');
+check('yellow and then cyan leaves GREEN', seg('3_1_8'), 3);
+opLoc(...T(4, 31), 'mourning_temple_pillar_3_8');               // Search: take the cyan back
+useOn('mourning_crystal_blue', ...T(4, 31), 'mourning_temple_pillar_3_8');
+check('yellow and then BLUE leaves nothing at all: the beam dies at that pillar', seg('3_1_8'), 0);
+opLoc(...T(4, 31), 'mourning_temple_pillar_3_8');
+check('  and taking it out brings the yellow beam back', [seg('3_1_8'), H.invCount(p, 'mourning_crystal_blue')], [2, 1]);
 
 // ----------------------------------------------------------------- the doors
 console.log('');
@@ -252,17 +280,20 @@ check('and a lit one does', [p.x - B[0], p.z - B[1], standing(p)], [8, 5, true])
 console.log('');
 console.log('THE LEVER, AND BACK TO THE COLLECTOR');
 const held = () => [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_yellow'), H.invCount(p, 'mourning_crystal_blue')];
-// ten mirrors came out of the collector and three chests; three are in sockets, so seven are in
-// hand. The yellow crystal is in pillar 3_10 and the blue is in hand.
-check('before the lever: seven mirrors in hand, three in sockets', held(), [7, 0, 1]);
+// ten mirrors came out of the collector and three chests; five are in sockets, so four are in
+// hand. The yellow crystal is in the spare socket at room 15 and the blue is in hand.
+// ten mirrors came out of the collector and three chests. Five went into the route and the mixing
+// test took one back out of room 8, so four are in sockets and six are in hand; the yellow crystal
+// is in the spare socket at room 15 and the blue is in hand.
+check('before the lever: six mirrors in hand, four in sockets, one crystal placed', held(), [6, 0, 1]);
 p.teleport(...T(56, 31), 1);
 H.tick(1);
 opLoc(...T(57, 31), 'mourning_temple_light_wall_lever');
 check('Pull takes every fitting out of its socket and puts it in the tray',
-    [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [3, 1]);
-check('  the temple goes dark', ['3_15_16', '3_10_west', '1_b_west'].map(seg), [0, 0, 0]);
+    [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [4, 1]);
+check('  the temple goes dark', ['3_15_16', '3_13_15', '1_b_west'].map(seg), [0, 0, 0]);
 check('  and so do the doors', [v(p, 'mourning_door_1_13_east'), v(p, 'mourning_door_1_1_south')], [0, 0]);
-check('  nothing was handed back yet', held(), [7, 0, 1]);
+check('  nothing was handed back yet', held(), [6, 0, 1]);
 opLoc(...T(58, 31), 'mourning_temple_light_wall_collector');
 check('and Collect hands all of it back', held(), [10, 1, 1]);
 
