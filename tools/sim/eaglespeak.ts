@@ -64,6 +64,13 @@ truthy('  "I need somebody with a little more experience"', said.includes('a lit
 const p = A.player('eaglepeak', 2604, 3264);
 p.setLevel(PlayerStat.HUNTER, 27);
 p.setLevel(PlayerStat.AGILITY, 50);
+// AND NO RANDOM EVENTS, the same switch the quest runs use. A sweep run lost this sim inside the
+// gold-feather puzzle: "The ground gives way, and the world turns green" - the frog event had
+// teleported the player to the Land of the Frogs between two lever pulls, so the next pull threw
+// "no eagle_gold_lever_centre at 1943,4911", which reads as a missing loc and is not one.
+// ~macro_event_allowed refuses to spawn one while %macro_event is already set.
+H.setVar(p, 'macro_event', 1);
+H.setVar(low, 'macro_event', 1);
 let j = journal(p);
 truthy('journal (not started): Charlie at Ardougne Zoo, 27 Hunter', j.includes('@dre@Charlie') && j.includes('Level 27 Hunter'), j.slice(0, 100));
 said = joined(A.talk(p, 'eagle_charlie', ['quest doing', 'Sure.']));
