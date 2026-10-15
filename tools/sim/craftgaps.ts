@@ -262,6 +262,10 @@ if (want('herb')) {
     H.setVar(brewer, 'druidquest', 4); // ^druid_complete - the skill refuses every action below it
     H.setVar(brewer, 'legendsquest', 30); // Ardrigal mixture is gated on Gujuo's pool
     H.setVar(brewer, 'itwatchtower', 20); // jangerberries ask about the ogre potion first
+    // Relicym's balm is the fourth of these gates, and the newest: brew_potion.rs2 refuses both of
+    // its recipes until Sithik has said how the disease is cured, which is the thzfe_makecuredisease
+    // bit. Without it both come back DEAD and read as a recipe nothing reaches.
+    H.setVarBit(brewer, 'thzfe_makecuredisease', 1);
 
     const broken: string[] = [];
     console.log(` ${brews.length} recipes`);
