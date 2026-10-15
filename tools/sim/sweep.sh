@@ -31,21 +31,32 @@ set -u
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)" || exit 1
 
 OUT="${OUT:-/tmp/simsweep}"
-# 3600 because audit1 reports 336 ok and takes about fifty minutes to do it: at 2400 it was killed
-# mid-run and filed as a TIMEOUT with a clean tally sitting in its log.
-LIMIT="${LIMIT:-3600}"
+# 5400 because audit1 reports 336 ok and takes about fifty minutes to do it: at 2400 it was killed
+# mid-run and filed as a TIMEOUT with a clean tally sitting in its log, and at 3600 it finished a
+# sweep in 3563s - thirty-seven seconds inside the cap - because something else on the machine was
+# competing for the CPU. The cap is there to catch a sim that has hung, not to race the slowest one.
+LIMIT="${LIMIT:-5400}"
 LOGS="$OUT/logs"
 RESULTS="$OUT/results.tsv"
 mkdir -p "$LOGS"
 touch "$RESULTS"
 
-# Libraries, and the three tools that take arguments or an env var. Run bare, each of those exits
+# Libraries, and the tools that take arguments or an env var. Run bare, each of those exits
 # non-zero with a usage message - which is correct of them, and which the sweep can only read as an
 # ABORT, so they are not sims as far as this is concerned:
+#   a1lib.ts, harness.ts                    the two libraries every sim imports
+#   questrun.ts                             also a library: quest_ahoy_run, quest_feud_run and
+#                                             quest_mm_run import its route/travel/Manifest
+#   ifunpack.ts <dir>                        reads an interface archive named in process.argv
 #   run.ts <name>                           a scenario dispatcher
 #   standable.ts <x>,<z>[,<level>]          a coordinate query
 #   NODE_PRODUCTION=true staffrules.ts      the owner rules are about a live world
-SKIP='^(a1lib|harness|ifunpack|questrun|scrollbars|run|standable|staffrules)\.ts$'
+#
+# scrollbars.ts WAS IN THIS LIST AND SHOULD NOT HAVE BEEN: it takes no argument and no env var, it
+# ends with `console.log(ok, FAIL); process.exit(R.bad ? 1 : 0)` like every other sim, and nothing
+# else runs it - not engine CI, not content CI, not a battery - so being skipped here meant it was
+# checked by nobody at all.
+SKIP='^(a1lib|harness|ifunpack|questrun|run|standable|staffrules)\.ts$'
 
 ls tools/sim/*.ts | xargs -n1 basename | grep -vE "$SKIP" | sort > "$OUT/simlist.txt"
 echo "$(wc -l < "$OUT/simlist.txt") sims, cap ${LIMIT}s, into $OUT"
