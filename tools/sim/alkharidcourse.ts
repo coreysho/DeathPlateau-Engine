@@ -44,10 +44,15 @@ const ROOF = new Set<string>();
     const lines = readFileSync('../content/maps/m51_49.jm2', 'utf8').split(/\r?\n/);
     let inLocs = false;
     for (const line of lines) {
-        if (line.startsWith('====')) { inLocs = line === '==== LOC ===='; continue; }
+        if (line.startsWith('====')) {
+            inLocs = line === '==== LOC ====';
+            continue;
+        }
         const m = /^([0-3]) (\d+) (\d+): (.*)$/.exec(line);
         if (!m) continue;
-        const level = Number(m[1]), x = 51 * 64 + Number(m[2]), z = 49 * 64 + Number(m[3]);
+        const level = Number(m[1]),
+            x = 51 * 64 + Number(m[2]),
+            z = 49 * 64 + Number(m[3]);
         if (!inLocs) {
             if (/(^| )o\d+/.test(m[4])) ROOF.add(`${level}:${x},${z}`);
         } else if (/^roof/.test(locNames.get(Number(m[4].split(' ')[0])) ?? '')) {
@@ -67,14 +72,14 @@ for (const line of readFileSync('../content/scripts/skill_agility/configs/alkhar
 
 type Step = { name: string; loc: string; x: number; z: number; level: number; land: string; xp: number; walk?: string };
 const COURSE: Step[] = [
-    { name: 'rough wall',   loc: 'osrsloc_11633', x: 3273, z: 3195, level: 0, land: 'alkharid_land_wall',  xp: 120 },
-    { name: 'tightrope 1',  loc: 'osrsloc_14398', x: 3272, z: 3181, level: 3, land: 'alkharid_land_rope1', xp: 360, walk: 'alkharid_rope1_start' },
-    { name: 'cable',        loc: 'osrsloc_14402', x: 3269, z: 3166, level: 3, land: 'alkharid_land_cable', xp: 480 },
-    { name: 'zip line',     loc: 'osrsloc_14403', x: 3302, z: 3163, level: 3, land: 'alkharid_land_zip',   xp: 480 },
-    { name: 'tropical tree',loc: 'osrsloc_14404', x: 3318, z: 3166, level: 1, land: 'alkharid_land_tree',  xp: 120 },
-    { name: 'beams',        loc: 'osrsloc_11634', x: 3316, z: 3179, level: 2, land: 'alkharid_land_beams', xp: 60 },
-    { name: 'tightrope 2',  loc: 'osrsloc_14409', x: 3313, z: 3186, level: 3, land: 'alkharid_land_rope2', xp: 180, walk: 'alkharid_rope2_start' },
-    { name: 'gap',          loc: 'osrsloc_14399', x: 3300, z: 3193, level: 3, land: 'alkharid_land_gap',   xp: 360 },
+    { name: 'rough wall', loc: 'osrsloc_11633', x: 3273, z: 3195, level: 0, land: 'alkharid_land_wall', xp: 120 },
+    { name: 'tightrope 1', loc: 'osrsloc_14398', x: 3272, z: 3181, level: 3, land: 'alkharid_land_rope1', xp: 360, walk: 'alkharid_rope1_start' },
+    { name: 'cable', loc: 'osrsloc_14402', x: 3269, z: 3166, level: 3, land: 'alkharid_land_cable', xp: 480 },
+    { name: 'zip line', loc: 'osrsloc_14403', x: 3302, z: 3163, level: 3, land: 'alkharid_land_zip', xp: 480 },
+    { name: 'tropical tree', loc: 'osrsloc_14404', x: 3318, z: 3166, level: 1, land: 'alkharid_land_tree', xp: 120 },
+    { name: 'beams', loc: 'osrsloc_11634', x: 3316, z: 3179, level: 2, land: 'alkharid_land_beams', xp: 60 },
+    { name: 'tightrope 2', loc: 'osrsloc_14409', x: 3313, z: 3186, level: 3, land: 'alkharid_land_rope2', xp: 180, walk: 'alkharid_rope2_start' },
+    { name: 'gap', loc: 'osrsloc_14399', x: 3300, z: 3193, level: 3, land: 'alkharid_land_gap', xp: 360 }
 ];
 
 console.log('\nEVERY OBSTACLE IS THERE TO CLICK');
@@ -102,9 +107,7 @@ for (const s of COURSE) {
 // would have to be argued away every run.
 {
     const on = COURSE.filter(s => K[s.land] && isFlagged(K[s.land][0], K[s.land][1], K[s.land][2], CollisionFlag.WALK_BLOCKED));
-    console.log(on.length
-        ? `  note: ${on.map(s => `${s.name} (${K[s.land][0]},${K[s.land][1]})`).join(', ')} land on flagged tiles`
-        : '  note: none of the landings sit on a flagged tile');
+    console.log(on.length ? `  note: ${on.map(s => `${s.name} (${K[s.land][0]},${K[s.land][1]})`).join(', ')} land on flagged tiles` : '  note: none of the landings sit on a flagged tile');
 }
 
 // AND YOU CAN GET OFF IT AGAIN. Standing somewhere is not the same as being able to leave. The
@@ -115,7 +118,14 @@ console.log('\nAND YOU CAN STEP OFF EVERY LANDING');
 for (const s of COURSE) {
     const c = K[s.land];
     if (!c) continue;
-    const out = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+    const out = (
+        [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as const
+    )
         .filter(([dx, dz]) => A.walkable(c[2], c[0] + dx, c[1] + dz))
         .map(([dx, dz]) => `${c[0] + dx},${c[1] + dz}`);
     check(`  ${s.name.padEnd(14)} has somewhere to step`, out.length > 0, true);
@@ -128,9 +138,7 @@ for (let i = 0; i < COURSE.length; i++) {
     const c = K[COURSE[i].land];
     const n = COURSE[(i + 1) % COURSE.length];
     if (!c) continue;
-    check(`  ${COURSE[i].name.padEnd(14)} -> ${n.name}`,
-        c[2] === n.level ? !!A.reachLoc(c[2], c[0], c[1], n.loc, n.x, n.z)
-                         : `lands on level ${c[2]}, ${n.name} is on ${n.level}`, true);
+    check(`  ${COURSE[i].name.padEnd(14)} -> ${n.name}`, c[2] === n.level ? !!A.reachLoc(c[2], c[0], c[1], n.loc, n.x, n.z) : `lands on level ${c[2]}, ${n.name} is on ${n.level}`, true);
 }
 
 console.log('\nTHE WALKED CROSSINGS STAY ON THE ROPE');
@@ -168,13 +176,17 @@ for (const s of COURSE) {
 console.log('\nTHE TROPICAL TREE');
 {
     const q: any = player('stuck', 3318, 3165, 1);
-    q.baseLevels[16] = 20; q.levels[16] = 20;
+    q.baseLevels[16] = 20;
+    q.levels[16] = 20;
     H.setVar(q, 'tutorial', 1000);
     H.tick(1);
     const from = H.mesgs.length;
     A.op(q, 3318, 3166, 'osrsloc_14404', 1);
     H.tick(8);
-    const said = H.mesgs.slice(from).filter(m => m.who === q.username).map(m => m.text);
+    const said = H.mesgs
+        .slice(from)
+        .filter(m => m.who === q.username)
+        .map(m => m.text);
     check('  the swing fires from the only tile a player can stand on', A.saw(said, "can't reach"), false);
     // Read off the constant rather than written out a second time, so the two cannot drift apart.
     // Both used to say 3317,3169, which is open air: the level 2 roof does not begin until z3173,
@@ -186,7 +198,8 @@ console.log('\nTHE TROPICAL TREE');
 console.log('\nA LAP, AS FAR AS THE TREE');
 const p: any = player('kharid', 3273, 3196);
 H.setVar(p, 'tutorial', 1000);
-p.baseLevels[16] = 20; p.levels[16] = 20;              // agility 20, the course's own requirement
+p.baseLevels[16] = 20;
+p.levels[16] = 20; // agility 20, the course's own requirement
 const agil = () => p.stats[16];
 const prog = () => p.getVar(VarPlayerType.getByName('alkharid_course_progress')!.id);
 const before = agil();
@@ -199,7 +212,10 @@ for (const s of COURSE.slice(0, 4)) {
     H.tick(14);
     const at = [p.x, p.z, p.level].join(',');
     const want = K[s.land].join(',');
-    if (at !== want) { console.log(`  ${s.name}: ended at ${at}, expected ${want}`); ok = false; }
+    if (at !== want) {
+        console.log(`  ${s.name}: ended at ${at}, expected ${want}`);
+        ok = false;
+    }
     prev = [p.x, p.z, p.level];
 }
 check('  the first four put the player where the constant says', ok, true);
@@ -211,17 +227,25 @@ console.log('\nAND IT IS SHUT TO ANYONE UNDER 20');
 {
     const q: any = player('novice', 3273, 3196);
     H.setVar(q, 'tutorial', 1000);
-    q.baseLevels[16] = 19; q.levels[16] = 19;
+    q.baseLevels[16] = 19;
+    q.levels[16] = 19;
     const from = H.ifaces.length;
     A.op(q, 3273, 3195, 'osrsloc_11633', 1);
     H.tick(3);
-    const said = H.ifaces.slice(from).filter(i => i.who === q.username && i.kind === 'text' && i.text).map(i => i.text!);
+    const said = H.ifaces
+        .slice(from)
+        .filter(i => i.who === q.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     check('  19 agility is told so and goes nowhere', [A.saw(said, 'Agility level of 20'), q.level], [true, 0]);
     H.despawn(q);
 }
 
-console.log('\nTHE EXPERIENCE IS THE WIKI\'S');
-check('  the eight obstacles add to a lap (216 experience)', COURSE.reduce((a, s) => a + s.xp, 0), 2160);
+console.log("\nTHE EXPERIENCE IS THE WIKI'S");
+check(
+    '  the eight obstacles add to a lap (216 experience)',
+    COURSE.reduce((a, s) => a + s.xp, 0),
+    2160
+);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

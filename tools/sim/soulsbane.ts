@@ -39,14 +39,17 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 await H.boot();
 H.loginOrder();
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -68,7 +71,7 @@ function drain(p: Player, picks: number[] = []) {
             continue;
         }
         const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-        const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+        const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             const pick = picks.shift();
@@ -94,7 +97,11 @@ function itemOnLoc(p: Player, objName: string, x: number, z: number, locName: st
     const obj = ObjType.getId(objName);
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
-    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === obj) { slot = i; break; }
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === obj) {
+            slot = i;
+            break;
+        }
     if (slot === -1) throw new Error('not carrying ' + objName);
     const id = LocType.getId(locName);
     const loc = World.getLoc(x, z, p.level, id)!;
@@ -116,7 +123,12 @@ function talkTo(p: Player, npc: Npc, picks: number[] = []) {
     drain(p, picks);
 }
 /** Everything the chatbox showed the player since `from` (an H.ifaces index), as one string. */
-const shown = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && !!i.text && i.text.length > 1).map(i => i.text!).join(' ');
+const shown = (p: Player, from: number) =>
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && !!i.text && i.text.length > 1)
+        .map(i => i.text!)
+        .join(' ');
 function talkText(p: Player, npc: Npc, picks: number[] = []) {
     const from = H.ifaces.length;
     talkTo(p, npc, picks);
@@ -153,7 +165,12 @@ function walkable(level: number, x: number, z: number, tx: number, tz: number): 
     while (q.length) {
         const [cx, cz] = q.shift()!;
         if (cx === tx && cz === tz) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const k = `${cx + dx},${cz + dz}`;
             if (!seen.has(k) && Math.abs(cx + dx - x) < 40 && Math.abs(cz + dz - z) < 40 && canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
                 seen.add(k);
@@ -174,9 +191,17 @@ for (const [npc, anims] of [
 ] as [string, string[]][]) {
     const t = NpcType.get(NpcType.getId(npc));
     check(`${npc} hitpoints / attack / strength / defence`, [t.stats[3], t.stats[0], t.stats[2], t.stats[1]], [200, 37, 38, 38]);
-    check(`  its attack, block and death animations`, [npcParam(npc, 'attack_anim'), npcParam(npc, 'defend_anim'), npcParam(npc, 'death_anim')], anims.map(seq));
+    check('  its attack, block and death animations', [npcParam(npc, 'attack_anim'), npcParam(npc, 'defend_anim'), npcParam(npc, 'death_anim')], anims.map(seq));
 }
-for (const [npc, hp] of [['soulbane_fear_reaper', 25], ['soulbane_confu_creeper', 28], ['soulbane_confu_creeper_fake1', 28], ['soulbane_hope_monst3', 25], ['soulbane_hope_monst1', 25], ['soulbane_final_tolna1', 37], ['soulbane_final_tolna3', 37]] as [string, number][]) {
+for (const [npc, hp] of [
+    ['soulbane_fear_reaper', 25],
+    ['soulbane_confu_creeper', 28],
+    ['soulbane_confu_creeper_fake1', 28],
+    ['soulbane_hope_monst3', 25],
+    ['soulbane_hope_monst1', 25],
+    ['soulbane_final_tolna1', 37],
+    ['soulbane_final_tolna3', 37]
+] as [string, number][]) {
     check(`${npc} hitpoints`, NpcType.get(NpcType.getId(npc)).stats[3], hp);
 }
 
@@ -200,7 +225,11 @@ a.teleport(SURFACE[0], SURFACE[1], 0);
 H.tick(1);
 useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi');
 truthy('no rope yet: the rift will not take you', a.z < 4000 && prog(a) === 1, at(a));
-truthy('  and says why', H.ifaces.some(i => i.who === a.username && !!i.text?.includes('tie a rope')), 'tie a rope');
+truthy(
+    '  and says why',
+    H.ifaces.some(i => i.who === a.username && !!i.text?.includes('tie a rope')),
+    'tie a rope'
+);
 H.give(a, 'rope');
 itemOnLoc(a, 'rope', RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi');
 check('the rope goes on the rift', [H.getVarBit(a, 'soulbane_riftrope_pres'), H.invCount(a, 'rope')], [1, 0]);
@@ -208,15 +237,19 @@ useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi', 1, 14);
 check('down the rope: the Anger room, stage 2', [at(a), prog(a)], [[3015, 5241, 0], 2]);
 for (const n of ['soulbane_anger_bear', 'soulbane_anger_unicorn', 'soulbane_anger_rat', 'soulbane_anger_goblin']) {
     const live = liveNpcs(n, 3020, 5232, 0);
-    check(`  ${n} in the room, at full health`, live.map(x => x.levels[3]), [200]);
+    check(
+        `  ${n} in the room, at full health`,
+        live.map(x => x.levels[3]),
+        [200]
+    );
 }
 
 // =============================================================================================
 console.log('TELEPORT');
 check('wilderness level in the Anger room', H.runProc(a, '[proc,wilderness_level]', [pack(0, 3015, 5241)])[0], 0);
-check('wilderness level in Tolna\'s room', H.runProc(a, '[proc,wilderness_level]', [pack(1, 2970, 5212)])[0], 0);
+check("wilderness level in Tolna's room", H.runProc(a, '[proc,wilderness_level]', [pack(1, 2970, 5212)])[0], 0);
 check('wilderness level at 3100,3950 (real Wilderness)', H.runProc(a, '[proc,wilderness_level]', [pack(0, 3100, 3950)])[0], 54);
-check('wilderness level at the Edgeville dungeon\'s Wilderness end', H.runProc(a, '[proc,wilderness_level]', [pack(0, 3100, 9950)])[0] > 0, true);
+check("wilderness level at the Edgeville dungeon's Wilderness end", H.runProc(a, '[proc,wilderness_level]', [pack(0, 3100, 9950)])[0] > 0, true);
 check('wilderness level in the Abyss (untouched)', H.runProc(a, '[proc,wilderness_level]', [pack(0, 3040, 4830)])[0] > 20, true);
 const tele = (p: Player) => {
     H.give(p, 'lawrune', 1);
@@ -225,7 +258,10 @@ const tele = (p: Player) => {
     const from = H.mesgs.length;
     H.ifButton(p, 'magic:varrock_teleport');
     H.tick(8);
-    return H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+    return H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 };
 b.teleport(3015, 5240, 0);
 H.tick(2);
@@ -296,7 +332,11 @@ remove(bear);
 a.clearInteraction?.();
 H.tick(12); // out of combat
 H.runProc(a, '[proc,soulbane_stock_anger]');
-check('the room restocks', ['soulbane_anger_bear', 'soulbane_anger_unicorn', 'soulbane_anger_rat', 'soulbane_anger_goblin'].map(n => liveNpcs(n, 3020, 5232, 0).length), [1, 1, 1, 1]);
+check(
+    'the room restocks',
+    ['soulbane_anger_bear', 'soulbane_anger_unicorn', 'soulbane_anger_rat', 'soulbane_anger_goblin'].map(n => liveNpcs(n, 3020, 5232, 0).length),
+    [1, 1, 1, 1]
+);
 
 // the sword on the unicorn, until the rage bar boils over
 H.npcHits.length = 0;
@@ -316,13 +356,19 @@ for (let round = 0; round < 25 && prog(a) === 2; round++) {
     if (!u.isActive) kills++;
     H.tick(6);
 }
-const uHits = H.npcHitsFor('soulbane_anger_unicorn').map(h => h.damage).filter(d => d > 0);
+const uHits = H.npcHitsFor('soulbane_anger_unicorn')
+    .map(h => h.damage)
+    .filter(d => d > 0);
 truthy('the sword on the unicorn hits for ten times a normal swing', uHits.length > 0 && Math.max(...uHits) > 25, { max: Math.max(...uHits), hits: uHits.length });
 truthy(`  a new unicorn comes after each (${kills} killed)`, kills >= 5, kills);
 check('the rage bar boils over: stage 3 (Fear)', prog(a), 3);
 check('  exactly 40 Attack experience, nothing for the kills', a.stats[PlayerStat.ATTACK] - xpBefore, 400);
 check('  the fire is out', H.getVarBit(a, 'soulbane_anger_flamepres'), 1);
-check('  no angry monster left in the room', ['soulbane_anger_bear', 'soulbane_anger_unicorn', 'soulbane_anger_rat', 'soulbane_anger_goblin'].map(n => liveNpcs(n, 3020, 5232, 0).length), [0, 0, 0, 0]);
+check(
+    '  no angry monster left in the room',
+    ['soulbane_anger_bear', 'soulbane_anger_unicorn', 'soulbane_anger_rat', 'soulbane_anger_goblin'].map(n => liveNpcs(n, 3020, 5232, 0).length),
+    [0, 0, 0, 0]
+);
 a.teleport(3036, 5228, 0);
 H.tick(2);
 useLoc(a, 3038, 5228, 'soul_bane_awall_void_exit');
@@ -340,7 +386,7 @@ const HOLES: [string, number, number][] = [
     ['soul_bane_fwall_void5', 3046, 5229],
     ['soul_bane_fwall_void6', 3046, 5239]
 ];
-const wrongHole = (H.getVarBit(a, 'soulbane_fear_enemydoor') % 6);
+const wrongHole = H.getVarBit(a, 'soulbane_fear_enemydoor') % 6;
 useLoc(a, HOLES[wrongHole][1], HOLES[wrongHole][2], HOLES[wrongHole][0]);
 check('an empty hole: no reaper', liveNpcs('soulbane_fear_reaper', 3056, 5232, 0).length, 0);
 const seenHoles = new Set<number>();
@@ -357,7 +403,11 @@ for (let i = 0; i < 12 && prog(a) === 3; i++) {
     if (r) fight(a, r, 40);
     H.tick(3);
 }
-truthy('  the player talks himself out of it, kill by kill (overheads)', ["I don't like looking in these holes but I must!", "I don't feel quite so afraid now.", "These holes aren't that spooky.", "This isn't so scary after all!"].every(t => saidBy(a).includes(t)), saidBy(a));
+truthy(
+    '  the player talks himself out of it, kill by kill (overheads)',
+    ["I don't like looking in these holes but I must!", "I don't feel quite so afraid now.", "These holes aren't that spooky.", "This isn't so scary after all!"].every(t => saidBy(a).includes(t)),
+    saidBy(a)
+);
 check('five reapers: stage 4 (Confusion), the black hole lit', [prog(a), H.getVarBit(a, 'soulbane_fear_killedtally'), H.getVarBit(a, 'soulbane_fear_exitlit')], [4, 5, 1]);
 truthy('  the reaper moved holes between kills', seenHoles.size >= 2, [...seenHoles]);
 a.teleport(3047, 5235, 0);
@@ -368,7 +418,11 @@ check('through the black hole: the Confusion room', at(a), [3056, 5208, 0]);
 // =============================================================================================
 console.log('CONFUSION');
 const fakes = ['soulbane_confu_creeper_fake1', 'soulbane_confu_creeper_fake2', 'soulbane_confu_creeper_fake3', 'soulbane_confu_creeper_fake4'];
-check('five beasts, one real', ['soulbane_confu_creeper', ...fakes].map(n => liveNpcs(n, 3056, 5200, 0).length), [1, 1, 1, 1, 1]);
+check(
+    'five beasts, one real',
+    ['soulbane_confu_creeper', ...fakes].map(n => liveNpcs(n, 3056, 5200, 0).length),
+    [1, 1, 1, 1, 1]
+);
 H.setVar(a, 'debug_onehit', 0);
 const fake = liveNpcs('soulbane_confu_creeper_fake1', 3056, 5200, 0)[0];
 H.npcHits.length = 0;
@@ -420,26 +474,55 @@ for (let i = 0; i < 40 && prog(a) === 5; i++) {
 }
 truthy('a creature comes back smaller when it falls', shrank, shrank);
 check('fifteen falls: the bridge, stage 6', [H.getVarBit(a, 'soulbane_hope_killedtally'), H.getVarBit(a, 'soulbane_hope_bridgepres'), prog(a)], [15, 1, 6]);
-truthy('  one remark per creature gone for good, as in the transcript', ['Is there any end to killing these monsters?', 'This is hard work!', "I've almost killed them all now!", 'Maybe if I kill one more?'].every(t => saidBy(a).includes(t)), saidBy(a).slice(-4));
+truthy(
+    '  one remark per creature gone for good, as in the transcript',
+    ['Is there any end to killing these monsters?', 'This is hard work!', "I've almost killed them all now!", 'Maybe if I kill one more?'].every(t => saidBy(a).includes(t)),
+    saidBy(a).slice(-4)
+);
 a.teleport(3020, 5189, 0);
 H.tick(1);
 // Through the exit beyond the bridge: the scene with Brana plays before anything attacks.
 const cutFrom = H.ifaces.length;
 H.opLoc(a, 3020, 5188, 'soul_bane_hwall_void_exit', 1);
 for (let t = 0; t < 20 && !(a.level === 1 && a.activeScript && a.activeScript.execution === ScriptState.PAUSEBUTTON); t++) H.tick(1);
-check('over the bridge: Tolna\'s room', at(a), [2970, 5212, 1]);
+check("over the bridge: Tolna's room", at(a), [2970, 5212, 1]);
 check('  which is multicombat', H.runProc(a, '[proc,wilderness_level]', [pack(1, 2970, 5212)])[0] === 0 && World.gameMap.isMulti(pack(1, 2975, 5212)), true);
 
 // =============================================================================================
 console.log('TOLNA');
 const heads = ['soulbane_final_tolna1', 'soulbane_final_tolna2', 'soulbane_final_tolna3'];
-check('three heads and Brana', heads.concat(['soulbane_brana']).map(n => liveNpcs(n, 2976, 5212, 1).length), [1, 1, 1, 1]);
-check('  the heads hold off while Brana talks to his son (huntrange 0)', heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]), [0, 0, 0]);
+check(
+    'three heads and Brana',
+    heads.concat(['soulbane_brana']).map(n => liveNpcs(n, 2976, 5212, 1).length),
+    [1, 1, 1, 1]
+);
+check(
+    '  the heads hold off while Brana talks to his son (huntrange 0)',
+    heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]),
+    [0, 0, 0]
+);
 drain(a);
 const cut = shown(a, cutFrom);
-truthy('"Finding Tolna", word for word: Brana pleads, Tolna rejects him, then turns on you', ['Son! Is that you?', 'no longer the boy you once knew', 'Something evil in this dungeon has morphed my body and mind.', 'You had your chance to help me', 'Lies!', 'Ah, we have a visitor!', 'Your father isn\'t lying.', 'then you shall both die!'].every(t => cut.includes(t)), cut.slice(0, 240));
+truthy(
+    '"Finding Tolna", word for word: Brana pleads, Tolna rejects him, then turns on you',
+    [
+        'Son! Is that you?',
+        'no longer the boy you once knew',
+        'Something evil in this dungeon has morphed my body and mind.',
+        'You had your chance to help me',
+        'Lies!',
+        'Ah, we have a visitor!',
+        "Your father isn't lying.",
+        'then you shall both die!'
+    ].every(t => cut.includes(t)),
+    cut.slice(0, 240)
+);
 check('  the scene is marked seen', H.getVarBit(a, 'soulbane_final_seencut'), 1);
-check('  and the heads hunt again (their own huntrange, 12)', heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]), [12, 12, 12]);
+check(
+    '  and the heads hunt again (their own huntrange, 12)',
+    heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => n.huntrange)[0]),
+    [12, 12, 12]
+);
 const brana = liveNpcs('soulbane_brana', 2976, 5212, 1)[0];
 const branaBefore = talkText(a, brana);
 truthy('Brana: "Now you must do what I cannot, conquer the physical dilemma!"', branaBefore.includes('conquer the physical dilemma!'), branaBefore.slice(0, 160));
@@ -456,20 +539,49 @@ for (const h of heads) for (const n of liveNpcs(h, 2976, 5212, 1)) H.setNpcMode(
 H.tick(15);
 const headPos = heads.map(h => liveNpcs(h, 2976, 5212, 1).map(n => [n.x, n.z])[0]);
 H.setVar(a, 'option_nodef', 0);
-truthy('  the heads attack at once, in multicombat, without moving (hits in 15 ticks)', H.hitsFor(a.username).length >= 4, H.hitsFor(a.username).map(h => h.damage));
-check('  still where they were put', headPos, [[2973, 5205], [2981, 5213], [2973, 5220]]);
+truthy(
+    '  the heads attack at once, in multicombat, without moving (hits in 15 ticks)',
+    H.hitsFor(a.username).length >= 4,
+    H.hitsFor(a.username).map(h => h.damage)
+);
+check('  still where they were put', headPos, [
+    [2973, 5205],
+    [2981, 5213],
+    [2973, 5220]
+]);
 for (const h of heads) {
     const n = liveNpcs(h, 2976, 5212, 1)[0];
     if (!n) continue;
     heal(a);
     const m0 = H.mesgs.length;
     fight(a, n, 40);
-    if (process.env.SB_DEBUG) console.log('   ', h, 'at', n.x, n.z, 'active', n.isActive, 'hp', n.levels[3], 'me', at(a), H.mesgs.slice(m0).filter(m => m.who === a.username).map(m => m.text));
+    if (process.env.SB_DEBUG)
+        console.log(
+            '   ',
+            h,
+            'at',
+            n.x,
+            n.z,
+            'active',
+            n.isActive,
+            'hp',
+            n.levels[3],
+            'me',
+            at(a),
+            H.mesgs
+                .slice(m0)
+                .filter(m => m.who === a.username)
+                .map(m => m.text)
+        );
     H.tick(2);
 }
 H.tick(4);
 drain(a);
-check('all three heads down', [1, 2, 3].map(n => H.getVarBit(a, `soulbane_final_tol${n}dead`)), [1, 1, 1]);
+check(
+    'all three heads down',
+    [1, 2, 3].map(n => H.getVarBit(a, `soulbane_final_tol${n}dead`)),
+    [1, 1, 1]
+);
 const tolna = liveNpcs('soulbane_tolna_top', 2976, 5212, 1)[0];
 truthy('  and Tolna is himself again, on the narrow path into the chasm (2982-2985,5212)', !!tolna && tolna.z === 5212 && tolna.level === 1 && tolna.x >= 2982 && tolna.x <= 2985, tolna ? [tolna.x, tolna.z, tolna.level] : null);
 truthy('  which is a walk from the way in', walkable(1, 2970, 5212, 2982, 5212), 'flood 2970,5212 -> 2982,5212');
@@ -489,7 +601,7 @@ check('  500 Defence and 500 Hitpoints experience, 500 coins', [a.stats[PlayerSt
 a.teleport(SURFACE[0], SURFACE[1], 0);
 H.tick(1);
 useLoc(a, RIFT[0], RIFT[1], 'soulbane_falloff2_rope_multi', 1, 14);
-check('after the quest the rift leads to Tolna\'s rift', at(a), [3297, 9824, 0]);
+check("after the quest the rift leads to Tolna's rift", at(a), [3297, 9824, 0]);
 useLoc(a, 3297, 9823, 'soulbane_rope_up');
 check('  and its rope back up', at(a), [SURFACE[0], SURFACE[1], 0]);
 

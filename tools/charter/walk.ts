@@ -1,6 +1,5 @@
 import World from '#/engine/World.js';
 import { isMapBlocked, isZoneAllocated, findPath } from '#/engine/GameMap.js';
-import NpcType from '#/cache/config/NpcType.js';
 await World.start(false, false);
 // crew x,z ; arrival x,z,level ; an inland tile to path to
 const ports: Record<string, [number, number, number, number, number, number, number]> = {
@@ -11,7 +10,7 @@ const ports: Record<string, [number, number, number, number, number, number, num
     khazard: [2673, 3144, 2674, 3141, 1, 2668, 3150],
     phasmatys: [3701, 3502, 3705, 3503, 1, 3696, 3496],
     shipyard: [3001, 3033, 2998, 3032, 1, 2998, 3043],
-    tyras: [2145, 3122, 2142, 3125, 1, 2153, 3120],
+    tyras: [2145, 3122, 2142, 3125, 1, 2153, 3120]
 };
 const only = process.argv[2];
 for (const [name, [cx, cz, ax, az, al, ix, iz]] of Object.entries(ports)) {

@@ -51,8 +51,12 @@ function roll(p: any, proc: string, times: number): Set<string> {
 const p: any = player('clue', 3200, 3200);
 const DIR = '../content/scripts/minigames/game_trail/scripts';
 
-for (const [tier, proc] of [['easy', 'trail_clue_easy_rare'], ['medium', 'trail_clue_medium_rare'],
-                            ['hard', 'trail_clue_hard_rare'], ['hard', 'trail_clue_master_rare']] as [string, string][]) {
+for (const [tier, proc] of [
+    ['easy', 'trail_clue_easy_rare'],
+    ['medium', 'trail_clue_medium_rare'],
+    ['hard', 'trail_clue_hard_rare'],
+    ['hard', 'trail_clue_master_rare']
+] as [string, string][]) {
     const path = `${DIR}/${tier}/trail_clue_${tier}_reward.rs2`;
     const want = entriesOf(path, proc);
     console.log(`\n${proc.toUpperCase()} - ${want.length} entries`);
@@ -99,10 +103,12 @@ console.log('\nEVERY REWARD IS ON A COLLECTION LOG PAGE');
         const block = dbrow.split(/\[collection_log_/).find(b => b.startsWith(key + ']')) ?? '';
         return new Set((block.match(/^data=items,(\S+)$/gm) ?? []).map(l => l.split(',')[1]));
     };
-    for (const [tier, proc, page] of [['easy', 'trail_clue_easy_rare', 'clue_easy'],
-                                      ['medium', 'trail_clue_medium_rare', 'clue_medium'],
-                                      ['hard', 'trail_clue_hard_rare', 'clue_hard'],
-                                      ['hard', 'trail_clue_master_rare', 'clue_elite_master']] as [string, string, string][]) {
+    for (const [tier, proc, page] of [
+        ['easy', 'trail_clue_easy_rare', 'clue_easy'],
+        ['medium', 'trail_clue_medium_rare', 'clue_medium'],
+        ['hard', 'trail_clue_hard_rare', 'clue_hard'],
+        ['hard', 'trail_clue_master_rare', 'clue_elite_master']
+    ] as [string, string, string][]) {
         const want = entriesOf(`${DIR}/${tier}/trail_clue_${tier}_reward.rs2`, proc);
         const have = pageItems(page);
         const missing = want.filter(n => !have.has(n));
@@ -115,8 +121,7 @@ console.log('\nEVERY REWARD IS ON A COLLECTION LOG PAGE');
     // they were rollable here and on no page at all, so a player could hold every one of them and
     // the window would never say so. Twelve, not Old School's twenty-four: the Armadyl, Bandos and
     // Ancient books came years after this era.
-    const PAGES = (readFileSync('../content/scripts/minigames/game_trail/configs/trail_god_pages.enum', 'utf8')
-        .match(/^val=\d+,(\S+)$/gm) ?? []).map(l => l.split(',')[1]);
+    const PAGES = (readFileSync('../content/scripts/minigames/game_trail/configs/trail_god_pages.enum', 'utf8').match(/^val=\d+,(\S+)$/gm) ?? []).map(l => l.split(',')[1]);
     check('  the era has twelve god pages', PAGES.length, 12);
     const sharedHas = pageItems('clue_shared');
     const noPage = PAGES.filter(n => !sharedHas.has(n));

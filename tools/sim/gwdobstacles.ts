@@ -22,18 +22,42 @@ await H.boot();
 
 console.log('\nTHE WOLVES ARE ON THE WALK IN');
 {
-    const spots: [number, number][] = [[2899,3722],[2907,3723],[2905,3727],[2903,3731],[2911,3732],
-      [2923,3735],[2908,3736],[2912,3738],[2920,3739],[2928,3740],[2905,3744],[2920,3744],
-      [2928,3744],[2905,3748],[2925,3748],[2917,3749],[2905,3752],[2922,3752],[2917,3753],
-      [2905,3756],[2922,3756],[2918,3757]];
+    const spots: [number, number][] = [
+        [2899, 3722],
+        [2907, 3723],
+        [2905, 3727],
+        [2903, 3731],
+        [2911, 3732],
+        [2923, 3735],
+        [2908, 3736],
+        [2912, 3738],
+        [2920, 3739],
+        [2928, 3740],
+        [2905, 3744],
+        [2920, 3744],
+        [2928, 3744],
+        [2905, 3748],
+        [2925, 3748],
+        [2917, 3749],
+        [2905, 3752],
+        [2922, 3752],
+        [2917, 3753],
+        [2905, 3756],
+        [2922, 3756],
+        [2918, 3757]
+    ];
     const reach = spots.filter(([x, z]) => A.connected(0, 2898, 3719, x, z, 80)).length;
     check('  every wolf can be reached from the boulder', reach, spots.length);
 }
 
 console.log('\nTHE SARADOMIN ROPES ASK FOR A ROPE');
-for (const [nm, lx, lz, lv] of [['upper', 2913, 5300, 2], ['lower', 2920, 5274, 1]] as [string,number,number,number][]) {
+for (const [nm, lx, lz, lv] of [
+    ['upper', 2913, 5300, 2],
+    ['lower', 2920, 5274, 1]
+] as [string, number, number, number][]) {
     const bare: any = A.player(`bare_${nm}`, lx, lz + 1, lv);
-    bare.baseLevels[16] = 99; bare.levels[16] = 99;
+    bare.baseLevels[16] = 99;
+    bare.levels[16] = 99;
     H.setVar(bare, 'tutorial', 1000);
     H.tick(1);
     let from = H.mesgs.length;
@@ -44,7 +68,8 @@ for (const [nm, lx, lz, lv] of [['upper', 2913, 5300, 2], ['lower', 2920, 5274, 
     H.despawn(bare);
 
     const kit: any = A.player(`kit_${nm}`, lx, lz + 1, lv);
-    kit.baseLevels[16] = 99; kit.levels[16] = 99;
+    kit.baseLevels[16] = 99;
+    kit.levels[16] = 99;
     H.setVar(kit, 'tutorial', 1000);
     H.give(kit, 'rope', 1);
     H.tick(1);
@@ -60,7 +85,8 @@ for (const [nm, lx, lz, lv] of [['upper', 2913, 5300, 2], ['lower', 2920, 5274, 
     // AND IT STAYS TIED. A separate player with the varp already set, because the one above is a
     // floor down by now and opLoc looks for the rock on the level the player is standing on.
     const again: any = A.player(`again_${nm}`, lx, lz + 1, lv);
-    again.baseLevels[16] = 99; again.levels[16] = 99;
+    again.baseLevels[16] = 99;
+    again.levels[16] = 99;
     H.setVar(again, 'tutorial', 1000);
     H.setVar(again, nm === 'upper' ? 'gwd_rope_upper' : 'gwd_rope_lower', 1);
     H.tick(1);
@@ -73,10 +99,13 @@ for (const [nm, lx, lz, lv] of [['upper', 2913, 5300, 2], ['lower', 2920, 5274, 
 }
 
 console.log('\nTHE BANDOS DOOR WORKS BOTH WAYS');
-for (const [label, sx, sz, want] of [['in from the corridor', 2852, 5333, 2850],
-                                     ['back out to the chamber', 2850, 5333, 2852]] as [string,number,number,number][]) {
+for (const [label, sx, sz, want] of [
+    ['in from the corridor', 2852, 5333, 2850],
+    ['back out to the chamber', 2850, 5333, 2852]
+] as [string, number, number, number][]) {
     const p: any = A.player('door' + sx, sx, sz, 2);
-    p.baseLevels[2] = 99; p.levels[2] = 99;
+    p.baseLevels[2] = 99;
+    p.levels[2] = 99;
     H.setVar(p, 'tutorial', 1000);
     H.give(p, 'hammer', 1);
     H.tick(1);
@@ -94,7 +123,7 @@ for (const [label, sx, sz, want] of [['in from the corridor', 2852, 5333, 2850],
 console.log('BOTH SARADOMIN ROPES GO BACK UP');
 for (const [nm, lv, lx, lz, sx, sz, wantLv] of [
     ['upper', 1, 2914, 5300, 2915, 5300, 2],
-    ['lower', 0, 2920, 5274, 2919, 5274, 1],
+    ['lower', 0, 2920, 5274, 2919, 5274, 1]
 ] as [string, number, number, number, number, number, number][]) {
     const p: any = A.player(`up_${nm}`, sx, sz, lv);
     H.setVar(p, 'tutorial', 1000);
@@ -108,10 +137,11 @@ for (const [nm, lv, lx, lz, sx, sz, wantLv] of [
 console.log('\nTHE ARMADYL GRAPPLE GOES BOTH WAYS');
 for (const [label, sx, sz, want] of [
     ['out to the pillar', 2871, 5279, 5269],
-    ['back again',        2871, 5269, 5279],
+    ['back again', 2871, 5269, 5279]
 ] as [string, number, number, number][]) {
     const p: any = A.player('grap' + sz, sx, sz, 2);
-    p.baseLevels[4] = 99; p.levels[4] = 99;
+    p.baseLevels[4] = 99;
+    p.levels[4] = 99;
     H.setVar(p, 'tutorial', 1000);
     H.give(p, 'mith_grapple', 1);
     H.equip(p, { rhand: 'crossbow' });

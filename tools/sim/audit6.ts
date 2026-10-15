@@ -428,8 +428,18 @@ console.log('SPIRITS OF THE ELID');
     op(p, 3372, 9556, 'elid_blackgolem_door');
     check('black golem door: through, east', [at(p), free(p)], [[3373, 9556, 0], true]);
     H.give(p, 'bronze_arrow', 5);
+    // THE SHOT IS TAKEN FROM A DISTANCE, AND THE FIRST CLICK ONLY SETS THE RANGE. The channel runs
+    // between the target and the black golem's room so nobody can stand beside it, which is why the
+    // content uses [apnpcu]: it opens with `if (npc_range(coord) > 7) { p_aprange(7); return; }`, so
+    // a click from further out asks the engine to re-run the trigger once the player has walked into
+    // range - and the walk needs ticks the sim was not giving it. One click with no ticks lands the
+    // arrow only when the black golem's door happens to leave the player inside seven tiles, which
+    // is why this passed alone and failed in a sweep twenty minutes later.
     const target = findNpc('elid_ranging_target_multinpc', p);
-    useOnNpc(p, target, 'bronze_arrow');
+    for (let t = 0; t < 30 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
+        if (t % 10 === 0) useOnNpc(p, target, 'bronze_arrow');
+        H.tick(1);
+    }
     check('  an arrow on the target from across the channel', [H.getVarBit(p, 'elid_rangingchannel'), H.getVarBit(p, 'elidquest')], [1, 35]);
     op(p, 3372, 9556, 'elid_blackgolem_door');
 

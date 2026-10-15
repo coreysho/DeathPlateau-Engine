@@ -39,13 +39,33 @@ const check = (what: string, got: unknown, want: unknown) => {
 
 // %viking_bits layout (quest_viking.constant)
 const B = {
-    manni: 0, sigli: 1, olaf: 2, sigmund: 3, thorvald: 4, peer: 5,
-    manniBeaten: 12, planted: 13, olafAsked: 14, thorvaldAsked: 15, kLo: 16,
-    mazeDone: 18, askRock: 25, lalliRock: 26, swensen: 27, potato: 28, cabbage: 29, onion: 30
+    manni: 0,
+    sigli: 1,
+    olaf: 2,
+    sigmund: 3,
+    thorvald: 4,
+    peer: 5,
+    manniBeaten: 12,
+    planted: 13,
+    olafAsked: 14,
+    thorvaldAsked: 15,
+    kLo: 16,
+    mazeDone: 18,
+    askRock: 25,
+    lalliRock: 26,
+    swensen: 27,
+    potato: 28,
+    cabbage: 29,
+    onion: 30
 };
 const bits = (p: Player) => H.getVar(p, 'viking_bits');
 const bit = (p: Player, n: number) => (bits(p) >>> n) & 1;
-const setBits = (p: Player, ...ns: number[]) => H.setVar(p, 'viking_bits', ns.reduce((v, n) => v | (1 << n), bits(p)));
+const setBits = (p: Player, ...ns: number[]) =>
+    H.setVar(
+        p,
+        'viking_bits',
+        ns.reduce((v, n) => v | (1 << n), bits(p))
+    );
 const koschei = (p: Player) => (bits(p) >>> B.kLo) & 3;
 const at = (p: Player) => [p.x, p.z, p.level];
 
@@ -80,7 +100,7 @@ function drain(p: Player, picks: number[] = [], maxTicks = 60) {
         }
         idle = 0;
         const names = (p as any).resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-        const open = (p as any).modalChat === -1 ? '' : Component.get((p as any).modalChat).comName ?? '';
+        const open = (p as any).modalChat === -1 ? '' : (Component.get((p as any).modalChat).comName ?? '');
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             const pick = picks.shift();
@@ -96,7 +116,14 @@ function drain(p: Player, picks: number[] = [], maxTicks = 60) {
 function talk(p: Player, npcName: string, picks: number[] = []) {
     const npc = [0, 1, 2, 3].map(l => H.npcNear(npcName, p.x, p.z, l)).find(n => n);
     if (!npc) throw new Error('no npc ' + npcName);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, 1);
@@ -128,7 +155,7 @@ function useOnLoc(p: Player, x: number, z: number, locName: string, objName: str
 }
 
 /** OpNpcUHandler. */
-function useOnNpc(p: Player, npcName: string, objName: string) {
+function _useOnNpc(p: Player, npcName: string, objName: string) {
     const npc = H.npcNear(npcName, p.x, p.z, p.level)!;
     p.clearPendingAction();
     p.lastUseItem = ObjType.getId(objName);
@@ -171,7 +198,12 @@ function clickLoc(p: Player, x: number, z: number, locName: string, op: number) 
 const locAt = (x: number, z: number, level: number, name: string) => World.getLoc(x, z, level, LocType.getId(name)) !== null;
 const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).at(-1)?.text;
 const said = (p: Player, s: string) => H.mesgs.some(m => m.who === p.username && m.text.includes(s));
-const allText = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text').map(i => i.text ?? '').join(' | ');
+const allText = (p: Player, from: number) =>
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => i.text ?? '')
+        .join(' | ');
 
 // =====================================================================================
 console.log('SWENSEN  the house door, the maze, and the seventh vote');
@@ -197,7 +229,15 @@ console.log('SWENSEN  the house door, the maze, and the seventh vote');
 
     // Every landing is in its own sealed room: no tile of the maze can be walked to from another.
     const landings: Record<string, [number, number]> = {
-        enter: [7, 22], room2: [18, 32], room3: [29, 21], room4: [41, 32], room5: [6, 43], room6: [29, 54], room7: [42, 43], end: [41, 54], deadend: [7, 32]
+        enter: [7, 22],
+        room2: [18, 32],
+        room3: [29, 21],
+        room4: [41, 32],
+        room5: [6, 43],
+        room6: [29, 54],
+        room7: [42, 43],
+        end: [41, 54],
+        deadend: [7, 32]
     };
     const reach = (a: [number, number], b: [number, number]) => {
         const [ax, az] = g(M41_156, a[0], a[1]);
@@ -221,7 +261,15 @@ console.log('SWENSEN  the house door, the maze, and the seventh vote');
     check('  and its rope puts you back at the start', at(p), [ex, ez, 0]);
 
     // the seven correct portals, one room after another
-    const portals: [number, number][] = [[7, 18], [15, 31], [32, 20], [41, 34], [6, 39], [32, 53], [42, 45]];
+    const portals: [number, number][] = [
+        [7, 18],
+        [15, 31],
+        [32, 20],
+        [41, 34],
+        [6, 39],
+        [32, 53],
+        [42, 45]
+    ];
     let n = 0;
     const route: string[] = [];
     for (const [px, pz] of portals) {
@@ -279,7 +327,7 @@ console.log('PEER  the mural');
 }
 
 // =====================================================================================
-console.log('THORVALD  the ladder, Koschei\'s speed, three kills and a safe death');
+console.log("THORVALD  the ladder, Koschei's speed, three kills and a safe death");
 {
     const [lx, lz] = g(M41_57, 43, 46);
     const down = (p: Player) => {
@@ -324,7 +372,7 @@ console.log('THORVALD  the ladder, Koschei\'s speed, three kills and a safe deat
         const ts = H.hitsFor(t.username).map(h => h.tick);
         const d = ts.slice(1).map((v, i) => v - ts[i]);
         gaps.push(d.length ? Math.min(...d) : -1);
-        npc.isActive && World.removeNpc(npc, -1);
+        if (npc.isActive) World.removeNpc(npc, -1);
         H.despawn(t);
     }
     check('Koschei attacks faster each form (ticks between hits, forms 1-4)', gaps, [5, 4, 3, 1]);
@@ -356,14 +404,14 @@ console.log('THORVALD  the ladder, Koschei\'s speed, three kills and a safe deat
     for (let i = 0; i < 30 && p.level === 2; i++) H.tick(1);
     drain(p);
     const [hx, hz] = g(M41_57, 43, 45);
-    check('dying down there: Thorvald\'s hut, food and jewellery kept', [at(p), H.invCount(p, 'lobster'), H.invCount(p, 'ring_of_recoil'), p.getInventory(InvType.WORN)!.get(12)?.id === ObjType.getId('ring_of_recoil')], [[hx, hz, 0], 5, 1, true]);
+    check("dying down there: Thorvald's hut, food and jewellery kept", [at(p), H.invCount(p, 'lobster'), H.invCount(p, 'ring_of_recoil'), p.getInventory(InvType.WORN)!.get(12)?.id === ObjType.getId('ring_of_recoil')], [[hx, hz, 0], 5, 1, true]);
     talk(p, 'viking_thorvald');
     check('Thorvald gives his vote', bit(p, B.thorvald), 1);
     H.despawn(p);
 }
 
 // =====================================================================================
-console.log('OLAF  the branch, Lalli\'s stew, the wool');
+console.log("OLAF  the branch, Lalli's stew, the wool");
 {
     const p = player('frem_olaf', 2660, 3670);
     setBits(p, B.olafAsked);
@@ -462,7 +510,7 @@ console.log('MANNI  the pipe and the keg');
     check('Take-from on the keg by the bar: a keg of beer', H.invCount(p, 'viking_beerkeg'), 1);
     H.give(p, 'viking_low_alcahol_beerkeg');
     talk(p, 'viking_reveller_3');
-    check('the rematch with both kegs and the pipe primed: Manni\'s vote', [bit(p, B.manni), H.invCount(p, 'viking_beerkeg'), H.invCount(p, 'viking_low_alcahol_beerkeg')], [1, 0, 0]);
+    check("the rematch with both kegs and the pipe primed: Manni's vote", [bit(p, B.manni), H.invCount(p, 'viking_beerkeg'), H.invCount(p, 'viking_low_alcahol_beerkeg')], [1, 0, 0]);
     H.despawn(p);
 }
 

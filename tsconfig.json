@@ -16,6 +16,8 @@
     "sourceMap": true,
     "allowJs": true,
     "checkJs": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "strict": true,
     "alwaysStrict": true,
     "skipLibCheck": true,

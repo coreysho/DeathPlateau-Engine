@@ -16,13 +16,17 @@
 //   reward      quest points, the xp, the astral runes and the Lunar spellbook at the altar
 //   spells      every spell on the book cast once, with its level and rune checks
 import * as A from './a1lib.js';
-const { H, World, ObjType, NpcType, LocType, Player } = A;
-import Component from '#/cache/config/Component.js';
+// Player AS A TYPE, which a destructured const cannot be: `const { Player } = A` is a value
+// binding, so every `(p: Player)` below was TS2749 - "refers to a value, but is being used as a
+// type here" - six of them. The type comes from the module it lives in.
+import type Player from '#/engine/entity/Player.js';
+import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+const { H, World, LocType } = A;
 
 await H.boot();
 H.loginOrder();
 
-const { check, drive, talk, useOn, useOnNpc, useHeld, op, held, at } = A;
+const { check, drive, talk, useOn, useOnNpc, useHeld, op, held } = A;
 const say = (s: string) => console.log('\n' + s);
 
 // ---------------------------------------------------------------- the world
@@ -35,7 +39,6 @@ const BRAZIER = [2074, 3911];
 const RING_DIG = [2078, 3863];
 const MINE = [2319, 10340];
 const DREAM_CENTRE = [1759, 5085];
-const AIR_ALTAR = [2843, 4832];
 const stage = (p: Player) => H.getVar(p, 'lunar_quest');
 const bits = (p: Player) => H.getVar(p, 'lunar_bits');
 
@@ -69,16 +72,37 @@ say('THE REQUIREMENTS');
 {
     const p = mk('nobody', false);
     const lines = talk(p, 'lokar_searunner', ['away from these parts', 'Why did you leave', 'innards']);
-    check('Lokar will not start the quest for someone who is not a Fremennik',
-        lines.some(l => l.includes('not even one of us')), true);
+    check(
+        'Lokar will not start the quest for someone who is not a Fremennik',
+        lines.some(l => l.includes('not even one of us')),
+        true
+    );
     check('  and the quest has not started', stage(p), 0);
     H.despawn(p);
 }
 {
+    // THE SKILL GATE, which this block measured nothing of until the typecheck said so. Its only
+    // statement was `p.setLevel(p.getStatId ? p.getStatId(s) : 0, 1)` and Player has no
+    // getStatId - so the ternary took the 0 branch every time, set Attack to 1 five times over,
+    // and despawned the player again without a single check.
+    //
+    // AND THE FIRST FIX MEASURED NOTHING EITHER. PlayerStatMap is keyed in CAPITALS, so
+    // get('crafting') is undefined, the non-null assertion made tsc accept it, and
+    // baseLevels[undefined] = 1 on a typed array is a silent no-op - a maxed player walked up to
+    // Lokar and the quest started. The stat ids come off the PlayerStat enum now, where a name
+    // that does not exist is a compile error rather than an undefined.
     const p = mk('lowskill');
-    for (const s of ['crafting', 'mining', 'woodcutting', 'firemaking', 'herblore']) {
-        p.setLevel(p.getStatId ? p.getStatId(s) : 0, 1);
+    for (const s of [PlayerStat.CRAFTING, PlayerStat.MINING, PlayerStat.WOODCUTTING, PlayerStat.FIREMAKING, PlayerStat.HERBLORE]) {
+        p.setLevel(s, 1);
     }
+    H.tick(1);
+    const lines = talk(p, 'lokar_searunner', ['away from these parts', 'Why did you leave', 'innards']);
+    check(
+        'Lokar refuses a Fremennik who is under the skill requirements',
+        lines.some(l => l.includes('not last a day out there')),
+        true
+    );
+    check('  and the quest has not started', stage(p), 0);
     H.despawn(p);
 }
 
@@ -86,7 +110,11 @@ const P = mk('lunar');
 {
     const lines = talk(P, 'lokar_searunner', ['away from these parts', 'Why did you leave', 'innards']);
     check('Lokar starts the quest', stage(P), 10);
-    check('  and sends you to Brundt', lines.some(l => l.includes('Seal of Passage')), true);
+    check(
+        '  and sends you to Brundt',
+        lines.some(l => l.includes('Seal of Passage')),
+        true
+    );
 }
 
 // ================================================================ Brundt's seal
@@ -103,8 +131,8 @@ say('THE SEAL OF PASSAGE');
 say('THE CROSSING');
 {
     tp(P, RELLEKKA_PIER);
-    talk(P, 'lokar_searunner', ["Take me to Pirates"]);
-    check('Lokar lands you at Pirates\' Cove', [P.x, P.z], COVE);
+    talk(P, 'lokar_searunner', ['Take me to Pirates']);
+    check("Lokar lands you at Pirates' Cove", [P.x, P.z], COVE);
     talk(P, 'captain_bentley', ['Can we sail to Lunar Isle']);
     check('Captain Bentley lands you on Lunar Isle', [P.x, P.z], ISLE_PIER);
     check('  and the quest knows you arrived', stage(P), 80);
@@ -117,8 +145,7 @@ say('THE SEAL RULE');
     H.setVar(q, 'lunar_quest', 80);
     tp(q, [ONEIRO[0] + 1, ONEIRO[1]]);
     talk(q, 'oneiromancer');
-    check('talking to the Moon Clan with no seal puts you back in Rellekka',
-        [q.x, q.z], [2630, 3696]);
+    check('talking to the Moon Clan with no seal puts you back in Rellekka', [q.x, q.z], [2630, 3696]);
     H.despawn(q);
 }
 
@@ -127,8 +154,11 @@ say('THE ONEIROMANCER');
 {
     tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
     const lines = talk(P, 'oneiromancer');
-    check('she names the three things you need',
-        lines.some(l => l.includes('waking sleep potion')), true);
+    check(
+        'she names the three things you need',
+        lines.some(l => l.includes('waking sleep potion')),
+        true
+    );
     check('  and the quest moves on', stage(P), 90);
 }
 
@@ -139,7 +169,7 @@ say('THE WAKING SLEEP POTION');
     talk(P, 'baba_yaga', ['Oneiromancer told me']);
     check('Baba Yaga hands over the special vial', H.invCount(P, 'lunar_empty_vial'), 1);
     useOn(P, 2086, 3895, 'loc474_16643', 'lunar_empty_vial');
-    check('  filled at the island\'s water source', H.invCount(P, 'lunar_vial_water'), 1);
+    check("  filled at the island's water source", H.invCount(P, 'lunar_vial_water'), 1);
     H.give(P, 'guam_leaf');
     H.give(P, 'marentill');
     useHeld(P, 'guam_leaf', 'lunar_vial_water');
@@ -166,7 +196,7 @@ say('THE LUNAR STAFF');
         ['air_altar', 2843, 4833, 'lunar_staff_pt1'],
         ['fire_altar', 2584, 4837, 'lunar_staff_pt2'],
         ['water_altar', 2715, 4835, 'lunar_staff_pt3'],
-        ['earth_altar', 2657, 4840, 'lunar_staff'],
+        ['earth_altar', 2657, 4840, 'lunar_staff']
     ];
     // the wrong altar first: the earth altar has nothing to say to a plain Dramen staff
     const wrong = World.getLoc(2657, 4840, 0, LocType.getId('earth_altar'));
@@ -177,10 +207,12 @@ say('THE LUNAR STAFF');
     }
     for (const [loc, x, z, want] of altars) {
         const l = World.getLoc(x, z, 0, LocType.getId(loc));
-        if (!l) { console.log(`  --   no ${loc} at ${x},${z}, skipped`); continue; }
+        if (!l) {
+            console.log(`  --   no ${loc} at ${x},${z}, skipped`);
+            continue;
+        }
         tp(P, [x, z + 2]);
-        const carry = H.invCount(P, 'dramen_staff') ? 'dramen_staff'
-            : ['lunar_staff_pt1', 'lunar_staff_pt2', 'lunar_staff_pt3'].find(o => H.invCount(P, o)) ?? '';
+        const carry = H.invCount(P, 'dramen_staff') ? 'dramen_staff' : (['lunar_staff_pt1', 'lunar_staff_pt2', 'lunar_staff_pt3'].find(o => H.invCount(P, o)) ?? '');
         useOn(P, x, z, loc, carry);
         check(`the ${loc} makes ${want}`, H.invCount(P, want), 1);
     }
@@ -198,10 +230,13 @@ say('THE EIGHT CEREMONIAL PIECES');
     tp(P, [MINE[0] + 1, MINE[1]], 2);
     H.give(P, 'rune_pickaxe');
     op(P, 2319, 10339, 'loc474_16680', 1);
-    check('the mine\'s stalagmites give lunar ore', H.invCount(P, 'lunar_ore'), 1);
+    check("the mine's stalagmites give lunar ore", H.invCount(P, 'lunar_ore'), 1);
     let fname = 'viking_furnace';
     let furnace = A.locsNamed(fname, 2600, 3660, 2680, 3720)[0];
-    if (!furnace) { fname = 'viking_furnace2'; furnace = A.locsNamed(fname, 2600, 3660, 2680, 3720)[0]; }
+    if (!furnace) {
+        fname = 'viking_furnace2';
+        furnace = A.locsNamed(fname, 2600, 3660, 2680, 3720)[0];
+    }
     // Rellekka's own anvil is viking_anvil, which has no [oplocu] of its own - a pre-existing gap
     // in smithing, not this quest's - so the test uses a plain anvil put down beside the player.
     A.addLoc('anvil', 2090, 3930, 0);
@@ -210,13 +245,19 @@ say('THE EIGHT CEREMONIAL PIECES');
         tp(P, [furnace[0], furnace[1] + 3]);
         useOn(P, furnace[0], furnace[1], fname, 'lunar_ore');
         check('  which smelts into a lunar bar at a furnace', H.invCount(P, 'lunar_bar'), 1);
-    } else { console.log('  --   no Rellekka furnace found'); H.give(P, 'lunar_bar'); }
+    } else {
+        console.log('  --   no Rellekka furnace found');
+        H.give(P, 'lunar_bar');
+    }
     H.give(P, 'hammer');
     if (anvil) {
         tp(P, [anvil[0], anvil[1] + 1]);
         useOn(P, anvil[0], anvil[1], 'anvil', 'lunar_bar');
         check('  and hammers into the Lunar helm on an anvil', H.invCount(P, 'lunar_helm'), 1);
-    } else { console.log('  --   no Rellekka anvil found'); H.give(P, 'lunar_helm'); }
+    } else {
+        console.log('  --   no Rellekka anvil found');
+        H.give(P, 'lunar_helm');
+    }
 
     // the leather four
     tp(P, VILLAGE);
@@ -227,15 +268,19 @@ say('THE EIGHT CEREMONIAL PIECES');
     check('  and takes the money', H.invCount(P, 'coins'), 600);
     H.give(P, 'needle');
     H.give(P, 'thread', 4);
-    for (const [pick, want] of [['Lunar torso', 'lunar_torso'], ['Lunar trousers', 'lunar_legs'],
-                                ['Lunar gloves', 'lunar_gloves'], ['Lunar boots', 'lunar_boots']] as [string, string][]) {
+    for (const [pick, want] of [
+        ['Lunar torso', 'lunar_torso'],
+        ['Lunar trousers', 'lunar_legs'],
+        ['Lunar gloves', 'lunar_gloves'],
+        ['Lunar boots', 'lunar_boots']
+    ] as [string, string][]) {
         useHeld(P, 'needle', 'suqah_leather', [pick]);
         check(`  sews ${want}`, H.invCount(P, want), 1);
     }
 
     // the cape
     talk(P, 'pauline_polaris', ['Pauline', 'Jane Blud-Hagic-Maid']);
-    check('Pauline\'s riddle gives the cape', H.invCount(P, 'lunar_cape'), 1);
+    check("Pauline's riddle gives the cape", H.invCount(P, 'lunar_cape'), 1);
 
     // the amulet
     talk(P, 'meteora');
@@ -254,8 +299,7 @@ say('THE EIGHT CEREMONIAL PIECES');
 
     // hand them all in
     tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
-    for (const piece of ['lunar_helm', 'lunar_torso', 'lunar_legs', 'lunar_gloves', 'lunar_boots',
-                         'lunar_cape', 'lunar_amulet', 'lunar_ring']) {
+    for (const piece of ['lunar_helm', 'lunar_torso', 'lunar_legs', 'lunar_gloves', 'lunar_boots', 'lunar_cape', 'lunar_amulet', 'lunar_ring']) {
         useOnNpc(P, 'oneiromancer', piece);
     }
     check('the Oneiromancer has all eight', H.getVar(P, 'lunar_pieces'), 255);
@@ -282,36 +326,71 @@ say('THE CEREMONY');
     tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
     talk(P, 'oneiromancer');
     useHeld(P, 'lunar_waking_sleep_vial', 'lunar_kindling');
-    H.equip(P, { hat: 'lunar_helm', torso: 'lunar_torso', legs: 'lunar_legs', hands: 'lunar_gloves',
-                 feet: 'lunar_boots', back: 'lunar_cape', front: 'lunar_amulet', ring: 'lunar_ring',
-                 rhand: 'lunar_staff' });
+    H.equip(P, { hat: 'lunar_helm', torso: 'lunar_torso', legs: 'lunar_legs', hands: 'lunar_gloves', feet: 'lunar_boots', back: 'lunar_cape', front: 'lunar_amulet', ring: 'lunar_ring', rhand: 'lunar_staff' });
     H.tick(1);
     tp(P, BRAZIER);
     useOn(P, 2072, 3911, 'loc474_16810', 'lunar_soaked_kindling');
-    check('in full ceremonial dress the brazier sends you to the Dream World', [P.x, P.z, P.level],
-        [DREAM_CENTRE[0], DREAM_CENTRE[1], 2]);
+    check('in full ceremonial dress the brazier sends you to the Dream World', [P.x, P.z, P.level], [DREAM_CENTRE[0], DREAM_CENTRE[1], 2]);
     check('  and the quest moves on', stage(P), 130);
 }
-
 
 // ================================================================ the Dream World
 say('THE DREAM WORLD');
 const vb = (n: string) => H.getVarBit(P, n);
 const dream = () => H.getVar(P, 'lunar_dream');
-const DICE: number[][] = [[1735, 5064], [1732, 5060], [1739, 5060], [1739, 5067], [1732, 5067], [1737, 5063]];
-const NUMS: number[][] = [[1783, 5062], [1786, 5065], [1787, 5063], [1786, 5061], [1784, 5060],
-                          [1781, 5061], [1780, 5063], [1781, 5065], [1782, 5066], [1784, 5067]];
+const DICE: number[][] = [
+    [1735, 5064],
+    [1732, 5060],
+    [1739, 5060],
+    [1739, 5067],
+    [1732, 5067],
+    [1737, 5063]
+];
+const NUMS: number[][] = [
+    [1783, 5062],
+    [1786, 5065],
+    [1787, 5063],
+    [1786, 5061],
+    [1784, 5060],
+    [1781, 5061],
+    [1780, 5063],
+    [1781, 5065],
+    [1782, 5066],
+    [1784, 5067]
+];
 const PATTERN: Record<number, number[]> = {
-    1: [2, 14, 8, 8, 15, 1, 15, 8], 2: [8, 8, 12, 4, 12, 8, 14, 2], 3: [1, 1, 15, 8, 14, 2, 14, 8],
-    4: [2, 6, 12, 8, 14, 2, 6, 4], 5: [1, 15, 8, 15, 1, 1, 7, 4], 6: [1, 7, 4, 7, 1, 15, 8, 8],
-    7: [2, 14, 8, 12, 6, 2, 6, 4], 8: [2, 6, 4, 6, 3, 1, 7, 4], 9: [4, 7, 1, 3, 2, 3, 1, 1],
-    10: [2, 14, 8, 8, 14, 2, 6, 4] };
-const SEQ: number[][] = [[6, 7], [1, 5], [3, 4], [5, 1], [4, 5], [7, 9], [3, 6], [3, 4],
-                         [3, 7], [8, 9], [4, 8], [1, 6], [5, 1], [2, 0], [3, 1], [5, 4]];
-const EMOTES = ['emotes:yes', 'emotes:no', 'emotes:bow', 'emotes:angry', 'emotes:think',
-                'emotes:wave', 'emotes:cheer', 'emotes:clap', 'emotes:dance', 'emotes:cry'];
+    1: [2, 14, 8, 8, 15, 1, 15, 8],
+    2: [8, 8, 12, 4, 12, 8, 14, 2],
+    3: [1, 1, 15, 8, 14, 2, 14, 8],
+    4: [2, 6, 12, 8, 14, 2, 6, 4],
+    5: [1, 15, 8, 15, 1, 1, 7, 4],
+    6: [1, 7, 4, 7, 1, 15, 8, 8],
+    7: [2, 14, 8, 12, 6, 2, 6, 4],
+    8: [2, 6, 4, 6, 3, 1, 7, 4],
+    9: [4, 7, 1, 3, 2, 3, 1, 1],
+    10: [2, 14, 8, 8, 14, 2, 6, 4]
+};
+const SEQ: number[][] = [
+    [6, 7],
+    [1, 5],
+    [3, 4],
+    [5, 1],
+    [4, 5],
+    [7, 9],
+    [3, 6],
+    [3, 4],
+    [3, 7],
+    [8, 9],
+    [4, 8],
+    [1, 6],
+    [5, 1],
+    [2, 0],
+    [3, 1],
+    [5, 4]
+];
+const EMOTES = ['emotes:yes', 'emotes:no', 'emotes:bow', 'emotes:angry', 'emotes:think', 'emotes:wave', 'emotes:cheer', 'emotes:clap', 'emotes:dance', 'emotes:cry'];
 /** Which face a die is showing, and so which loc stands on its tile right now. */
-const diceLoc = (i: number) => 'loc474_' + (16842 + (((vb('lunar_dice_flips') >>> i) & 1) ? 7 - (i + 1) : i + 1));
+const diceLoc = (i: number) => 'loc474_' + (16842 + ((vb('lunar_dice_flips') >>> i) & 1 ? 7 - (i + 1) : i + 1));
 /** Step onto a platform, which swaps you between the middle and a challenge's own island. */
 function platform(locName: string, x: number, z: number) {
     tp(P, [x, z + 1], 2);
@@ -320,8 +399,16 @@ function platform(locName: string, x: number, z: number) {
 
 {
     const lines = talk(P, 'ethereal_being');
-    check('the Ethereal Being explains the dream', lines.some(l => l.includes('in the land of your own')), true);
-    check('  and names the six challenges', lines.some(l => l.includes('A game of chance')), true);
+    check(
+        'the Ethereal Being explains the dream',
+        lines.some(l => l.includes('in the land of your own')),
+        true
+    );
+    check(
+        '  and names the six challenges',
+        lines.some(l => l.includes('A game of chance')),
+        true
+    );
 }
 
 // ---- A game of chance
@@ -329,20 +416,26 @@ function platform(locName: string, x: number, z: number) {
     platform('loc474_16637', 1751, 5080);
     check('the Fluke platform lands you on the dice island', [P.x, P.z, P.level], [1735, 5069, 2]);
     talk(P, 'ethereal_fluke');
-    check('  he calls a number between 12 and 30',
-        vb('lunar_dice_target') >= 12 && vb('lunar_dice_target') <= 30, true);
+    check('  he calls a number between 12 and 30', vb('lunar_dice_target') >= 12 && vb('lunar_dice_target') <= 30, true);
     for (let guard = 0; guard < 300 && ((dream() >>> 8) & 1) === 0; guard++) {
         const want = vb('lunar_dice_target');
         let pick = -1;
         for (let m = 0; m < 64; m++) {
             let tot = 0;
-            for (let i = 0; i < 6; i++) tot += ((m >>> i) & 1) ? 7 - (i + 1) : i + 1;
-            if (tot === want) { pick = m; break; }
+            for (let i = 0; i < 6; i++) tot += (m >>> i) & 1 ? 7 - (i + 1) : i + 1;
+            if (tot === want) {
+                pick = m;
+                break;
+            }
         }
         if (pick === -1) throw new Error('no dice state totals ' + want);
         const flips = vb('lunar_dice_flips');
         let die = -1;
-        for (let i = 0; i < 6; i++) if (((pick >>> i) & 1) !== ((flips >>> i) & 1)) { die = i; break; }
+        for (let i = 0; i < 6; i++)
+            if (((pick >>> i) & 1) !== ((flips >>> i) & 1)) {
+                die = i;
+                break;
+            }
         // already showing the number he just called: the dice have to be disturbed to be read
         if (die === -1) die = 0;
         tp(P, [DICE[die][0] + 1, DICE[die][1]], 2);
@@ -375,16 +468,20 @@ function platform(locName: string, x: number, z: number) {
     // listening, which is the thing this is here to catch; counting attempts would only report it
     // as "he never finished".
     for (let guard = 0; guard < 60 && ((dream() >>> 9) & 1) === 0; guard++) {
-        const id = vb('lunar_seq_id'), step = vb('lunar_seq_step'), score = vb('lunar_seq_score');
+        const id = vb('lunar_seq_id'),
+            step = vb('lunar_seq_step'),
+            score = vb('lunar_seq_score');
         const want = SEQ[id][step];
         tp(P, [NUMS[want][0] + 1, NUMS[want][1]], 2);
         op(P, NUMS[want][0], NUMS[want][1], 'loc474_' + (16619 + want), 1);
-        const moved = vb('lunar_seq_id') !== id || vb('lunar_seq_step') !== step
-            || vb('lunar_seq_score') !== score || ((dream() >>> 9) & 1) === 1;
-        if (!moved) throw new Error(`the Numerator ignored ${want}: sequence ${id} `
-            + `("${['0,1,3,4', '1,1,1,2,1,3,1,4', '1,1,2,2,3', '1,1,2,3,1,1,4', '1,2,3', '1,3,5', '1,4,2,5',
-                   '1,6,2,5', '1,9,2,8', '2,3,5,6', '2,6,3,7', '3,4,2,5', '7,3,6,2', '8,6,4', '9,7,5',
-                   '9,8,7,6'][id]}"), step ${step}, score ${score} - "${A.lastMes(P)}"`);
+        const moved = vb('lunar_seq_id') !== id || vb('lunar_seq_step') !== step || vb('lunar_seq_score') !== score || ((dream() >>> 9) & 1) === 1;
+        if (!moved)
+            throw new Error(
+                `the Numerator ignored ${want}: sequence ${id} ` +
+                    `("${
+                        ['0,1,3,4', '1,1,1,2,1,3,1,4', '1,1,2,2,3', '1,1,2,3,1,1,4', '1,2,3', '1,3,5', '1,4,2,5', '1,6,2,5', '1,9,2,8', '2,3,5,6', '2,6,3,7', '3,4,2,5', '7,3,6,2', '8,6,4', '9,7,5', '9,8,7,6'][id]
+                    }"), step ${step}, score ${score} - "${A.lastMes(P)}"`
+            );
     }
     check('five sequences finishes the numbers', (dream() >>> 9) & 1, 1);
     talk(P, 'ethereal_being');
@@ -420,16 +517,33 @@ function platform(locName: string, x: number, z: number) {
     const key = (r: number, c: number) => r * 4 + c;
     const prev = new Map<number, number>();
     const q: number[][] = [];
-    for (let c = 0; c < 4; c++) if (safe(0, c)) { q.push([0, c]); prev.set(key(0, c), -1); }
+    for (let c = 0; c < 4; c++)
+        if (safe(0, c)) {
+            q.push([0, c]);
+            prev.set(key(0, c), -1);
+        }
     let endc = -1;
     while (q.length) {
         const rc = q.shift();
         if (!rc) break;
-        const r = rc[0], c = rc[1];
-        if (r === 7) { endc = c; break; }
-        for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nr = r + d[0], nc = c + d[1];
-            if (safe(nr, nc) && !prev.has(key(nr, nc))) { prev.set(key(nr, nc), key(r, c)); q.push([nr, nc]); }
+        const r = rc[0],
+            c = rc[1];
+        if (r === 7) {
+            endc = c;
+            break;
+        }
+        for (const d of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nr = r + d[0],
+                nc = c + d[1];
+            if (safe(nr, nc) && !prev.has(key(nr, nc))) {
+                prev.set(key(nr, nc), key(r, c));
+                q.push([nr, nc]);
+            }
         }
     }
     check('  and it has a way across', endc >= 0, true);
@@ -438,7 +552,8 @@ function platform(locName: string, x: number, z: number) {
     tp(P, [1736, 5109], 2);
     op(P, 1736, 5108, 'loc474_16858', 1);
     for (const rc of path) {
-        const x = 1731 + rc[1] * 3, z = 5106 - rc[0] * 3;
+        const x = 1731 + rc[1] * 3,
+            z = 5106 - rc[0] * 3;
         tp(P, [x, z + 3], 2);
         op(P, x, z, 'loc474_16638', 1);
     }
@@ -453,7 +568,12 @@ function platform(locName: string, x: number, z: number) {
 {
     platform('loc474_16634', 1770, 5088);
     check('the Expert platform lands you at the hurdles', [P.x, P.z], [1785, 5078]);
-    const HURDLES: number[][] = [[1786, 5085], [1784, 5091], [1786, 5096], [1784, 5101]];
+    const HURDLES: number[][] = [
+        [1786, 5085],
+        [1784, 5091],
+        [1786, 5096],
+        [1784, 5101]
+    ];
     for (let attempt = 0; attempt < 10 && ((dream() >>> 10) & 1) === 0; attempt++) {
         talk(P, 'ethereal_expert', ['on.']);
         for (let guard = 0; guard < 12 && vb('lunar_race_fallen') < 3 && ((dream() >>> 10) & 1) === 0; guard++) {
@@ -510,7 +630,8 @@ say('THE REWARD');
 {
     A.runProcProtected(P, '[proc,update_questpoints]');
     const qp0 = H.getVar(P, 'qp');
-    const magic0 = P.stats[6], rc0 = P.stats[20];
+    const magic0 = P.stats[6],
+        rc0 = P.stats[20];
     tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
     talk(P, 'oneiromancer');
     check('the quest completes', stage(P), 150);
@@ -527,8 +648,6 @@ say('THE REWARD');
     op(P, 2157, 3863, 'astral_altar', 2, ['Switch to the Lunar']);
 }
 
-
-
 // ================================================================ Dream Mentor
 say('DREAM MENTOR: THE FALLEN MAN');
 const CYRISUS = [2345, 10335];
@@ -539,7 +658,7 @@ const dmStage = () => H.getVar(P, 'dreammentor');
     H.give(P, 'lunar_seal_of_passage');
     tp(P, [CYRISUS[0] + 1, CYRISUS[1]], 2);
     talk(P, 'cyrisus_fallen');
-    check('Cyrisus will not be helped by someone who has not done Eadgar\'s Ruse', dmStage(), 0);
+    check("Cyrisus will not be helped by someone who has not done Eadgar's Ruse", dmStage(), 0);
     H.setVar(P, 'eadgar_quest', 100);
     talk(P, 'cyrisus_fallen');
     check('with both quests behind you he lets you try', dmStage(), 10);
@@ -565,21 +684,35 @@ say('DREAM MENTOR: THE THREE BARS');
     // his own equipment, out of his own bank, keyed to your best combat skill
     tp(P, [2093, 3925]);
     // the same test ~dm_cyrisus_set makes: whichever of Attack, Ranged and Magic you are best at
-    const att = P.baseLevels[0], rng = P.baseLevels[4], mag = P.baseLevels[6];
-    const set = (rng > att && rng >= mag) ? 1 : ((mag > att && mag > rng) ? 2 : 0);
-    const OPTS = [['Dragon med', 'Splitbark', 'Robin'],
-                  ['robetop', 'leathertop', 'chainbody'],
-                  ['skirt', 'platelegs', 'chaps'],
-                  ['Ranger', 'Adamant', 'Infinity'],
-                  ['whip', 'shortbow', 'staff']];
+    const att = P.baseLevels[0],
+        rng = P.baseLevels[4],
+        mag = P.baseLevels[6];
+    const set = rng > att && rng >= mag ? 1 : mag > att && mag > rng ? 2 : 0;
+    const OPTS = [
+        ['Dragon med', 'Splitbark', 'Robin'],
+        ['robetop', 'leathertop', 'chainbody'],
+        ['skirt', 'platelegs', 'chaps'],
+        ['Ranger', 'Adamant', 'Infinity'],
+        ['whip', 'shortbow', 'staff']
+    ];
     // every slot wrong: he finds nothing
     // Op 1, not 3. Jack's npc record declares op1=Talk-to and nothing else, so the [opnpc3] this
     // used to drive was a trigger the client can never send - dead for every real player, which is
     // why Dream Mentor could not be finished at all. The armament questions hang off his ordinary
     // Talk-to now, behind ~dm_jack_wants, so this drives what a player drives.
-    talk(P, 'birdseye_jack', OPTS.map(o => o[(set + 1) % 3]), 1);
+    talk(
+        P,
+        'birdseye_jack',
+        OPTS.map(o => o[(set + 1) % 3]),
+        1
+    );
     check('wrong guesses at his equipment get nothing', H.getVarBit(P, 'dm_armament'), 0);
-    talk(P, 'birdseye_jack', OPTS.map(o => o[set]), 1);
+    talk(
+        P,
+        'birdseye_jack',
+        OPTS.map(o => o[set]),
+        1
+    );
     check('the five right answers empty his account', H.getVarBit(P, 'dm_armament'), 31);
 
     tp(P, [CYRISUS[0] + 1, CYRISUS[1]], 2);
@@ -643,7 +776,8 @@ say('DREAM MENTOR: THE REWARD');
 {
     A.runProcProtected(P, '[proc,update_questpoints]');
     const qp0 = H.getVar(P, 'qp');
-    const hp0 = P.stats[3], magic0 = P.stats[6];
+    const hp0 = P.stats[3],
+        magic0 = P.stats[6];
     tp(P, [ONEIRO[0] + 1, ONEIRO[1]]);
     talk(P, 'oneiromancer');
     check('the quest completes', dmStage(), 70);
@@ -664,8 +798,11 @@ say('THE QUEST JOURNAL');
         const from = H.ifaces.length;
         H.ifButton(P, 'questlist:lunar');
         drive(P);
-        const text = H.ifaces.slice(from).filter(i => i.who === P.username && i.kind === 'text')
-            .map(i => i.text ?? '').join(' ');
+        const text = H.ifaces
+            .slice(from)
+            .filter(i => i.who === P.username && i.kind === 'text')
+            .map(i => i.text ?? '')
+            .join(' ');
         if (text.trim().length < 20) blank++;
         seen.add(text);
     }
@@ -674,18 +811,14 @@ say('THE QUEST JOURNAL');
     H.setVar(P, 'lunar_quest', 150);
 }
 
-
 // ================================================================ every spell on the book
 //
 // Forty spells. Each is cast once with the runes and the level it asks for, and the cast is only
 // counted as working if nothing came back saying the level was too low, the runes were missing, the
 // quest was not done, or that nothing interesting happened.
 say('THE LUNAR SPELLBOOK');
-const RUNES = ['astralrune', 'cosmicrune', 'lawrune', 'naturerune', 'deathrune', 'bloodrune',
-               'soulrune', 'mindrune', 'bodyrune', 'airrune', 'waterrune', 'earthrune',
-               'firerune', 'chaosrune'];
-const REFUSALS = ['Magic level is not high enough', 'do not have enough', 'not learnt the magic',
-                  'completed Dream Mentor', 'Nothing interesting happens', 'do not know where the Ourania'];
+const RUNES = ['astralrune', 'cosmicrune', 'lawrune', 'naturerune', 'deathrune', 'bloodrune', 'soulrune', 'mindrune', 'bodyrune', 'airrune', 'waterrune', 'earthrune', 'firerune', 'chaosrune'];
+const REFUSALS = ['Magic level is not high enough', 'do not have enough', 'not learnt the magic', 'completed Dream Mentor', 'Nothing interesting happens', 'do not know where the Ourania'];
 function stock(p: Player, extra: string[] = []) {
     H.clearInv(p);
     for (const r of RUNES) H.give(p, r, 1000);
@@ -710,17 +843,29 @@ H.setVar(Q, 'lunar_unlocked', 1);
 H.setVar(Q, 'dreammentor', 70);
 H.setVar(Q, 'spellbook', 2);
 H.setVar(P, 'spellbook', 2);
-H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') | (1 << 13));   // Baba Yaga's Ourania unlock
+H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') | (1 << 13)); // Baba Yaga's Ourania unlock
 H.tick(1);
 
 // ---- the eighteen teleports
 {
-    const TELES = ['lunar_home_teleport', 'moonclan_teleport', 'ourania_teleport',
-                   'waterbirth_teleport', 'barbarian_teleport', 'khazard_teleport',
-                   'fishing_guild_teleport', 'catherby_teleport', 'ice_plateau_teleport',
-                   'tele_group_moonclan', 'tele_group_waterbirth', 'tele_group_barbarian',
-                   'tele_group_khazard', 'tele_group_fishing_guild', 'tele_group_catherby',
-                   'tele_group_ice_plateau'];
+    const TELES = [
+        'lunar_home_teleport',
+        'moonclan_teleport',
+        'ourania_teleport',
+        'waterbirth_teleport',
+        'barbarian_teleport',
+        'khazard_teleport',
+        'fishing_guild_teleport',
+        'catherby_teleport',
+        'ice_plateau_teleport',
+        'tele_group_moonclan',
+        'tele_group_waterbirth',
+        'tele_group_barbarian',
+        'tele_group_khazard',
+        'tele_group_fishing_guild',
+        'tele_group_catherby',
+        'tele_group_ice_plateau'
+    ];
     const moved: string[] = [];
     const stuck: string[] = [];
     for (const t of TELES) {
@@ -752,15 +897,14 @@ H.tick(1);
         ['magic_imbue', [], ''],
         ['vengeance', [], ''],
         ['heal_group', [], ''],
-        ['spellbook_swap', [], ''],
+        ['spellbook_swap', [], '']
     ];
     const broken: string[] = [];
     const made: string[] = [];
     for (const [name, items, want] of PLAIN) {
         stock(P, items);
         H.setVar(P, 'spellbook', 2);
-        const why = cast(P, () => H.ifButton(P, 'lunar_magic:' + name),
-            name === 'spellbook_swap' ? ['normal'] : []);
+        const why = cast(P, () => H.ifButton(P, 'lunar_magic:' + name), name === 'spellbook_swap' ? ['normal'] : []);
         if (why) broken.push(name + ': ' + why);
         else if (want && !H.invCount(P, want)) broken.push(name + ': no ' + want);
         else made.push(name);
@@ -806,16 +950,21 @@ H.tick(1);
         if (why) broken.push('monster_examine: ' + why);
     }
     // on something held
-    for (const [name, item] of [['plank_make', 'logs'], ['boost_potion_share', '3dose1attack'],
-                                ['stat_restore_pot_share', '3dosestatrestore']] as [string, string][]) {
+    for (const [name, item] of [
+        ['plank_make', 'logs'],
+        ['boost_potion_share', '3dose1attack'],
+        ['stat_restore_pot_share', '3dosestatrestore']
+    ] as [string, string][]) {
         stock(P, [item]);
-        if (!H.invCount(P, item)) { broken.push(name + ': no ' + item + ' to test with'); continue; }
+        if (!H.invCount(P, item)) {
+            broken.push(name + ': no ' + item + ' to test with');
+            continue;
+        }
         const why = cast(P, () => H.castOnHeld(P, item, 'lunar_magic:' + name));
         if (why) broken.push(name + ': ' + why);
     }
     check('the spells cast on a player, an npc or an item all cast', broken, []);
 }
-
 
 // ---- the two cast at a farming patch
 {
@@ -840,13 +989,15 @@ H.tick(1);
     H.setVar(P, 'dreammentor', 0);
     const locked: string[] = [];
     const suqah = H.npcNear('suqah', 2100, 3944, 0);
-    for (const name of ['monster_examine', 'humidify', 'hunter_kit', 'stat_spy', 'dream',
-                        'plank_make', 'spellbook_swap']) {
+    for (const name of ['monster_examine', 'humidify', 'hunter_kit', 'stat_spy', 'dream', 'plank_make', 'spellbook_swap']) {
         stock(P, ['logs']);
         H.setVar(P, 'spellbook', 2);
         const from = A.mark();
         if (name === 'monster_examine') {
-            if (!suqah) { locked.push(name); continue; }
+            if (!suqah) {
+                locked.push(name);
+                continue;
+            }
             P.teleport(suqah.x + 1, suqah.z, suqah.level);
             H.tick(1);
             H.castOnNpc(P, suqah, 'lunar_magic:' + name);
@@ -863,7 +1014,7 @@ H.tick(1);
         drive(P);
         if (A.mesSince(P, from).some(m => m.includes('completed Dream Mentor'))) locked.push(name);
     }
-    check('the seven Dream Mentor spells are locked without it', locked.sort(), ['dream','humidify','hunter_kit','monster_examine','plank_make','spellbook_swap','stat_spy']);
+    check('the seven Dream Mentor spells are locked without it', locked.sort(), ['dream', 'humidify', 'hunter_kit', 'monster_examine', 'plank_make', 'spellbook_swap', 'stat_spy']);
     H.setVar(P, 'dreammentor', 70);
 
     H.setVar(P, 'lunar_unlocked', 0);
@@ -871,8 +1022,11 @@ H.tick(1);
     const from = A.mark();
     H.ifButton(P, 'lunar_magic:moonclan_teleport');
     drive(P);
-    check('and the whole book is locked without Lunar Diplomacy',
-        A.mesSince(P, from).some(m => m.includes('not learnt the magic')), true);
+    check(
+        'and the whole book is locked without Lunar Diplomacy',
+        A.mesSince(P, from).some(m => m.includes('not learnt the magic')),
+        true
+    );
     H.setVar(P, 'lunar_unlocked', 1);
 
     H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') & ~(1 << 13));
@@ -880,8 +1034,11 @@ H.tick(1);
     const from2 = A.mark();
     H.ifButton(P, 'lunar_magic:ourania_teleport');
     drive(P);
-    check('Ourania Teleport waits for Baba Yaga',
-        A.mesSince(P, from2).some(m => m.includes('Ourania')), true);
+    check(
+        'Ourania Teleport waits for Baba Yaga',
+        A.mesSince(P, from2).some(m => m.includes('Ourania')),
+        true
+    );
     H.setVar(P, 'lunar_bits', H.getVar(P, 'lunar_bits') | (1 << 13));
 }
 
@@ -894,8 +1051,11 @@ H.tick(1);
     const from = A.mark();
     H.ifButton(P, 'lunar_magic:moonclan_teleport');
     drive(P);
-    check('a spell above your Magic level is refused',
-        A.mesSince(P, from).some(m => m.includes('Magic level is not high enough')), true);
+    check(
+        'a spell above your Magic level is refused',
+        A.mesSince(P, from).some(m => m.includes('Magic level is not high enough')),
+        true
+    );
     P.baseLevels[6] = 99;
     P.levels[6] = 99;
 }
@@ -907,8 +1067,11 @@ H.tick(1);
     const from = A.mark();
     H.ifButton(P, 'lunar_magic:moonclan_teleport');
     drive(P);
-    check('a spell with no runes is refused',
-        A.mesSince(P, from).some(m => m.includes('do not have enough')), true);
+    check(
+        'a spell with no runes is refused',
+        A.mesSince(P, from).some(m => m.includes('do not have enough')),
+        true
+    );
 }
 
 // ================================================================ summary

@@ -29,13 +29,16 @@ await H.boot();
 // hidden one Old School uses to mark them. Both are floor you are meant to be on. Anything else at
 // level 3 is a tile the client never draws, and standing on it is the bug this is here to catch.
 const ROOF = new Set<string>();
-for (const [reg, mx, mz] of [['48_51', 48, 51], ['48_50', 48, 50]] as [string, number, number][]) {
+for (const [reg, mx, mz] of [
+    ['48_51', 48, 51],
+    ['48_50', 48, 50]
+] as [string, number, number][]) {
     const lines = readFileSync(`../content/maps/m${reg}.jm2`, 'utf8').split(/\r?\n/);
     for (const line of lines) {
         if (line === '==== LOC ====') break;
         const m = /^3 (\d+) (\d+): (.*)$/.exec(line);
         if (!m) continue;
-        if (!/(^| )o\d+/.test(m[3])) continue;             // no overlay -> not drawn
+        if (!/(^| )o\d+/.test(m[3])) continue; // no overlay -> not drawn
         ROOF.add(`${mx * 64 + Number(m[1])},${mz * 64 + Number(m[2])}`);
     }
 }
@@ -69,12 +72,15 @@ const CROSSINGS: [string, string[]][] = [
     ['tightrope 1', ['draynor_rope1_start', 'draynor_land_rope1']],
     ['tightrope 2', ['draynor_rope2_start', 'draynor_land_rope2']],
     ['narrow wall', ['draynor_narrow_start', 'draynor_narrow_corner', 'draynor_land_narrow']],
-    ['gap', ['draynor_gap_start', 'draynor_land_gap']],
+    ['gap', ['draynor_gap_start', 'draynor_land_gap']]
 ];
 for (const [name, legs] of CROSSINGS) {
     const path: string[] = [];
     for (let i = 0; i + 1 < legs.length; i++) {
-        if (!K[legs[i]] || !K[legs[i + 1]]) { console.log(`  ${name}: ${legs[i]} or ${legs[i + 1]} is not in the constant file`); continue; }
+        if (!K[legs[i]] || !K[legs[i + 1]]) {
+            console.log(`  ${name}: ${legs[i]} or ${legs[i + 1]} is not in the constant file`);
+            continue;
+        }
         path.push(...walk(K[legs[i]], K[legs[i + 1]]));
     }
     const bad = path.filter(t => !ROOF.has(t));
@@ -82,18 +88,23 @@ for (const [name, legs] of CROSSINGS) {
 }
 
 type Step = {
-    loc: string; x: number; z: number; level: number;
-    land: [number, number, number]; xp: number; name: string;
-    walked?: boolean;    // crossed on foot, so every tile between must be roof
+    loc: string;
+    x: number;
+    z: number;
+    level: number;
+    land: [number, number, number];
+    xp: number;
+    name: string;
+    walked?: boolean; // crossed on foot, so every tile between must be roof
 };
 const COURSE: Step[] = [
-    { name: 'rough wall',  loc: 'osrsloc_11404', x: 3103, z: 3279, level: 0, land: [3102, 3279, 3], xp: 50 },
+    { name: 'rough wall', loc: 'osrsloc_11404', x: 3103, z: 3279, level: 0, land: [3102, 3279, 3], xp: 50 },
     { name: 'tightrope 1', loc: 'osrsloc_11405', x: 3098, z: 3277, level: 3, land: [3089, 3277, 3], xp: 80, walked: true },
     { name: 'tightrope 2', loc: 'osrsloc_11406', x: 3092, z: 3276, level: 3, land: [3092, 3266, 3], xp: 70, walked: true },
     { name: 'narrow wall', loc: 'osrsloc_11430', x: 3089, z: 3264, level: 3, land: [3088, 3261, 3], xp: 70, walked: true },
-    { name: 'wall',        loc: 'osrsloc_11630', x: 3088, z: 3256, level: 3, land: [3088, 3255, 3], xp: 100 },
-    { name: 'gap',         loc: 'osrsloc_11631', x: 3095, z: 3255, level: 3, land: [3096, 3256, 3], xp: 40, walked: true },
-    { name: 'crate',       loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: [3103, 3261, 0], xp: 790 },
+    { name: 'wall', loc: 'osrsloc_11630', x: 3088, z: 3256, level: 3, land: [3088, 3255, 3], xp: 100 },
+    { name: 'gap', loc: 'osrsloc_11631', x: 3095, z: 3255, level: 3, land: [3096, 3256, 3], xp: 40, walked: true },
+    { name: 'crate', loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: [3103, 3261, 0], xp: 790 }
 ];
 
 // WHICH LANDINGS SIT ON A FLAGGED TILE - printed, not asserted. A teleport can put you on one and
@@ -104,9 +115,7 @@ const COURSE: Step[] = [
 {
     const on = COURSE.filter(s => isFlagged(s.land[0], s.land[1], s.land[2], CollisionFlag.WALK_BLOCKED));
     console.log('\nWHERE EACH OBSTACLE PUTS YOU DOWN');
-    console.log(on.length
-        ? `  note: ${on.map(s => `${s.name} (${s.land[0]},${s.land[1]})`).join(', ')} land on flagged tiles`
-        : '  note: no landing sits on a flagged tile');
+    console.log(on.length ? `  note: ${on.map(s => `${s.name} (${s.land[0]},${s.land[1]})`).join(', ')} land on flagged tiles` : '  note: no landing sits on a flagged tile');
 }
 
 // AND THE LAP CAN CARRY ON FROM IT: either you can walk off the landing, or the next obstacle is
@@ -116,13 +125,19 @@ const COURSE: Step[] = [
 // obstacle, and you simply could not move.
 console.log('\nAND THE LAP CAN CARRY ON FROM EVERY LANDING');
 for (let i = 0; i < COURSE.length; i++) {
-    const s = COURSE[i], n = COURSE[(i + 1) % COURSE.length];
+    const s = COURSE[i],
+        n = COURSE[(i + 1) % COURSE.length];
     const [lx, lz, ll] = s.land;
-    const canWalkOff = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
-        .some(([dx, dz]) => A.walkable(ll, lx + dx, lz + dz));
+    const canWalkOff = (
+        [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as const
+    ).some(([dx, dz]) => A.walkable(ll, lx + dx, lz + dz));
     const canUseNext = ll === n.level && !!A.reachLoc(ll, lx, lz, n.loc, n.x, n.z);
-    check(`  ${s.name.padEnd(12)} ${canWalkOff ? 'walk off' : canUseNext ? `use ${n.name}` : 'STUCK'}`,
-        canWalkOff || canUseNext, true);
+    check(`  ${s.name.padEnd(12)} ${canWalkOff ? 'walk off' : canUseNext ? `use ${n.name}` : 'STUCK'}`, canWalkOff || canUseNext, true);
 }
 
 console.log('\nAND THE OBSTACLE IS THERE TO CLICK');
@@ -134,12 +149,12 @@ for (const s of COURSE) {
 console.log('\nA FULL LAP');
 const p: any = player('roof', 3103, 3280);
 H.setVar(p, 'tutorial', 1000);
-const agil = () => p.stats[16];                       // agility
+const agil = () => p.stats[16]; // agility
 const prog = () => p.getVar(VarPlayerType.getByName('draynor_course_progress')!.id);
 const before = agil();
 let ok = true;
-let offRoof: string[] = [];
-let prev: [number, number, number] = [3103, 3278, 0];   // the street, south of the rough wall
+const offRoof: string[] = [];
+let prev: [number, number, number] = [3103, 3278, 0]; // the street, south of the rough wall
 for (const s of COURSE) {
     // STAND BESIDE THE OBSTACLE, not on the tile it will throw you to - the first run of this put
     // the player on the LANDING before each click, so every obstacle after the first was clicked
@@ -162,7 +177,10 @@ for (const s of COURSE) {
     }
     const at = [p.x, p.z, p.level].join(',');
     const want = s.land.join(',');
-    if (at !== want) { console.log(`  ${s.name}: ended at ${at}, expected ${want}`); ok = false; }
+    if (at !== want) {
+        console.log(`  ${s.name}: ended at ${at}, expected ${want}`);
+        ok = false;
+    }
     prev = [p.x, p.z, p.level];
 }
 check('  every obstacle put the player where the constant says', ok, true);
@@ -176,8 +194,12 @@ check('  and the progress counter reset for the next lap', prog(), 0);
 // ---------------------------------------------------------------- the wiki's numbers
 // 5, 8, 7, 7, 10, 4, 79. The crate's 79 IS the lap bonus; there is no separate award, which is why
 // the seven have to add to 120 exactly.
-console.log('\nTHE EXPERIENCE IS THE WIKI\'S');
-check('  the seven obstacles add to a lap', COURSE.reduce((a, s) => a + s.xp, 0), 1200);
+console.log("\nTHE EXPERIENCE IS THE WIKI'S");
+check(
+    '  the seven obstacles add to a lap',
+    COURSE.reduce((a, s) => a + s.xp, 0),
+    1200
+);
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

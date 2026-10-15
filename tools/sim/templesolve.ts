@@ -12,7 +12,6 @@
 //
 //   npx tsx tools/sim/templesolve.ts
 import * as H from './harness.js';
-import Player from '#/engine/entity/Player.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 
 await H.boot();
@@ -30,8 +29,7 @@ const dark = () => {
     H.runProc(p, '[proc,m2_dark]', [], undefined, true);
     H.runProc(p, '[proc,m2_pillars_dark]', [], undefined, true);
 };
-const edge = (pid: number, d: number, colour: number) =>
-    H.runProc(p, '[proc,m2_edge]', [pid, d, colour], undefined, true)[0];
+const edge = (pid: number, d: number, colour: number) => H.runProc(p, '[proc,m2_edge]', [pid, d, colour], undefined, true)[0];
 
 // ---------------------------------------------------------------- read the graph out of the engine
 const PILLARS = 35;
@@ -68,11 +66,15 @@ for (let pid = 1; pid <= PILLARS; pid++) {
 }
 dark();
 console.log('');
-console.log('the graph as the engine has it: ' + NAMES.length + ' light varbits, '
-    + [...Array(PILLARS).keys()].reduce((a, i) => a + DIRS.filter(d => lights[i + 1][d].length > 0 || next[i + 1][d] > 0).length, 0)
-    + ' edges, of which '
-    + [...Array(PILLARS).keys()].reduce((a, i) => a + DIRS.filter(d => next[i + 1][d] === 0 && lights[i + 1][d].length > 0).length, 0)
-    + ' run into an outer wall');
+console.log(
+    'the graph as the engine has it: ' +
+        NAMES.length +
+        ' light varbits, ' +
+        [...Array(PILLARS).keys()].reduce((a, i) => a + DIRS.filter(d => lights[i + 1][d].length > 0 || next[i + 1][d] > 0).length, 0) +
+        ' edges, of which ' +
+        [...Array(PILLARS).keys()].reduce((a, i) => a + DIRS.filter(d => next[i + 1][d] === 0 && lights[i + 1][d].length > 0).length, 0) +
+        ' run into an outer wall'
+);
 
 // ---------------------------------------------------------------- cheapest routes
 const KEY = (pid: number, d: number, free: number) => (pid * 10 + d) * 2 + free;
@@ -138,7 +140,7 @@ function departures() {
                 // doors in the building unreachable.
                 for (const nd of DIRS) {
                     if (lights[pid][nd].length === 0) continue;
-                    const cost = nd === d ? arrive : (nd === opposite[d] ? Infinity : arrive + 1);
+                    const cost = nd === d ? arrive : nd === opposite[d] ? Infinity : arrive + 1;
                     if (!isFinite(cost)) continue;
                     // going straight on leaves this pillar's socket spare as well
                     const spare = free === 1 || nd === d ? 1 : 0;
@@ -171,10 +173,7 @@ const DOORS: [string, string, string][] = [
 for (const [what, seg, colour] of DOORS) {
     const a = plain.get(seg);
     const b = coloured.get(seg);
-    console.log('  ' + what.padEnd(42)
-        + (a === undefined ? 'UNREACHABLE' : a + ' mirrors').padEnd(14)
-        + (colour === 'any colour' ? '' : 'with a spare socket: ' + (b === undefined ? 'NO ROUTE' : b + ' mirrors'))
-        + '   (' + colour + ')');
+    console.log('  ' + what.padEnd(42) + (a === undefined ? 'UNREACHABLE' : a + ' mirrors').padEnd(14) + (colour === 'any colour' ? '' : 'with a spare socket: ' + (b === undefined ? 'NO ROUTE' : b + ' mirrors')) + '   (' + colour + ')');
 }
 console.log('');
 console.log('  the temple kit, waiting in the collector: 4 mirrors - and every chest holds two more');
@@ -195,10 +194,15 @@ const CROSSINGS: [string, string, string][] = [
 for (const [where, ew, ns] of CROSSINGS) {
     const a = coloured.get(ew);
     const b = coloured.get(ns);
-    console.log('  ' + where.padEnd(16)
-        + 'east-west ' + (a === undefined ? 'no colourable route' : a + ' mirrors').padEnd(22)
-        + 'north-south ' + (b === undefined ? 'no colourable route' : b + ' mirrors')
-        + (a !== undefined && b !== undefined ? '   <- magenta can be made here' : ''));
+    console.log(
+        '  ' +
+            where.padEnd(16) +
+            'east-west ' +
+            (a === undefined ? 'no colourable route' : a + ' mirrors').padEnd(22) +
+            'north-south ' +
+            (b === undefined ? 'no colourable route' : b + ' mirrors') +
+            (a !== undefined && b !== undefined ? '   <- magenta can be made here' : '')
+    );
 }
 
 // ---------------------------------------------------------------- and the routes themselves
@@ -213,7 +217,7 @@ function route(segment: string) {
                 if (arrive === undefined) continue;
                 for (const nd of DIRS) {
                     if (lights[pid][nd].length === 0 || !lights[pid][nd].includes(segment)) continue;
-                    const cost = nd === d ? arrive : (nd === opposite[d] ? Infinity : arrive + 1);
+                    const cost = nd === d ? arrive : nd === opposite[d] ? Infinity : arrive + 1;
                     if (!isFinite(cost)) continue;
                     if (!best || cost < best[1]) best = [KEY(pid, d, free), cost];
                     if (nd !== d) {
@@ -243,9 +247,11 @@ function route(segment: string) {
 }
 const lastStep = new Map<string, string>();
 
-for (const [what, seg] of [['OUT OF THE HOLE IN THE WEST WALL', 'mourning_light_temple_1_b_west'],
-                           ['THE FIRST YELLOW DOOR (floor 1 room 16, a chest behind it)', 'mourning_light_temple_1_16_north'],
-                           ['THE BLACK DOOR TO THE DEATH ALTAR', 'mourning_light_temple_1_d_west']] as [string, string][]) {
+for (const [what, seg] of [
+    ['OUT OF THE HOLE IN THE WEST WALL', 'mourning_light_temple_1_b_west'],
+    ['THE FIRST YELLOW DOOR (floor 1 room 16, a chest behind it)', 'mourning_light_temple_1_16_north'],
+    ['THE BLACK DOOR TO THE DEATH ALTAR', 'mourning_light_temple_1_d_west']
+] as [string, string][]) {
     const r = route(seg);
     console.log('');
     console.log(what + ': ' + (r ? r.cost + ' mirrors' : 'no route'));

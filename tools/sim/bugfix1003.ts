@@ -28,7 +28,9 @@ const param = (name: string, p: string) => {
     return t.params?.get(id) ?? null;
 };
 const hp = (p: any) => p.levels[3];
-const setHp = (p: any, n: number) => { p.levels[3] = n; };
+const setHp = (p: any, n: number) => {
+    p.levels[3] = n;
+};
 
 // ---------------------------------------------------------------- 1. the strawhat
 // The model is 39 faces of straw. They used to be colour 6070 - osrs2ob2's TEXTURED_HSL, the
@@ -51,7 +53,7 @@ console.log('\nTHE DWARVEN ROCK CAKE IS NOT FOOD');
     H.give(p, 'hundred_dwarf_cool_rockcake', 1);
 
     setHp(p, 10);
-    H.opheld(p, 'hundred_dwarf_cool_rockcake', 1);          // Eat
+    H.opheld(p, 'hundred_dwarf_cool_rockcake', 1); // Eat
     check('  eating costs one hitpoint', hp(p), 9);
     check('  and the cake is still in the pack', H.invCount(p, 'hundred_dwarf_cool_rockcake'), 1);
 
@@ -60,7 +62,7 @@ console.log('\nTHE DWARVEN ROCK CAKE IS NOT FOOD');
     check('  at 2 hitpoints eating does nothing', hp(p), 2);
 
     setHp(p, 20);
-    H.opheld(p, 'hundred_dwarf_cool_rockcake', 2);          // Guzzle
+    H.opheld(p, 'hundred_dwarf_cool_rockcake', 2); // Guzzle
     check('  guzzling takes a tenth plus one (20 -> 17)', hp(p), 17);
 
     setHp(p, 2);
@@ -75,17 +77,18 @@ console.log('\nTHE DWARVEN ROCK CAKE IS NOT FOOD');
 
 // ---------------------------------------------------------------- 3. armour that defends
 console.log('\nTRIMMED ARMOUR IS STILL ARMOUR');
-for (const [variant, base] of [['studded_body_trim_fur', 'studded_body'],
-                               ['studded_body_trim_gold', 'studded_body'],
-                               ['studded_chaps_trim_fur', 'studded_chaps'],
-                               ['studded_chaps_trim_gold', 'studded_chaps']] as [string, string][]) {
-    const same = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence',
-                  'rangeattack', 'magicattack'].every(k => param(variant, k) === param(base, k));
+for (const [variant, base] of [
+    ['studded_body_trim_fur', 'studded_body'],
+    ['studded_body_trim_gold', 'studded_body'],
+    ['studded_chaps_trim_fur', 'studded_chaps'],
+    ['studded_chaps_trim_gold', 'studded_chaps']
+] as [string, string][]) {
+    const same = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence', 'rangeattack', 'magicattack'].every(k => param(variant, k) === param(base, k));
     check(`  ${variant.padEnd(24)} matches ${base}`, same, true);
 }
 // An imbue raises the slayer bonus. It does not hand you +3 magic attack over the mask it was
 // made from, which is what leaving these two off did.
-check('  black_mask_i keeps the plain mask\'s magic attack penalty', param('black_mask_i', 'magicattack'), param('black_mask', 'magicattack'));
+check("  black_mask_i keeps the plain mask's magic attack penalty", param('black_mask_i', 'magicattack'), param('black_mask', 'magicattack'));
 check('  and its ranged attack penalty', param('black_mask_i', 'rangeattack'), param('black_mask', 'rangeattack'));
 
 // ---------------------------------------------------------------- 4. the glow
@@ -93,7 +96,7 @@ console.log('\nTHE MAGIC SHORTBOW (I) IS ITS OWN BOW');
 {
     const plain = obj('magic_shortbow') as any;
     const imbued = obj('magic_shortbow_i') as any;
-    check('  it no longer borrows the plain bow\'s model', imbued.model === plain.model, false);
+    check("  it no longer borrows the plain bow's model", imbued.model === plain.model, false);
     check('  nor its worn model', imbued.manwear === plain.manwear, false);
     const size = (n: string) => readFileSync(`../content/models/obj/${n}.ob2`).length;
     check('  and its model is the bigger of the two', size('obj_magic_shortbow_i') > size('obj_shortbow'), true);
@@ -103,28 +106,30 @@ console.log('\nTHE MAGIC SHORTBOW (I) IS ITS OWN BOW');
     // so until the sparkle was imported as a local texture those twelve were flattened to the
     // texture's AVERAGE COLOUR and the bow shipped under solid cream slabs, twice. This reads
     // the face-info and colour blocks and fails if any of them is flat again.
-    const SPARKLE_TEXTURE = 51;                        // content/pack/texture.pack
+    const SPARKLE_TEXTURE = 51; // content/pack/texture.pack
     for (const n of ['obj_magic_shortbow_i', 'obj_magic_shortbow_i_manwear', 'obj_magic_shortbow_i_womanwear']) {
         const raw = readFileSync(`../content/models/obj/${n}.ob2`);
         const h = raw.length - 18;
         const g2 = (o: number) => (raw[o] << 8) | raw[o + 1];
-        const vcount = g2(h), fcount = g2(h + 2);
+        const vcount = g2(h),
+            fcount = g2(h + 2);
         const [fTex, fPri, fAlpha, fFlab, fVlab] = [raw[h + 5], raw[h + 6], raw[h + 7], raw[h + 8], raw[h + 9]];
-        let o = vcount + fcount;                       // vertex flags, face types
+        let o = vcount + fcount; // vertex flags, face types
         if (fPri === 255) o += fcount;
         if (fFlab === 1) o += fcount;
         const finfoAt = o;
         if (fTex === 1) o += fcount;
         if (fVlab === 1) o += vcount;
         if (fAlpha === 1) o += fcount;
-        o += g2(h + 16);                               // face data
+        o += g2(h + 16); // face data
         const colourAt = o;
-        let textured = 0, flattened = 0;
+        let textured = 0,
+            flattened = 0;
         for (let i = 0; i < fcount; i++) {
             const info = fTex === 1 ? raw[finfoAt + i] : 0;
             const colour = g2(colourAt + i * 2);
             if ((info & 2) !== 0 && colour === SPARKLE_TEXTURE) textured++;
-            if ((info & 2) === 0 && colour === 9443) flattened++;   // the texture's average colour
+            if ((info & 2) === 0 && colour === 9443) flattened++; // the texture's average colour
         }
         check(`  ${n.padEnd(34)} wears the sparkle texture`, [textured, flattened], [12, 0]);
     }
@@ -149,12 +154,10 @@ console.log('\nTHE EASTER RING TURNS YOU INTO AN EGG');
     H.give(p, 'easter06_ring_of_egg', 1);
     check('  you start as yourself', p.npcId, -1);
 
-    H.opheld(p, 'easter06_ring_of_egg', 2);                 // Wear
-    A.drive(p);                                            // the mesbox, and the tick the equip lands on
+    H.opheld(p, 'easter06_ring_of_egg', 2); // Wear
+    A.drive(p); // the mesbox, and the tick the equip lands on
     check('  wearing it puts the ring on', p.getInventory(InvType.WORN)!.get(12)?.id, ObjType.getId('easter06_ring_of_egg'));
-    const eggs = ['easter06_npc_3689', 'easter06_npc_3690', 'easter06_npc_3691',
-                  'easter06_npc_3692', 'easter06_npc_3693', 'easter06_npc_3694']
-        .map(n => NpcType.getId(n));
+    const eggs = ['easter06_npc_3689', 'easter06_npc_3690', 'easter06_npc_3691', 'easter06_npc_3692', 'easter06_npc_3693', 'easter06_npc_3694'].map(n => NpcType.getId(n));
     check('  and turns you into one of the six eggs', eggs.includes(p.npcId), true);
 
     // Which egg is the map square's, so it is the same egg every time you stand there and a
@@ -187,8 +190,11 @@ console.log('\nCLUE LOOT THAT WILL NOT FIT GOES ON THE FLOOR');
 
     const dropped = A.runProcProtected(p, '[proc,trail_flush_rewards]');
     check('  all four had to go somewhere else', dropped[0], 4);
-    check('  the reward inv is empty, not holding them back',
-        [0, 1, 2, 3].every(i => p.getInventory(InvType.getId('trail_rewardinv'))!.get(i) === null), true);
+    check(
+        '  the reward inv is empty, not holding them back',
+        [0, 1, 2, 3].every(i => p.getInventory(InvType.getId('trail_rewardinv'))!.get(i) === null),
+        true
+    );
     // Looked for in the zone rather than picked up: the pack is still full, so take() cannot.
     const here = rewards.every(o => World.getObj(p.x, p.z, p.level, ObjType.getId(o), p.hash64) !== null);
     check('  and every one of them is on the ground under the player', here, true);

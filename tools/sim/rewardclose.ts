@@ -8,10 +8,12 @@ import Component from '#/cache/config/Component.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const count = (p: any, inv: string) => {
@@ -22,7 +24,10 @@ const count = (p: any, inv: string) => {
 };
 const errors: string[] = [];
 const origErr = console.error;
-console.error = (...a: unknown[]) => { errors.push(a.join(' ')); origErr(...a); };
+console.error = (...a: unknown[]) => {
+    errors.push(a.join(' '));
+    origErr(...a);
+};
 
 const p: any = H.makePlayer('reward_a', 3222, 3218, 90);
 H.tick(3);

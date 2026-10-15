@@ -21,11 +21,11 @@ const { World, NpcType } = A;
 await H.boot();
 
 const ROOMS: [string, number, number, number][] = [
-    ['main chamber',       2, 2880, 5310],   // ^gwd_entrance_inside, where the hole drops you
-    ["Armadyl's Eyrie",    2, 2839, 5296],   // ^gwd_inside_armadyl
-    ["Bandos' Stronghold", 2, 2864, 5354],   // ^gwd_inside_bandos
-    ["Zamorak's Fortress", 2, 2925, 5331],   // ^gwd_inside_zamorak
-    ["Saradomin's Encampment", 0, 2907, 5265], // ^gwd_inside_saradomin
+    ['main chamber', 2, 2880, 5310], // ^gwd_entrance_inside, where the hole drops you
+    ["Armadyl's Eyrie", 2, 2839, 5296], // ^gwd_inside_armadyl
+    ["Bandos' Stronghold", 2, 2864, 5354], // ^gwd_inside_bandos
+    ["Zamorak's Fortress", 2, 2925, 5331], // ^gwd_inside_zamorak
+    ["Saradomin's Encampment", 0, 2907, 5265] // ^gwd_inside_saradomin
 ];
 
 function flood(level: number, sx: number, sz: number, limit = 4000) {
@@ -33,12 +33,22 @@ function flood(level: number, sx: number, sz: number, limit = 4000) {
     const q: [number, number][] = [[sx, sz]];
     while (q.length && seen.size < limit) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
-            const nx = cx + dx, nz = cz + dz, k = `${nx},${nz}`;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as const) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = `${nx},${nz}`;
             if (seen.has(k) || Math.abs(nx - sx) > 90 || Math.abs(nz - sz) > 90) continue;
             // canTravel, not walkable: walkable only asks whether the TILE is blocked, so a flood
             // built on it walks straight through walls and merges every room into one.
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return seen;
@@ -55,11 +65,16 @@ for (const npc of World.npcs) {
 }
 console.log(`npcs inside the dungeon's squares: ${all.length}`);
 
-const god = (n: string) =>
-    /armadyl|aviansie|kreearra|kilisa|geerin|skree/.test(n) ? 'armadyl' :
-    /bandos|ork|goblin|hobgoblin|ogre|jogre|cyclops|graardor|strongstack|steelwill|grimspike/.test(n) ? 'bandos' :
-    /saradomin|knight|priest|zilyana|starlight|growler|bree/.test(n) ? 'saradomin' :
-    /zamorak|imp|icefiend|pyrefiend|bloodveld|werewolf|hellhound|gorak|vampyre|kril|balfrug|tstanon|zakln/.test(n) ? 'zamorak' : '?';
+// Which army an npc belongs to, by name. A table rather than a chain of nested ternaries: the
+// chain was four deep and prettier and eslint's indent rule disagreed about every level of it,
+// which is a fight neither can win and the reader loses.
+const ARMIES: [RegExp, string][] = [
+    [/armadyl|aviansie|kreearra|kilisa|geerin|skree/, 'armadyl'],
+    [/bandos|ork|goblin|hobgoblin|ogre|jogre|cyclops|graardor|strongstack|steelwill|grimspike/, 'bandos'],
+    [/saradomin|knight|priest|zilyana|starlight|growler|bree/, 'saradomin'],
+    [/zamorak|imp|icefiend|pyrefiend|bloodveld|werewolf|hellhound|gorak|vampyre|kril|balfrug|tstanon|zakln/, 'zamorak']
+];
+const god = (n: string) => ARMIES.find(([re]) => re.test(n))?.[1] ?? '?';
 
 const claimed = new Set<string>();
 for (const [label, lv, x, z] of ROOMS) {
@@ -69,10 +84,21 @@ for (const [label, lv, x, z] of ROOMS) {
     const by: Record<string, number> = {};
     for (const n of here) by[god(n.name)] = (by[god(n.name)] ?? 0) + 1;
     console.log(`\n${label}  (${tiles.size} tiles, ${here.length} npcs)`);
-    console.log('   by god: ' + Object.entries(by).map(([g, c]) => `${g} ${c}`).join('  '));
+    console.log(
+        '   by god: ' +
+            Object.entries(by)
+                .map(([g, c]) => `${g} ${c}`)
+                .join('  ')
+    );
     const kinds: Record<string, number> = {};
     for (const n of here) kinds[n.name] = (kinds[n.name] ?? 0) + 1;
-    console.log('   ' + Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, c]) => `${c}x ${k}`).join(', '));
+    console.log(
+        '   ' +
+            Object.entries(kinds)
+                .sort((a, b) => b[1] - a[1])
+                .map(([k, c]) => `${c}x ${k}`)
+                .join(', ')
+    );
 }
 const left = all.filter(n => !claimed.has(`${n.name}@${n.x},${n.z}`));
 console.log(`\nin none of the five regions (corridors and antechambers): ${left.length}`);

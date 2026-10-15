@@ -28,7 +28,7 @@ const check = (what: string, got: unknown, want: unknown) => {
 
 const SPOT: [number, number] = [2977, 3616];
 const TURTLE = 79;
-const sp = (name: string, p: string) => StructType.get(StructType.getId(name)).params.get(ParamType.getId(p));
+const sp = (name: string, p: string) => StructType.get(StructType.getId(name)).params?.get(ParamType.getId(p));
 
 let bucket = 1;
 function player(name: string, fishing: number): Player {
@@ -49,7 +49,7 @@ console.log('== the spot is where the dragons are');
     check('on a tile a player can reach', isZoneAllocated(0, x + 1, z) && !isFlagged(x + 1, z, 0, CollisionFlag.WALK_BLOCKED), true);
     const t = NpcType.get(NpcType.getId('wildyfish'));
     check('it does not drift', t.wanderrange, 0);
-    check('and offers Harpoon', t.op[2], 'Harpoon');
+    check('and offers Harpoon', t.op?.[2] ?? null, 'Harpoon');
     // Level 13 Wilderness: (3616 - 3520) / 8 + 1. Deep enough to matter, shallow enough to leave.
     check('at Wilderness level 13', Math.floor((z - 3520) / 8) + 1, 13);
     // the three green dragons it was put among

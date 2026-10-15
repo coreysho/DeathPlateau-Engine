@@ -866,9 +866,17 @@ if (run('dt')) {
     sv(p, 'desertrescue', 30);
     talk(p, 'fourdiamonds_indiana', [1]);
     check('the Archaeologist starts it: etchings, stage 1', [st(), H.invCount(p, 'four_diamonds_etchings')], [1, 1]);
-    const expert = nearest('archaeological_expert', p);
-    standBy(p, expert.x, expert.z, expert.level);
-    useOnNpc(p, 'four_diamonds_etchings', expert);
+    // TERRY MOVES, AND THE USE NEEDS TICKS. He is stood beside once and the etchings used on him
+    // once, which lands only if he is still on the tile standBy measured and the script gets to run
+    // before the next line reads the stage. A sweep run caught this at [1,0] against [2,1] and then
+    // aborted two lines later on a menu the Archaeologist only offers at stage 3, after the file had
+    // passed alone minutes before. Re-approach and re-use until the stage moves.
+    for (let t = 0; t < 6 && st() < 2; t++) {
+        const expert = nearest('archaeological_expert', p);
+        standBy(p, expert.x, expert.z, expert.level);
+        useOnNpc(p, 'four_diamonds_etchings', expert);
+        H.tick(3);
+    }
     check('Terry translates: stage 2', [st(), H.invCount(p, 'four_diamonds_translation_primer')], [2, 1]);
     talk(p, 'fourdiamonds_indiana');
     check('back to the Archaeologist: stage 3', st(), 3);
@@ -936,6 +944,12 @@ if (run('dt')) {
         op(s, 3169, 2967, 'fd_bandit_shutchest', 1);
     }
     check('the cross, out of the chest', H.invCount(s, 'fd_sword_cross'), 1);
+    // AND PUT THE PICKS DOWN BEFORE TALKING TO HIM. Lockpicks do not stack, so thirty of them is
+    // thirty slots: @dt_rasolo_reward checks inv_freespace before handing the ring over and said
+    // "Make some space and I'll hand it over" instead, which failed the next check and was my own
+    // fix for the chest doing it.
+    s.invDel(InvType.INV, ObjType.getId('lockpick'), 30);
+    H.tick(1);
     talk(s, 'shadow_warrior_rasool');
     check('Rasolo: the ring of visibility, the ladder shows', [H.invCount(s, 'fd_ring_visibility'), gv(s, 'fd_shadowwarrior_quest'), gv(s, 'fd_ladder_present')], [1, 2, 1]);
 

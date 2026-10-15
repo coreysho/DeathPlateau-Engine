@@ -41,7 +41,7 @@ function settle(p: Player, picks: number[] = [], max = 250) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -67,8 +67,7 @@ function settle(p: Player, picks: number[] = [], max = 250) {
 // out of heap - five million zone lookups to find two tiles whose ids are in pack/loc.pack.
 const COFFIN: [number, number, number] = [3481, 9808, 2];
 const WELL: [number, number, number] = [3482, 3234, 0];
-const placed = (x: number, z: number, lvl: number, name: string) =>
-    World.getLoc(x, z, lvl, LocType.getId(name)) !== null;
+const placed = (x: number, z: number, lvl: number, name: string) => World.getLoc(x, z, lvl, LocType.getId(name)) !== null;
 
 const p: any = H.makePlayer('myrequerod', 3222, 3218);
 H.tick(1);
@@ -99,36 +98,38 @@ const useOnLoc = (obj: string, x: number, z: number, lvl: number, name: string, 
 // ------------------------------------------------------------------ the pieces exist
 console.log('');
 console.log('WHAT THE CACHE HAD ALL ALONG');
-for (const n of ['burgh_rod_clay', 'burgh_rod_command1', 'burgh_rod_command2',
-                 'burgh_rod_command_final_10', 'burgh_rod_command_final_1']) {
+for (const n of ['burgh_rod_clay', 'burgh_rod_command1', 'burgh_rod_command2', 'burgh_rod_command_final_10', 'burgh_rod_command_final_1']) {
     check(n + ' is an obj', ObjType.getId(n) !== -1, true);
 }
-check('the Rod of Ivandis has ten charge states',
-    [...Array(10).keys()].every(i => ObjType.getId('burgh_rod_command_final_' + (i + 1)) !== -1), true);
+check(
+    'the Rod of Ivandis has ten charge states',
+    [...Array(10).keys()].every(i => ObjType.getId('burgh_rod_command_final_' + (i + 1)) !== -1),
+    true
+);
 check('the coffin is placed where the map says', placed(...COFFIN, 'burgh_ancient_coffin'), true);
 check('and the well under Paterdomus', placed(...WELL, 'burgh_well'), true);
 
 // ------------------------------------------------------------------ the mould
 console.log('');
 console.log('THE MOULD, OFF THE COFFIN LID');
-set(p, 'myreque_2_quest', 100);        // ^m2_tomb: the tomb open, the fragment in hand
+set(p, 'myreque_2_quest', 100); // ^m2_tomb: the tomb open, the fragment in hand
 H.give(p, 'softclay', 2);
 useOnLoc('softclay', ...COFFIN, 'burgh_ancient_coffin');
-check('before Veliaf has read the fragment, the carving is just a carving',
-    [H.invCount(p, 'burgh_rod_clay'), v(p, 'myreque_2_quest')], [0, 100]);
-set(p, 'myreque_2_quest', 102);        // ^m2_recipe: he has read it
+check('before Veliaf has read the fragment, the carving is just a carving', [H.invCount(p, 'burgh_rod_clay'), v(p, 'myreque_2_quest')], [0, 100]);
+set(p, 'myreque_2_quest', 102); // ^m2_recipe: he has read it
 useOnLoc('softclay', ...COFFIN, 'burgh_ancient_coffin');
-check('clay against the carving takes the mould, and the quest moves on',
-    [H.invCount(p, 'burgh_rod_clay'), H.invCount(p, 'softclay'), v(p, 'myreque_2_quest')], [1, 1, 104]);
+check('clay against the carving takes the mould, and the quest moves on', [H.invCount(p, 'burgh_rod_clay'), H.invCount(p, 'softclay'), v(p, 'myreque_2_quest')], [1, 1, 104]);
 useOnLoc('softclay', ...COFFIN, 'burgh_ancient_coffin');
 check('  and it will not give a second one', H.invCount(p, 'burgh_rod_clay'), 1);
 
 // ------------------------------------------------------------------ the casting
 console.log('');
 console.log('THE SILVER CASTING PANEL, WHICH HAS HAD A SLOT FOR THIS ALL ALONG');
-check('the panel has the rod slot and both its layers',
-    ['silver_casting:slot_silvthrill_rod', 'silver_casting:make_silvthrill_rod', 'silver_casting:need_silvthrill_rod']
-        .every(n => Component.getId(n) !== -1), true);
+check(
+    'the panel has the rod slot and both its layers',
+    ['silver_casting:slot_silvthrill_rod', 'silver_casting:make_silvthrill_rod', 'silver_casting:need_silvthrill_rod'].every(n => Component.getId(n) !== -1),
+    true
+);
 // the panel's own button, as the client sends it: a slot on a crafting panel is an inv, so its
 // Make 1 is an inv_button and not an if_button
 const press = (comName: string, picks: number[] = []) => {
@@ -141,9 +142,7 @@ check('with no mithril and no sapphire it refuses', H.invCount(p, 'burgh_rod_com
 H.give(p, 'mithril_bar', 1);
 H.give(p, 'sapphire', 1);
 press('silver_casting:slot_silvthrill_rod');
-check('silver, mithril and a sapphire make the silvthrill rod',
-    [H.invCount(p, 'burgh_rod_command1'), H.invCount(p, 'silver_bar'), H.invCount(p, 'mithril_bar'),
-        H.invCount(p, 'sapphire'), v(p, 'myreque_2_quest')], [1, 0, 0, 0, 106]);
+check('silver, mithril and a sapphire make the silvthrill rod', [H.invCount(p, 'burgh_rod_command1'), H.invCount(p, 'silver_bar'), H.invCount(p, 'mithril_bar'), H.invCount(p, 'sapphire'), v(p, 'myreque_2_quest')], [1, 0, 0, 0, 106]);
 
 // ------------------------------------------------------------------ the enchant
 console.log('');
@@ -152,8 +151,7 @@ H.give(p, 'waterrune', 5);
 H.give(p, 'cosmicrune', 5);
 H.castOnHeld(p, 'burgh_rod_command1', 'magic:enchant_lvl1');
 settle(p);
-check('the spell turns the silvthrill rod into the enchanted one',
-    [H.invCount(p, 'burgh_rod_command1'), H.invCount(p, 'burgh_rod_command2')], [0, 1]);
+check('the spell turns the silvthrill rod into the enchanted one', [H.invCount(p, 'burgh_rod_command1'), H.invCount(p, 'burgh_rod_command2')], [0, 1]);
 
 // ------------------------------------------------------------------ the well
 console.log('');
@@ -162,15 +160,12 @@ useOnLoc('burgh_rod_command2', ...WELL, 'burgh_well');
 check('without a rope it stays in your hand', H.invCount(p, 'burgh_rod_command2'), 1);
 H.give(p, 'rope', 1);
 useOnLoc('burgh_rod_command2', ...WELL, 'burgh_well');
-check('on a rope it comes up as the Rod of Ivandis, fully charged',
-    [H.invCount(p, 'burgh_rod_command2'), H.invCount(p, 'burgh_rod_command_final_10'), v(p, 'myreque_2_quest')],
-    [0, 1, 108]);
+check('on a rope it comes up as the Rod of Ivandis, fully charged', [H.invCount(p, 'burgh_rod_command2'), H.invCount(p, 'burgh_rod_command_final_10'), v(p, 'myreque_2_quest')], [0, 1, 108]);
 
 // ------------------------------------------------------------------ Veliaf
 console.log('');
 console.log('VELIAF');
-const veliaf = [...World.npcs].find(n => n && n.isActive
-    && NpcType.get(n.type).debugname === 'burgh_rescue_veliaf_hurtz_talk');
+const veliaf = [...World.npcs].find(n => n && n.isActive && NpcType.get(n.type).debugname === 'burgh_rescue_veliaf_hurtz_talk');
 check('Veliaf is in the cellar', veliaf !== undefined, true);
 if (veliaf) {
     p.teleport(veliaf.x + 1, veliaf.z, veliaf.level);
@@ -179,8 +174,7 @@ if (veliaf) {
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, veliaf.x, veliaf.z, p.width, veliaf.width, veliaf.length));
     p.setInteraction(Interaction.ENGINE, veliaf, ServerTriggerType.APNPC1);
     settle(p);
-    check('he takes the rod, looks at it, and hands it straight back: quest complete',
-        [v(p, 'myreque_2_quest'), H.invCount(p, 'burgh_rod_command_final_10')], [110, 1]);
+    check('he takes the rod, looks at it, and hands it straight back: quest complete', [v(p, 'myreque_2_quest'), H.invCount(p, 'burgh_rod_command_final_10')], [110, 1]);
 }
 
 console.log('');

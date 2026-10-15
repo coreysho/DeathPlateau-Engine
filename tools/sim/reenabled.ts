@@ -18,10 +18,12 @@ import InvType from '#/cache/config/InvType.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 let n = 0;
@@ -32,8 +34,17 @@ function player(x: number, z: number) {
     H.clearInv(p);
     return p;
 }
-const mesOf = (p: any, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
-const textOf = (p: any, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!).join(' ');
+const mesOf = (p: any, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
+const textOf = (p: any, from: number) =>
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .join(' ');
 const worn = (p: any, pos: number) => {
     const o = p.getInventory(InvType.WORN)!.get(pos);
     return o ? ObjType.get(o.id).debugname : null;
@@ -64,10 +75,18 @@ function spec(weapon: string, button: string, at: { x: number; z: number }, noSp
     H.equip(p, { rhand: weapon });
     H.setVar(p, 'sa_energy', 1000);
     H.setVar(p, 'dueloptions', noSpecs ? 1 << NO_SPECS : 0);
-    const m0 = H.mesgs.length, s0 = H.says.length;
+    const m0 = H.mesgs.length,
+        s0 = H.says.length;
     H.ifButton(p, button);
     H.tick(2);
-    const r = { mes: mesOf(p, m0), said: H.says.slice(s0).filter(s => s.who === p.username).map(s => s.text), energy: H.getVar(p, 'sa_energy') };
+    const r = {
+        mes: mesOf(p, m0),
+        said: H.says
+            .slice(s0)
+            .filter(s => s.who === p.username)
+            .map(s => s.text),
+        energy: H.getVar(p, 'sa_energy')
+    };
     H.despawn(p);
     return r;
 }
@@ -110,7 +129,8 @@ console.log('CHARGE: ONCE A MINUTE');
         H.tick(1);
         return mesOf(p, m0);
     };
-    const CHARGED = 'You feel charged with magic power.', TOO_STRONG = "You can't recast that yet, your current Charge is too strong.";
+    const CHARGED = 'You feel charged with magic power.',
+        TOO_STRONG = "You can't recast that yet, your current Charge is too strong.";
     check('first cast', cast(), [CHARGED]);
     check('  again at once: refused, no runes spent', [cast(), H.invCount(p, 'bloodrune')], [[TOO_STRONG], 97]);
     H.tick(96); // 98 ticks after the cast
@@ -121,7 +141,9 @@ console.log('CHARGE: ONCE A MINUTE');
 }
 
 console.log('TUTORIAL ISLAND: WIELDING BEFORE THE COMBAT INSTRUCTOR');
-const WORN_INVENTORY = 380, DAGGER_EQUIPPED = 390, COMPLETE = 1000; // tutorial.constant, quest.constant
+const WORN_INVENTORY = 380,
+    DAGGER_EQUIPPED = 390,
+    COMPLETE = 1000; // tutorial.constant, quest.constant
 for (const obj of ['bronze_dagger', 'bronze_axe', 'bronze_pickaxe']) {
     const p = player(LUMBRIDGE.x, LUMBRIDGE.z);
     H.setVar(p, 'tutorial', 100);
@@ -152,7 +174,10 @@ for (const obj of ['bronze_dagger', 'bronze_axe', 'bronze_pickaxe']) {
 }
 
 console.log('UNDERGROUND PASS JOURNAL, AFTER THE QUEST');
-for (const [st, want] of [[0, "services to stop Tyras."], [1, 'He has sent a messenger to summon me to stop Tyras.']] as const) {
+for (const [st, want] of [
+    [0, 'services to stop Tyras.'],
+    [1, 'He has sent a messenger to summon me to stop Tyras.']
+] as const) {
     const p = player(LUMBRIDGE.x, LUMBRIDGE.z);
     H.setVar(p, 'upass', 10);
     H.setVar(p, 'regicide_quest', st);

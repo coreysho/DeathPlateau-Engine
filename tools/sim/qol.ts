@@ -10,7 +10,6 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import InvType from '#/cache/config/InvType.js';
-import ObjType from '#/cache/config/ObjType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 
 await H.boot();
@@ -39,8 +38,7 @@ console.log('RING OF RECOIL');
     // and it still shatters on the same number it counts down to
     H.equip(p, { ring: 'ring_of_recoil' });
     A.runProcProtected(p, '[proc,ring_of_recoil_lose_charge]', [28]);
-    check('  it shatters at 40 recoiled', [last(p), p.getInventory(InvType.WORN)!.get(12) ?? null],
-        ['Your Ring of Recoil has shattered.', null]);
+    check('  it shatters at 40 recoiled', [last(p), p.getInventory(InvType.WORN)!.get(12) ?? null], ['Your Ring of Recoil has shattered.', null]);
     check('  and the counter is reset for the next one', v(p, 'ring_of_recoil'), 0);
     H.despawn(p);
 }
@@ -56,14 +54,17 @@ console.log('BREAKING THE RING');
     // interface text but only from where IT starts, and opheld has already put the box up by then -
     // so take the mark before the click.
     const from = H.ifaces.length;
-    H.opheld(p, 'ring_of_recoil', 4);   // Break
-    A.drive(p, [2]);                    // "Keep it."
-    const shown = H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!);
+    H.opheld(p, 'ring_of_recoil', 4); // Break
+    A.drive(p, [2]); // "Keep it."
+    const shown = H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     check('  keeping it changes nothing', [H.invCount(p, 'ring_of_recoil'), v(p, 'ring_of_recoil')], [2, 33]);
     check('  and it says what you would lose first', A.saw(shown, 'recoil 7 more damage'), true);
 
     H.opheld(p, 'ring_of_recoil', 4);
-    A.drive(p, [1]);                    // "Break the ring of recoil."
+    A.drive(p, [1]); // "Break the ring of recoil."
     check('  breaking one takes exactly one ring', H.invCount(p, 'ring_of_recoil'), 1);
     check('  and the charge is reset to full', v(p, 'ring_of_recoil'), 0);
     A.runProcProtected(p, '[proc,ring_of_recoil_check]');
@@ -80,11 +81,9 @@ console.log("AVA'S DEVICE");
     // is what the gate compares against - so a player who never touches this still attracts
     check('  attraction is on to begin with', v(p, 'avas_attract_off') === 1, false);
     H.opheld(p, 'avas_accumulator', 3);
-    check('  Toggle-attract turns it off', [v(p, 'avas_attract_off'), last(p)],
-        [1, "Your Ava's device will no longer attract metal items. It still saves your ammunition."]);
+    check('  Toggle-attract turns it off', [v(p, 'avas_attract_off'), last(p)], [1, "Your Ava's device will no longer attract metal items. It still saves your ammunition."]);
     H.opheld(p, 'avas_accumulator', 3);
-    check('  and back on again', [v(p, 'avas_attract_off'), last(p)],
-        [0, "Your Ava's device will attract metal items again."]);
+    check('  and back on again', [v(p, 'avas_attract_off'), last(p)], [0, "Your Ava's device will attract metal items again."]);
 
     // the thing that must NOT change: the ammo saving
     H.equip(p, { back: 'avas_accumulator' });
@@ -100,8 +99,7 @@ console.log("AVA'S DEVICE");
     const on = rate();
     setv(p, 'avas_attract_off', 1);
     const off = rate();
-    check(`  the device saves ammo either way (${(on * 100).toFixed(0)}% on, ${(off * 100).toFixed(0)}% off)`,
-        on > 0.6 && off > 0.6 && Math.abs(on - off) < 0.08, true);
+    check(`  the device saves ammo either way (${(on * 100).toFixed(0)}% on, ${(off * 100).toFixed(0)}% off)`, on > 0.6 && off > 0.6 && Math.abs(on - off) < 0.08, true);
 
     // and the thing that must: no metal arrives while it is off
     H.clearInv(p);

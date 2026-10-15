@@ -13,16 +13,19 @@ import * as A from './a1lib.ts';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 
 await H.boot();
-let ok = 0, fail = 0;
+let ok = 0,
+    fail = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const good = JSON.stringify(got) === JSON.stringify(want);
     console.log(`  ${good ? 'ok  ' : 'FAIL'} ${what}${good ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}`}`);
-    good ? ok++ : fail++;
+    if (good) ok++;
+    else fail++;
 };
 
 let n = 0;
 function brewer(herblore: number) {
-    const p = H.makePlayer('brew' + n, 3222 + (n % 6), 3218, 800 + n); n++;
+    const p = H.makePlayer('brew' + n, 3222 + (n % 6), 3218, 800 + n);
+    n++;
     H.tick(2);
     H.maxOut(p);
     H.clearInv(p);
@@ -43,7 +46,7 @@ function mix(level: number, a: string, b: string, want: string): { made: number;
     A.useHeld(p, a, b);
     H.tick(4);
     const made = H.invCount(p, want);
-    const xp = Math.round((p.stats[PlayerStat.HERBLORE] - before));
+    const xp = Math.round(p.stats[PlayerStat.HERBLORE] - before);
     H.despawn(p);
     H.tick(1);
     return { made, xp };
@@ -59,7 +62,7 @@ const STEPS: [string, number, string, string, string, number][] = [
     ['Weapon poison(++)', 82, 'poisonivy_berries', 'unfinished_weapon_poison++', 'weapon_poison++', 1900],
     // The one that already worked, so a regression in the shared code shows up here too.
     ['Antidote++ (unf)', 79, 'irit_leaf', 'vial_coconut_milk', 'unfinished_antidote++', 0],
-    ['Antidote++', 79, 'magic_roots', 'unfinished_antidote++', 'antidote++4', 1775],
+    ['Antidote++', 79, 'magic_roots', 'unfinished_antidote++', 'antidote++4', 1775]
 ];
 
 console.log('EVERY STEP OF THE THREE POISONS, AND THE ONE THAT ALREADY WORKED');
@@ -76,7 +79,7 @@ for (const [name, level, a, b, want] of STEPS) {
     check(`  one level short of ${name} makes nothing`, r.made, 0);
 }
 
-console.log('\nRED SPIDERS\' EGGS STILL MAKE WHAT THEY ALWAYS DID');
+console.log("\nRED SPIDERS' EGGS STILL MAKE WHAT THEY ALWAYS DID");
 // They now carry three recipes - restore, super restore and weapon poison(+) - and get_brew_struct
 // walks struct, _secondary, _tertiary in order. Adding the third must not shadow the first two.
 {

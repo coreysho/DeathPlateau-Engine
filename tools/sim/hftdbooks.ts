@@ -13,7 +13,6 @@
 //   clue rewards      the three casket procs, rolled thousands of times: pages come out of every
 //                     tier, all twelve of them, at the OSRS per-page rate
 import * as H from './harness.ts';
-import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -30,14 +29,17 @@ import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 await H.boot();
 H.loginOrder();
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -78,10 +80,22 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 function talkNear(p: Player, npc: Npc, picks: number[] = []) {
-    for (const [dx, dz] of [[0, -1], [1, 0], [-1, 0], [0, 1], [1, 1], [-1, -1], [2, 0], [0, 2]]) {
+    for (const [dx, dz] of [
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, 1);
@@ -98,10 +112,15 @@ const slotOf = (p: Player, objName: string) => {
 };
 /** "Use X on Y" in the pack: OpHeldUHandler - Y's trigger, else X's with the two swapped. */
 function useOn(p: Player, used: string, target: string) {
-    const a = ObjType.getId(used), b = ObjType.getId(target);
-    const sa = slotOf(p, used), sb = slotOf(p, target);
+    const a = ObjType.getId(used),
+        b = ObjType.getId(target);
+    const sa = slotOf(p, used),
+        sb = slotOf(p, target);
     if (sa === -1 || sb === -1) throw new Error(`not carrying ${used} / ${target}`);
-    p.lastItem = b; p.lastSlot = sb; p.lastUseItem = a; p.lastUseSlot = sa;
+    p.lastItem = b;
+    p.lastSlot = sb;
+    p.lastUseItem = a;
+    p.lastUseSlot = sa;
     let script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, b, -1);
     if (!script) {
         script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, a, -1);
@@ -114,14 +133,20 @@ function useOn(p: Player, used: string, target: string) {
     }
     p.executeScript(ScriptRunner.init(script, p), true);
     drive(p);
-    return H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+    return H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 }
 function checkBook(p: Player, book: string): string[] {
     // the mesbox is drawn inside the click itself, before drive() starts watching
     const from = H.ifaces.length;
     H.opheld(p, book, 3);
     drive(p);
-    const shown = H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!);
+    const shown = H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     // only the mesbox's lines - the side tabs redraw text of their own while it is open
     return shown.filter(l => / page is (missing|in the book)\.$/.test(l));
 }
@@ -151,7 +176,11 @@ const bookSlot = slotOf(j, 'unfinished_zamorakbook');
 let m = useOn(j, PAGE('z', 3), 'unfinished_zamorakbook');
 check('page 3 on the book: added', m, ['You add the page to the book...']);
 check('Check: 1, 2 and 4 missing', missing(checkBook(j, 'unfinished_zamorakbook')), ['first', 'second', 'fourth']);
-check('the cache varbit horror_unholypage3 is set, the others not', [1, 2, 3, 4].map(n => H.getVarBit(j, `horror_unholypage${n}`)), [0, 0, 1, 0]);
+check(
+    'the cache varbit horror_unholypage3 is set, the others not',
+    [1, 2, 3, 4].map(n => H.getVarBit(j, `horror_unholypage${n}`)),
+    [0, 0, 1, 0]
+);
 check('one page 3 used, the second kept', H.invCount(j, PAGE('z', 3)), 1);
 
 m = useOn(j, PAGE('z', 3), 'unfinished_zamorakbook');
@@ -172,8 +201,16 @@ check('...and the first, third and fourth read as in the book', lines.filter(l =
 m = useOn(j, PAGE('z', 2), 'unfinished_zamorakbook');
 check('the last page: added, and the book is complete', m, ['You add the page to the book...', 'The book is now complete!']);
 check('the damaged book became the unholy book, in the same slot', [H.invCount(j, 'unfinished_zamorakbook'), H.invCount(j, 'zamorakbook_complete'), slotOf(j, 'zamorakbook_complete')], [0, 1, bookSlot]);
-check('all four Zamorak pages used up (the spare page 3 aside)', [1, 2, 3, 4].map(n => H.invCount(j, PAGE('z', n))), [0, 0, 1, 0]);
-check('all four unholy page varbits set', [1, 2, 3, 4].map(n => H.getVarBit(j, `horror_unholypage${n}`)), [1, 1, 1, 1]);
+check(
+    'all four Zamorak pages used up (the spare page 3 aside)',
+    [1, 2, 3, 4].map(n => H.invCount(j, PAGE('z', n))),
+    [0, 0, 1, 0]
+);
+check(
+    'all four unholy page varbits set',
+    [1, 2, 3, 4].map(n => H.getVarBit(j, `horror_unholypage${n}`)),
+    [1, 1, 1, 1]
+);
 m = useOn(j, PAGE('z', 3), 'zamorakbook_complete');
 check('a page on the finished book: it already has it', m, ['The book already has that page.']);
 
@@ -188,13 +225,16 @@ const stats = (obj: string) => {
     return { wearpos: t.wearpos, atk: ATK.map(v), def: DEF.map(v), prayer: v('prayerbonus'), str: v('strengthbonus') };
 };
 const WANT: Record<string, { atk: number; def: number }> = {
-    unfinished_saradominbook: { atk: 0, def: 0 }, unfinished_zamorakbook: { atk: 0, def: 0 }, unfinished_guthixbook: { atk: 0, def: 0 },
-    saradominbook_complete: { atk: 0, def: 8 }, zamorakbook_complete: { atk: 8, def: 0 }, guthixbook_complete: { atk: 4, def: 4 }
+    unfinished_saradominbook: { atk: 0, def: 0 },
+    unfinished_zamorakbook: { atk: 0, def: 0 },
+    unfinished_guthixbook: { atk: 0, def: 0 },
+    saradominbook_complete: { atk: 0, def: 8 },
+    zamorakbook_complete: { atk: 8, def: 0 },
+    guthixbook_complete: { atk: 4, def: 4 }
 };
 const sp = player('hftdbk2', 3222, 3218);
 for (const [obj, w] of Object.entries(WANT)) {
-    check(`${obj} (${ObjType.get(ObjType.getId(obj)).name}): shield slot, attack, defence, prayer`, stats(obj),
-        { wearpos: 5, atk: Array(5).fill(w.atk), def: Array(5).fill(w.def), prayer: 5, str: 0 });
+    check(`${obj} (${ObjType.get(ObjType.getId(obj)).name}): shield slot, attack, defence, prayer`, stats(obj), { wearpos: 5, atk: Array(5).fill(w.atk), def: Array(5).fill(w.def), prayer: 5, str: 0 });
     // wield it at level 1 in everything - there is no requirement
     for (const s of [PlayerStat.ATTACK, PlayerStat.DEFENCE, PlayerStat.PRAYER, PlayerStat.MAGIC]) sp.setLevel(s, 1);
     H.clearInv(sp);
@@ -202,7 +242,7 @@ for (const [obj, w] of Object.entries(WANT)) {
     H.opheld(sp, obj, 2);
     drive(sp);
     const worn = sp.getInventory(InvType.WORN)!.get(5);
-    check(`...wielded at level 1 into the shield slot, and the equipment script reads +5 Prayer`, [worn?.id === ObjType.getId(obj), H.getVar(sp, 'prayer_drain_resistance')], [true, 70]);
+    check('...wielded at level 1 into the shield slot, and the equipment script reads +5 Prayer', [worn?.id === ObjType.getId(obj), H.getVar(sp, 'prayer_drain_resistance')], [true, 70]);
     sp.invDelSlot(InvType.WORN, 5);
 }
 
@@ -214,26 +254,46 @@ drive(j, [4]);
 const said = H.ifaces.filter(i => i.who === j.username && i.kind === 'text' && i.text).map(i => i.text!);
 const menu = said.slice(said.indexOf('Select a relevant passage'), said.indexOf('Select a relevant passage') + 5);
 check('the menu', menu, ['Select a relevant passage', 'Wedding Ceremony', 'Last Rites', 'Blessings', 'Preach']);
-check('the Zamorak preach seq, with the book in hand', H.anims.filter(a => a.who === j.username).map(a => a.seq), [SeqType.getId('horror_preach_zamorak')]);
+check(
+    'the Zamorak preach seq, with the book in hand',
+    H.anims.filter(a => a.who === j.username).map(a => a.seq),
+    [SeqType.getId('horror_preach_zamorak')]
+);
 const sermon = H.saysFor(j.username).map(s => s.text);
 check('a sermon, three lines overhead, ending on Zamorak', [sermon.length, sermon[2]], [3, 'Zamorak give me strength!']);
-truthy('...said a tick or two apart, not all at once', new Set(H.saysFor(j.username).map(s => s.tick)).size === 3, H.saysFor(j.username).map(s => s.tick));
+truthy(
+    '...said a tick or two apart, not all at once',
+    new Set(H.saysFor(j.username).map(s => s.tick)).size === 3,
+    H.saysFor(j.username).map(s => s.tick)
+);
 const g = player('hftdbk3', 3222, 3218);
 H.give(g, 'guthixbook_complete');
 H.clearLogs();
 H.opheld(g, 'guthixbook_complete', 3);
 drive(g, [1]);
-check('the book of balance: the Wedding Ceremony', H.saysFor(g.username).map(s => s.text), ['Light and dark, day and night,', 'Balance arises from contrast.', 'I unify thee in the name of Guthix.']);
+check(
+    'the book of balance: the Wedding Ceremony',
+    H.saysFor(g.username).map(s => s.text),
+    ['Light and dark, day and night,', 'Balance arises from contrast.', 'I unify thee in the name of Guthix.']
+);
 H.clearLogs();
 H.opheld(g, 'guthixbook_complete', 3);
 drive(g, [2]);
-check('...and Last Rites', H.saysFor(g.username).map(s => s.text), ['Thy death was not in vain,', 'for it brought some balance to the world.', 'May Guthix bring you rest.']);
+check(
+    '...and Last Rites',
+    H.saysFor(g.username).map(s => s.text),
+    ['Thy death was not in vain,', 'for it brought some balance to the world.', 'May Guthix bring you rest.']
+);
 const s = player('hftdbk4', 3222, 3218);
 H.give(s, 'saradominbook_complete');
 H.clearLogs();
 H.opheld(s, 'saradominbook_complete', 3);
 drive(s, [3]);
-check('the holy book: Blessings', H.saysFor(s.username).map(x => x.text), ['Go in peace in the name of Saradomin;', 'May his glory shine upon you like the sun.']);
+check(
+    'the holy book: Blessings',
+    H.saysFor(s.username).map(x => x.text),
+    ['Go in peace in the name of Saradomin;', 'May his glory shine upon you like the sun.']
+);
 
 // ============================================================ Jossik
 console.log('Jossik gives a lost book back with its pages:');
@@ -274,7 +334,11 @@ console.log('Clue caskets, rolled many times:');
     for (const g of ['s', 'z', 'g']) for (let n = 1; n <= 4; n++) pageIds.set(ObjType.getId(PAGE(g, n)), PAGE(g, n));
     const seen = new Map<string, number>();
     // per-roll page chance for the tier, times the tier's mean roll count (2-4, 3-5, 4-6)
-    const tiers: [string, number, number][] = [['easy', 3 * (1 / 72), 6000], ['medium', 4 * (5 / 341), 6000], ['hard', 5 * (6 / 325), 6000]];
+    const tiers: [string, number, number][] = [
+        ['easy', 3 * (1 / 72), 6000],
+        ['medium', 4 * (5 / 341), 6000],
+        ['hard', 5 * (6 / 325), 6000]
+    ];
     for (const [tier, perCasket, N] of tiers) {
         let pages = 0;
         for (let i = 0; i < N; i++) {
@@ -295,7 +359,11 @@ console.log('Clue caskets, rolled many times:');
         const want = N * perCasket;
         truthy(`${tier}: ${pages} pages from ${N} caskets, against ${want.toFixed(0)} expected (within 25%)`, Math.abs(pages - want) < want * 0.25, pages);
     }
-    check('every one of the twelve pages turned up', [...pageIds.values()].filter(n => !seen.has(n)), []);
+    check(
+        'every one of the twelve pages turned up',
+        [...pageIds.values()].filter(n => !seen.has(n)),
+        []
+    );
     console.log('    ' + [...pageIds.values()].map(n => `${n.replace('holy_book_', '')}=${seen.get(n) ?? 0}`).join(' '));
 }
 
