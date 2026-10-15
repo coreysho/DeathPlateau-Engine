@@ -493,6 +493,14 @@ console.log('IN AID OF THE MYREQUE');
 guard('myreque2', () => {
     const p = player('myreque2', 3484, 3246);
     check('Burgh de Rott is fenced in from the swamp road', connected(0, 3484, 3246, 3490, 3240), false);
+    // THE GATE WANTS FEEDING NOW. myreque2_village.rs2 bars it from the inside until Florin has had
+    // something to eat (%myreque_2_quest >= ^m2_fed, which is 12), and only lets you out the other
+    // way without it - so this used to walk straight in and now has to earn it. The feeding itself
+    // is myrequevillage.ts's; what this block is for is the map, so it sets the stage and asks the
+    // gate the same question. The refusal is worth a check of its own while we are here.
+    op(p, 3484, 3244, 'burgh_fencegate_r', 1);
+    check('the gate is barred until Florin is fed', p.z <= 3243, false);
+    sv(p, 'myreque_2_quest', 12); // ^m2_fed
     op(p, 3484, 3244, 'burgh_fencegate_r', 1);
     check('the gate lets you into the village', [p.z <= 3243, reachesNear(0, p.x, p.z, 3490, 3241), reachesNear(0, p.x, p.z, 3517, 3241)], [true, true, true]);
     const f = player('myreque2f', 3475, 3221);
@@ -518,11 +526,13 @@ guard('myreque2', () => {
     H.tick(1);
     for (let i = 0; i < 3; i++) op(p, 3527, 3209, 'burgh_furnace_multiloc', 1);
     check('the furnace: mended, loaded, lit', gv(p, 'burgh_furnace_fix'), 3);
-    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere.
-    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall']) sv(p, b, 1);
-    p.teleport(3517, 3239, 0);
-    H.tick(1);
-    talk(p, 'burgh_general_store_owner');
+    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere -
+    // and STOCKING THE SHOP IS ITS OWN QUEST STEP NOW: once the roof and wall are done, Aurel asks
+    // for ten bronze axes, three tinderboxes and ten of whatever the swamp gave him that week, hands
+    // over a crate, and ~p_choice2 asks whether you will fetch it. A talk() with no pick walks into
+    // that menu and throws "unexpected menu: multi2", which is what it did. myrequecrate.ts is the
+    // sim for that step; here the var goes on with the other three.
+    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall', 'burgh_store_stocked']) sv(p, b, 1);
     check('the store is stocked', gv(p, 'burgh_store_stocked'), 1);
     p.teleport(3490, 3239, 0);
     H.tick(1);
