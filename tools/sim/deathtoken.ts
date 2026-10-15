@@ -408,7 +408,7 @@ console.log('\nTHE ROYAL SEED POD STOPS AT LEVEL 30');
         const from = { x: p.x, z: p.z };
         H.opheld(p, 'royal_seed_pod', 1);
         for (let i = 0; i < 8; i++) {
-            World.cycle(false);   // the teleport sits behind a p_delay
+            World.cycle(); // the teleport sits behind a p_delay
         }
         const moved = p.x !== from.x || p.z !== from.z;
         H.despawn(p);

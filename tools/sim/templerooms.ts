@@ -14,7 +14,12 @@ function reach(sx: number, sz: number, lvl: number, limit = 60000) {
     const q: [number, number][] = [[sx, sz]];
     while (q.length && seen.size < limit) {
         const [x, z] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as const) {
             if (seen.has(KEY(x + dx, z + dz))) continue;
             if (!canTravel(lvl, x, z, dx, dz, 1, 1, CollisionType.NORMAL)) continue;
             seen.add(KEY(x + dx, z + dz));
@@ -49,7 +54,12 @@ console.log('');
 for (const [name, cx, cz, lvl] of chests) {
     // the chest tile itself is blocking, so flood from each walkable neighbour
     let room = new Set<number>();
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ] as const) {
         const r = reach(cx + dx, cz + dz, lvl);
         if (r.size > room.size) room = r;
     }
@@ -58,7 +68,13 @@ for (const [name, cx, cz, lvl] of chests) {
     for (const k of room) {
         const x = Math.floor(k / 10000);
         const z = k % 10000;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]] as const) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+            [0, 0]
+        ] as const) {
             for (const n of locs.get(lvl + ':' + (x + dx) + ':' + (z + dz)) ?? []) {
                 if (/^mourning_door_\d/.test(n)) doors.add(n);
                 if (/stairs|ladder|way_rope|way_down|wall_jump|agility_hanging/.test(n)) stairs.add(n);
@@ -69,3 +85,8 @@ for (const [name, cx, cz, lvl] of chests) {
     console.log('   doors on its edge: ' + ([...doors].join(', ') || 'none'));
     console.log('   ways between floors in it: ' + ([...stairs].join(', ') || 'none'));
 }
+
+// Exit rather than running off the end of the file: the world keeps worker threads and timers alive,
+// so without this the sim hangs after its last line instead of finishing. gwdmap and feudhouse were
+// the same, and all four were the sweep's only timeouts.
+process.exit(0);

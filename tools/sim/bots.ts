@@ -133,11 +133,18 @@ check(
     [...furthest.values()].some(n => n >= 30),
     true
 );
+// THE SLACK IS THE ENGINE'S, as in the melee-area check further down: BotBrain.inArea takes a slack
+// argument and the two places that decide whether to keep chasing a target pass 2 - "with slack
+// levels/tiles of give, for someone it is already fighting" - so a roamer that followed something
+// over the line is inside its leash by design. This was failing on a low roamer at level 17 against
+// a depth of 15, which is that slack exactly. What the check is for is a roamer that has lost its
+// area altogether: travel() clamps every waypoint to z = 3520 + maxLevel * 8 - 1 and pickDestination
+// only picks inside the area, so nothing but a chase can put one past its depth at all.
 check(
-    "  never past their bracket's depth (low 15, mid 30)",
+    "  never past their bracket's depth plus the engine's chase slack (low 15, mid 30, +2)",
     roamers.every(b => {
         const br = BotManager.stateOf(b)?.kit.bracket;
-        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 1;
+        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 2;
     }),
     true
 );
@@ -541,9 +548,15 @@ doomed.invDel(InvType.INV, ObjType.getId('swordfish'), 28);
 doomed.levels[PlayerStat.HITPOINTS] = 4;
 doomed.levels[PlayerStat.PRAYER] = 0;
 let deathTile: { x: number; z: number } | null = null;
-for (let t = 0; t < 300 && !deathTile; t++) {
+for (let t = 0; t < 600 && !deathTile; t++) {
     hunt(doomed);
     doomed.runenergy = 0; // spent: it can only walk, and the killer runs it down
+    // HELD AT FOUR, every tick. Setting it once before the loop leaves the rest of the window to
+    // regeneration and to whatever the bot can still eat or pray, so the killer has to land the
+    // whole bar again - and a sweep run caught this failing with the bot alive at the end of it and
+    // the three drop checks under it failing too. Nearly dead and being run down is the premise of
+    // the test, not a starting condition.
+    if (doomed.levels[PlayerStat.HITPOINTS] > 4) doomed.levels[PlayerStat.HITPOINTS] = 4;
     H.tick(1);
     trace(t, doomed);
     if (getVarp(doomed, 'death') === 1) deathTile = { x: doomed.x, z: doomed.z };

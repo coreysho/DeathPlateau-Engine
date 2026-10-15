@@ -27,9 +27,13 @@ const pairs: { base: number; kit: number; into: number }[] = [];
 for (let i = 0; i < ObjType.count; i++) {
     if (!ObjType.get(i)) continue;
     // THREE SLOTS: the infinity robes take either colour kit, the rune scimitar takes one per god.
-    for (const [k, v] of [['ornament_kit', 'ornament_into'], ['ornament_kit2', 'ornament_into2'],
-                          ['ornament_kit3', 'ornament_into3']]) {
-        const kit = P(i, k), into = P(i, v);
+    for (const [k, v] of [
+        ['ornament_kit', 'ornament_into'],
+        ['ornament_kit2', 'ornament_into2'],
+        ['ornament_kit3', 'ornament_into3']
+    ]) {
+        const kit = P(i, k),
+            into = P(i, v);
         if (kit !== null && into !== null) pairs.push({ base: i, kit, into });
     }
 }
@@ -44,7 +48,8 @@ for (let i = 0; i < ObjType.count; i++) if (ObjType.get(i)?.category === ORNAMEN
 const dead = declared.filter(i => !kits.has(i)).map(name);
 check(`  all ${declared.length} kits are wired to something`, dead.length ? dead.join(' ') : 'yes', 'yes');
 
-let applied = 0, reverted = 0;
+let applied = 0,
+    reverted = 0;
 const broken: string[] = [];
 for (const { base, kit, into } of pairs) {
     const p: any = player(`orn${base}_${kit}`, 3200, 3200);
@@ -69,15 +74,13 @@ if (broken.length) console.log('  ' + broken.join('\n  '));
 // Every result must carry its base's bonuses exactly, or a gilded dragon scimitar is a different
 // weapon from a dragon scimitar and nobody meant that.
 console.log('\nA DECORATION IS PAINT');
-const BONUS = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack',
-               'stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence',
-               'strengthbonus', 'prayerbonus'];
+const BONUS = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack', 'stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence', 'strengthbonus', 'prayerbonus'];
 let same = 0;
 for (const { base, into } of pairs) {
     if (BONUS.every(k => P(base, k) === P(into, k))) same++;
     else console.log(`  ${name(into)} does not match ${name(base)}`);
 }
-check('  every decorated item has its base item\'s stats', same, pairs.length);
+check("  every decorated item has its base item's stats", same, pairs.length);
 
 // ---------------------------------------------------------------- and the wrong kit is refused
 console.log('\nTHE WRONG KIT DOES NOTHING');

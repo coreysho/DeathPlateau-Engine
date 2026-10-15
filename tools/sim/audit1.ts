@@ -790,25 +790,43 @@ if (rfd) {
         check(`${name} appears`, npc !== null, true);
         if (!npc) break;
         if (i === 4) {
-            // the Gelatinnoth Mother only takes damage from her current form's style, and her form
-            // turns every 30 ticks; a scimitar fights her melee form, so each time she comes round
-            // to it, attack until she turns again
-            let dead = false;
-            for (let round = 0; round < 40 && !dead; round++) {
-                for (let t = 0; t < 200 && NpcType.get(npc.type).debugname !== 'hundred_minion5_melee'; t++) H.tick(1);
-                H.attackNpc(p, npc);
-                for (let t = 0; t < 30; t++) {
-                    H.tick(1);
-                    if (!npc.isActive || npc.levels[3] === 0) {
-                        dead = true;
-                        break;
-                    }
-                    if (!p.target && t % 5 === 4) H.attackNpc(p, npc);
-                    if (p.levels[3] < 50) p.levels[3] = 99;
+            // THE GELATINNOTH MOTHER, and why this is not fight(). She takes damage only from the
+            // style her current form answers to - 190 hitpoints behind magicdefence=1000 in five of
+            // her six forms - and npc_changetype_keepall turns her every 30 ticks on a fixed ring,
+            // so a rune scimitar gets one window in six to land 190 damage inside the 1500 ticks of
+            // ^hundred_boss_lifetime she exists for.
+            //
+            // THIS BLOCK PASSED THREE RUNS AND FAILED THE FOURTH, reporting a kill that the quest
+            // did not count, and two things in the old loop are why:
+            //   it healed the player only inside the 30-tick attack window. The 200-tick wait for
+            //     her melee form ran with no top-up at all, and she is aggressive_melee with
+            //     strength 90 and attackrate 5.
+            //   it read !npc.isActive as death. Her lifetime running out leaves her inactive with
+            //     her hitpoints intact - a despawn, not a kill - and reporting it as a kill is what
+            //     turned a lost race into "dies to a real fight: true" with the tally still on 4.
+            // One tick loop, healing on every tick of it, the attack re-issued only when the player
+            // has no target (a form change does not drop it - she is the same npc throughout), and
+            // an outcome that names which of the three endings happened.
+            let outcome = 'still alive when the sim gave up';
+            let ticks = 0;
+            for (; ticks < 1400; ticks++) {
+                if (!npc.isActive) {
+                    outcome = npc.levels[3] > 0 ? 'despawned with her hitpoints intact' : 'killed';
+                    break;
                 }
+                if (npc.levels[3] === 0) {
+                    outcome = 'killed';
+                    break;
+                }
+                if (p.levels[3] < 60) p.levels[3] = 99;
+                if (!p.target && ticks % 5 === 4) H.attackNpc(p, npc);
+                H.tick(1);
             }
-            H.tick(3);
-            check(`${name} dies to a real fight (her melee form)`, dead, true);
+            if (outcome !== 'killed') {
+                console.log(`       she was ${NpcType.get(npc.type).debugname} on ${npc.levels[3]} hitpoints after ${ticks} ticks,` + ` the player ${p.levels[3]} at ${p.x},${p.z},${p.level} and she at ${npc.x},${npc.z},${npc.level}`);
+            }
+            H.tick(4);
+            check(`${name} dies to a real fight (her melee form)`, outcome, 'killed');
         } else {
             // 1500 rather than 900 because the last one is 120 hitpoints; the stall nudge that used
             // to be written out here lives in fight() now, under every caller.
@@ -1418,7 +1436,14 @@ if (run('watchtower')) {
     H.tick(2);
     op(p, 2590, 9449, 'rock_of_dalgroth', 2);
     check('the fourth crystal from the Rock of Dalgroth', H.invCount(p, 'powering_crystal4'), 1);
-    op(p, 2598, 9468, 'enclavecave', 1);
+    // THE EXIT IS EIGHT TILES AWAY from where the Rock of Dalgroth left the player, so the click has
+    // to be walked to and the walk needs ticks - one op() with whatever drive() spends is sometimes
+    // enough and sometimes leaves the player underground, which is how a sweep run got [false,true]
+    // on a check that passes alone.
+    for (let t = 0; t < 8 && p.z > 4000; t++) {
+        op(p, 2598, 9468, 'enclavecave', 1);
+        H.tick(4);
+    }
     check('out of the enclave, a walkable tile', [p.z < 4000, walkable(0, p.x, p.z)], [true, true]);
 
     p.teleport(2545, 3112, 2);

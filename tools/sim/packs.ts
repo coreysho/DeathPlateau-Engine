@@ -25,7 +25,8 @@ let ok = 0,
     n = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -56,7 +57,11 @@ console.log('\nwater-filled vial pack, the obj');
     check('stackable', o.stackable, false);
     // The wiki's "options = Open, Drop". Drop is iop5 on every obj in the build, so the pack adds
     // only Open - there is no Open-all, no Use, nothing else to click.
-    check('inventory ops', o.iop?.filter(x => x), ['Open', 'Drop']);
+    check(
+        'inventory ops',
+        o.iop?.filter(x => x),
+        ['Open', 'Drop']
+    );
     check('noted form links back', cert.certlink, id);
     check('obj id is inside the round-s range', id >= 10730 && id <= 10769, true);
     check('model id is inside the round-s range', o.model >= 24600 && o.model <= 24699, true);
@@ -91,7 +96,11 @@ for (const [shop, [slot, stock, restock]] of Object.entries(SHOPS)) {
     // square, because obj 65535 only appears once Inventory.fromType has seeded the shop.
     const live = Inventory.fromType(InvType.getId(shop));
     check(`${shop} live container holds ${stock}`, live.getItemCount(packId), stock);
-    check(`${shop} live container has no blank square`, [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535), false);
+    check(
+        `${shop} live container has no blank square`,
+        [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535),
+        false
+    );
 }
 
 // ---------------------------------------------------------------- what it costs
@@ -222,7 +231,11 @@ const RUNE_PACKS: [string, string, number, string][] = [
         check(`${pack} cost`, o.cost, cost);
         check(`${pack} weight (grams)`, o.weight, 4535);
         check(`${pack} free, tradeable, unstackable`, [o.members, o.tradeable, o.stackable], [false, true, false]);
-        check(`${pack} inventory ops`, o.iop?.filter(x => x), ['Open', 'Drop']);
+        check(
+            `${pack} inventory ops`,
+            o.iop?.filter(x => x),
+            ['Open', 'Drop']
+        );
         check(`${pack} noted form links back`, ObjType.get(ObjType.getId('cert_' + pack)).certlink, id);
         check(`${pack} obj id in range`, id >= 10732 && id <= 10769, true);
         check(`${pack} model id in range`, o.model >= 24601 && o.model <= 24699, true);
@@ -278,24 +291,44 @@ console.log('\nshops that stock the rune packs');
         const want = ORDER.map(p => [p, p === 'mind_rune_pack' ? ms : es, p === 'mind_rune_pack' ? mr : er]);
         check(`${shop} rows ${first}-${first + 4}`, got, want);
         const live = Inventory.fromType(InvType.getId(shop));
-        check(`${shop} live container, no blank square`, [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535), false);
-        check(`${shop} sells no chaos pack`, [...Array(live.capacity).keys()].some(s => (ObjType.get(live.get(s)?.id ?? 0).debugname ?? '').includes('chaos_rune_pack')), false);
+        check(
+            `${shop} live container, no blank square`,
+            [...Array(live.capacity).keys()].some(s => live.get(s)?.id === 65535),
+            false
+        );
+        check(
+            `${shop} sells no chaos pack`,
+            [...Array(live.capacity).keys()].some(s => (ObjType.get(live.get(s)?.id ?? 0).debugname ?? '').includes('chaos_rune_pack')),
+            false
+        );
     }
     // Tutab's is the odd one and is meant to be: Old School stocks only the four elementals on Ape
     // Atoll, with no mind pack, matching the loose runes the shop carries.
     const tutab = InvType.getByName('mm_magic_shop')!;
-    check('mm_magic_shop rows 6-9 are the four elementals', [0, 1, 2, 3].map(k => [ObjType.get(tutab.stockobj![5 + k]).debugname, tutab.stockcount![5 + k], tutab.stockrate![5 + k]]), [
-        ['fire_rune_pack', 40, 10],
-        ['water_rune_pack', 40, 10],
-        ['air_rune_pack', 40, 10],
-        ['earth_rune_pack', 40, 10]
-    ]);
+    check(
+        'mm_magic_shop rows 6-9 are the four elementals',
+        [0, 1, 2, 3].map(k => [ObjType.get(tutab.stockobj![5 + k]).debugname, tutab.stockcount![5 + k], tutab.stockrate![5 + k]]),
+        [
+            ['fire_rune_pack', 40, 10],
+            ['water_rune_pack', 40, 10],
+            ['air_rune_pack', 40, 10],
+            ['earth_rune_pack', 40, 10]
+        ]
+    );
     const tutabLive = Inventory.fromType(InvType.getId('mm_magic_shop'));
     check('mm_magic_shop has no mind pack, as OSRS has it', tutabLive.getItemCount(ObjType.getId('mind_rune_pack')), 0);
-    check('mm_magic_shop live container, no blank square', [...Array(tutabLive.capacity).keys()].some(s => tutabLive.get(s)?.id === 65535), false);
+    check(
+        'mm_magic_shop live container, no blank square',
+        [...Array(tutabLive.capacity).keys()].some(s => tutabLive.get(s)?.id === 65535),
+        false
+    );
     // The TzHaar rune store takes the TzHaar variants in Old School, not these, so it gets none.
     const tz = Inventory.fromType(InvType.getId('tzhaar_shop_rune'));
-    check('tzhaar_shop_rune got none of them', RUNE_PACKS.map(([p]) => tz.getItemCount(ObjType.getId(p))), [0, 0, 0, 0, 0]);
+    check(
+        'tzhaar_shop_rune got none of them',
+        RUNE_PACKS.map(([p]) => tz.getItemCount(ObjType.getId(p))),
+        [0, 0, 0, 0, 0]
+    );
 }
 
 // ---------------------------------------------------------------- what they cost
@@ -316,7 +349,11 @@ console.log('\nopening a rune pack');
     // A rune has no noted form at all - it stacks, so it never needed one. That is the whole reason
     // item_pack_contents names the rune itself here where the vial pack names a cert, and it is
     // also why "did it come out noted?" cannot be asked the way it was asked of the vial pack.
-    check('a rune has no noted form to come out as', RUNE_PACKS.map(([, , , rune]) => ObjType.getId('cert_' + rune)), [-1, -1, -1, -1, -1]);
+    check(
+        'a rune has no noted form to come out as',
+        RUNE_PACKS.map(([, , , rune]) => ObjType.getId('cert_' + rune)),
+        [-1, -1, -1, -1, -1]
+    );
     for (const [pack, , , rune] of RUNE_PACKS) {
         const p = fresh();
         H.give(p, pack, 1);

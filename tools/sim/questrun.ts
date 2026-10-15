@@ -57,14 +57,14 @@ export type Step =
 
 export type Manifest = {
     quest: string;
-    source: string;            // the guide this step list came from
-    stageVar: string;          // the quest's own progress varp or varbit
-    done: number;              // its value at completion
+    source: string; // the guide this step list came from
+    stageVar: string; // the quest's own progress varp or varbit
+    done: number; // its value at completion
     start: [number, number, number];
     steps: Step[];
 };
 
-const W = 66;   // how wide a step line is before the verdict column
+const W = 66; // how wide a step line is before the verdict column
 
 // DID THE PLAYER GET THERE? This is the one question the runner cannot afford to get wrong, because
 // getting it wrong means a step that did nothing is reported as a pass, which is worse than no audit
@@ -112,8 +112,7 @@ function quiet(p: Player, ticks = 10): void {
 export type Result = { n: number; what: string; ok: boolean; detail: string };
 
 /** A walkable route between two tiles, by the engine's own canTravel. [] means there is none. */
-export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96,
-    tol = 0): number[][] {
+export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96, tol = 0): number[][] {
     const key = (a: number, b: number) => a * 20000 + b;
     const prev = new Map<number, number>();
     const seen = new Set<number>([key(x, z)]);
@@ -130,8 +129,15 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
                 }
                 return out;
             }
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nx = cx + dx, nz = cz + dz, k = key(nx, nz);
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ]) {
+                const nx = cx + dx,
+                    nz = cz + dz,
+                    k = key(nx, nz);
                 if (seen.has(k)) continue;
                 if (Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
                 if (!canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
@@ -249,8 +255,7 @@ export function play(m: Manifest, p: Player): Result[] {
             // a jumped leg for a walked one. Every use needs a reason in .
             p.teleport(s.setpos[0], s.setpos[1], s.setpos[2]);
             H.tick(2);
-            console.log('      -- JUMPED to ' + s.setpos[0] + ',' + s.setpos[1] + ' L' + s.setpos[2]
-                + ': ' + s.why);
+            console.log('      -- JUMPED to ' + s.setpos[0] + ',' + s.setpos[1] + ' L' + s.setpos[2] + ': ' + s.why);
             continue;
         }
         if ('wait' in s) {
@@ -394,9 +399,12 @@ export function play(m: Manifest, p: Player): Result[] {
                 (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
                 H.tick(1);
                 far = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-                const dbg = process.env.QUESTRUN_DEBUG
-                    ? (w: string) => console.log('        attempt ' + a + ': ' + w)
-                    : (_w: string) => { void _w; };
+                // One arrow with the condition inside it, rather than a ternary choosing between
+                // two arrows where the no-op one needed a `void _w;` body to keep eslint quiet:
+                // prettier and eslint's indent rule could not agree on how to lay that out.
+                const dbg = (w: string) => {
+                    if (process.env.QUESTRUN_DEBUG) console.log('        attempt ' + a + ': ' + w);
+                };
                 if (!H.opNpc(p, npc, s.op ?? 1)) {
                     dbg('click thrown away; delayed=' + (p as unknown as { delayed: boolean }).delayed);
                     H.tick(5);
@@ -421,8 +429,7 @@ export function play(m: Manifest, p: Player): Result[] {
             // until not satisfied after every attempt is a failure, not a pass. Reporting ok
             // here once hid a Rune-Draw loop that never produced the bow.
             if (reached && 'until' in s && s.until && H.invCount(p, s.until) === 0) {
-                hard(what, false, 'after ' + tries + ' attempts there is still no ' + s.until
-                    + '; the last one said: ' + lines.slice(0, 4).join(' | ').slice(0, 120));
+                hard(what, false, 'after ' + tries + ' attempts there is still no ' + s.until + '; the last one said: ' + lines.slice(0, 4).join(' | ').slice(0, 120));
                 continue;
             }
             if (!reached) {
@@ -439,7 +446,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 locw = lt.width;
                 locl = lt.length;
                 sent = H.opLoc(p, s.at[0], s.at[1], s.loc, s.op ?? 1);
-            } catch (e) {
+            } catch (_e) {
                 hard(what, false, 'no ' + s.loc + ' there on level ' + p.level + ' (player at ' + p.x + ',' + p.z + ')');
                 continue;
             }
@@ -533,8 +540,7 @@ export function play(m: Manifest, p: Player): Result[] {
 
         const joined = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
         if (unreached && !('until' in s && s.until)) {
-            soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: '
-                + joined.slice(0, 110));
+            soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: ' + joined.slice(0, 110));
             continue;
         }
         if (s.want && !joined.includes(s.want)) {

@@ -17,6 +17,7 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
+import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -42,24 +43,58 @@ check('the maps spawn their npcs', spawns.length > 12000, true);
 
 console.log('THE COW FIELD');
 const field = spawns.filter(s => s.npc.level === 0 && inBox(s, 3240, 3255, 3266, 3300)).map(s => s.name);
-check('no Elf warrior in Lumbridge\'s cow field', field.filter(n => n.includes('elf')), []);
-check('the field is cows, calves and Gillie', [...new Set(field)].filter(n => !/^(cow|cow2|cow3|cow2_calf|cow3_calf|calf|gillie_the_milkmaid)$/.test(n)), []);
+check(
+    "no Elf warrior in Lumbridge's cow field",
+    field.filter(n => n.includes('elf')),
+    []
+);
+check(
+    'the field is cows, calves and Gillie',
+    [...new Set(field)].filter(n => !/^(cow|cow2|cow3|cow2_calf|cow3_calf|calf|gillie_the_milkmaid)$/.test(n)),
+    []
+);
 
 console.log('BY REGION');
 const overworld = (s: { npc: Npc }) => s.npc.startZ < 4400;
 const elves = spawns.filter(s => /^(regicide_|mourning_|elf_|roving_)/.test(s.name) && overworld(s));
-check('every elf-kind spawn on the surface is in Tirannwn', elves.filter(s => !inBox(s, 2150, 3050, 2420, 3450)).map(s => `${s.name}@${where(s)}`), []);
+check(
+    'every elf-kind spawn on the surface is in Tirannwn',
+    elves.filter(s => !inBox(s, 2150, 3050, 2420, 3450)).map(s => `${s.name}@${where(s)}`),
+    []
+);
 const elid = spawns.filter(s => s.name.startsWith('elid_'));
-check('Nardah\'s people are in Nardah or the Elid\'s cave', elid.filter(s => !inBox(s, 3380, 2860, 3470, 2960) && !inBox(s, 3330, 9280, 3420, 9620)).map(s => `${s.name}@${where(s)}`), []);
+check(
+    "Nardah's people are in Nardah or the Elid's cave",
+    elid.filter(s => !inBox(s, 3380, 2860, 3470, 2960) && !inBox(s, 3330, 9280, 3420, 9620)).map(s => `${s.name}@${where(s)}`),
+    []
+);
 const jackals = spawns.filter(s => s.disp === 'Jackal' && overworld(s));
-check('jackals only in the desert', jackals.filter(s => s.npc.startZ > 3150).map(s => `${s.name}@${where(s)}`), []);
+check(
+    'jackals only in the desert',
+    jackals.filter(s => s.npc.startZ > 3150).map(s => `${s.name}@${where(s)}`),
+    []
+);
 check('no Pyrefiend in Etceteria', spawns.filter(s => s.name.startsWith('slayer_pyrefiend') && inBox(s, 2500, 3840, 2640, 3910)).map(where), []);
 check('no Mime (random event) outside his stage', spawns.filter(s => s.name === 'macro_mime' && !inBox(s, 1990, 4740, 2030, 4780)).map(where), []);
 
 console.log('FALADOR');
 // OSRS wiki, Guard: "Falador Walls", plane 1 - the same nine tiles the maps use.
-const walls: [number, number][] = [[3031, 3389], [3039, 3388], [3049, 3389], [3056, 3389], [3064, 3384], [3028, 3329], [3038, 3329], [3051, 3329], [3059, 3330]];
-check('the nine wall posts are wall guards (fai_falador_guard5/6)', walls.map(([x, z]) => at(x, z, 1).join('+')).filter(n => !/^fai_falador_guard[56]$/.test(n)), []);
+const walls: [number, number][] = [
+    [3031, 3389],
+    [3039, 3388],
+    [3049, 3389],
+    [3056, 3389],
+    [3064, 3384],
+    [3028, 3329],
+    [3038, 3329],
+    [3051, 3329],
+    [3059, 3330]
+];
+check(
+    'the nine wall posts are wall guards (fai_falador_guard5/6)',
+    walls.map(([x, z]) => at(x, z, 1).join('+')).filter(n => !/^fai_falador_guard[56]$/.test(n)),
+    []
+);
 check('no Nardah villager on the walls', spawns.filter(s => s.name.startsWith('elid_') && inBox(s, 2930, 3300, 3080, 3420)).length, 0);
 check('the ground guard by the west bank', at(2950, 3379, 0), ['fai_falador_guard4']);
 check('the ground guard by the Rising Sun', at(2968, 3379, 0), ['fai_falador_guard4']);
@@ -97,27 +132,85 @@ function reach(n: Npc): number {
     const size = NpcType.get(n.type).size;
     const seen = new Set<number>();
     const q: [number, number][] = [];
-    for (let dx = -1; dx <= size; dx++) for (let dz = -1; dz <= size; dz++) {
-        const x = n.startX + dx, z = n.startZ + dz;
-        if (!isFlagged(x, z, n.level, CollisionFlag.WALK_BLOCKED)) { seen.add(x * 65536 + z); q.push([x, z]); }
-    }
+    for (let dx = -1; dx <= size; dx++)
+        for (let dz = -1; dz <= size; dz++) {
+            const x = n.startX + dx,
+                z = n.startZ + dz;
+            if (!isFlagged(x, z, n.level, CollisionFlag.WALK_BLOCKED)) {
+                seen.add(x * 65536 + z);
+                q.push([x, z]);
+            }
+        }
     while (q.length && seen.size < 30) {
         const [cx, cz] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const k = (cx + dx) * 65536 + cz + dz;
-            if (!seen.has(k) && canTravel(n.level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([cx + dx, cz + dz]); }
+            if (!seen.has(k) && canTravel(n.level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([cx + dx, cz + dz]);
+            }
         }
     }
     return seen.size;
 }
 // What stands in the sea, a swamp or a rock on purpose: water and sky creatures, spots, stage extras.
-const belongs = new Set(['Fishing spot', 'Duck', 'Duckling', 'Swan', 'Gull', 'Seagull', 'Ghast', "Will o' the wisp", 'Giant bat', 'Spinolyp', 'Suspicious water',
-    'Light creature', 'Storm Cloud', 'Shark', 'Whirlpool', 'Butterfly', 'Bald Headed Eagle', 'Eagle', 'Crocodile', 'Strange watcher', 'Mime', 'Quiz Master', '']);
+const belongs = new Set([
+    'Fishing spot',
+    'Duck',
+    'Duckling',
+    'Swan',
+    'Gull',
+    'Seagull',
+    'Ghast',
+    "Will o' the wisp",
+    'Giant bat',
+    'Spinolyp',
+    'Suspicious water',
+    'Light creature',
+    'Storm Cloud',
+    'Shark',
+    'Whirlpool',
+    'Butterfly',
+    'Bald Headed Eagle',
+    'Eagle',
+    'Crocodile',
+    'Strange watcher',
+    'Mime',
+    'Quiz Master',
+    ''
+]);
 const stage = new Set(['zogre_drummer1', 'zogre_drummer2', 'mm_caranock_cutscene', 'mm_foreman_cutscene', 'gnomeknight']);
-const stranded = spawns.filter(s => !belongs.has(s.disp) && !stage.has(s.name) && reach(s.npc) === 0);
-check('no map npc stranded where no player can reach it', stranded.map(s => `${s.name}@${where(s)}`), []);
+// A BANKER BELONGS BEHIND HIS BOOTH. The two on Lumbridge castle's upper floor stand at 3208-3209,
+// 3222 with lumbridge_bankbooth across their south side and log piles behind them: no tile next to
+// them is walkable and that is the whole point, because the player uses the BOOTH and the banker is
+// on the far side of it. Checked by looking for a booth rather than by name, so a banker who really
+// has been walled into a cupboard still gets reported.
+const BOOTH = /bankbooth|bank_booth/i;
+const behindABooth = (n: Npc) =>
+    [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => {
+        for (let id = 0; id < LocType.count; id++) {
+            if (World.getLoc(n.x + dx, n.z + dz, n.level, id) && BOOTH.test(LocType.get(id).debugname ?? '')) return true;
+        }
+        return false;
+    });
+const stranded = spawns.filter(s => !belongs.has(s.disp) && !stage.has(s.name) && reach(s.npc) === 0 && !behindABooth(s.npc));
+check(
+    'no map npc stranded where no player can reach it',
+    stranded.map(s => `${s.name}@${where(s)}`),
+    []
+);
 const lokar = spawns.find(s => s.name === 'lokar_searunner' && s.npc.startZ < 3800)!;
-check('Lokar Searunner stands on Rellekka\'s pier', !isFlagged(lokar.npc.startX, lokar.npc.startZ, 0, CollisionFlag.WALK_BLOCKED) && reach(lokar.npc) >= 10, true);
+check("Lokar Searunner stands on Rellekka's pier", !isFlagged(lokar.npc.startX, lokar.npc.startZ, 0, CollisionFlag.WALK_BLOCKED) && reach(lokar.npc) >= 10, true);
 const ign = spawns.find(s => s.name === 'skillcape_ignatius')!;
 check('Ignatius Vulcan is not inside a tree', isFlagged(ign.npc.startX, ign.npc.startZ, 0, CollisionFlag.WALK_BLOCKED), false);
 

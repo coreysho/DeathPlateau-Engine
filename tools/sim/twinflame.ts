@@ -8,13 +8,16 @@ import World from '#/engine/World.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
-const WIND_WAVE = 12, FIRE_WAVE = 15;
+const WIND_WAVE = 12,
+    FIRE_WAVE = 15;
 let n = 0;
 
 // one autocast at a fresh npc: which wave went off (by its cast sound), and the ticks to the next
@@ -24,7 +27,10 @@ function cast(npcName: string, staff: string, magic = 99) {
     H.tick(2);
     H.maxOut(p);
     if (magic < 99) p.setLevel?.(6, magic);
-    if (magic < 99) { p.baseLevels[6] = magic; p.levels[6] = magic; }
+    if (magic < 99) {
+        p.baseLevels[6] = magic;
+        p.levels[6] = magic;
+    }
     H.clearInv(p);
     H.equip(p, { rhand: staff });
     H.give(p, 'airrune', 1000);
@@ -51,8 +57,30 @@ function cast(npcName: string, staff: string, magic = 99) {
         }
         if (first < 0 && casts.length) first = casts[0];
     }
-    if (process.env.TF_DEBUG) console.log('   dbg', npcName, staff, p.x, p.z, npc.x, npc.z, JSON.stringify(H.mesgs.filter(m => m.who === p.username).slice(-3).map(m => m.text)));
-    const kinds = [...new Set(H.sounds.slice(s0).filter(s => s.who === p.username && s.synth.endsWith('_cast_and_fire')).map(s => s.synth))];
+    if (process.env.TF_DEBUG)
+        console.log(
+            '   dbg',
+            npcName,
+            staff,
+            p.x,
+            p.z,
+            npc.x,
+            npc.z,
+            JSON.stringify(
+                H.mesgs
+                    .filter(m => m.who === p.username)
+                    .slice(-3)
+                    .map(m => m.text)
+            )
+        );
+    const kinds = [
+        ...new Set(
+            H.sounds
+                .slice(s0)
+                .filter(s => s.who === p.username && s.synth.endsWith('_cast_and_fire'))
+                .map(s => s.synth)
+        )
+    ];
     return { kinds, gap: casts.length > 1 ? casts[1] - casts[0] : -1 };
 }
 
@@ -66,8 +94,9 @@ const c = cast('mossgiant', 'staff_of_air');
 check('with a plain staff, Wind Wave at a moss giant stays Wind Wave', c.kinds, ['windwave_cast_and_fire']);
 check('  every 5 ticks', c.gap, 5);
 const d = cast('mossgiant', 'twinflame_staff', 70);
-check('below Fire Wave\'s level (75) it casts the Wind Wave you chose', d.kinds, ['windwave_cast_and_fire']);
-void FIRE_WAVE; void World;
+check("below Fire Wave's level (75) it casts the Wind Wave you chose", d.kinds, ['windwave_cast_and_fire']);
+void FIRE_WAVE;
+void World;
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);

@@ -18,11 +18,13 @@ import { NpcStat } from '#/engine/entity/NpcStat.js';
 
 await H.boot();
 const HP = NpcStat.HITPOINTS;
-let ok = 0, fail = 0;
+let ok = 0,
+    fail = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const good = JSON.stringify(got) === JSON.stringify(want);
     console.log(`  ${good ? 'ok  ' : 'FAIL'} ${what}${good ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}`}`);
-    good ? ok++ : fail++;
+    if (good) ok++;
+    else fail++;
 };
 
 /** What World.ts sends now. */
@@ -42,10 +44,16 @@ function pixels([barHp, barMax]: [number, number]): number {
 
 /** Walk an npc from full to dead and report how the bar behaved. */
 function walk(hpMax: number, encode: (hp: number, hpMax: number) => [number, number]) {
-    let prev = Infinity, rises = 0, worstRise = 0, emptyWhileAlive = 0;
+    let prev = Infinity,
+        rises = 0,
+        worstRise = 0,
+        emptyWhileAlive = 0;
     for (let hp = hpMax; hp >= 0; hp--) {
         const px = pixels(encode(hp, hpMax));
-        if (px > prev) { rises++; worstRise = Math.max(worstRise, px - prev); }
+        if (px > prev) {
+            rises++;
+            worstRise = Math.max(worstRise, px - prev);
+        }
         if (hp > 0 && px === 0) emptyWhileAlive++;
         prev = px;
     }

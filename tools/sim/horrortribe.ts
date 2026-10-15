@@ -10,6 +10,7 @@
 // witnesses, the Duke, the rubble, the brooch, Reldo and the library, the goblin generals, the bow
 // to Mistag, the Duke's refusal, Sigmund's pocket and chest, the H.A.M. hideout, the treaty.
 import * as H from './harness.js';
+import type Npc from '#/engine/entity/Npc.js';
 import World from '#/engine/World.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -48,8 +49,16 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+const lastMes = (p: Player) =>
+    H.mesgs
+        .filter(m => m.who === p.username)
+        .map(m => m.text)
+        .slice(-1)[0] ?? '';
+const _mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 
 /** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
 function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
@@ -76,14 +85,26 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 /** Talk to the nearest npc of a type (any floor), standing next to it first. */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = [p.level, 0, 1, 2, 3].map(l => H.npcNear(npcName, p.x, p.z, l)).find(n => n);
     if (!npc) throw new Error('no npc ' + npcName);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -101,7 +122,11 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
     const obj = ObjType.getId(objName);
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
-    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === obj) { slot = i; break; }
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === obj) {
+            slot = i;
+            break;
+        }
     if (slot === -1) throw new Error('not carrying ' + objName);
     p.clearPendingAction();
     p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach));
@@ -122,10 +147,20 @@ function connected(level: number, x: number, z: number, tx: number, tz: number, 
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (cx === tx && cz === tz) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
@@ -212,9 +247,9 @@ console.log('HORROR FROM THE DEEP');
     c.teleport(2515, 4629, 1);
     H.tick(1);
     op(c, 2515, 4630, 'horror_ladder_top2', 1);
-    check('ladder down lands in Jossik\'s cave', [c.level, c.z > 4630 && c.z < 4640], [0, true]);
+    check("ladder down lands in Jossik's cave", [c.level, c.z > 4630 && c.z < 4640], [0, true]);
     const jrId = NpcType.getId('horror_dagannoth_jr4');
-    const jrs = () => World.npcs.filter(n => n && n.isActive && n.type === jrId && n.z > 4600 && n.z < 4700);
+    const jrs = () => World.npcs.filter((n): n is Npc => !!n && n.isActive && n.type === jrId && n.z > 4600 && n.z < 4700);
     check('nothing comes out of the water just for climbing down (horror2.ts)', jrs().length, 0);
     const words = talk(c, 'horror_lighthousekeeeper_injured');
     check('Jossik talks, and at the end of it the level-100 dagannoth comes for you', [words.length > 3, jrs().length === 1 || H.getVar(c, 'horror') === 3], [true, true]);
@@ -222,7 +257,11 @@ console.log('HORROR FROM THE DEEP');
     if (H.getVar(c, 'horror') === 2) enqueue(c, '[queue,horror_boss_slain]', [1]);
     drive(c);
     H.tick(3);
-    check('dagannoth dead: stage 3, Jossik warns you, the Mother surfaces in the same cave', [H.getVar(c, 'horror'), ['horror_dagganoth_aira', 'horror_dagganoth_airb', 'horror_dagganoth_airc', 'horror_dagganoth_air'].some(t => H.npcNear(t, c.x, c.z, 0) !== null)], [3, true]);
+    check(
+        'dagannoth dead: stage 3, Jossik warns you, the Mother surfaces in the same cave',
+        [H.getVar(c, 'horror'), ['horror_dagganoth_aira', 'horror_dagganoth_airb', 'horror_dagganoth_airc', 'horror_dagganoth_air'].some(t => H.npcNear(t, c.x, c.z, 0) !== null)],
+        [3, true]
+    );
     enqueue(c, '[queue,horror_boss_slain]', [2]);
     // The kill is faked through the queue, so the Mother herself is still alive - and she is aggressive
     // now (horror2.ts), so take her away or she keeps interrupting the rest of the walk.
@@ -273,7 +312,6 @@ console.log('HORROR FROM THE DEEP');
 // =============================================================================== The Lost Tribe
 console.log('THE LOST TRIBE');
 {
-
     const obj = (name: string) => ObjType.getId(name);
     const takeObj = (p: Player, x: number, z: number, name: string) => {
         const o = World.getObj(x, z, p.level, obj(name), p.hash64);
@@ -365,7 +403,15 @@ console.log('THE LOST TRIBE');
     // the chest opens from the south, inside the little room behind Sigmund (door on its west side)
     p.teleport(3209, 3216, 1);
     H.tick(1);
-    check('the chest is locked without the key', (() => { const q = player('ltchest', 3209, 3216, 1); op(q, 3209, 3217, 'lost_tribe_chest', 1); return lastMes(q); })(), 'The chest is locked.');
+    check(
+        'the chest is locked without the key',
+        (() => {
+            const q = player('ltchest', 3209, 3216, 1);
+            op(q, 3209, 3217, 'lost_tribe_chest', 1);
+            return lastMes(q);
+        })(),
+        'The chest is locked.'
+    );
     op(p, 3209, 3217, 'lost_tribe_chest', 1);
     check('his chest holds H.A.M. robes', [H.invCount(p, 'ham_shirt'), H.getVarBit(p, 'lost_tribe_ham')], [1, 1]);
     p.teleport(3166, 3251, 0);
@@ -395,7 +441,15 @@ console.log('THE LOST TRIBE');
     H.tick(3);
     drive(p);
     check('quest complete: stage 11, ring of life, 3,000 Mining xp', [stage(p), H.invCount(p, 'ring_of_life'), p.stats[14] - xp], [11, 1, 30000]);
-    check('the goblin emotes play', (() => { H.ifButton(p, 'emotes:goblin_salute'); drive(p); return lastMes(p).includes('unlocked'); })(), false);
+    check(
+        'the goblin emotes play',
+        (() => {
+            H.ifButton(p, 'emotes:goblin_salute');
+            drive(p);
+            return lastMes(p).includes('unlocked');
+        })(),
+        false
+    );
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

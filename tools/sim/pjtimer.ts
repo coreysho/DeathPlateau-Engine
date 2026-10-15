@@ -39,7 +39,8 @@ let ok = 0,
     bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -62,8 +63,8 @@ for (let n = 0; highNames.length < 40; n++) {
 let nameIdx = 0;
 
 const spawn = (at: { x: number; z: number }, dx: number): Player => {
-    let x = at.x + dx,
-        z = at.z;
+    const x = at.x + dx;
+    let z = at.z;
     while (isMapBlocked(x, z, 0)) z++;
     const p: any = H.makePlayer(highNames[nameIdx++], x, z);
     H.tick(2);
@@ -285,7 +286,7 @@ console.log('ONE OF THEM LOGS OUT');
     check('  so B may start on C', gate(b, c).allowed, true);
     const onB = gate(c, b);
     check('  but C still may not jump B - their own 12 seconds are their own', [onB.allowed, onB.said], [false, 'Someone else is already fighting your opponent.']);
-    lapse(b, c, '  and they are B\'s own to run down');
+    lapse(b, c, "  and they are B's own to run down");
     H.despawn(b, c);
     H.tick(2);
 }
@@ -337,16 +338,13 @@ console.log('A RANDOM EVENT CANNOT PJ A FIGHT');
     H.tick(1);
 
     const goblin = hold(a, 'goblin', false);
-    check('an ordinary monster on A still shuts B out', [gate(b, a).allowed, gate(b, a).said],
-        [false, 'Someone else is already fighting your opponent.']);
-    check('  and still stops A starting on B', [gate(a, b).allowed, gate(a, b).said],
-        [false, "I'm already under attack."]);
+    check('an ordinary monster on A still shuts B out', [gate(b, a).allowed, gate(b, a).said], [false, 'Someone else is already fighting your opponent.']);
+    check('  and still stops A starting on B', [gate(a, b).allowed, gate(a, b).said], [false, "I'm already under attack."]);
     World.removeNpc(goblin, -1);
 
     H.despawn(a, b);
     H.tick(2);
 }
-
 
 console.log(`PJTIMER  ${ok} ok, ${bad} failed`);
 process.exit(0);

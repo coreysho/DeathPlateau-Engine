@@ -14,7 +14,6 @@
 //
 //   npx tsx tools/sim/weaponanims.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import ObjType from '#/cache/config/ObjType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
@@ -23,7 +22,7 @@ import ParamType from '#/cache/config/ParamType.js';
 await H.boot();
 
 const P = (id: number, p: string) => (ObjType.get(id) as any).params?.get(ParamType.getId(p)) ?? null;
-const MAGIC_STYLE = 4;   // ^magic_style, skill_combat/configs/combat_damagetypes.constant
+const MAGIC_STYLE = 4; // ^magic_style, skill_combat/configs/combat_damagetypes.constant
 const BONUSES = ['stabattack', 'slashattack', 'crushattack', 'magicattack', 'rangeattack', 'strengthbonus'];
 
 // every right-hand item that claims a combat bonus: those are the ones meant to be swung
@@ -47,7 +46,10 @@ for (const id of armed) {
     // 'flowers' is 377's own joke category - a bunch of flowers is swung, has a crush bonus, and
     // shares the blunt tab (~attackstyle_memory_get names it). It is not a weapon_* and is not
     // meant to be. Anything else without a weapon_* category is an import that lost one.
-    if (!cat.startsWith('weapon_') && cat !== 'flowers') { noCat.push(`${name} (${cat || 'none'})`); continue; }
+    if (!cat.startsWith('weapon_') && cat !== 'flowers') {
+        noCat.push(`${name} (${cat || 'none'})`);
+        continue;
+    }
     if (cat === 'flowers') continue;
 
     // Ask for every style the weapon's own table offers, the way a player switching tabs would.
@@ -57,7 +59,10 @@ for (const id of armed) {
         H.runProc(p, '[proc,player_combat_stat]');
         const dmg = H.getVar(p, 'damagetype');
         const style = H.getVar(p, 'damagestyle');
-        if (dmg < 0) { noAnim.push(`${name} style ${mode}: damagetype ${dmg}`); continue; }
+        if (dmg < 0) {
+            noAnim.push(`${name} style ${mode}: damagetype ${dmg}`);
+            continue;
+        }
         // A MAGIC STYLE BRINGS ITS OWN ANIMATION. A powered staff's first style is the spell it
         // fires, and the spell animates the cast - the obj carries no magicattack_anim and should
         // not. Only a swing or a shot has to come from the weapon.

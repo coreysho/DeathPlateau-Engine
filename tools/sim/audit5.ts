@@ -18,7 +18,6 @@ import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import Component from '#/cache/config/Component.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
-import VarBitType from '#/cache/config/VarBitType.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -52,7 +51,11 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
+const lastMes = (p: Player) =>
+    H.mesgs
+        .filter(m => m.who === p.username)
+        .map(m => m.text)
+        .slice(-1)[0] ?? '';
 
 // a varp or a varbit, whichever the name is
 function gv(p: Player, name: string): number {
@@ -112,7 +115,10 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 /** Talk to the nearest npc of a type on the player's floor, standing next to it first. */
@@ -120,7 +126,18 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
     const npc = H.npcNear(npcName, p.x, p.z, p.level);
     if (!npc) throw new Error('no npc ' + npcName);
     if (!npcOpOk(p, npc, op)) throw new Error(`${npcName} shows no op${op} to this player`);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -150,7 +167,12 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
 function useOnNpc(p: Player, npcName: string, objName: string) {
     const npc = H.npcNear(npcName, p.x, p.z, p.level)!;
     // stand on a side of it the route can actually reach (an npc by a wall has sides that cannot)
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (!connected(npc.level, npc.x + dx, npc.z + dz, npc.x, npc.z, 2)) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         break;
@@ -194,10 +216,20 @@ function connected(level: number, x: number, z: number, tx: number, tz: number, 
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (cx === tx && cz === tz) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
@@ -233,15 +265,25 @@ console.log('THE HAND IN THE SAND');
     check('Bert again: stage 30 (Rarve)', gv(p, 'handsand_quest'), 30);
 
     // Rarve is inside the Wizards' Guild behind its 66 Magic door
-    check('Rarve\'s own spot is not reachable from outside the guild', connected(0, 2605, 3090, 2588, 3087), false);
+    check("Rarve's own spot is not reachable from outside the guild", connected(0, 2605, 3090, 2588, 3087), false);
     p.teleport(2599, 3084, 0);
     H.tick(1);
+    // THERE ARE TWO RARVES ONCE THE BELL RINGS - the one inside the guild and the one npc_add puts
+    // outside it at 2599,3087 - and both of them wander. npcNear takes the nearest, which is the
+    // outside one while he is on his tile and the INSIDE one as soon as he has taken a step, and
+    // then the check read his x as 2585 and failed. What the bell is for is that somebody comes out
+    // to a tile the street can reach, so it looks for a Rarve near where he is summoned and holds
+    // him to that.
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
-    const out = H.npcNear('zogre_human_zavistic_rarve', 2599, 3087, 0)!;
-    check('the bell brings Rarve out to a tile you can walk to', [out.x >= 2598, connected(0, 2605, 3090, out.x, out.z)], [true, true]);
-    const n0 = World.npcs.filter(n => n && n.isActive && n.type === out.type).length;
+    H.tick(6);
+    const RARVE = NpcType.getId('zogre_human_zavistic_rarve');
+    const rarves = () => [...World.npcs].filter((n): n is NonNullable<typeof n> => !!n && n.isActive && n.type === RARVE);
+    const outside = rarves().filter(n => n.level === 0 && Math.max(Math.abs(n.x - 2599), Math.abs(n.z - 3087)) <= 4);
+    check('the bell brings Rarve out to a tile you can walk to', [outside.length > 0, outside.every(n => connected(0, 2605, 3090, n.x, n.z))], [true, true]);
+    const n0 = rarves().length;
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
-    check('ringing again does not bring a second one', World.npcs.filter(n => n && n.isActive && n.type === out.type).length, n0);
+    H.tick(4);
+    check('ringing again does not bring a second one', rarves().length, n0);
     p.teleport(2600, 3087, 0);
     talk(p, 'zogre_human_zavistic_rarve');
     check('Rarve (outside) wants a name and proof - stage stays 30', gv(p, 'handsand_quest'), 30);
@@ -255,22 +297,26 @@ console.log('THE HAND IN THE SAND');
     talk(p, 'handsand_sandy', [2]);
     check('Sandy distracted: at the window', gv(p, 'handsand_sandy_multi'), 1);
     op(p, 2788, 3174, 'handsand_desk', 1);
-    check('desk searched: Sandy\'s rota, Sandy back at his desk, no rota of Bert\'s so stage 30', [H.invCount(p, 'handsand_rota_sandy'), gv(p, 'handsand_sandy_multi'), gv(p, 'handsand_quest')], [1, 0, 30]);
+    check("desk searched: Sandy's rota, Sandy back at his desk, no rota of Bert's so stage 30", [H.invCount(p, 'handsand_rota_sandy'), gv(p, 'handsand_sandy_multi'), gv(p, 'handsand_quest')], [1, 0, 30]);
     talk(p, 'handsand_bert');
-    check('lost Bert\'s rota: he gives another copy', H.invCount(p, 'handsand_rota_bert'), 1);
+    check("lost Bert's rota: he gives another copy", H.invCount(p, 'handsand_rota_bert'), 1);
     // the sand pit
     H.give(p, 'spade');
     p.teleport(2543, 3102, 0);
     H.tick(1);
     useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'spade');
-    check('spade in the sand pit: the wizard\'s head', H.invCount(p, 'handsand_wizhead'), 1);
+    check("spade in the sand pit: the wizard's head", H.invCount(p, 'handsand_wizhead'), 1);
     // Rarve compares the rotas now, then takes the head
     p.teleport(2599, 3084, 0);
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
     p.teleport(2600, 3087, 0);
     talk(p, 'zogre_human_zavistic_rarve');
-    check('Rarve: rotas compared, head taken, kit given (stage 50)', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_wizhead'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_scroll_magic')], [50, 0, 1, 1, 1]);
+    check(
+        'Rarve: rotas compared, head taken, kit given (stage 50)',
+        [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_wizhead'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_scroll_magic')],
+        [50, 0, 1, 1, 1]
+    );
 
     // Betty and the lens
     p.teleport(3014, 3256, 0);
@@ -282,7 +328,7 @@ console.log('THE HAND IN THE SAND');
     H.give(p, 'redberries');
     H.give(p, 'white_berries');
     useHeld(p, 'handsand_bottle_water', 'redberries');
-    check('bottle used ON the redberries (the pie handler\'s side) makes the juice', [H.invCount(p, 'handsand_redberry_juice'), H.invCount(p, 'redberries')], [1, 0]);
+    check("bottle used ON the redberries (the pie handler's side) makes the juice", [H.invCount(p, 'handsand_redberry_juice'), H.invCount(p, 'redberries')], [1, 0]);
     // lose the juice: Betty starts the chain again
     p.invDel(InvType.INV, ObjType.getId('handsand_redberry_juice'), 1);
     talk(p, 'betty');
@@ -292,7 +338,7 @@ console.log('THE HAND IN THE SAND');
     useHeld(p, 'redberries', 'handsand_bottle_water');
     check('redberries used on the bottle also works', H.invCount(p, 'handsand_redberry_juice'), 1);
     useHeld(p, 'handsand_redberry_juice', 'white_berries');
-    check('juice used ON the white berries (the herblore handler\'s side) makes the dye', [H.invCount(p, 'handsand_pink_dye'), H.invCount(p, 'white_berries')], [1, 0]);
+    check("juice used ON the white berries (the herblore handler's side) makes the dye", [H.invCount(p, 'handsand_pink_dye'), H.invCount(p, 'white_berries')], [1, 0]);
     useHeld(p, 'lens', 'handsand_pink_dye');
     check('lens in the dye: rose tinted lens', H.invCount(p, 'handsand_rose_lens'), 1);
     useHeld(p, 'handsand_orb_storage', 'handsand_rose_lens');
@@ -339,7 +385,11 @@ console.log('THE HAND IN THE SAND');
     // the journal has text at the end
     H.ifButton(p, 'questlist:handsand');
     H.tick(1);
-    check('journal says QUEST COMPLETE', H.ifaces.filter(i => i.who === p.username && i.kind === 'text').some(i => (i.text ?? '').includes('QUEST COMPLETE')), true);
+    check(
+        'journal says QUEST COMPLETE',
+        H.ifaces.filter(i => i.who === p.username && i.kind === 'text').some(i => (i.text ?? '').includes('QUEST COMPLETE')),
+        true
+    );
     H.despawn(p);
 }
 
@@ -369,7 +419,14 @@ console.log('ONE SMALL FAVOUR');
     p.invDel(InvType.INV, ObjType.getId('favour_ornament_broken'), 1);
     op(p, 2702, 3476, 'osf_weathervane', 5);
     check('lost the ornament: Search the vane again finds it', H.invCount(p, 'favour_ornament_broken'), 1);
+    // THE CLIMB TAKES A MOMENT. [oploc1,favour_seer_laddertop] opens with p_arrivedelay and then
+    // ~climb_ladder, so the player is still walking onto the tile when op() returns - it works from
+    // any side, and from any of them it wants about a dozen ticks to finish. Checking straight after
+    // the click reads the player a tile short and still on the platform.
+    p.teleport(2700, 3476, 3); // beside it: the two vane searches above leave the player across the platform
+    H.tick(1);
     op(p, 2699, 3476, 'favour_seer_laddertop', 1);
+    H.tick(12);
     check('back down the roof ladder: first floor, inside the room', [at(p), connected(1, p.x, p.z, 2701, 3474)], [[2700, 3476, 1], true]);
     op(p, 2699, 3476, 'laddermiddle', 3);
     check('first floor ladder, Climb-down: ground floor', p.level, 0);
@@ -474,7 +531,11 @@ console.log('A TAIL OF TWO CATS');
     H.tick(1);
     for (let i = 0; i < 3; i++) useOn(p, 2919, 3563, 'twocats_patch', 'rake');
     useOn(p, 2919, 3563, 'twocats_patch', 'potato_seed');
-    check('five chores: bed, fire, meal, hair, garden -> stage 30', [gv(p, 'twocats_chores_tidyhouse'), gv(p, 'twocats_chores_warmhuman'), gv(p, 'twocats_chores_feedhuman'), gv(p, 'twocats_chores_tidyhuman'), gv(p, 'twocats_chores_tidygarden'), gv(p, 'twocats_quest')], [1, 2, 5, 0, 4, 30]);
+    check(
+        'five chores: bed, fire, meal, hair, garden -> stage 30',
+        [gv(p, 'twocats_chores_tidyhouse'), gv(p, 'twocats_chores_warmhuman'), gv(p, 'twocats_chores_feedhuman'), gv(p, 'twocats_chores_tidyhuman'), gv(p, 'twocats_chores_tidygarden'), gv(p, 'twocats_quest')],
+        [1, 2, 5, 0, 4, 30]
+    );
     p.teleport(3230, 3202, 0);
     H.tick(1);
     talk(p, 'twocats_bob_bow_tie');
@@ -495,19 +556,19 @@ console.log('A TAIL OF TWO CATS');
     talk(p, 'twocats_niete');
     check('Neite lifts the curse: stage 70', gv(p, 'twocats_quest'), 70);
     talk(p, 'twocats_niete');
-    check('Neite\'s reward: complete (80), +2 quest points, present and amulet', [gv(p, 'twocats_quest'), qp(p) - qp0, H.invCount(p, 'twocats_present'), H.invCount(p, 'twocats_amuletofcatspeak')], [80, 2, 1, 1]);
+    check("Neite's reward: complete (80), +2 quest points, present and amulet", [gv(p, 'twocats_quest'), qp(p) - qp0, H.invCount(p, 'twocats_present'), H.invCount(p, 'twocats_amuletofcatspeak')], [80, 2, 1, 1]);
     H.despawn(p);
 }
 
 // =============================================================================== Cook's Assistant
-console.log('COOK\'S ASSISTANT - the range');
+console.log("COOK'S ASSISTANT - the range");
 {
     const range = locsOf('cooksquestrange')[0];
     const cook = H.npcNear('cook', range.x, range.z, 0)!;
     const p = player('audit5_cook', cook.x, cook.z); // in the kitchen; the route finds the range's side
     H.give(p, 'raw_shrimp', 1);
     useOn(p, range.x, range.z, 'cooksquestrange', 'raw_shrimp');
-    check('quest not done: the Cook\'s range does not cook', H.invCount(p, 'raw_shrimp'), 1);
+    check("quest not done: the Cook's range does not cook", H.invCount(p, 'raw_shrimp'), 1);
     sv(p, 'cookquest', 2);
     useOn(p, range.x, range.z, 'cooksquestrange', 'raw_shrimp');
     for (let t = 0; t < 10; t++) H.tick(1);
@@ -516,7 +577,7 @@ console.log('COOK\'S ASSISTANT - the range');
 }
 
 // =============================================================================== Gertrude's Cat
-console.log('GERTRUDE\'S CAT - the reward kitten and a follower that is already out');
+console.log("GERTRUDE'S CAT - the reward kitten and a follower that is already out");
 {
     const p = player('audit5_cat1', 3150, 3410);
     H.runProc(p, '[proc,pet_receive_later]', [ObjType.getId('bosspet_kbd_item'), 0]);

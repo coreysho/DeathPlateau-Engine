@@ -17,15 +17,17 @@ await H.boot();
 
 const TIER = { easy: 0, medium: 1, hard: 2 };
 const p = player('clue', 3250, 3250);
-const floorAt = () => [...World.gameMap.getZone(p.x, p.z, p.level).getAllObjsUnsafe()]
-    .filter((o: any) => o.x === p.x && o.z === p.z)
-    .map((o: any) => [ObjType.get(o.type).debugname, o.count] as [string, number]);
-const clear = () => { for (const o of floorAt()) void o; };
+const floorAt = () => [...World.gameMap.getZone(p.x, p.z, p.level).getAllObjsUnsafe()].filter((o: any) => o.x === p.x && o.z === p.z).map((o: any) => [ObjType.get(o.type).debugname, o.count] as [string, number]);
+const _clear = () => {
+    for (const o of floorAt()) void o;
+};
 
 const packed = (x: number, z: number, level = 0) => (z & 0x3fff) | ((x & 0x3fff) << 14) | ((level & 0x3) << 28);
 
 console.log('ROLLING TWENTY EASY CLUE DROPS IN A ROW');
-let boxes = 0, scrolls = 0, suspicions = 0;
+let boxes = 0,
+    scrolls = 0,
+    suspicions = 0;
 for (let i = 0; i < 20; i++) {
     const before = H.mesgs.length;
     const seen = new Set(floorAt().map(o => o[0]));
@@ -56,13 +58,11 @@ console.log('WHAT THE CAP WAS NOT PROTECTING');
     // a box will not open while that tier's clue is still in hand
     const before = A.mark();
     H.opheld(p, 'trail_scrollbox_easy', 1);
-    check('  a box refuses to open while a clue of its tier is held',
-        A.said(p, before, 'you already have a clue'), true);
+    check('  a box refuses to open while a clue of its tier is held', A.said(p, before, 'you already have a clue'), true);
 }
 {
     // and picking up more boxes off the floor is never refused now
-    const refused = H.runProc(p, '[proc,trail_take_refused]',
-        [ObjType.getId('trail_scrollbox_easy'), 50])[0];
+    const refused = H.runProc(p, '[proc,trail_take_refused]', [ObjType.getId('trail_scrollbox_easy'), 50])[0];
     check('  picking up fifty more boxes is allowed', refused, 0);
 }
 

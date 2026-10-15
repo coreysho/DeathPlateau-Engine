@@ -24,10 +24,12 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -63,10 +65,8 @@ H.tick(6);
 check('  and the flax is a bow string', [H.invCount(spinner, 'flax'), H.invCount(spinner, 'bow_string')], [2, 1]);
 
 // Every make-x chooser shares the fix, so none of them may be left without the close.
-const chat = (await import('node:fs')).readFileSync('../content/scripts/interface_chat/scripts/chat.rs2', 'latin1')
-    .replace(/\r\n/g, '\n');
-const makex = ['multiobj2', 'multiobj3', 'multiobj3_close', 'multiobj4',
-               'skillmulti1', 'skillmulti2', 'skillmulti3', 'skillmulti4', 'skillmulti5'];
+const chat = (await import('node:fs')).readFileSync('../content/scripts/interface_chat/scripts/chat.rs2', 'latin1').replace(/\r\n/g, '\n');
+const makex = ['multiobj2', 'multiobj3', 'multiobj3_close', 'multiobj4', 'skillmulti1', 'skillmulti2', 'skillmulti3', 'skillmulti4', 'skillmulti5'];
 const unclosed = makex.filter(name => {
     const body = chat.split(`[proc,${name}]`)[1]?.split('\n[proc,')[0] ?? '';
     return !/p_pausebutton;\nif_close;/.test(body);
@@ -102,17 +102,17 @@ check('  ...and none of them draws a minimap dot', pets.filter(i => NpcType.get(
         }
     }
     const unreachable = pets.filter(i => !reachable.has(i)).map(i => NpcType.get(i).debugname ?? String(i));
-    const unmarked = [...reachable].filter(i => !NpcType.get(i).params?.has(petItem))
-        .map(i => NpcType.get(i).debugname ?? String(i));
+    const unmarked = [...reachable].filter(i => !NpcType.get(i).params?.has(petItem)).map(i => NpcType.get(i).debugname ?? String(i));
     console.log(`  ${pets.length} npcs carry a pet item; ${reachable.size} are reachable from one`);
     check("  ...and every one of them is on some pet item's ring", unreachable, []);
     check('  ...and every form on a ring carries the pet item', unmarked, []);
 }
-check('the cats are in that set as well as the boss and skilling pets',
-    ['kittenpet1', 'growncat', 'overgrowncat', 'bosspet_kbd', 'skillpet_beaver', 'bosspet_kraken']
-        .filter(n => !NpcType.get(NpcType.getId(n)).follower), []);
-check('an ordinary npc is untouched: still a dot, still everyone\'s to click',
-    [NpcType.get(NpcType.getId('goblin')).follower, NpcType.get(NpcType.getId('goblin')).minimap], [false, true]);
+check(
+    'the cats are in that set as well as the boss and skilling pets',
+    ['kittenpet1', 'growncat', 'overgrowncat', 'bosspet_kbd', 'skillpet_beaver', 'bosspet_kraken'].filter(n => !NpcType.get(NpcType.getId(n)).follower),
+    []
+);
+check("an ordinary npc is untouched: still a dot, still everyone's to click", [NpcType.get(NpcType.getId('goblin')).follower, NpcType.get(NpcType.getId('goblin')).minimap], [false, true]);
 
 const slot = VarPlayerType.getByName('follower_uid')!;
 check('the follower slot is sent to the client', slot.transmit, true);
@@ -127,8 +127,7 @@ H.tick(2);
 const pet = H.followerOf(owner);
 check('putting a pet down gives you a follower', pet !== null, true);
 const uid = H.getVar(owner, 'follower_uid');
-check('  ...and the varp the client gets names that npc', [uid & 0xffff, (uid >>> 16) & 0xffff],
-    [pet?.nid ?? -1, NpcType.getId('bosspet_kbd')]);
+check('  ...and the varp the client gets names that npc', [uid & 0xffff, (uid >>> 16) & 0xffff], [pet?.nid ?? -1, NpcType.getId('bosspet_kbd')]);
 check('  ...which is the npc index the client knows it by', pet?.nid === (uid & 0xffff), true);
 check('  ...and it is a follower to the client', NpcType.get(pet?.type ?? 0).follower, true);
 
@@ -159,8 +158,7 @@ check('  ...and the pet is back in the pack', H.invCount(owner, 'bosspet_kbd_ite
         H.tick(2);
         seen.push(form());
     }
-    check('the snakeling cycles its three colours and comes back round', seen,
-        ['bosspet_snakeling', 'bosspet_snakeling_magma', 'bosspet_snakeling_tanzanite', 'bosspet_snakeling']);
+    check('the snakeling cycles its three colours and comes back round', seen, ['bosspet_snakeling', 'bosspet_snakeling_magma', 'bosspet_snakeling_tanzanite', 'bosspet_snakeling']);
 
     // and the chosen colour survives being put away, which is the whole point of %pet_form
     H.opNpc(owner2, H.followerOf(owner2)!, 4);
