@@ -166,8 +166,8 @@ twice before calling it fixed.
 
 ## Failures you will see more than once
 
-Six shapes account for nearly every sweep failure that is not a real game bug. All six have been
-mistaken for content faults at least once, so the signature matters as much as the fix.
+Seven shapes account for nearly every sweep failure that is not a real game bug. All seven have
+been mistaken for content faults at least once, so the signature matters as much as the fix.
 
 - **A fixed offset from a wandering npc.** The sim reads the npc's tile, stands at `+1` or `+3` from
   it, and clicks - and the npc has moved. `wanderrange` defaults to **5** and most npcs do not
@@ -180,6 +180,13 @@ mistaken for content faults at least once, so the signature matters as much as t
   that drives the dialogue, so whatever that call drove before returning is already behind the slice.
   It passes until the tick where it does not. Mark first, click second, read the slice after -
   `fremtrials2` and the note at the top of `batch1012`.
+- **A refusal read out of the wrong log.** `mes` writes a chat line and `~mesbox`, `~objbox` and
+  `~doubleobjbox` write an *interface*, so a check that reads `A.mesSince` for "You need at least 28
+  Fishing to bait these fish." sees nothing and reports a content fault. Which one a refusal uses is
+  the content's choice and there is no pattern to it: the same script can `mes` a level gate and
+  `~mesbox` the next one. Read `H.ifaces` for the boxes (`newsources` and `eelspots` both carry a
+  local `shown()` for it) and the chat log for `mes`, and when a refusal check fails, print BOTH
+  before believing it. Five failures in one sim, all of them the sim's own fault.
 - **A random event in the middle of a long run.** The frog event teleports the player to the Land of
   the Frogs and the next loc click throws "no such loc"; it reads as a missing loc and is not one.
   `~macro_event_allowed` refuses to spawn one while `%macro_event` is already set, so
