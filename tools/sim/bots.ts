@@ -541,9 +541,15 @@ doomed.invDel(InvType.INV, ObjType.getId('swordfish'), 28);
 doomed.levels[PlayerStat.HITPOINTS] = 4;
 doomed.levels[PlayerStat.PRAYER] = 0;
 let deathTile: { x: number; z: number } | null = null;
-for (let t = 0; t < 300 && !deathTile; t++) {
+for (let t = 0; t < 600 && !deathTile; t++) {
     hunt(doomed);
     doomed.runenergy = 0; // spent: it can only walk, and the killer runs it down
+    // HELD AT FOUR, every tick. Setting it once before the loop leaves the rest of the window to
+    // regeneration and to whatever the bot can still eat or pray, so the killer has to land the
+    // whole bar again - and a sweep run caught this failing with the bot alive at the end of it and
+    // the three drop checks under it failing too. Nearly dead and being run down is the premise of
+    // the test, not a starting condition.
+    if (doomed.levels[PlayerStat.HITPOINTS] > 4) doomed.levels[PlayerStat.HITPOINTS] = 4;
     H.tick(1);
     trace(t, doomed);
     if (getVarp(doomed, 'death') === 1) deathTile = { x: doomed.x, z: doomed.z };

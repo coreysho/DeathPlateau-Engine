@@ -668,7 +668,16 @@ if (want('hauntedmine')) {
     check('the valve side reaches the valve and the lift', [reaches(0, p.x, p.z, 2808, 4497), reaches(0, p.x, p.z, 2806, 4493)], [true, true]);
     op(p, 2807, 4492, 'lift_side_r');
     check('the lift will not go down before the valve', p.z > 4480, true);
-    op(p, 2808, 4496, 'hauntedmine_lift_valve');
+    // AN APPROACH TRIGGER, SO THE WALK NEEDS TICKS. [aploc1,hauntedmine_lift_valve] opens with
+    // `if (distance(loc_coord, coord) > 1) { p_aprange(1); return; }`: a click from further off only
+    // registers the range and the valve turns once the player is beside it. One click with whatever
+    // ticks op() happens to spend left the stage at 3 and the player on the surface about one run in
+    // three, and the level-5 check below went with it. Same class as audit6's arrow across the
+    // channel - these [ap*] triggers all want the approach, not just the click.
+    for (let t = 0; t < 8 && v(p, 'hauntedmine') < 4; t++) {
+        op(p, 2808, 4496, 'hauntedmine_lift_valve');
+        H.tick(4);
+    }
     check('valve: the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
     check('level 5 reaches both staircases down', [reaches(0, p.x, p.z, 2746, 4437), reaches(0, p.x, p.z, 2692, 4437)], [true, true]);
 
