@@ -232,9 +232,17 @@ function route(segment: string) {
         }
     }
     if (!best) return null;
+    // THE WALK BACK NEEDS A VISITED SET, and without one this sim hangs. parent is written every
+    // time a cheaper cost is found, and the graph is full of ZERO-weight edges (a pillar the beam
+    // passes straight through is free), so two keys can end up each other's parent at the same
+    // cost - and then this loop never ends. It spun for twenty-five minutes of CPU on a sweep run,
+    // printing nothing, until the per-sim cap killed it. A truncated route fails a check loudly;
+    // a loop that never returns fails nothing and takes the sweep's slot with it.
     const steps: string[] = [];
+    const seen = new Set<number>();
     let k: number | undefined = best[0];
-    while (k !== undefined) {
+    while (k !== undefined && !seen.has(k)) {
+        seen.add(k);
         const par = parent.get(k);
         if (!par) break;
         steps.push(par[1]);
