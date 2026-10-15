@@ -25,7 +25,8 @@ import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
-import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
+import { findPathToEntity, findPathToLoc, isMapBlocked, canTravel } from '#/engine/GameMap.js';
+import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 
@@ -143,9 +144,39 @@ const npcNamed = (name: string): Npc => {
     for (const n of World.npcs) if (n && n.isActive && n.type === id) return n as Npc;
     throw new Error(name + ' is not spawned');
 };
+/**
+ * A tile beside the npc that a player can actually stand on and reach it from.
+ *
+ * NOT npc.x + 1, which is what both helpers below used to do. The bartender stands behind his own
+ * counter and wanders inside it (wanderrange defaults to 5 and he does not override it), so the
+ * tile east of him is as often the counter as it is the floor - and a walk that cannot finish is a
+ * use-on-npc that never fires, which a sweep run filed as "he will not sign a drawing of a man
+ * nobody has asked him about" with nothing said at all. Shape one in tools/sim/README.md.
+ */
+const standBy = (npc: Npc): [number, number] => {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1]
+    ] as [number, number][]) {
+        const x = npc.x + dx;
+        const z = npc.z + dz;
+        if (isMapBlocked(x, z, npc.level)) continue;
+        if (!canTravel(npc.level, x, z, -dx, -dz, 1, 0, CollisionType.NORMAL)) continue;
+        return [x, z];
+    }
+    return [npc.x + 1, npc.z];
+};
+
 const talkTo = (npc: Npc, picks: number[] = []): string =>
     heard(() => {
-        p.teleport(npc.x + 1, npc.z, npc.level);
+        const [sx, sz] = standBy(npc);
+        p.teleport(sx, sz, npc.level);
         H.tick(1);
         p.clearPendingAction();
         p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
@@ -154,7 +185,8 @@ const talkTo = (npc: Npc, picks: number[] = []): string =>
     });
 const useOnNpc = (obj: string, npc: Npc, picks: number[] = []): string =>
     heard(() => {
-        p.teleport(npc.x + 1, npc.z, npc.level);
+        const [sx, sz] = standBy(npc);
+        p.teleport(sx, sz, npc.level);
         H.tick(1);
         p.clearPendingAction();
         p.lastUseItem = ObjType.getId(obj);
