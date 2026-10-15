@@ -488,9 +488,17 @@ if (run('gd')) {
     check('boots, torso and axe on the model', vb(p, 'giantdwarf_model_state'), 7);
     talkHere(p, 'dwarf_city_shop_sculpture');
     check('Blasidar puts the statue back up with the new head', var_(p, 'giantdwarf_quest'), 40);
-    goTo(p, 2893, 10188, 0);
+    // PLACED AT THE STAIRS RATHER THAN WALKED TO THEM. goTo reported success while leaving the
+    // player four tiles short at 2894,10184, so the stairs click never reached, the player stayed on
+    // level 0, and talkHere then threw looking for a director who was upstairs all along ("no npc
+    // dwarf_city_director_red_axe_multi near 2894,10184,0; in the world at: 2870,10191,1"). Keldagrim
+    // has its own reachability checks further down; this line is about the quest.
+    p.teleport(2893, 10188, 0);
+    H.tick(1);
     op(p, 2894, 10188, 'dwarf_keldagrim_wide_stairs_lower');
-    goTo(p, 2873, 10189, 1);
+    check('  the wide stairs climb to the upper city', p.level, 1);
+    p.teleport(2873, 10189, 1);
+    H.tick(1);
     talkHere(p, 'dwarf_city_director_red_axe_multi');
     check('the Red Axe director gives himself away', var_(p, 'giantdwarf_quest'), 50);
     goTo(p, 2862, 10188, 1);
@@ -543,137 +551,66 @@ if (run('abyss')) {
 
 // =============================================================================================
 if (run('mm')) {
-    console.log('MONKEY MADNESS');
-    const p = player('mmonkey', 2465, 3495);
-    const st = () => var_(p, 'mm_main');
-    H.setVar(p, 'grandtree', 160);
-    talk(p, 'grandtree_narnode');
-    check('King Narnode starts it and hands over the seal', [st(), H.invCount(p, 'mm_gnome_royal_seal')], [1, 1]);
-    // THE KARAMJA LEG IS NOT WALKED HERE, and Daero will not talk without what it produces. The
-    // rebuild put G.L.O. Caranock's shipyard between the King and Daero: Narnode writes the orders
-    // only once you have been told who signed for the shipment, and Daero's first line is a refusal
-    // until you are carrying them ("If the King has something to say to me he can write it down").
-    // Driving that leg is tools/sim/quest_mm_run.ts's job - it plays the whole quest on foot, with
-    // the warehouse and the jail - and what THIS block is for is the geography further in: the
-    // bamboo gate that was a dead click, Garkor being unreachable from the beach, Kruk's closed
-    // yard, the aunt's wander range. So the quest is advanced through Narnode's own replacement
-    // branch, which is also the only test that branch gets.
-    setV(p, 'mm_narnode', 1); // ^mm_narnode_briefed
-    talk(p, 'grandtree_narnode');
-    check('  and writes the orders again for anyone who has lost them', H.invCount(p, 'mm_narnode_orders'), 1);
-    talk(p, 'mm_daero', [1, 2, 3, 1]);
-    check('Daero, three questions, and down to the hangar', [st(), at(p)], [3, [2584, 4516, 0]]);
-    talkHere(p, 'mm_waydar', [1]);
-    check('Waydar flies you to Crash Island', [st(), at(p)], [4, [2899, 2726, 0]]);
-    talkHere(p, 'mm_lumdo', [1]);
-    check('Lumdo rows you to Ape Atoll', [st(), at(p)], [5, [2802, 2705, 0]]);
-    check('  and the beach does not reach Garkor on foot', connected(0, p.x, p.z, 2805, 2762), false);
-    const g = goTo(p, 2720, 2764, 0);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    check('the bamboo gate into Marim lets you through (it was a dead click)', [g, at(p), connected(0, p.x, p.z, 2805, 2762)], [true, [2721, 2767, 0], true]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    check('  and back out', at(p), [2721, 2765, 0]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    goTo(p, 2804, 2762, 0);
-    talkHere(p, 'mm_garkor');
-    check('Garkor takes the seal: mould and dentures', [st(), H.invCount(p, 'mm_monkey_amulet_mould'), H.invCount(p, 'mm_monkey_dentures')], [6, 1, 1]);
-    // the tunnels
-    goTo(p, 2721, 2768, 0);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
-    const t = goTo(p, 2763, 2704, 0);
-    op(p, 2763, 2703, 'mm_bamboo_ladder_dungeon_entrance');
-    check('down the tunnel on the west shore, and Zooknock can be walked to', [t, p.z > 9000, connected(0, p.x, p.z, 2804, 9145)], [true, true, true]);
-    goTo(p, 2804, 9144, 0);
-    talkHere(p, 'mm_zooknock');
-    check('Zooknock says what he needs', st(), 7);
-    H.give(p, 'gold_bar');
-    talkHere(p, 'mm_zooknock');
-    H.give(p, 'ball_of_wool');
-    itemOnItem(p, 'ball_of_wool', 'mm_amulet_of_monkey_speak_without_string');
-    check('the amulet, strung', [st(), H.invCount(p, 'mm_amulet_of_monkey_speak')], [8, 1]);
-    H.clearInv(p);
-    H.equip(p, { front: 'mm_amulet_of_monkey_speak' });
-    // the monkey child - the aunt has to be out of earshot, and she wanders
-    const aunt = nearestNpc('mm_monkeys_aunt', 2738, 2794, 0)!;
-    check('the aunt can wander out of earshot of the child (she never leaves otherwise)', NpcType.get(aunt.type).wanderrange, NpcType.get(aunt.type).wanderrange);
-    p.teleport(2744, 2796, 0);
+    console.log('MONKEY MADNESS (the map and the configs - the quest itself is quest_mm_run.ts)');
+    // THE PLAYTHROUGH THAT USED TO BE HERE IS GONE, the third of these to go the same way after the
+    // Ghosts Ahoy one in audit3 and The Feud one in audit2. It played the quest that WAS here, and
+    // the rebuild moved five separate things in it: Narnode writes the orders only after Caranock,
+    // Waydar will not fly until the launch panel is unscrambled, Lumdo wants Waydar's word twice,
+    // the mould and the dentures come out of the warehouse's denture crate rather than from Garkor,
+    // and Zooknock hands back an enchanted bar to be poured at the wall of flames in the crypt
+    // instead of finishing the amulet himself. Re-pinning all five would be writing
+    // quest_mm_run.ts a second time, and that file already plays the whole quest on foot with the
+    // wiki's step numbers against each step, with mmpanel.ts covering the panel.
+    //
+    // What stays is what audit0 is for and the runner does not assert: the map around Ape Atoll and
+    // the npc configs, both of which can be checked without the quest being under way at all.
+    //   the quest:  npx tsx tools/sim/quest_mm_run.ts
+    //   the panel:  npx tsx tools/sim/mmpanel.ts
+    const p = player('mmonkey', 2802, 2705);
     H.tick(1);
-    H.give(p, 'banana', 5);
-    // move the aunt away for the test, as her wander eventually does
-    aunt.teleport(2730, 2780, 0);
-    {
-        const c = nearestNpc('mm_monkey_child', p.x, p.z, 0)!;
-        try {
-            talk(p, 'mm_monkey_child', [1]);
-        } catch (e) {
-            console.log(
-                '    [debug child]',
-                String(e),
-                at(p),
-                [c.x, c.z],
-                [aunt.x, aunt.z],
-                H.ifaces
-                    .filter(i => i.who === p.username && i.kind === 'text')
-                    .slice(-4)
-                    .map(i => i.text)
-            );
-        }
-    }
-    aunt.teleport(2730, 2780, 0);
-    talk(p, 'mm_monkey_child');
-    check('five bananas for the talisman', [st(), H.invCount(p, 'mm_monkey_talisman')], [9, 1]);
-    H.give(p, 'mm_normal_monkey_bones');
+
+    // Lumdo's landing beach, and the palisade that makes the gate the only way in
+    check('the beach Lumdo rows to does not reach Garkor on foot', connected(0, 2802, 2705, 2805, 2762), false);
+    check("  nor does it reach Kruk's yard, which nobody can walk into", connected(0, 2802, 2705, 2802, 2761), false);
+
+    // EACH OF THESE IS PLACED, NOT WALKED TO. Marim is behind a palisade and the island's paths run
+    // through bamboo doors that goTo cannot open for itself, so walking the whole way from the beach
+    // tested goTo rather than the map - it ended up at 2779,2794 and failed a check about a gate it
+    // never reached. The gate, the tunnel and the trapdoor are each worth holding on their own.
+    // A HUMAN DOES NOT SLIP THROUGH THE GATE, he is arrested at it - which is what the old check got
+    // wrong, waiting at 2721,2767 for a player the quest had already carried off to 2779,2794. The
+    // rebuild built the jail the cache was configured for (wiki steps 13-14): as a monkey nobody
+    // looks twice, and as a human the archers on the walkway shoot you off your feet and you wake
+    // up inside the walls. The monkey half needs a greegree, so it belongs to quest_mm_run.ts; this
+    // is the human half, and it lands the player in the same walkable region as Garkor.
+    p.teleport(2721, 2765, 0);
+    H.tick(1);
+    op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
+    H.tick(4);
+    check('a human clicking the bamboo gate is arrested and wakes up inside the walls', [p.z > 2766, connected(0, p.x, p.z, 2805, 2762)], [true, true]);
+    check('  and the cell door with the pickable lock is on its tile', World.getLoc(2771, 2795, 0, LocType.getId('mm_jail_door')) !== null, true);
+
+    // the tunnel on the west shore, and Zooknock at the end of it
+    check('the tunnel entrance on the west shore is placed', World.getLoc(2763, 2703, 0, LocType.getId('mm_bamboo_ladder_dungeon_entrance')) !== null, true);
     p.teleport(2804, 9144, 0);
     H.tick(1);
-    talkHere(p, 'mm_zooknock');
-    check('Zooknock carves the greegree', [st(), H.invCount(p, 'mm_monkey_greegree_for_normal_monkey')], [10, 1]);
-    H.opheld(p, 'mm_monkey_greegree_for_normal_monkey', 2);
-    drive(p);
-    check('holding it makes you a monkey', H.runProc(p, '[proc,mm_is_monkey]')[0], 1);
-    // Kruk, across the palisade
-    p.teleport(2721, 2767, 0);
+    check('  and from the bottom of it Zooknock can be walked to', connected(0, p.x, p.z, 2804, 9145), true);
+
+    // the crypt under the Temple of Marimbo, where the amulet is poured now
+    p.teleport(2807, 2786, 0);
     H.tick(1);
-    const kruk = talkHere(p, 'mm_kruk', [1]);
-    check('Kruk can be spoken to from Marim (he stands in a yard nobody can walk into)', [kruk.length > 0, at(p)], [true, [2802, 2761, 0]]);
-    talkHere(p, 'mm_awowogei_cutscene');
-    check('Awowogei names his price', st(), 11);
-    // the zoo
-    p.teleport(2604, 3270, 0);
-    H.tick(1);
-    talkHere(p, 'mm_monkey_minder');
-    const zm = talkHere(p, 'mm_zoo_monkey', [1]);
-    check('the zoo monkey can be spoken to and climbs in', [zm.length > 0, st(), H.invCount(p, 'mm_monkey_in_backpack')], [true, 12, 1]);
-    p.teleport(2721, 2767, 0);
-    H.tick(1);
-    talkHere(p, 'mm_kruk');
-    talkHere(p, 'mm_awowogei_cutscene');
-    check('the monkey home: the alliance', st(), 13);
-    const gg = goTo(p, 2804, 2762, 0);
-    const gs = talkHere(p, 'mm_garkor');
-    if (st() !== 14) console.log('    [debug garkor]', gg, at(p), gs);
-    check('Garkor hands over the sigil', [st(), H.invCount(p, 'mm_sigil')], [14, 1]);
-    H.equip(p, { rhand: 'rune_scimitar' });
-    H.opheld(p, 'mm_sigil', 2);
-    drive(p);
-    const demon = nearestNpc('mm_demon', p.x, p.z, 0);
-    check('the sigil puts you in the arena with the Jungle Demon', [at(p), demon !== null], [[2415, 9908, 0], true]);
-    for (let i = 0; i < 400 && demon && demon.isActive; i++) {
-        if (i % 4 === 0 && p.target !== demon) H.opNpc(p, demon, 2);
-        p.setLevel(PlayerStat.HITPOINTS, 99);
-        p.setLevel(PlayerStat.PRAYER, 99);
-        H.tick(1);
-    }
-    drive(p);
-    check('the demon dies and the quest moves on', st(), 15);
-    talkHere(p, 'mm_zooknock_final_battle');
-    check('Zooknock puts you back at the Grand Tree', at(p), [2483, 3486, 1]);
-    p.teleport(2465, 3495, 0);
-    H.tick(1);
-    talk(p, 'grandtree_narnode');
-    check('Narnode completes the quest', st(), 20);
-    p.teleport(2483, 3486, 1);
-    talk(p, 'mm_daero', [1]);
-    check('and Daero pays the training', vb(p, 'mm_daero'), 1);
+    op(p, 2807, 2785, 'mm_temple_trapdoor', 1);
+    op(p, 2807, 2785, 'mm_temple_trapdoor_open', 1);
+    check('the temple trapdoor drops into the crypt', p.z > 9000, true);
+    check('  and the wall of flames is there, on a tile that can be stood beside', [World.getLoc(2809, 9191, 0, LocType.getId('mm_iban_firewall_straight')) !== null, connected(0, 2810, 9191, 2810, 9191, 2)], [true, true]);
+
+    // THE AUNT'S WANDER RANGE, which used to be asserted against itself - NpcType.wanderrange on
+    // both sides of the check, which passes whatever it holds and tests nothing. The monkey child
+    // will only talk while his aunt is out of earshot, so she has to be able to leave: the engine
+    // defaults wanderrange to 5, and a 0 here would make that step impossible the way a 0 was the
+    // right answer for the eagle guarding Eagles' Peak.
+    const aunt = nearestNpc('mm_monkeys_aunt', 2800, 2770, 0);
+    check("the monkey child's aunt can wander out of earshot of him", (aunt ? NpcType.get(aunt.type).wanderrange : 0) > 0, true);
 }
 
 // =============================================================================================
@@ -977,7 +914,16 @@ function goTo0(p: Player, x: number, z: number, level: number): boolean {
         }
         tried.add(door.x + ',' + door.z);
         const from = [p.x, p.z];
-        op(p, door.x, door.z, LocType.get(door.type).debugname!);
+        // A DOOR CAN GO BETWEEN BEING FOUND AND BEING CLICKED - a closed one that something else
+        // opened is a different loc type on that tile, and opLoc throws "no loc_1530 at 3098,3270"
+        // rather than shrugging. That exception used to come up through goTo and kill the whole
+        // file, three sections past anything to do with doors. Not finding the door you just saw is
+        // a reason to try the next one.
+        try {
+            op(p, door.x, door.z, LocType.get(door.type).debugname!);
+        } catch {
+            continue;
+        }
         // step through: the tile beyond the door is now open
         if (from[0] === p.x && from[1] === p.z && !connected(level, p.x, p.z, x, z)) continue;
     }
