@@ -535,18 +535,72 @@ if (run('zogre')) {
     H.tick(1);
     op(p, 2442, 9433, 'ogre_cavedoorl', 1);
     check('out through the tomb door, walkable', [p.level, p.z < 4000, walkable(p.x, p.z, p.level)], [0, true, true]);
-    p.teleport(2588, 3088, 0);
-    H.tick(1);
-    talk(p, 'zogre_human_zavistic_rarve');
-    check('Rarve reads the evidence: the potion, stage 8', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [8, 1]);
+    // INCRIMINATING SITHIK (2026-10-15). Rarve used to hand over the potion for a prism and a
+    // backpack; he now wants the case the cache kept seven bits for. tools/sim/zogreyanille.ts
+    // goes through it a line at a time - this is the walkthrough getting past it.
     standBy(p, 2597, 3107, 0);
     op(p, 2597, 3107, 'ladder', 1);
     check("up the ladder in Sithik's house", p.level, 1);
     op(p, 2591, 3105, 'loc_1530', 1);
     check('  his bed reachable up there, through his door', reaches(1, p.x, p.z, 2591, 3103), true);
+    standAt(p, 'sithiks_drawers', 2593, 3103, 1);
+    op(p, 2593, 3103, 'sithiks_drawers', 1);
+    standAt(p, 'sithiks_cupboard', 2593, 3104, 1);
+    op(p, 2593, 3104, 'sithiks_cupboard', 1);
+    standAt(p, 'sithiks_wardrobe', 2590, 3103, 1);
+    op(p, 2590, 3103, 'sithiks_wardrobe', 1);
+    check('his own rooms: paper, charcoal, and two books he should not have',
+        [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal'), H.invCount(p, 'zogre_necrobook'), H.invCount(p, 'zogre_hambook')],
+        [1, 1, 1, 1]);
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+    useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'zogre_necrobook');
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+    useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'zogre_hambook');
+    check('and he denies both to your face', [gv(p, 'thzfe_shownnecrobook'), gv(p, 'thzfe_shownhambook')], [1, 1]);
+    for (let i = 0; i < 40 && H.invCount(p, 'zogre_sithik_portrait_good') === 0; i++) {
+        if (H.invCount(p, 'papyrus') === 0) H.give(p, 'papyrus');
+        const bad = H.invCount(p, 'zogre_sithik_portrait_bad');
+        if (bad > 0) p.invDel(InvType.INV, ObjType.getId('zogre_sithik_portrait_bad'), bad, slotOf(p, 'zogre_sithik_portrait_bad'));
+        standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+        useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'papyrus');
+    }
+    check('a likeness of him that an innkeeper would know', H.invCount(p, 'zogre_sithik_portrait_good'), 1);
+    p.teleport(2556, 3081, 0);
+    H.tick(1);
+    const innkeeper = nearest('dragon_bartender', p);
+    useOnNpc(p, 'zogre_dragon_tankard', innkeeper);
+    useOnNpc(p, 'zogre_sithik_portrait_good', innkeeper);
+    check('the innkeeper knows the tankard and signs the portrait',
+        [gv(p, 'thzfe_innkeepermugshown'), H.invCount(p, 'zogre_sithik_portrait_signed')], [1, 1]);
+    p.teleport(2588, 3088, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('Rarve hears the hunch and asks for the case', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [6, 0]);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('and with all four of them: the potion, stage 8', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [8, 1]);
+    standBy(p, 2597, 3107, 0);
+    op(p, 2597, 3107, 'ladder', 1);
+    // his door stays open behind you, so there is no loc_1530 to click a second time
+    const tea = World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), p.hash64)
+        ?? World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), -1n);
+    check('the cup of tea is on his bedroom floor', tea !== null, true);
+    if (tea) {
+        p.teleport(2592, 3104, 1);
+        H.tick(1);
+        p.clearPendingAction();
+        p.lastUseItem = ObjType.getId('zogre_ogre_trans_potion');
+        p.lastUseSlot = slotOf(p, 'zogre_ogre_trans_potion');
+        p.setInteraction(Interaction.ENGINE, tea, ServerTriggerType.APOBJU);
+        for (let t = 0; t < 15; t++) H.tick(1);
+        p.closeModal();
+    }
+    check('the potion goes in it, and he is still a man: stage 9', [stage(), gv(p, 'thzfe_sithik_transformed')], [9, 0]);
+    H.tick(110);
+    check('he drinks it when you are not watching', gv(p, 'thzfe_sithik_transformed'), 1);
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
     op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
-    op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
-    check('Sithik drinks it, turns, confesses: stage 10', [stage(), gv(p, 'thzfe_sithik_transformed')], [10, 1]);
+    check('Sithik confesses, and teaches the arrows and the balm: stage 10',
+        [stage(), gv(p, 'thzfe_makebrutalarrow'), gv(p, 'thzfe_makecuredisease')], [10, 1, 1]);
     p.teleport(2598, 3084, 0);
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
