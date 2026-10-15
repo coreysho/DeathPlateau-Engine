@@ -664,6 +664,14 @@ BotManager.config.meleeArea = structuredClone(DEFAULT_BOT_CONFIG.meleeArea);
     H.tick(5);
 
     // a melee PKer ignores a player at level 10, and goes for one at level 3
+    //
+    // AND NOTHING ELSE IN THE WILDERNESS WHILE IT DECIDES. This is a check about whom a PKer
+    // PICKS, and a sweep run had it pick Bot Vex - another bot still in the world from the block
+    // above - so the prey was never touched and a working brain read as broken. The diagnostic
+    // printed the target, which is how it was caught: `tgt:Bot Vex ... manual attack`. So clear
+    // every bot first and let the hunter be the only one out there.
+    BotManager.despawnAll();
+    H.tick(5);
     for (const [lvlZ, want] of [
         [3596, false],
         [3540, true]
