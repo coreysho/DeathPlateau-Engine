@@ -147,6 +147,51 @@ function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): str
         .map(i => i.text!);
 }
 /** Stand next to the npc first, then talk. */
+/**
+ * Walk up and talk until `done()` says it worked, because he keeps wandering while you walk.
+ *
+ * SHAPE ONE IN tools/sim/README.md, and it caught this sim twice. talkHere reads the npc's tile
+ * once and then clicks from wherever the player is standing, so a shopkeeper who has drifted two
+ * tiles behind his own counter is four "I can't reach that!" in a row and a quest stage that never
+ * moves - which is what a sweep run saw at Blasidar (`[talk dwarf_city_shop_sculpture did not
+ * start]`, the player at 2909,10203 and Blasidar at 2910,10202), one run after the same block
+ * passed. wanderrange defaults to 5 and he does not override it.
+ *
+ * So: re-read his tile each attempt, stand on a neighbouring tile that can actually reach him, and
+ * take the caller's own condition as the success signal rather than anything the dialogue printed -
+ * a talkHere that only printed "I can't reach that!" still returns lines.
+ */
+function talkUntil(p: Player, npcName: string, done: () => boolean, picks: number[] = [], tries = 4): string[] {
+    let said: string[] = [];
+    for (let attempt = 0; attempt < tries; attempt++) {
+        const npc = nearestNpc(npcName, p.x, p.z, p.level);
+        if (!npc) break;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+            [1, 1],
+            [-1, -1],
+            [1, -1],
+            [-1, 1]
+        ]) {
+            const x = npc.x + dx;
+            const z = npc.z + dz;
+            if (!isZoneAllocatedTile(npc.level, x, z)) continue;
+            if (!bfsRoute(npc.level, x, z, npc.x, npc.z, 4)) continue;
+            p.teleport(x, z, npc.level);
+            H.tick(1);
+            break;
+        }
+        const m0 = H.mesgs.length;
+        said = talkHere(p, npcName, [...picks]);
+        if (done()) return said;
+        console.log('    [talk retry]', npcName, attempt, mesSince(p, m0).slice(-2), at(p), [npc.x, npc.z]);
+    }
+    return said;
+}
+
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = [0, 1, 2, 3]
         .map(l => nearestNpc(npcName, p.x, p.z, l))
@@ -498,11 +543,12 @@ if (run('gd')) {
     op(p, 2895, 10209, 'dwarf_keldagrim_wide_stairs_upper');
     check('and the stairs come back down', p.level, 0);
     goTo(p, 2906, 10206, 0);
-    talkHere(p, 'dwarf_city_shop_sculpture');
+    talkUntil(p, 'dwarf_city_shop_sculpture', () => var_(p, 'giantdwarf_quest') >= 20);
     check('Blasidar takes the commission', var_(p, 'giantdwarf_quest'), 20);
     for (const pick of [1, 2, 3]) talkHere(p, 'dwarf_city_shop_sculpture_model_multi', [pick]);
     check('boots, torso and axe on the model', vb(p, 'giantdwarf_model_state'), 7);
-    talkHere(p, 'dwarf_city_shop_sculpture');
+    // he has had three model clicks to wander off during, which is how this one went red
+    talkUntil(p, 'dwarf_city_shop_sculpture', () => var_(p, 'giantdwarf_quest') >= 40);
     check('Blasidar puts the statue back up with the new head', var_(p, 'giantdwarf_quest'), 40);
     // PLACED AT THE STAIRS RATHER THAN WALKED TO THEM. goTo reported success while leaving the
     // player four tiles short at 2894,10184, so the stairs click never reached, the player stayed on
