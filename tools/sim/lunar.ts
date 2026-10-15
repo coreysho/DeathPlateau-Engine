@@ -20,7 +20,7 @@ import * as A from './a1lib.js';
 // binding, so every `(p: Player)` below was TS2749 - "refers to a value, but is being used as a
 // type here" - six of them. The type comes from the module it lives in.
 import type Player from '#/engine/entity/Player.js';
-import { PlayerStatMap } from '#/engine/entity/PlayerStat.js';
+import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 const { H, World, LocType } = A;
 
 await H.boot();
@@ -84,11 +84,16 @@ say('THE REQUIREMENTS');
     // THE SKILL GATE, which this block measured nothing of until the typecheck said so. Its only
     // statement was `p.setLevel(p.getStatId ? p.getStatId(s) : 0, 1)` and Player has no
     // getStatId - so the ternary took the 0 branch every time, set Attack to 1 five times over,
-    // and despawned the player again without a single check. The stat ids are PlayerStatMap's,
-    // and the refusal is Lokar's own line.
+    // and despawned the player again without a single check.
+    //
+    // AND THE FIRST FIX MEASURED NOTHING EITHER. PlayerStatMap is keyed in CAPITALS, so
+    // get('crafting') is undefined, the non-null assertion made tsc accept it, and
+    // baseLevels[undefined] = 1 on a typed array is a silent no-op - a maxed player walked up to
+    // Lokar and the quest started. The stat ids come off the PlayerStat enum now, where a name
+    // that does not exist is a compile error rather than an undefined.
     const p = mk('lowskill');
-    for (const s of ['crafting', 'mining', 'woodcutting', 'firemaking', 'herblore']) {
-        p.setLevel(PlayerStatMap.get(s)!, 1);
+    for (const s of [PlayerStat.CRAFTING, PlayerStat.MINING, PlayerStat.WOODCUTTING, PlayerStat.FIREMAKING, PlayerStat.HERBLORE]) {
+        p.setLevel(s, 1);
     }
     H.tick(1);
     const lines = talk(p, 'lokar_searunner', ['away from these parts', 'Why did you leave', 'innards']);
