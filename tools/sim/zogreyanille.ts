@@ -21,7 +21,6 @@ import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import NpcType from '#/cache/config/NpcType.js';
-import VarBitType from '#/cache/config/VarBitType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -46,7 +45,7 @@ function settle(p: Player, picks: number[] = [], max = 200) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -97,8 +96,12 @@ const heard = (fn: () => void): string => {
     const mark = H.mesgs.length;
     const faces = H.ifaces.length;
     fn();
-    return H.ifaces.slice(faces).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
-        .concat(H.mesgs.slice(mark).map(m => m.text)).join(' ');
+    return H.ifaces
+        .slice(faces)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .concat(H.mesgs.slice(mark).map(m => m.text))
+        .join(' ');
 };
 function slotOf(objName: string) {
     const id = ObjType.getId(objName);
@@ -118,8 +121,7 @@ const opLoc = (name: string, x: number, z: number, picks: number[] = []): string
         p.teleport(sx, sz, 1);
         H.tick(1);
         p.clearPendingAction();
-        p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length,
-            loc.angle, loc.shape, LocType.get(loc.type).forceapproach));
+        p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(loc.type).forceapproach));
         p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOC1);
         settle(p, picks);
     });
@@ -132,8 +134,7 @@ const useOnLoc = (obj: string, name: string, x: number, z: number, picks: number
         p.clearPendingAction();
         p.lastUseItem = ObjType.getId(obj);
         p.lastUseSlot = slotOf(obj);
-        p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length,
-            loc.angle, loc.shape, LocType.get(loc.type).forceapproach));
+        p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(loc.type).forceapproach));
         p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
         settle(p, picks);
     });
@@ -170,21 +171,17 @@ for (const [name, x, z] of FURNITURE) {
     const t = LocType.get(locAt(name, x, z).type);
     check(`${name} (${t.name}) is there, with Search`, (t.op ?? [])[0], 'Search');
 }
-H.setVarBit(p, 'zogre', 4);            // ^zogre_in_tomb: not told to prove anything yet
+H.setVarBit(p, 'zogre', 4); // ^zogre_in_tomb: not told to prove anything yet
 let said = opLoc('sithiks_drawers', 2593, 3103);
-check('and they stay shut until Rarve has asked for proof',
-    [H.invCount(p, 'papyrus'), said.includes('no business')], [0, true]);
+check('and they stay shut until Rarve has asked for proof', [H.invCount(p, 'papyrus'), said.includes('no business')], [0, true]);
 
-H.setVarBit(p, 'zogre', 6);            // ^zogre_found_evidence
+H.setVarBit(p, 'zogre', 6); // ^zogre_found_evidence
 opLoc('sithiks_drawers', 2593, 3103);
-check('the drawers: papyrus and charcoal',
-    [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal')], [1, 1]);
+check('the drawers: papyrus and charcoal', [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal')], [1, 1]);
 opLoc('sithiks_drawers', 2593, 3103);
-check('  and more papyrus, which the guide says you will need',
-    [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal')], [2, 1]);
+check('  and more papyrus, which the guide says you will need', [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal')], [2, 1]);
 opLoc('sithiks_cupboard', 2593, 3104);
-check('the cupboard: the book on portraiture, and the one underneath it',
-    [H.invCount(p, 'zogre_portrait_book'), H.invCount(p, 'zogre_necrobook')], [1, 1]);
+check('the cupboard: the book on portraiture, and the one underneath it', [H.invCount(p, 'zogre_portrait_book'), H.invCount(p, 'zogre_necrobook')], [1, 1]);
 opLoc('sithiks_wardrobe', 2590, 3103);
 check('the wardrobe, behind the coats: Humans Against Monsters', H.invCount(p, 'zogre_hambook'), 1);
 said = opLoc('sithiks_wardrobe', 2590, 3103);
@@ -194,14 +191,11 @@ check('  and nothing else behind them', [H.invCount(p, 'zogre_hambook'), said.in
 console.log('');
 console.log('MAKING HIM DENY THEM');
 said = useOnLoc('zogre_necrobook', 'zogre_sithik_bed_entity', BED[0], BED[1]);
-check('the necromancy book: that is not mine',
-    [vb(p, 'thzfe_shownnecrobook'), said.includes('not mine')], [1, true]);
+check('the necromancy book: that is not mine', [vb(p, 'thzfe_shownnecrobook'), said.includes('not mine')], [1, true]);
 said = useOnLoc('zogre_hambook', 'zogre_sithik_bed_entity', BED[0], BED[1]);
-check("the book of 'h.a.m': a man may read what he likes",
-    [vb(p, 'thzfe_shownhambook'), said.includes('read what he likes')], [1, true]);
+check("the book of 'h.a.m': a man may read what he likes", [vb(p, 'thzfe_shownhambook'), said.includes('read what he likes')], [1, true]);
 said = useOnLoc('zogre_portrait_book', 'zogre_sithik_bed_entity', BED[0], BED[1]);
-check('and his own book on portraiture is the only honest thing in the room',
-    said.includes('only honest thing'), true);
+check('and his own book on portraiture is the only honest thing in the room', said.includes('only honest thing'), true);
 
 console.log('');
 console.log('DRAWING HIM');
@@ -242,16 +236,12 @@ H.tick(1);
 const bartender = npcNamed('dragon_bartender');
 H.give(p, 'zogre_dragon_tankard', 1);
 said = useOnNpc('zogre_sithik_portrait_good', bartender);
-check('he will not sign a drawing of a man nobody has asked him about',
-    [vb(p, 'thzfe_innkeeperportraitshown'), said.includes('not been asked about')], [0, true]);
+check('he will not sign a drawing of a man nobody has asked him about', [vb(p, 'thzfe_innkeeperportraitshown'), said.includes('not been asked about')], [0, true]);
 said = useOnNpc('zogre_dragon_tankard', bartender);
-check('the tankard is one of his, and he names the man who took it',
-    [vb(p, 'thzfe_innkeepermugshown'), said.includes('one of mine')], [1, true]);
+check('the tankard is one of his, and he names the man who took it', [vb(p, 'thzfe_innkeepermugshown'), said.includes('one of mine')], [1, true]);
 if (vb(p, 'thzfe_innkeepermugshown') === 0) console.log('       heard: ' + JSON.stringify(said.slice(0, 300)));
 said = useOnNpc('zogre_sithik_portrait_good', bartender);
-check('then he signs the portrait',
-    [H.invCount(p, 'zogre_sithik_portrait_signed'), H.invCount(p, 'zogre_sithik_portrait_good'),
-        vb(p, 'thzfe_innkeeperportraitshown')], [1, 0, 1]);
+check('then he signs the portrait', [H.invCount(p, 'zogre_sithik_portrait_signed'), H.invCount(p, 'zogre_sithik_portrait_good'), vb(p, 'thzfe_innkeeperportraitshown')], [1, 0, 1]);
 
 // ------------------------------------------------------------------ Rarve
 console.log('');
@@ -260,17 +250,14 @@ const rarve = npcNamed('zogre_human_zavistic_rarve');
 // twenty sheets of papyrus later the inventory is full, and H.give drops what will not fit
 H.clearInv(p);
 H.tick(1);
-for (const o of ['zogre_black_prism', 'zogre_brentle_vahn_backpack', 'zogre_necrobook',
-                 'zogre_hambook', 'zogre_dragon_tankard', 'zogre_sithik_portrait_signed']) H.give(p, o, 1);
+for (const o of ['zogre_black_prism', 'zogre_brentle_vahn_backpack', 'zogre_necrobook', 'zogre_hambook', 'zogre_dragon_tankard', 'zogre_sithik_portrait_signed']) H.give(p, o, 1);
 H.tick(1);
 // the first time he sees the prism he has nothing else to go on: the four are set aside for it
 const CASE = ['zogre_necrobook', 'zogre_hambook', 'zogre_dragon_tankard', 'zogre_sithik_portrait_signed'];
 for (const o of CASE) p.invDel(InvType.INV, ObjType.getId(o), 1, slotOf(o));
 H.tick(1);
 said = talkTo(rarve);
-check('a prism and a dead man is not a case: he asks for four things',
-    [vb(p, 'thzfe_prismsold'), said.includes('guild master, not a mob'),
-        H.invCount(p, 'zogre_ogre_trans_potion')], [1, true, 0]);
+check('a prism and a dead man is not a case: he asks for four things', [vb(p, 'thzfe_prismsold'), said.includes('guild master, not a mob'), H.invCount(p, 'zogre_ogre_trans_potion')], [1, true, 0]);
 if (vb(p, 'thzfe_prismsold') === 0) console.log('       heard: ' + JSON.stringify(said.slice(0, 300)));
 said = talkTo(rarve);
 check('  and he will list what is still missing', said.includes('Four things'), true);
@@ -278,9 +265,7 @@ for (const o of CASE) H.give(p, o, 1);
 H.tick(1);
 const signed = H.invCount(p, 'zogre_sithik_portrait_signed');
 said = talkTo(rarve);
-check('with all four he hands over the strange potion',
-    [H.invCount(p, 'zogre_ogre_trans_potion'), vb(p, 'thzfe_showntankard'),
-        vb(p, 'thzfe_shownsignedportrait'), H.getVarBit(p, 'zogre'), signed], [1, 1, 1, 8, 1]);
+check('with all four he hands over the strange potion', [H.invCount(p, 'zogre_ogre_trans_potion'), vb(p, 'thzfe_showntankard'), vb(p, 'thzfe_shownsignedportrait'), H.getVarBit(p, 'zogre'), signed], [1, 1, 1, 8, 1]);
 
 // ------------------------------------------------------------------ the tea
 console.log('');
@@ -290,8 +275,7 @@ H.tick(2);
 const teaObj = () => World.getObj(TEA[0], TEA[1], 1, ObjType.getId('zogre_cup_of_tea_sithix'), p.hash64) ?? World.getObj(TEA[0], TEA[1], 1, ObjType.getId('zogre_cup_of_tea_sithix'), -1n);
 check('the cup is on the floor of his bedroom now', teaObj() !== null, true);
 said = useOnLoc('zogre_ogre_trans_potion', 'zogre_sithik_bed_entity', BED[0], BED[1]);
-check('he will not drink it out of your hand',
-    [H.invCount(p, 'zogre_ogre_trans_potion'), said.includes('cup of tea on the drawers')], [1, true]);
+check('he will not drink it out of your hand', [H.invCount(p, 'zogre_ogre_trans_potion'), said.includes('cup of tea on the drawers')], [1, true]);
 // NOT settle() here: the drink is on a hundred-tick queue and settle would sit through it, which
 // is the one thing this step is about - he does not turn into an ogre while you are in the room.
 said = heard(() => {
@@ -306,21 +290,15 @@ said = heard(() => {
     H.tick(10);
     p.closeModal();
 });
-check('the potion goes into the tea',
-    [H.invCount(p, 'zogre_ogre_trans_potion'), H.getVarBit(p, 'zogre'), said.includes('does not change colour')],
-    [0, 9, true]);
-check('  and Sithik is still a man while you are standing over it',
-    [H.getVarBit(p, 'thzfe_sithik_transformed'), H.queued(p, '[queue,zogre_tea_drunk]').length], [0, 1]);
-H.tick(110);                              // ^zogre_tea_wait, and he is alone
-check('he drinks it when you are not watching',
-    [H.getVarBit(p, 'thzfe_sithik_transformed'), teaObj()], [1, null]);
+check('the potion goes into the tea', [H.invCount(p, 'zogre_ogre_trans_potion'), H.getVarBit(p, 'zogre'), said.includes('does not change colour')], [0, 9, true]);
+check('  and Sithik is still a man while you are standing over it', [H.getVarBit(p, 'thzfe_sithik_transformed'), H.queued(p, '[queue,zogre_tea_drunk]').length], [0, 1]);
+H.tick(110); // ^zogre_tea_wait, and he is alone
+check('he drinks it when you are not watching', [H.getVarBit(p, 'thzfe_sithik_transformed'), teaObj()], [1, null]);
 
 console.log('');
 console.log('WHAT HE KNOWS');
 said = opLoc('zogre_sithik_bed_entity', BED[0], BED[1]);
-check('he confesses, and teaches the two things he knows: brutal arrows and the balm',
-    [H.getVarBit(p, 'zogre'), vb(p, 'thzfe_makebrutalarrow'), vb(p, 'thzfe_makecuredisease'),
-        vb(p, 'thzfe_makecompozogrebow')], [10, 1, 1, 0]);
+check('he confesses, and teaches the two things he knows: brutal arrows and the balm', [H.getVarBit(p, 'zogre'), vb(p, 'thzfe_makebrutalarrow'), vb(p, 'thzfe_makecuredisease'), vb(p, 'thzfe_makecompozogrebow')], [10, 1, 1, 0]);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

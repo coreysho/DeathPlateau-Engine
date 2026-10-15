@@ -32,7 +32,7 @@ function settle(p: Player, picks: number[] = [], max = 150) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -79,8 +79,12 @@ const heard = (fn: () => void): string => {
     const mark = H.mesgs.length;
     const faces = H.ifaces.length;
     fn();
-    return H.ifaces.slice(faces).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
-        .concat(H.mesgs.slice(mark).map(m => m.text)).join(' ');
+    return H.ifaces
+        .slice(faces)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .concat(H.mesgs.slice(mark).map(m => m.text))
+        .join(' ');
 };
 const opNpc = (npc: Npc, op: number, picks: number[] = []): string =>
     heard(() => {
@@ -97,19 +101,17 @@ console.log('');
 console.log('SEVEN ELVES WITH NAMES AND NO SCRIPTS');
 for (const [name, who] of ELVES) {
     const t = NpcType.get(NpcType.getId(name));
-    check(`${name} is ${who}, placed, with Talk-to`,
-        [t.name, (t.op ?? [])[0], npcOf(name) !== null], [who, 'Talk-to', true]);
+    check(`${name} is ${who}, placed, with Talk-to`, [t.name, (t.op ?? [])[0], npcOf(name) !== null], [who, 'Talk-to', true]);
 }
 
 console.log('');
 console.log('AND NOW THEY TALK');
 H.setVarBit(p, 'mourning_quest_main', 0);
 let said = opNpc(npcOf('mourning_town_elf_2'), 1);
-check('before Arianwyn vouches for you, nobody in this village says much',
-    said.includes('only reason you are standing here'), true);
+check('before Arianwyn vouches for you, nobody in this village says much', said.includes('only reason you are standing here'), true);
 said = opNpc(npcOf('mourning_elf_kid_1'), 1);
 check('  except the children, who have never seen a human', said.includes("You're a human"), true);
-H.setVarBit(p, 'mourning_quest_main', 2);      // ^mourning_told_arianwyn
+H.setVarBit(p, 'mourning_quest_main', 2); // ^mourning_told_arianwyn
 const lines: Record<string, string> = {
     mourning_town_elf_1: 'traps in Isafdar',
     mourning_town_elf_2: 'Arianwyn wants evidence',
@@ -123,7 +125,7 @@ for (const [name, who] of ELVES) {
     said = opNpc(npcOf(name), 1);
     check(`${who} has something of his own to say`, said.includes(lines[name]), true);
 }
-H.setVarBit(p, 'mourning_quest_main', 20);     // past the quest
+H.setVarBit(p, 'mourning_quest_main', 20); // past the quest
 said = opNpc(npcOf('mourning_town_elf_1'), 1);
 check('and Goreu has heard about the gates afterwards', said.includes('opened the gates'), true);
 
@@ -133,17 +135,14 @@ console.log('THE PICKPOCKET THE CACHE HAS ALWAYS OFFERED');
 const PICK = ELVES.slice(0, 5).map(([n]) => n);
 for (const name of PICK) {
     const t = NpcType.get(NpcType.getId(name));
-    check(`${t.name} carries op3=Pickpocket, and it has a trigger now`,
-        [(t.op ?? [])[2], ScriptProvider.getByTrigger(ServerTriggerType.OPNPC3, NpcType.getId(name), t.category) !== null],
-        ['Pickpocket', true]);
+    check(`${t.name} carries op3=Pickpocket, and it has a trigger now`, [(t.op ?? [])[2], ScriptProvider.getByTrigger(ServerTriggerType.OPNPC3, NpcType.getId(name), t.category) !== null], ['Pickpocket', true]);
 }
-p.setLevel(17, 84);                       // 17 is Thieving
+p.setLevel(17, 84); // 17 is Thieving
 H.tick(1);
 said = opNpc(npcOf('mourning_town_elf_3'), 3);
 check('84 Thieving is not enough', said.includes('85'), true);
 p.setLevel(17, 85);
 H.tick(1);
-let xp = p.stats[17];
 let got = 0;
 let stunned = 0;
 for (let i = 0; i < 60; i++) {
@@ -156,8 +155,7 @@ for (let i = 0; i < 60; i++) {
     else if (said.includes('stunned')) stunned++;
     H.tick(6);
 }
-check('at 85 it succeeds about a third of the time, and the rest stun you',
-    [got > 5, got < 45, stunned > 5], [true, true, true]);
+check('at 85 it succeeds about a third of the time, and the rest stun you', [got > 5, got < 45, stunned > 5], [true, true, true]);
 console.log(`  (${got} of 60 succeeded, ${stunned} stunned)`);
 
 H.clearInv(p);
@@ -172,8 +170,11 @@ while (p.stats[17] === before && tries < 80) {
 }
 check('and one success is 353.3 Thieving experience', (p.stats[17] - before) / 10, 353.3);
 const loot = ['coins', 'deathrune', 'jug_wine', 'naturerune', 'fire_orb', 'diamond', 'gold_ore'];
-check('  with something of the elf table in your hands',
-    loot.some(o => H.invCount(p, o) > 0), true);
+check(
+    '  with something of the elf table in your hands',
+    loot.some(o => H.invCount(p, o) > 0),
+    true
+);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);
