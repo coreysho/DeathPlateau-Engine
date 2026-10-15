@@ -492,6 +492,11 @@ if (run('zogre')) {
     check('  and it cannot be climbed before Grish', p.x, 2455);
     talk(p, 'zogre_ogre_shaman', [1]);
     check('Grish: stage 2', stage(), 2);
+    // THE BARRICADE IS THE GUARD'S (2026-10-15): "Speak to Ogre guard to the east, he will remove
+    // the barricade" - Grish used to do it himself in the same breath as the warning.
+    check('  and it is still up until the guard is asked', gv(p, 'thzfe_blocking_barricade'), 0);
+    talk(p, 'zogre_ogre_guard');
+    check('the ogre guard puts his shoulder to it', gv(p, 'thzfe_blocking_barricade'), 1);
     p.teleport(2455, 3049, 0);
     H.tick(1);
     op(p, 2456, 3049, 'zogre_multi_blocking_barricade_r', 1);
@@ -528,9 +533,8 @@ if (run('zogre')) {
     check('  picking one inside the tomb does not throw you back to the landing', [p.level, lastMes(p).includes('Bones')], [2, true]);
     standBy(p, 2446, 9417, 2);
     op(p, 2443, 9417, 'ogre_stairs_down', 1);
-    check('down to the deepest chamber, walkable, and the stand is in reach', [p.level, walkable(p.x, p.z, 0), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
-    op(p, 2443, 9417, 'ogre_stairs', 1);
-    check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
+    // the ceremonial chamber is behind the ogre gate now, and the key is three conversations away
+    check('the way down to the chamber is barred this early', [p.level, saw(p, 'ogre gate')], [2, true]);
     p.teleport(landing[0], landing[1], 2);
     H.tick(1);
     op(p, 2442, 9433, 'ogre_cavedoorl', 1);
@@ -601,11 +605,25 @@ if (run('zogre')) {
     op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
     check('Sithik confesses, and teaches the arrows and the balm: stage 10',
         [stage(), gv(p, 'thzfe_makebrutalarrow'), gv(p, 'thzfe_makecuredisease')], [10, 1, 1]);
-    p.teleport(2598, 3084, 0);
+    // THE CEREMONIAL CHAMBER (2026-10-15). Grish hands over the ogre gate key once Sithik has
+    // talked, and the stairs down to the chamber are what it opens - Slash Bash used to be woken
+    // by ringing the Wizards' Guild bell in Yanille, which was a stand-in for this.
+    p.teleport(2443, 3049, 0);
     H.tick(1);
-    op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
+    talk(p, 'zogre_ogre_shaman');
+    check('Grish gives the ogre gate key', H.invCount(p, 'zogre_tomb_artefact_key'), 1);
+    p.teleport(landing[0], landing[1], 2);
+    H.tick(1);
+    standBy(p, 2443, 9417, 2);
+    op(p, 2443, 9417, 'ogre_stairs_down', 1);
+    check('and it opens the way down into the chamber, with the stand in reach',
+        [p.level, walkable(p.x, p.z, p.level), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
+    op(p, 2443, 9417, 'ogre_stairs', 1);
+    check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
+    standBy(p, 2446, 9417, 2);
+    op(p, 2443, 9417, 'ogre_stairs_down', 1);
     const bash = H.npcNear('zogre_slash_bash', 2440, 9458, 2);
-    check('the bell wakes Slash Bash in the tomb, on a walkable tile', [bash !== null, bash ? walkable(bash.x, bash.z, 2) : false], [true, true]);
+    check('which is where Slash Bash stops pretending to be dead', [bash !== null, bash ? walkable(bash.x, bash.z, 2) : false], [true, true]);
     if (bash) {
         const t = NpcType.get(bash.type);
         check('Slash Bash has real stats now (100 hp, not 1)', [bash.levels[3], t.stats?.[0] ?? bash.baseLevels[0]], [100, 100]);
