@@ -990,9 +990,14 @@ if (want('tbwt')) {
         p.teleport(x + 1, z, 0);
         H.tick(1);
         const outside = reaches(0, p.x, p.z, 2795, 3080, 60);
+        // A TICK AFTER EACH CLICK. Stepping through a door is a move, and reading the player's tile
+        // on the same tick as the click catches them mid-step: all three of these doors step through
+        // and back when given a moment, and the third one failed its way back without one.
         op(p, x, z, 'tbwt_bamboo_door');
+        H.tick(2);
         const a1 = at(p);
         op(p, x, z, 'tbwt_bamboo_door');
+        H.tick(2);
         const a2 = at(p);
         check(`bamboo door at ${x},${z} steps you through and back`, [outside, a1[0] !== x + 1 || a1[1] !== z, walkable(0, a1[0], a1[1]), a2[0] === x + 1 && a2[1] === z], [true, true, true, true]);
     }

@@ -12,7 +12,12 @@ function reach(sx: number, sz: number, lvl: number, limit = 60000) {
     const q: [number, number][] = [[sx, sz]];
     while (q.length && seen.size < limit) {
         const [x, z] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as const) {
             if (seen.has(KEY(x + dx, z + dz))) continue;
             if (!canTravel(lvl, x, z, dx, dz, 1, 1, CollisionType.NORMAL)) continue;
             seen.add(KEY(x + dx, z + dz));
@@ -21,7 +26,7 @@ function reach(sx: number, sz: number, lvl: number, limit = 60000) {
     }
     return seen;
 }
-const corridors = reach(1925, 4642, 0);   // from the first corpse in the cave
+const corridors = reach(1925, 4642, 0); // from the first corpse in the cave
 console.log('');
 console.log('the cave + corridor region: ' + corridors.size + ' tiles');
 const T = (lx: number, lz: number) => [29 * 64 + lx, 72 * 64 + lz] as [number, number];
@@ -61,3 +66,8 @@ for (let lz = 20; lz <= 40; lz++) {
     }
     if (best >= 0) console.log('  z=' + String(lz).padStart(2) + '  easternmost x=' + best);
 }
+
+// Exit rather than running off the end of the file: the world keeps worker threads and timers alive,
+// so without this the sim hangs after its last line instead of finishing. gwdmap and feudhouse were
+// the same, and all four were the sweep's only timeouts.
+process.exit(0);

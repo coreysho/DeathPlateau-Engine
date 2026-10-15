@@ -864,6 +864,12 @@ if (run('dt')) {
         op(s, 3169, 2967, 'fd_bandit_shutchest', 1);
     }
     check('the cross, out of the chest', H.invCount(s, 'fd_sword_cross'), 1);
+    // AND PUT THE PICKS DOWN BEFORE TALKING TO HIM. Lockpicks do not stack, so thirty of them is
+    // thirty slots: @dt_rasolo_reward checks inv_freespace before handing the ring over and said
+    // "Make some space and I'll hand it over" instead, which failed the next check and was my own
+    // fix for the chest doing it.
+    s.invDel(InvType.INV, ObjType.getId('lockpick'), 30);
+    H.tick(1);
     talk(s, 'shadow_warrior_rasool');
     check('Rasolo: the ring of visibility, the ladder shows', [H.invCount(s, 'fd_ring_visibility'), gv(s, 'fd_shadowwarrior_quest'), gv(s, 'fd_ladder_present')], [1, 2, 1]);
 
