@@ -1418,7 +1418,14 @@ if (run('watchtower')) {
     H.tick(2);
     op(p, 2590, 9449, 'rock_of_dalgroth', 2);
     check('the fourth crystal from the Rock of Dalgroth', H.invCount(p, 'powering_crystal4'), 1);
-    op(p, 2598, 9468, 'enclavecave', 1);
+    // THE EXIT IS EIGHT TILES AWAY from where the Rock of Dalgroth left the player, so the click has
+    // to be walked to and the walk needs ticks - one op() with whatever drive() spends is sometimes
+    // enough and sometimes leaves the player underground, which is how a sweep run got [false,true]
+    // on a check that passes alone.
+    for (let t = 0; t < 8 && p.z > 4000; t++) {
+        op(p, 2598, 9468, 'enclavecave', 1);
+        H.tick(4);
+    }
     check('out of the enclave, a walkable tile', [p.z < 4000, walkable(0, p.x, p.z)], [true, true]);
 
     p.teleport(2545, 3112, 2);
