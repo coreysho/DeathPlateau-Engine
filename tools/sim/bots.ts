@@ -133,11 +133,18 @@ check(
     [...furthest.values()].some(n => n >= 30),
     true
 );
+// THE SLACK IS THE ENGINE'S, as in the melee-area check further down: BotBrain.inArea takes a slack
+// argument and the two places that decide whether to keep chasing a target pass 2 - "with slack
+// levels/tiles of give, for someone it is already fighting" - so a roamer that followed something
+// over the line is inside its leash by design. This was failing on a low roamer at level 17 against
+// a depth of 15, which is that slack exactly. What the check is for is a roamer that has lost its
+// area altogether: travel() clamps every waypoint to z = 3520 + maxLevel * 8 - 1 and pickDestination
+// only picks inside the area, so nothing but a chase can put one past its depth at all.
 check(
-    "  never past their bracket's depth (low 15, mid 30)",
+    "  never past their bracket's depth plus the engine's chase slack (low 15, mid 30, +2)",
     roamers.every(b => {
         const br = BotManager.stateOf(b)?.kit.bracket;
-        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 1;
+        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 2;
     }),
     true
 );

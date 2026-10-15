@@ -408,24 +408,42 @@ if (run('wanted')) {
         }
         return null;
     };
+    // AND HE KEEPS WANDERING WHILE YOU WALK UP. standBy picks a tile that can reach him, but
+    // talkHere reads his tile once and then clicks four times from wherever the player started: one
+    // step behind a Varrock fence between the teleport and the click is four "I can't reach that!"
+    // in a row, which is what a sweep run saw at location 10 - the debug line printed the player
+    // adjacent to him, and the conversation then landed on the NEXT sighting's click, putting every
+    // count after it out by one. So re-read his tile and walk up again, and take the sightings
+    // counter as the success signal: a talkHere that only printed "I can't reach that!" still
+    // returns the questtab's own lines, so said.length is not one.
+    const walkUpAndTalk = (who: Player, place: number, want: number): { said: string[]; stood: boolean; at: number[] | null } => {
+        let said: string[] = [];
+        let stood = false;
+        let tile: number[] | null = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const npc = nearestNpc('wanted_solus' + place, 3000, 3300, 0);
+            if (!npc) break;
+            tile ??= [npc.x, npc.z];
+            const spot = standBy(npc);
+            if (spot) {
+                stood = true;
+                who.teleport(spot[0], spot[1], 0);
+                H.tick(1);
+            }
+            const m0 = H.mesgs.length;
+            said = talkHere(who, 'wanted_solus' + place);
+            if (H.runProc(who, '[proc,wanted_sightings]')[0] === want) break;
+            console.log('    [retry]', place, attempt, mesSince(who, m0).slice(-2), at(who), [npc.x, npc.z], connected(0, who.x, who.z, npc.x, npc.z, 10));
+        }
+        return { said, stood, at: tile };
+    };
     for (let i = 0; i < 5; i++) {
         const place = H.runProc(p, '[proc,wanted_current_location]')[0];
         if (!place) {
             check('the orb has a location', place, '>0');
             break;
         }
-        const shell = `wanted_solus${place}`;
-        const npc = nearestNpc(shell, 3000, 3300, 0);
-        const spawn = npc ? [npc.x, npc.z] : null;
-        // walk up to him the way a player would, from a few tiles off
-        const spot = npc ? standBy(npc) : null;
-        if (spot) {
-            p.teleport(spot[0], spot[1], 0);
-            H.tick(1);
-        }
-        const m0 = H.mesgs.length;
-        const said = talkHere(p, shell);
-        if (H.runProc(p, '[proc,wanted_sightings]')[0] !== i + 1) console.log('    [debug]', said, mesSince(p, m0), at(p), [npc!.x, npc!.z], connected(0, p.x, p.z, npc!.x, npc!.z, 10));
+        const { said, at: spawn } = walkUpAndTalk(p, place, i + 1);
         check(`sighting ${i + 1}: Solus at location ${place} (${spawn}) can be spoken to, and it counts`, [said.length > 0, H.runProc(p, '[proc,wanted_sightings]')[0], H.runProc(p, '[proc,wanted_current_location]')[0]], [true, i + 1, 0]);
         if (i < 4) {
             H.opheld(p, 'wanted_crystal_ball', 1);
@@ -437,18 +455,9 @@ if (run('wanted')) {
         const q = player('wanted' + place, 3000, 3300);
         setV(q, 'wanted_main', 30);
         H.setVarBit(q, 'wanted_mission' + place, 1);
-        const npc = nearestNpc('wanted_solus' + place, 3000, 3300, 0)!;
-        // stand on a walkable tile a few steps off, then click him from there - standBy above
-        const spot = standBy(npc);
-        const stood = spot !== null;
-        if (spot) q.teleport(spot[0], spot[1], 0);
-        H.tick(1);
-        const said = stood ? talkHere(q, 'wanted_solus' + place) : [];
-        check(
-            `location ${place} (${H.runProc(q, '[proc,wanted_place_name]', [place]).length ? '' : ''}${npc.x},${npc.z}): Solus can be walked up to and spoken to`,
-            [stood, said.length > 0, H.runProc(q, '[proc,wanted_sightings]')[0]],
-            [true, true, 1]
-        );
+        // stand on a walkable tile a few steps off, then click him from there - walkUpAndTalk above
+        const { said, stood, at: tile } = walkUpAndTalk(q, place, 1);
+        check(`location ${place} (${tile}): Solus can be walked up to and spoken to`, [stood, said.length > 0, H.runProc(q, '[proc,wanted_sightings]')[0]], [true, true, 1]);
         H.despawn(q);
     }
     check('he is cornered, and the hat is yours', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_solus_trophy')], [40, 1]);
