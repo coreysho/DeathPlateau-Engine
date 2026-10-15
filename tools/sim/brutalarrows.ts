@@ -15,7 +15,13 @@
 //   npx tsx tools/sim/brutalarrows.ts
 import * as H from './harness.js';
 import Player from '#/engine/entity/Player.js';
+import World from '#/engine/World.js';
+import Npc from '#/engine/entity/Npc.js';
 import ObjType from '#/cache/config/ObjType.js';
+import NpcType from '#/cache/config/NpcType.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+import { Interaction } from '#/engine/entity/Interaction.js';
+import { findPathToEntity } from '#/engine/GameMap.js';
 import ParamType from '#/cache/config/ParamType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
 import Component from '#/cache/config/Component.js';
@@ -226,6 +232,136 @@ check('the comp ogre bow fires every one of them',
     METALS.every(([, a]) => fires('zogre_bow', a)) && fires('zogre_bow', 'ogre_arrow'), true);
 check('and a maple shortbow fires none of them', fires('maple_shortbow', 'zogre_brutal_bronze'), false);
 check('  nor will an ogre bow fire a rune arrow', fires('ogre_bow', 'rune_arrow'), false);
+
+
+// ------------------------------------------------------------------ the third unlock bit
+console.log('');
+console.log("RELICYM'S BALM, THE THIRD BIT NOTHING READ");
+const DOSES = ['relicyms_balm1', 'relicyms_balm2', 'relicyms_balm3', 'relicyms_balm4'];
+check('four doses, chained down to an empty vial',
+    DOSES.map(d => param(d, 'next_obj_stage')),
+    ['vial_empty', 'relicyms_balm1', 'relicyms_balm2', 'relicyms_balm3'].map(o => ObjType.getId(o)));
+check('  and each knows how many doses it is', DOSES.map(d => param(d, 'dose_count')), [1, 2, 3, 4]);
+
+H.clearInv(p);
+H.tick(1);
+H.setVarBit(p, 'thzfe_makecuredisease', 0);
+H.setVar(p, 'druidquest', 4);        // Herblore is shut until Druidic Ritual is done
+p.setLevel(15, 8);                 // 15 is Herblore
+H.tick(1);
+H.give(p, 'vial_water', 2);
+H.give(p, 'rogues_purse', 2);
+H.give(p, 'snake_weed', 2);
+use('rogues_purse', 'vial_water');
+check("rogue's purse goes into a vial of water, which it never did before",
+    [H.invCount(p, 'rogues_purse_sol'), H.invCount(p, 'rogues_purse')], [1, 1]);
+said = use('snake_weed', 'rogues_purse_sol');
+check('and before Sithik has told you how, that is as far as it goes',
+    [H.invCount(p, 'relicyms_balm3'), said.includes('not really sure')], [0, true]);
+H.setVarBit(p, 'thzfe_makecuredisease', 1);
+xp = p.stats[15];
+use('snake_weed', 'rogues_purse_sol');
+check("afterwards it is Relicym's balm(3), for 40 Herblore experience",
+    [H.invCount(p, 'relicyms_balm3'), (p.stats[15] - xp) / 10], [1, 40]);
+use('snake_weed', 'vial_water');
+xp = p.stats[15];
+use('rogues_purse', 'snakeweed_sol');
+check('and it mixes the other way round too, which is why the cache has both unfinished potions',
+    [H.invCount(p, 'relicyms_balm3'), (p.stats[15] - xp) / 10], [2, 40]);
+p.setLevel(15, 7);
+H.tick(1);
+H.give(p, 'vial_water', 1);
+H.give(p, 'rogues_purse', 1);
+H.give(p, 'snake_weed', 1);
+use('snake_weed', 'vial_water');
+said = use('rogues_purse', 'snakeweed_sol');
+check('Herblore 8 or nothing', [H.invCount(p, 'relicyms_balm3'), said.includes('level of at least 8')], [2, true]);
+p.setLevel(15, 8);
+H.tick(1);
+
+console.log('');
+console.log('DRINKING IT');
+H.clearInv(p);
+H.tick(1);
+H.give(p, 'relicyms_balm4', 1);
+const atk = p.levels[0];
+said = heard(() => {
+    H.opheld(p, 'relicyms_balm4', 1);
+    settle(p);
+});
+check('a dose goes down and nothing is boosted by it',
+    [H.invCount(p, 'relicyms_balm3'), p.levels[0], said.includes("Relicym's balm")], [1, atk, true]);
+H.tick(3);
+H.opheld(p, 'relicyms_balm3', 1);
+settle(p);
+H.tick(3);
+H.opheld(p, 'relicyms_balm2', 1);
+settle(p);
+H.tick(3);
+H.opheld(p, 'relicyms_balm1', 1);
+settle(p);
+check('and the fourth dose leaves an empty vial',
+    [H.invCount(p, 'vial_empty'), DOSES.some(d => H.invCount(p, d) > 0)], [1, false]);
+
+// ------------------------------------------------------------------ Uglug's stuffsies
+console.log('');
+console.log("UGLUG NAR, WHO HAD A SHOP NOBODY COULD OPEN");
+const uglug = (() => {
+    const id = NpcType.getId('zogre_uglug_nar');
+    for (const n of World.npcs) if (n && n.isActive && n.type === id) return n as Npc;
+    throw new Error('Uglug is not spawned');
+})();
+check("his shop is the quest's whole reward list",
+    ['relicyms_balm3', 'achey_tree_logs', 'zogre_brutal_rune', 'zogre_bow']
+        .every(o => ObjType.getId(o) !== -1), true);
+const talk = (picks: number[] = []): string =>
+    heard(() => {
+        p.teleport(uglug.x + 2, uglug.z, uglug.level);
+        H.tick(1);
+        p.clearPendingAction();
+        p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, uglug.x, uglug.z, p.width, uglug.width, uglug.length));
+        p.setInteraction(Interaction.ENGINE, uglug, ServerTriggerType.APNPC1);
+        settle(p, picks);
+    });
+const trade = (): string =>
+    heard(() => {
+        p.teleport(uglug.x + 2, uglug.z, uglug.level);
+        H.tick(1);
+        p.clearPendingAction();
+        p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, uglug.x, uglug.z, p.width, uglug.width, uglug.length));
+        p.setInteraction(Interaction.ENGINE, uglug, ServerTriggerType.APNPC3);
+        settle(p);
+    });
+H.setVarBit(p, 'thzfe_sold_balm', 0);
+H.setVarBit(p, 'zogre', 0);
+said = talk();
+check('before Grish has warned you he will not talk to a human', said.includes('Uglug not sell to human'), true);
+H.setVarBit(p, 'zogre', 2);           // ^zogre_warned
+said = talk();
+check('afterwards he says what is wrong with his people', said.includes('Ogres sick'), true);
+said = trade();
+// %shop is -1 until a shop has been opened: his Trade must not reach ~openshop_activenpc
+check('and his Trade is shut until you fix it',
+    [said.includes('bring medicine'), H.getVar(p, 'shop')], [true, -1]);
+
+H.clearInv(p);
+H.tick(1);
+H.give(p, 'relicyms_balm3', 2);
+said = heard(() => {
+    p.teleport(uglug.x + 2, uglug.z, uglug.level);
+    H.tick(1);
+    p.clearPendingAction();
+    p.lastUseItem = ObjType.getId('relicyms_balm3');
+    p.lastUseSlot = 0;
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, uglug.x, uglug.z, p.width, uglug.width, uglug.length));
+    p.setInteraction(Interaction.ENGINE, uglug, ServerTriggerType.APNPCU);
+    settle(p);
+});
+check('a three dose balm is 650 coins and a shop that opens',
+    [H.invCount(p, 'coins'), H.invCount(p, 'relicyms_balm3'), H.getVarBit(p, 'thzfe_sold_balm')], [650, 1, 1]);
+check('  and the shop he opens is his own', H.getVar(p, 'shop') !== 0, true);
+said = trade();
+check('Trade works from then on', H.getVar(p, 'shop') !== 0, true);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);
