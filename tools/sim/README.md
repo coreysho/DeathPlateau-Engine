@@ -151,6 +151,19 @@ before testing one thing says exactly which triggers that one thing touched.
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 
+`tools/sim/sweep.sh` runs every sim in this directory, one per process, and classifies each as PASS,
+FAIL, ABORT (died before printing a tally), TIMEOUT or NOSUM (a clean exit from one of the sims that
+prints a report instead of checks). It writes `results.tsv` and a log per sim under `$OUT`
+(`/tmp/simsweep` by default) and resumes from `results.tsv` if it is interrupted, so a long sweep can
+be stopped for an urgent run and picked up again.
+
+Two things it knows that are easy to get wrong. **It runs them sequentially**, because the world is
+stateful and the sims share `data/` on disk - an earlier version of this ran three at a time and
+reported five sims as aborting that passed perfectly well alone. And **a pass is one sample**:
+several sims here depend on where a wandering npc happens to be standing, or on a click that has to
+be walked to, and they pass alone and fail in a sweep twenty minutes later. Run anything that matters
+twice before calling it fixed.
+
 ## Two things that will bite you
 
 - **Warm up past tick 8.** Half the combat guards in the content read
