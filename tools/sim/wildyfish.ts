@@ -1,19 +1,27 @@
-// THE WILDERNESS FISHING SPOT: sea turtle and manta ray among the west dragons.
+// THE WILDERNESS FISHING SPOTS: sea turtle and manta ray, on the lake beside the east dragons.
 //
 //   npx tsx tools/sim/wildyfish.ts
 //
-// Suggestion #10. The point of the spot is that it is a SIDEGRADE to the Fishing Trawler - same
-// rolls, same xp, more risk - so most of what is checked here is that it really is one: the catch
+// Suggestion #10. The point of the spots is that they are a SIDEGRADE to the Fishing Trawler - same
+// rolls, same xp, more risk - so most of what is checked here is that they really are one: the catch
 // rates are the shark's own numbers and the xp is unchanged, because a Wilderness spot that simply
 // out-earned the Trawler would replace it rather than add to it.
+//
+// MOVED EAST ON 15 OCTOBER, and this sim went red on the owner's own commit: one spot in the puddle
+// among the WEST dragons became four down the west shore of the lake by the east dragons, and three
+// checks here were still reading (2977,3616). What they assert now is the shape that move was for -
+// four spots in the water with the bank beside them, far enough apart to be a queue, with the
+// dragons in walking distance and the lake no longer something you can stroll across.
 import * as H from './harness.js';
+import World from '#/engine/World.js';
+import Npc from '#/engine/entity/Npc.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import StructType from '#/cache/config/StructType.js';
 import Player from '#/engine/entity/Player.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import { isFlagged, isZoneAllocated } from '#/engine/GameMap.js';
-import { CollisionFlag } from '#/engine/routefinder/index.js';
+import { isFlagged, isZoneAllocated, canTravel } from '#/engine/GameMap.js';
+import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 H.loginOrder();
@@ -26,13 +34,59 @@ const check = (what: string, got: unknown, want: unknown) => {
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
-const SPOT: [number, number] = [2977, 3616];
+// The four, as the map places them: m52_57's NPC section at local (43,37), (39,43), (41,49) and
+// (45,52), which is 3328+lx, 3648+lz.
+const SPOTS: [number, number][] = [
+    [3371, 3685],
+    [3367, 3691],
+    [3369, 3697],
+    [3373, 3700]
+];
 const TURTLE = 79;
 const sp = (name: string, p: string) => StructType.get(StructType.getId(name)).params?.get(ParamType.getId(p));
+const blocked = (x: number, z: number) => isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED);
+const banks = (x: number, z: number) =>
+    (
+        [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as [number, number][]
+    )
+        .map(([dx, dz]) => [x + dx, z + dz] as [number, number])
+        .filter(([bx, bz]) => isZoneAllocated(0, bx, bz) && !blocked(bx, bz));
+/** Can you walk from (x,z) to (tx,tz)? A flood over the real collision map. */
+const onFoot = (x: number, z: number, tx: number, tz: number, radius = 60) => {
+    const seen = new Set<string>([x + ',' + z]);
+    const q = [[x, z]];
+    while (q.length) {
+        const [cx, cz] = q.pop()!;
+        if (cx === tx && cz === tz) return true;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
+            if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
+            if (canTravel(0, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
+        }
+    }
+    return false;
+};
 
 let bucket = 1;
-function player(name: string, fishing: number): Player {
-    const p = H.makePlayer(name, SPOT[0] + 1, SPOT[1], bucket++);
+/** On the bank beside a spot, which is the only tile it can be fished from. */
+function player(name: string, fishing: number, spot: [number, number] = SPOTS[0]): Player {
+    const [bx, bz] = banks(spot[0], spot[1])[0];
+    const p = H.makePlayer(name, bx, bz, bucket++);
     H.tick(2);
     H.maxOut(p);
     H.clearInv(p);
@@ -41,28 +95,51 @@ function player(name: string, fishing: number): Player {
     return p;
 }
 
-console.log('== the spot is where the dragons are');
+console.log('== four spots, in the water, on the lake by the east dragons');
 {
-    const [x, z] = SPOT;
-    const npc = H.npcNear('wildyfish', x, z);
-    check('it is spawned', npc ? `${npc.x},${npc.z}` : 'nowhere', `${x},${z}`);
-    check('on a tile a player can reach', isZoneAllocated(0, x + 1, z) && !isFlagged(x + 1, z, 0, CollisionFlag.WALK_BLOCKED), true);
-    const t = NpcType.get(NpcType.getId('wildyfish'));
-    check('it does not drift', t.wanderrange, 0);
-    check('and offers Harpoon', t.op?.[2] ?? null, 'Harpoon');
-    // Level 13 Wilderness: (3616 - 3520) / 8 + 1. Deep enough to matter, shallow enough to leave.
-    check('at Wilderness level 13', Math.floor((z - 3520) / 8) + 1, 13);
-    // the three green dragons it was put among
-    const near = [
-        [2973, 3620],
-        [2977, 3611],
-        [2982, 3618]
-    ].map(([dx, dz]) => Math.max(Math.abs(dx - x), Math.abs(dz - z)));
+    const id = NpcType.getId('wildyfish');
+    const placed = [...World.npcs]
+        .filter((n): n is Npc => !!n && n.type === id)
+        .map(n => [n.x, n.z] as [number, number])
+        .sort((a, b) => a[1] - b[1]);
     check(
-        'within five tiles of all three west dragons',
-        near.every(d => d <= 5),
+        'all four are spawned, and nowhere else',
+        placed,
+        [...SPOTS].sort((a, b) => a[1] - b[1])
+    );
+    // THE SHAPE EVERY CACHE FISHING SPOT HAS: the npc stands on a blocked water tile and the bank is
+    // beside it, so the spot is reachable from the shore and from nowhere else. The puddle it came
+    // from was walkable, and the lake was not flagged at all until the move.
+    check(
+        'each stands in the water with a bank beside it',
+        SPOTS.filter(([x, z]) => !blocked(x, z) || banks(x, z).length === 0),
+        []
+    );
+    // and the water is water: the lake cannot be crossed on foot from the west bank
+    check('the lake cannot be walked across', onFoot(3366, 3691, 3384, 3691), false);
+    const t = NpcType.get(NpcType.getId('wildyfish'));
+    check('they do not drift', t.wanderrange, 0);
+    check('and offer Harpoon', t.op?.[2] ?? null, 'Harpoon');
+    // Wilderness 21 to 23, from (z - 3520) / 8 + 1. Deep enough to matter, shallow enough to leave.
+    check(
+        'at Wilderness 21 to 23',
+        SPOTS.map(([, z]) => Math.floor((z - 3520) / 8) + 1),
+        [21, 22, 23, 23]
+    );
+    // FOUR AND NOT ONE BECAUSE ONE SPOT IS A QUEUE: far enough apart that a taken one is a few steps
+    // from a free one, which is the whole reason the move added three.
+    let closest = 99;
+    for (let i = 0; i < SPOTS.length; i++) for (let j = i + 1; j < SPOTS.length; j++) closest = Math.min(closest, Math.max(Math.abs(SPOTS[i][0] - SPOTS[j][0]), Math.abs(SPOTS[i][1] - SPOTS[j][1])));
+    check('no two of them are within three tiles of each other', closest >= 4, true);
+    // and the dragons, which are what the Wilderness levels are for
+    const dragons = [...World.npcs].filter((n): n is Npc => !!n && NpcType.get(n.type).debugname === 'green_dragon').map(n => [n.x, n.z]);
+    const nearest = SPOTS.map(([x, z]) => Math.min(...dragons.map(([dx, dz]) => Math.max(Math.abs(dx - x), Math.abs(dz - z)))));
+    check(
+        'a green dragon is within thirty tiles of every one of them',
+        nearest.every(d => d <= 30),
         true
     );
+    console.log(`       (nearest dragon to each: ${nearest.join(', ')} tiles)`);
 }
 
 console.log('== it is a sidegrade, not an upgrade');
@@ -79,7 +156,7 @@ console.log('== it is a sidegrade, not an upgrade');
 console.log('== fishing it');
 {
     const p = player('toolow', TURTLE - 1);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', SPOTS[0][0], SPOTS[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 20; t++) H.tick(1);
@@ -88,7 +165,7 @@ console.log('== fishing it');
 {
     // At 79 the turtle is reachable and the manta is not - the roll only offers what you can catch.
     const p = player('turtler', TURTLE);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', SPOTS[0][0], SPOTS[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 400 && H.invCount(p, 'raw_seaturtle') + H.invCount(p, 'raw_mantaray') < 6; t++) H.tick(1);
@@ -100,7 +177,7 @@ console.log('== fishing it');
 }
 {
     const p = player('mantaman', 99);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', SPOTS[0][0], SPOTS[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 600 && H.invCount(p, 'raw_mantaray') < 3; t++) H.tick(1);
@@ -110,7 +187,7 @@ console.log('== fishing it');
 {
     const p = player('nokit', 99);
     H.clearInv(p); // no harpoon
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', SPOTS[0][0], SPOTS[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 20; t++) H.tick(1);
