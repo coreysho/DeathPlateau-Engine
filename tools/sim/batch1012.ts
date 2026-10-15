@@ -45,7 +45,31 @@ console.log('\n================ THE GRAND TREE CELL');
     // The arrest and the release are one continuous scene: Glough calls the guards, you are put in
     // the cage, Charlie tells you about the shipyard, and King Narnode comes down and lets you out.
     // So what is checked is the scene, plus the fact that the cage you were put in was a real one.
-    const lines = talk(p, 'grandtree_glough', [], 1, false);
+    //
+    // HE WANDERS INSIDE THE CAGE, which is why his tile is re-read here rather than used once.
+    // Nothing overrides wanderrange for grandtree_glough and the engine defaults it to 5, so "him
+    // plus one east" at boot is a tile he may have left by the time the op goes in - and the cage is
+    // sealed (glough.rs2: "no tile beside him can be walked to"), so a refused op prints nothing and
+    // the whole scene below it fails with it. That is what sweep5 reported, six checks deep, on a
+    // sim that passed sweep4. The talk stays teleport=false so the scene itself is never interfered
+    // with; it is only the standing-next-to-him that is retried.
+    let lines: string[] = [];
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [2, 0],
+        [-2, 0],
+        [0, 2],
+        [0, -2]
+    ]) {
+        const g = H.npcNear('grandtree_glough', 2478, 3463, 1)!;
+        p.teleport(g.x + dx, g.z + dz, g.level);
+        H.tick(1);
+        lines = talk(p, 'grandtree_glough', [], 1, false);
+        if (A.saw(lines, 'Guards! Guards!')) break;
+    }
     H.tick(40);
     check('Glough calls the guards', A.saw(lines, 'Guards! Guards!'), true);
     check('Charlie greets you as a fellow prisoner in the cage', A.saw(lines, 'So they got you as well'), true);
