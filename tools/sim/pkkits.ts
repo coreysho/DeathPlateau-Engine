@@ -52,12 +52,17 @@ check('  all nine are there', MINE.length, 9);
 console.log('\nEVERY PIECE IS A REAL OBJ');
 const bad: string[] = [];
 for (const k of MINE) {
-    const names = [...k.worn, ...k.inv.map(i => i[0]), k.food,
+    const names = [
+        ...k.worn,
+        ...k.inv.map(i => i[0]),
+        k.food,
         ...(k.wornAmmo ? [k.wornAmmo[0]] : []),
         ...(k.specWeapon ? [k.specWeapon] : []),
         ...(k.lowHpWeapon ? [k.lowHpWeapon] : []),
-        ...(k.mageSet ?? []), ...(k.meleeSet ?? []),
-        ...k.dropExtras.map(d => d[0])];
+        ...(k.mageSet ?? []),
+        ...(k.meleeSet ?? []),
+        ...k.dropExtras.map(d => d[0])
+    ];
     for (const n of names) if (ObjType.getId(n) === -1) bad.push(`${k.id}: ${n}`);
 }
 for (const b of bad) console.log('  ' + b);
@@ -69,7 +74,11 @@ const H99 = MINE.filter(k => k.stats[PlayerStat.HITPOINTS] !== 99).map(k => k.id
 check('  99 hitpoints on all nine', H99.length ? H99.join(' ') : 'yes', 'yes');
 const P52 = MINE.filter(k => k.stats[PlayerStat.PRAYER] !== 52).map(k => k.id);
 check('  52 prayer, which is Smite', P52.length ? P52.join(' ') : 'yes', 'yes');
-check('  all nine are pkers', MINE.every(k => k.kinds.length === 1 && k.kinds[0] === 'pker'), true);
+check(
+    '  all nine are pkers',
+    MINE.every(k => k.kinds.length === 1 && k.kinds[0] === 'pker'),
+    true
+);
 
 // An Armadyl godsword needs 75 Attack. A kit under that has to spec with something else, or it
 // carries a sword it can never draw.
@@ -81,18 +90,24 @@ for (const w of wrongSpec) console.log('  ' + w);
 check('  the godsword only where Attack can wield it', wrongSpec.length, 0);
 
 // 28 slots, and the food has to fit in what the rest leaves.
-const over = MINE.filter(k => k.inv.length + k.foodCount > 28)
-    .map(k => `${k.id}: ${k.inv.length} + ${k.foodCount} food`);
+const over = MINE.filter(k => k.inv.length + k.foodCount > 28).map(k => `${k.id}: ${k.inv.length} + ${k.foodCount} food`);
 for (const o of over) console.log('  ' + o);
 check('  every inventory fits in 28 slots', over.length, 0);
-check('  and they all eat manta rays', MINE.every(k => k.food === 'mantaray'), true);
+check(
+    '  and they all eat manta rays',
+    MINE.every(k => k.food === 'mantaray'),
+    true
+);
 
 // ---------------------------------------------------------------- on the real engine
 console.log('\nEACH ONE SPAWNS AND IS WEARING ITS KIT');
 const BOOK: Record<string, number> = { normal: 0, ancient: 1, lunar: 2 };
 for (const k of MINE) {
     const bot = BotManager.spawn('pker', { kitId: k.id, at: { x: 3200, z: 3200, level: 0 }, manual: true }) as BotPlayer;
-    if (!bot) { check(`  ${k.id.padEnd(22)} spawned`, false, true); continue; }
+    if (!bot) {
+        check(`  ${k.id.padEnd(22)} spawned`, false, true);
+        continue;
+    }
     H.tick(2);
     const worn = bot.getInventory(InvType.WORN)!;
     let on = 0;
@@ -160,8 +175,14 @@ console.log('AND THE DHAROK SWITCH, WHICH WAITS ON ITS OWN HEALTH');
         engaged = BotManager.stateOf(bot)?.pvpTarget != null;
     }
     check('  it finds someone to fight', engaged, true);
+    // AND IT EATS, which is what made this fail one run in a sweep of it. The brain checks
+    // hpPercent() against the kit's lowHpPercent of 40, and a bot that gets a bite in first comes
+    // back over that line - measured at 42/99 on the tick after the switch was queued - so a tick
+    // that evaluates just after an eat sees a healthy bot and queues nothing. Forcing the health
+    // down every tick and giving it longer than one eat cooldown makes the window certain rather
+    // than likely; the switch itself lands within about seven ticks when it does land.
     let swapped = false;
-    for (let t = 0; t < 40 && !swapped; t++) {
+    for (let t = 0; t < 120 && !swapped; t++) {
         // held near death, which is the whole point of a Dharok set: 40% of 99 is 39
         bot.levels[PlayerStat.HITPOINTS] = 20;
         H.tick(1);
