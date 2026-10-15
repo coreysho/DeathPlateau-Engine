@@ -15,7 +15,7 @@ import InvType from '#/cache/config/InvType.js';
 
 await H.boot();
 
-const _PIECES = 24;
+const PIECES = 24;
 
 // The slide is [opheld5,_trail_puzzle_piece] - an op 5 on a piece inside the puzzle interface's own
 // inventory, which the client sends as an InvButton. bankux.ts drives the bank the same way.
@@ -40,7 +40,7 @@ console.log('=== THE PANEL, in the hangar');
     // click into a dummy inv (InvButtonHandler wants the component visible and an iop on it, and
     // the real client sends an OpHeld for these). What IS new is the completion hook at the end of
     // that trigger, so its two conditions are asserted here instead of through the packet layer.
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < PIECES; i++) {
         p.invSet(inv, ObjType.getId('trail_slidingpuzzleb' + String(i + 1).padStart(2, '0')), 1, i);
     }
     H.tick(1);
@@ -57,7 +57,7 @@ console.log('\n=== THE SAME PUZZLE AS A CLUE, in Varrock, which must NOT open an
     p.teleport(3210, 3424, 0);
     H.setVar(p, 'mm_main', 3); // the same stage, nowhere near the hangar
     H.tick(1);
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < PIECES; i++) {
         p.invSet(inv, ObjType.getId('trail_slidingpuzzleb' + String(i + 1).padStart(2, '0')), 1, i);
     }
     H.tick(1);
@@ -73,16 +73,42 @@ console.log('\n=== GLOUGH, through the bars of his cage');
 {
     const p: any = H.makePlayer('bribe', 2479, 3465);
     H.tick(2);
-    const g = findNpc('grandtree_glough', p);
-    p.teleport(g.x, g.z + 1, g.level); // against the bars, which is where a player stands
     H.setVar(p, 'grandtree', 160); // The Grand Tree complete
     H.setVar(p, 'mm_main', 3);
     H.give(p, 'coins', 200000);
     H.tick(2);
     H.clearLogs();
-    H.opNpc(p, g, 1);
-    for (let i = 0; i < 25 && !p.activeScript; i++) H.tick(1);
-    const lines = p.activeScript ? drive(p, [1]) : [];
+    // HE WANDERS INSIDE HIS CAGE. Nothing overrides wanderrange for grandtree_glough and the engine
+    // defaults it to 5, so his tile moves between runs - and glough.rs2's own header says the cage
+    // is sealed and "no tile beside him can be walked to", which is why it carries an [apnpc1] as
+    // well as an [opnpc1]. "Him plus one north" is therefore a coin toss: it is against the bars on
+    // one run and across them on the next, and an op that cannot reach prints nothing, so all three
+    // checks here failed on a sweep run that had passed 10 of 10 the night before. Re-read his tile
+    // and try the tiles around him until one of them gets the dialogue started.
+    let lines: string[] = [];
+    let stood: number[] | null = null;
+    for (const [dx, dz] of [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+        [0, 2],
+        [0, -2],
+        [2, 0],
+        [-2, 0]
+    ]) {
+        const g = findNpc('grandtree_glough', p);
+        p.teleport(g.x + dx, g.z + dz, g.level);
+        H.tick(1);
+        H.opNpc(p, g, 1);
+        for (let i = 0; i < 25 && !p.activeScript; i++) H.tick(1);
+        if (p.activeScript) {
+            stood = [g.x + dx, g.z + dz];
+            lines = drive(p, [1]);
+            break;
+        }
+    }
+    if (!stood) console.log('    [debug] no tile around Glough started the dialogue; he was at', findNpc('grandtree_glough', p).x, findNpc('grandtree_glough', p).z);
     check('he offers the code', lines.join(' ').includes('fair price'), true);
     check('  takes the 200,000', H.invCount(p, 'coins'), 0);
     check('  and the hangar opens', H.getVarBit(p, 'mm_hangar_puzzle_complete'), 1);
