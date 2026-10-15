@@ -386,6 +386,28 @@ if (run('wanted')) {
     H.opheld(p, 'wanted_crystal_ball', 1);
     drive(p);
     check('Scan: the stage moves on to hunting (a jump used to stop it short)', var_(p, 'wanted_main'), 30);
+    // WHERE TO STAND TO TALK TO HIM, the same answer for both loops below. Solus wanders inside
+    // his range, so his tile moves between runs and between sightings, and two hard-coded offsets
+    // are not enough: the sighting loop used `him + 3 east, else him + 1 north` and a sweep run
+    // drew location 10 three times and got "I can't reach that!" four times over - while the
+    // per-place loop under it, which tries eight offsets and asks bfsRoute whether each one can
+    // reach him, passed for that very location in the same run. One helper, the eight-offset one,
+    // so a draw that picks a cramped spot cannot fail the sightings while the place itself passes.
+    const standBy = (who: { x: number; z: number }) => {
+        for (const [dx, dz] of [
+            [3, 0],
+            [-3, 0],
+            [0, 3],
+            [0, -3],
+            [2, 2],
+            [-2, -2],
+            [1, 0],
+            [0, 1]
+        ]) {
+            if (bfsRoute(0, who.x + dx, who.z + dz, who.x, who.z, 12)) return [who.x + dx, who.z + dz];
+        }
+        return null;
+    };
     for (let i = 0; i < 5; i++) {
         const place = H.runProc(p, '[proc,wanted_current_location]')[0];
         if (!place) {
@@ -396,10 +418,9 @@ if (run('wanted')) {
         const npc = nearestNpc(shell, 3000, 3300, 0);
         const spawn = npc ? [npc.x, npc.z] : null;
         // walk up to him the way a player would, from a few tiles off
-        p.teleport(npc!.x + 3, npc!.z, 0);
-        H.tick(1);
-        if (!connected(0, p.x, p.z, npc!.x, npc!.z, 10)) {
-            p.teleport(npc!.x, npc!.z + 1, 0);
+        const spot = npc ? standBy(npc) : null;
+        if (spot) {
+            p.teleport(spot[0], spot[1], 0);
             H.tick(1);
         }
         const m0 = H.mesgs.length;
@@ -417,24 +438,10 @@ if (run('wanted')) {
         setV(q, 'wanted_main', 30);
         H.setVarBit(q, 'wanted_mission' + place, 1);
         const npc = nearestNpc('wanted_solus' + place, 3000, 3300, 0)!;
-        // stand on a walkable tile a few steps off, then click him from there
-        let stood = false;
-        for (const [dx, dz] of [
-            [3, 0],
-            [-3, 0],
-            [0, 3],
-            [0, -3],
-            [2, 2],
-            [-2, -2],
-            [1, 0],
-            [0, 1]
-        ]) {
-            if (bfsRoute(0, npc.x + dx, npc.z + dz, npc.x, npc.z, 12)) {
-                q.teleport(npc.x + dx, npc.z + dz, 0);
-                stood = true;
-                break;
-            }
-        }
+        // stand on a walkable tile a few steps off, then click him from there - standBy above
+        const spot = standBy(npc);
+        const stood = spot !== null;
+        if (spot) q.teleport(spot[0], spot[1], 0);
         H.tick(1);
         const said = stood ? talkHere(q, 'wanted_solus' + place) : [];
         check(
