@@ -501,7 +501,7 @@ console.log('The bookcase and its three books:');
 console.log("Jossik's cave: the Dagannoth comes when he sees it, and the quest ends on the Mother:");
 {
     const jrId = NpcType.getId('horror_dagannoth_jr4');
-    const jrs = () => [...World.npcs].filter(n => n && n.isActive && n.type === jrId);
+    const jrs = () => [...World.npcs].filter((n): n is Npc => !!n && n.isActive && n.type === jrId);
     for (const n of jrs()) World.removeNpc(n, -1);
     const j = player('hftd2jossik', 2515, 4629, 1, { horror: 2 });
     op(j, 2515, 4630, 'horror_ladder_top2');

@@ -128,7 +128,7 @@ function talkHere(p: Player, npcName: string, picks: number[] = [], op = 1): str
     if (!npc)
         throw new Error(
             `no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs]
-                .filter(n => n && n.type === NpcType.getId(npcName))
+                .filter((n): n is Npc => !!n && n.type === NpcType.getId(npcName))
                 .map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`)
                 .join(' ')}`
         );
@@ -155,7 +155,7 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
     if (!npc)
         throw new Error(
             `no npc ${npcName} near ${p.x},${p.z},${p.level}; in the world at: ${[...World.npcs]
-                .filter(n => n && n.type === NpcType.getId(npcName))
+                .filter((n): n is Npc => !!n && n.type === NpcType.getId(npcName))
                 .map(n => `${n.x},${n.z},${n.level}${n.isActive ? '' : ' (inactive)'}`)
                 .join(' ')}`
         );

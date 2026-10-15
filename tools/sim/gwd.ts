@@ -88,15 +88,9 @@ function nearestOpen(x: number, z: number, lvl: number, r = 4): [number, number]
 }
 // You walk UP TO a faction door, never through it - the room behind it is sealed, which is the
 // whole thing killcount exists to open. So the question is whether any tile beside the door can be
-// reached, not whether the room can.
-function _canReachDoor(fx: number, fz: number, lvl: number, x: number, z: number) {
-    for (let dx = -1; dx <= 1; dx++)
-        for (let dz = -1; dz <= 1; dz++) {
-            if (isFlagged(x + dx, z + dz, lvl, CollisionFlag.WALK_BLOCKED)) continue;
-            if (connected(lvl, fx, fz, x + dx, z + dz, 220)) return true;
-        }
-    return false;
-}
+// reached, not whether the room can. That is what THE SEAM below asks, directly; the helper that
+// used to sit here called a `connected` that this file never imported, so it was a ReferenceError
+// waiting for its first caller and never got one.
 
 // THE SEAM, asked directly. Walking from the rope to a boss door is the wrong question - the route
 // runs through doors that block until you open them, so a flat flood says "no" for reasons that
@@ -139,9 +133,12 @@ for (const reg of ['44_82', '44_83', '45_82', '45_83']) {
                     const t = LocType.get(loc.type);
                     const ops = (t.op ?? []).filter(Boolean) as string[];
                     if (!ops.length) continue;
-                    const e = seen.get(t.debugname);
+                    // the id as the fallback name: a nameless loc type still has to be told
+                    // apart from the next one, and this map is what the report below reads
+                    const dbg = t.debugname ?? `loc_${loc.type}`;
+                    const e = seen.get(dbg);
                     if (e) e.n++;
-                    else seen.set(t.debugname, { ops, name: t.name ?? '', n: 1, where: `${lvl}_${mx}_${mz}_${x & 63}_${z & 63}` });
+                    else seen.set(dbg, { ops, name: t.name ?? '', n: 1, where: `${lvl}_${mx}_${mz}_${x & 63}_${z & 63}` });
                 }
 }
 for (const [dbg, e] of [...seen].sort((a, b) => a[0].localeCompare(b[0]))) console.log(`  ${dbg.padEnd(22)} "${e.name}" [${e.ops.join('/')}] x${e.n} first at ${e.where}`);

@@ -279,7 +279,11 @@ console.log('DEFENDER BLOCK ANIM');
 // ============================================================================ 4. fishing spots
 console.log('FISHING SPOTS');
 {
-    const spots = [...World.npcs].filter(x => x && x.isActive && NpcType.get(x.type).name === 'Fishing spot');
+    // A TYPE PREDICATE, because World.npcs has holes: it is an array with gaps where npcs have
+    // been removed, so iterating it yields undefined as well as Npc. The truthiness test was
+    // already here and doing the work at runtime - TypeScript cannot narrow through a plain
+    // filter callback, so it has to be told what the filter proves.
+    const spots = [...World.npcs].filter((x): x is Npc => !!x && x.isActive && NpcType.get(x.type).name === 'Fishing spot');
     const rellekka = spots.filter(x => (NpcType.get(x.type).debugname ?? '').startsWith('0_41_57_'));
     check('Rellekka has fishing spots spawned', rellekka.length > 0, true);
     const types = new Set(spots.map(x => x.type));

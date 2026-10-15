@@ -10,6 +10,7 @@
 // witnesses, the Duke, the rubble, the brooch, Reldo and the library, the goblin generals, the bow
 // to Mistag, the Duke's refusal, Sigmund's pocket and chest, the H.A.M. hideout, the treaty.
 import * as H from './harness.js';
+import type Npc from '#/engine/entity/Npc.js';
 import World from '#/engine/World.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -248,7 +249,7 @@ console.log('HORROR FROM THE DEEP');
     op(c, 2515, 4630, 'horror_ladder_top2', 1);
     check("ladder down lands in Jossik's cave", [c.level, c.z > 4630 && c.z < 4640], [0, true]);
     const jrId = NpcType.getId('horror_dagannoth_jr4');
-    const jrs = () => World.npcs.filter(n => n && n.isActive && n.type === jrId && n.z > 4600 && n.z < 4700);
+    const jrs = () => World.npcs.filter((n): n is Npc => !!n && n.isActive && n.type === jrId && n.z > 4600 && n.z < 4700);
     check('nothing comes out of the water just for climbing down (horror2.ts)', jrs().length, 0);
     const words = talk(c, 'horror_lighthousekeeeper_injured');
     check('Jossik talks, and at the end of it the level-100 dagannoth comes for you', [words.length > 3, jrs().length === 1 || H.getVar(c, 'horror') === 3], [true, true]);

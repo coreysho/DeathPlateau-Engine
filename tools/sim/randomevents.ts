@@ -46,7 +46,12 @@ const wanted = (npc: any): string => {
  * does - and which walked the player away from their own event to a Rick Turpentine standing
  * somewhere else entirely, where the click said nothing at all. */
 const talkToThis = (p: any, npc: any, picks: (number | string)[] = []): string[] => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, 1);
@@ -63,7 +68,12 @@ const nearby = (name: string, p: any, within = 6) => {
 };
 
 let badCoins = 0;
-const check0 = (ok: boolean, got: number) => { if (!ok) { badCoins++; console.log(`       coins out of range: ${got}`); } };
+const check0 = (ok: boolean, got: number) => {
+    if (!ok) {
+        badCoins++;
+        console.log(`       coins out of range: ${got}`);
+    }
+};
 
 /** Run a proc the way a click does, so a p_delay inside it is resumed instead of abandoned. */
 function runToEnd(p: any, name: string, ticks = 8) {
@@ -109,7 +119,11 @@ console.log('A SPADE BREAKS WHILE FARMING, AND GOES BACK TOGETHER');
     runToEnd(p, '[proc,macro_event_lost_spade_spawn]');
     const said = mesSince(p, from);
     check('the spade comes apart in your hands', [H.invCount(p, 'spade'), H.invCount(p, 'spade_handle')], [0, 1]);
-    check('  ...and says so', said.some(m => m === 'You dig into the soil.'), true);
+    check(
+        '  ...and says so',
+        said.some(m => m === 'You dig into the soil.'),
+        true
+    );
 
     // the head is on the ground somewhere near, which is the half a player has to go and fetch
     const headId = ObjType.getId('spade_head');
@@ -124,9 +138,12 @@ console.log('A SPADE BREAKS WHILE FARMING, AND GOES BACK TOGETHER');
     H.give(p, 'spade_head', 1);
     const from2 = mark();
     H.useHeldOn(p, 'spade_head', 'spade_handle');
-    check('using the two together rebuilds the spade',
-        [H.invCount(p, 'spade'), H.invCount(p, 'spade_handle'), H.invCount(p, 'spade_head')], [1, 0, 0]);
-    check('  ...and either way round', mesSince(p, from2).some(m => m.startsWith('You carefully attach')), true);
+    check('using the two together rebuilds the spade', [H.invCount(p, 'spade'), H.invCount(p, 'spade_handle'), H.invCount(p, 'spade_head')], [1, 0, 0]);
+    check(
+        '  ...and either way round',
+        mesSince(p, from2).some(m => m.startsWith('You carefully attach')),
+        true
+    );
 
     // the other way round, which is the half that used to be missed
     H.clearInv(p);
@@ -192,7 +209,6 @@ console.log('CALL FOLLOWER BRINGS THE PET TO YOU');
     check('  ...and it is following again, not standing there', pet!.targetOp, NpcMode.PLAYERFOLLOW);
 }
 
-
 // ======================================================= the four talking randoms this round added
 console.log('');
 console.log('FOUR PEOPLE WALK UP AND TALK TO YOU');
@@ -219,8 +235,7 @@ console.log('FOUR PEOPLE WALK UP AND TALK TO YOU');
     H.setVar(p, 'macro_event', 0);
     H.runProc(p, '[proc,macro_event_general_spawn]', [9]);
     H.tick(2);
-    const brothers = ['macro_niles', 'macro_miles', 'macro_giles']
-        .map(n => nearby(n, p)).filter(Boolean);
+    const brothers = ['macro_niles', 'macro_miles', 'macro_giles'].map(n => nearby(n, p)).filter(Boolean);
     check('one of the three certers turns up', brothers.length, 1);
 }
 
@@ -237,16 +252,19 @@ console.log('AND THEY ALL PAY FROM ONE TABLE');
         seen.set(n, (seen.get(n) ?? 0) + 1);
         if (n === 'coins') check0(count >= 80 && count <= 640, count);
     }
-    console.log(`       ${[...seen].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ${(c / 60).toFixed(1)}%`).join(', ')}`);
-    check('every branch of the table is reachable', [...seen.keys()].sort(),
-        ['coins', 'cosmic_talisman', 'kebab', 'keyhalf1', 'keyhalf2', 'spinach_roll',
-            'uncut_diamond', 'uncut_emerald', 'uncut_ruby', 'uncut_sapphire'].sort());
+    console.log(
+        `       ${[...seen]
+            .sort((a, b) => b[1] - a[1])
+            .map(([n, c]) => `${n} ${(c / 60).toFixed(1)}%`)
+            .join(', ')}`
+    );
+    check('every branch of the table is reachable', [...seen.keys()].sort(), ['coins', 'cosmic_talisman', 'kebab', 'keyhalf1', 'keyhalf2', 'spinach_roll', 'uncut_diamond', 'uncut_emerald', 'uncut_ruby', 'uncut_sapphire'].sort());
     const pct = (n: string) => (seen.get(n) ?? 0) / 60;
-    check('  ...a third of it is coins, and the gems thin out in order',
-        pct('coins') > 32 && pct('coins') < 42
-        && pct('uncut_sapphire') > pct('uncut_emerald')
-        && pct('uncut_emerald') > pct('uncut_ruby')
-        && pct('uncut_ruby') > pct('uncut_diamond'), true);
+    check(
+        '  ...a third of it is coins, and the gems thin out in order',
+        pct('coins') > 32 && pct('coins') < 42 && pct('uncut_sapphire') > pct('uncut_emerald') && pct('uncut_emerald') > pct('uncut_ruby') && pct('uncut_ruby') > pct('uncut_diamond'),
+        true
+    );
     check('  ...and no coin drop is outside 80-640', badCoins, 0);
 }
 
@@ -263,10 +281,12 @@ console.log('AND EVERY ID THE ROLL CAN GIVE HAS AN NPC BEHIND IT');
     for (let i = 0; i < 400; i++) free.push(H.runProc(p, '[proc,macro_event_set_random]')[0]);
     const kinds = [...new Set(free)].sort((a, b) => a - b);
     console.log(`       400 rolls gave ids ${kinds.join(', ')} (members world)`);
-    check('every id rolled is one the world has an npc for',
-        kinds.every(id => H.runProc(p, '[proc,macro_event_npc]', [id])[0] > 0), true);
+    check(
+        'every id rolled is one the world has an npc for',
+        kinds.every(id => H.runProc(p, '[proc,macro_event_npc]', [id])[0] > 0),
+        true
+    );
 }
-
 
 // ============================================== and talking to them is what actually pays out
 console.log('');
@@ -306,7 +326,11 @@ console.log('AND TALKING TO THEM IS THE POINT');
         H.runProc(p, '[proc,macro_event_general_spawn]', [10]);
         H.tick(2);
         const empty = talkToThis(p, nearby('macro_doctor', p)!);
-        check('Dr Ford takes no for an answer', empty.some(m => m.includes('Thank you anyway')), true);
+        check(
+            'Dr Ford takes no for an answer',
+            empty.some(m => m.includes('Thank you anyway')),
+            true
+        );
         check('  ...and goes away empty-handed when you have none', invCount(p), 0);
     }
     {
@@ -324,18 +348,20 @@ console.log('AND TALKING TO THEM IS THE POINT');
         const before = invCount(p);
         const said = talkToThis(p, npc);
         check('given what he asked for, Dr Ford takes it', H.invCount(p, wants), 0);
-        check('  ...and pays for it', said.some(m => m.includes('Marvellous')), true);
+        check(
+            '  ...and pays for it',
+            said.some(m => m.includes('Marvellous')),
+            true
+        );
         check('  ...so you are no worse off', invCount(p) >= before, true);
     }
 }
-
 
 // ===================================================== the sandwich lady, her tray and her baguette
 console.log('');
 console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
 {
-    const FOODS = ['baguette', 'triangle_sandwich', 'square_sandwich', 'chocolate_bar',
-        'kebab', 'roll', 'meat_pie'];
+    const FOODS = ['baguette', 'triangle_sandwich', 'square_sandwich', 'chocolate_bar', 'kebab', 'roll', 'meat_pie'];
     const KO = SeqType.getId('macro_sandwich_lady_knockout');
 
     // THE TRAY, read back out of the script rather than out of the file it was written in. slot(7)
@@ -366,8 +392,8 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
     {
         const ko = SeqType.get(KO);
         const death = SeqType.get(SeqType.getId('human_death'));
-        check('she knocks you out with a seq out of the cache, not one written here', ko.frames.join(','), death.frames.join(','));
-        check('  ...held for less time than a death', ko.delay[ko.delay.length - 1] < death.delay[death.delay.length - 1], true);
+        check('she knocks you out with a seq out of the cache, not one written here', (ko.frames ?? []).join(','), (death.frames ?? []).join(','));
+        check('  ...held for less time than a death', (ko.delay?.at(-1) ?? 0) < (death.delay?.at(-1) ?? 0), true);
     }
 
     /** Click her, then take slot $slot off the tray - or close it, with slot -1. Returns where the
@@ -378,7 +404,12 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
      * closes - the page of dialogue after it still lists multiobj7s - so a test that went by those
      * would answer the next question by clicking a sandwich. */
     const takeFromTray = (p: any, npc: any, slot: number): { x: number; z: number } => {
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             p.teleport(npc.x + dx, npc.z + dz, npc.level);
             H.tick(1);
             H.opNpc(p, npc, 1);
@@ -395,8 +426,10 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
                     opened = true;
                     // last_com of -1 is what closing the tray without choosing leaves behind, and
                     // multiobj7 answers that with null.
-                    if (slot < 0) { p.lastCom = -1; p.executeScript(s, true, true); }
-                    else if (!H.choose(p, `multiobj7:com_${2 + slot}`)) throw new Error('the tray would not take a click');
+                    if (slot < 0) {
+                        p.lastCom = -1;
+                        p.executeScript(s, true, true);
+                    } else if (!H.choose(p, `multiobj7:com_${2 + slot}`)) throw new Error('the tray would not take a click');
                 } else {
                     p.executeScript(s, true, true);
                 }
@@ -431,7 +464,11 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
             check('  ...and only it', others, 0);
             for (let i = 0; i < 12; i++) H.tick(1);
             check('  ...and she does not teleport you anywhere', [p.x, p.z], [was.x, was.z]);
-            check('  ...and does not knock you down either', H.anims.some(a => a.who === p.username && a.seq === KO), false);
+            check(
+                '  ...and does not knock you down either',
+                H.anims.some(a => a.who === p.username && a.seq === KO),
+                false
+            );
         }
     }
 
@@ -447,14 +484,24 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
         const slot = offered(lady);
         const wrong = (slot + 3) % 7;
         const was = takeFromTray(p, lady, wrong);
-        check('she calls you a thief', H.saysFor('macro_sandwich_lady_npc')
-            .some(s => s.text.includes('Thief! Thief! Thief!')), true);
-        check('  ...and knocks you down, with the seq the cache keeps for it',
-            H.anims.some(a => a.who === p.username && a.seq === KO), true);
+        check(
+            'she calls you a thief',
+            H.saysFor('macro_sandwich_lady_npc').some(s => s.text.includes('Thief! Thief! Thief!')),
+            true
+        );
+        check(
+            '  ...and knocks you down, with the seq the cache keeps for it',
+            H.anims.some(a => a.who === p.username && a.seq === KO),
+            true
+        );
         for (let i = 0; i < 12; i++) H.tick(1);
         check('  ...and you wake up somewhere else', Math.abs(p.x - was.x) + Math.abs(p.z - was.z) > 20, true);
         check('  ...with your coins still on you', H.invCount(p, 'coins'), 5000);
-        check('  ...and none of her food', FOODS.reduce((n, f) => n + H.invCount(p, f), 0), 0);
+        check(
+            '  ...and none of her food',
+            FOODS.reduce((n, f) => n + H.invCount(p, f), 0),
+            0
+        );
     }
 
     // WALK AWAY FROM THE TRAY and she is not robbed, so nothing happens to you at all.
@@ -468,7 +515,11 @@ console.log('THE SANDWICH LADY OFFERS YOU ONE THING AND MEANS IT');
         const was = takeFromTray(p, lady, -1);
         for (let i = 0; i < 12; i++) H.tick(1);
         check('closing the tray is not stealing', [p.x, p.z], [was.x, was.z]);
-        check('  ...and you get nothing', FOODS.reduce((n, f) => n + H.invCount(p, f), 0), 0);
+        check(
+            '  ...and you get nothing',
+            FOODS.reduce((n, f) => n + H.invCount(p, f), 0),
+            0
+        );
     }
 }
 
@@ -481,12 +532,18 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
     // off tools/sim/roommap.ts, and a check that they are still there is the first thing worth
     // making - the event is a script hung on a room somebody else placed.
     const GRAVE: [number, number, string][] = [
-        [1924, 4996, 'loc_12721'], [1926, 4999, 'loc_12722'], [1928, 4996, 'loc_12723'],
-        [1930, 4999, 'loc_12724'], [1932, 4996, 'loc_12725']
+        [1924, 4996, 'loc_12721'],
+        [1926, 4999, 'loc_12722'],
+        [1928, 4996, 'loc_12723'],
+        [1930, 4999, 'loc_12724'],
+        [1932, 4996, 'loc_12725']
     ];
     const STONE: [number, number, string][] = [
-        [1924, 4998, 'loc_12716'], [1926, 5001, 'loc_12717'], [1928, 4998, 'loc_12718'],
-        [1930, 5001, 'loc_12719'], [1932, 4998, 'loc_12720']
+        [1924, 4998, 'loc_12716'],
+        [1926, 5001, 'loc_12717'],
+        [1928, 4998, 'loc_12718'],
+        [1930, 5001, 'loc_12719'],
+        [1932, 4998, 'loc_12720']
     ];
     // A grave is two tiles long and forceapproach=south, so the player has to be standing on the
     // tile below it before the click will take. Walking there would work too and takes thirty ticks
@@ -505,8 +562,7 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
             // interaction, and a settle that returned straight away measured the state before
             // anything had happened. Then wait for the player to be free of it - target included,
             // or an interaction that takes a step first is read as finished.
-            if (t >= 2 && !p.activeScript && !p.delayed && !p.target
-                && [...p.queue.all()].length === 0) return;
+            if (t >= 2 && !p.activeScript && !p.delayed && !p.target && [...p.queue.all()].length === 0) return;
             H.tick(1);
         }
         throw new Error('the player never became idle');
@@ -516,11 +572,13 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
     const coffinObj = (trade: number) => `macro_digger_coffin_object_${trade}`;
 
     {
-        const missing = [...GRAVE, ...STONE].filter(([x, z, name]) =>
-            !World.getLoc(x, z, 0, LocType.getId(name)));
-        check('the cemetery is still where the map put it', missing.map(m => m[2]), []);
-        check('  ...and the mausoleum with it',
-            World.getLoc(1927, 5004, 0, LocType.getId('loc_12731')) !== null, true);
+        const missing = [...GRAVE, ...STONE].filter(([x, z, name]) => !World.getLoc(x, z, 0, LocType.getId(name)));
+        check(
+            'the cemetery is still where the map put it',
+            missing.map(m => m[2]),
+            []
+        );
+        check('  ...and the mausoleum with it', World.getLoc(1927, 5004, 0, LocType.getId('loc_12731')) !== null, true);
     }
 
     // THE ARRANGEMENT. Five headstones get a shuffle of the five trades and the five graves get
@@ -578,11 +636,17 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
             H.opLoc(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], 1);
             settle(p);
         }
-        check('all five coffins come out', [0, 1, 2, 3, 4].map(i => grave(p, i)), [0, 0, 0, 0, 0]);
-        check('  ...and you are carrying them',
-            was.map(trade => H.invCount(p, coffinObj(trade))), [1, 1, 1, 1, 1]);
-        check('  ...and the grave on the tile is the same loc it always was',
-            World.getLoc(GRAVE[0][0], GRAVE[0][1], 0, LocType.getId(GRAVE[0][2]))!.type, typeBefore);
+        check(
+            'all five coffins come out',
+            [0, 1, 2, 3, 4].map(i => grave(p, i)),
+            [0, 0, 0, 0, 0]
+        );
+        check(
+            '  ...and you are carrying them',
+            was.map(trade => H.invCount(p, coffinObj(trade))),
+            [1, 1, 1, 1, 1]
+        );
+        check('  ...and the grave on the tile is the same loc it always was', World.getLoc(GRAVE[0][0], GRAVE[0][1], 0, LocType.getId(GRAVE[0][2]))!.type, typeBefore);
 
         // CHECK is the only way to tell two coffins apart: every grave good is called "Item" and
         // examines as "It seems bleached with age".
@@ -603,19 +667,19 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
             return out;
         };
         const cook = inside(1);
-        check("the cook's coffin holds the cook's things", cook,
-            ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_chefshat',
-                'macro_digger_apron', 'macro_digger_cake', 'macro_digger_kebab']);
+        check("the cook's coffin holds the cook's things", cook, ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_chefshat', 'macro_digger_apron', 'macro_digger_cake', 'macro_digger_kebab']);
         const miner = inside(4);
-        check('  ...and the miner holds his own, not the cook’s', miner,
-            ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_pick_axe', 'macro_digger_nuggets']);
+        check('  ...and the miner holds his own, not the cook’s', miner, ['macro_digger_skull', 'macro_digger_bones', 'macro_digger_pick_axe', 'macro_digger_nuggets']);
         // Every trade's coffin, and no item in two of them: the goods are what identifies a coffin,
         // so a good that turns up twice makes two coffins impossible to tell apart.
         const all = [1, 2, 3, 4, 5].map(inside);
         const goods = all.flat().filter(n => n !== 'macro_digger_skull' && n !== 'macro_digger_bones');
         check('  ...and no grave good is in two coffins', goods.length, new Set(goods).size);
-        check('  ...with a body in every one of them',
-            all.every(c => c[0] === 'macro_digger_skull' && c[1] === 'macro_digger_bones'), true);
+        check(
+            '  ...with a body in every one of them',
+            all.every(c => c[0] === 'macro_digger_skull' && c[1] === 'macro_digger_bones'),
+            true
+        );
 
         // PUTTING THEM BACK. Each coffin into the grave whose headstone asks for it.
         for (let i = 0; i < 5; i++) {
@@ -623,26 +687,27 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
             A.useOn(p, GRAVE[i][0], GRAVE[i][1], GRAVE[i][2], coffinObj(wants(p, i)));
             settle(p);
         }
-        check('every coffin goes where its headstone asks',
-            [0, 1, 2, 3, 4].map(i => grave(p, i)), [0, 1, 2, 3, 4].map(i => wants(p, i)));
-        check('  ...and none are left in your pack',
-            [1, 2, 3, 4, 5].reduce((n, trade) => n + H.invCount(p, coffinObj(trade)), 0), 0);
+        check(
+            'every coffin goes where its headstone asks',
+            [0, 1, 2, 3, 4].map(i => grave(p, i)),
+            [0, 1, 2, 3, 4].map(i => wants(p, i))
+        );
+        check(
+            '  ...and none are left in your pack',
+            [1, 2, 3, 4, 5].reduce((n, trade) => n + H.invCount(p, coffinObj(trade)), 0),
+            0
+        );
         check('  ...so Leo calls it done', H.runProc(p, '[proc,macro_digger_done]')[0], 1);
 
         // AND LEO PAYS. Two things off the zombie list, and home.
-        const before = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
-            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
-            + H.invCount(p, 'macro_digger_boots');
+        const before = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt') + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves') + H.invCount(p, 'macro_digger_boots');
         talkToThis(p, nearby('macro_gravedigger', p, 10)!);
         for (let t = 0; t < 10; t++) H.tick(1);
-        const after = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
-            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
-            + H.invCount(p, 'macro_digger_boots');
+        const after = H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt') + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves') + H.invCount(p, 'macro_digger_boots');
         const emotes = H.getVarBit(p, 'emote_zombie_walk') + H.getVarBit(p, 'emote_zombie_dance');
         check('Leo pays two things off the zombie list', after - before + emotes, 2);
         check('  ...and sends you back where he found you', [p.x, p.z], [3230, 3250]);
-        check('  ...and lets go of the event, so randoms can happen again',
-            H.getVar(p, 'macro_event'), 0);
+        check('  ...and lets go of the event, so randoms can happen again', H.getVar(p, 'macro_event'), 0);
     }
 
     // AND NOT BEFORE. A cemetery one coffin short of right pays nothing - which is the check that
@@ -670,13 +735,9 @@ console.log('THE GRAVEDIGGER PUTS FIVE COFFINS IN THE WRONG HOLES');
         // NOT asserted on what he says: drive() only collects the chat from the second page on, and
         // the line that turns him down is on the first. Where the player ends up is the thing that
         // matters, and it is not something a wrong assertion could make true by accident.
-        check('  ...and Leo leaves you in the graveyard rather than paying',
-            [p.x >= 1921 && p.x <= 1934, p.z >= 4993 && p.z <= 5007], [true, true]);
+        check('  ...and Leo leaves you in the graveyard rather than paying', [p.x >= 1921 && p.x <= 1934, p.z >= 4993 && p.z <= 5007], [true, true]);
         check('  ...and the event is still running', H.getVar(p, 'macro_event'), 12);
-        check('  ...with nothing to show for it',
-            H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt')
-            + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves')
-            + H.invCount(p, 'macro_digger_boots'), 0);
+        check('  ...with nothing to show for it', H.invCount(p, 'macro_digger_mask') + H.invCount(p, 'macro_digger_shirt') + H.invCount(p, 'macro_digger_legs') + H.invCount(p, 'macro_digger_gloves') + H.invCount(p, 'macro_digger_boots'), 0);
     }
 }
 
@@ -688,8 +749,10 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
     // server knows about: a signpost is a loc with no options, GameMap only keeps a loc whose type
     // is active, and the client draws and re-draws them straight off the map from the varbit.
     const MAT: [number, number, string][] = [
-        [3160, 4819, 'loc_10076'], [3162, 4819, 'loc_10077'],
-        [3164, 4819, 'loc_10078'], [3166, 4819, 'loc_10079']
+        [3160, 4819, 'loc_10076'],
+        [3162, 4819, 'loc_10077'],
+        [3164, 4819, 'loc_10078'],
+        [3166, 4819, 'loc_10079']
     ];
     const EX = ['run', 'sit-ups', 'press-ups', 'star jumps'];
     const post = (p: any, i: number) => H.getVarBit(p, `macro_drilldemon_post_${i + 1}`);
@@ -699,25 +762,27 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
 
     {
         const missing = MAT.filter(([x, z, name]) => !World.getLoc(x, z, 0, LocType.getId(name)));
-        check('the four mats are still where the map put them', missing.map(m => m[2]), []);
-        check('  ...and Sergeant Damien is standing in front of them',
-            H.npcNear('macro_drilldemon', 3165, 4816, 0) !== null, true);
+        check(
+            'the four mats are still where the map put them',
+            missing.map(m => m[2]),
+            []
+        );
+        check('  ...and Sergeant Damien is standing in front of them', H.npcNear('macro_drilldemon', 3165, 4816, 0) !== null, true);
         // The signposts are placed but deliberately not entities. If they ever become active the
         // client stops being the only thing that draws them and this comment is wrong.
-        check('  ...and the signposts are scenery, not entities',
+        check(
+            '  ...and the signposts are scenery, not entities',
             [0, 1, 2, 3].map(i => World.getLoc(MAT[i][0], 4821, 0, LocType.getId(`loc_${10068 + i}`))),
-            [null, null, null, null]);
+            [null, null, null, null]
+        );
 
         // WHICH SIGN STANDS BEHIND WHICH MAT, read out of the map file rather than assumed. The
         // whole event is "look at the sign above the mat", so a mat wired to the wrong post would
         // be unplayable in game and invisible to every other check here, which uses the same
         // mapping the script does. The map square is 49_75, so local x = world x - 3136 and
         // local z = world z - 4800.
-        const jm2 = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m49_75.jm2`, 'ascii')
-            .split(/\r?\n/);
-        const placedAt = (lx: number, lz: number) => jm2
-            .filter(l => l.startsWith(`0 ${lx} ${lz}: `))
-            .map(l => parseInt(l.slice(l.indexOf(': ') + 2)));
+        const jm2 = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m49_75.jm2`, 'ascii').split(/\r?\n/);
+        const placedAt = (lx: number, lz: number) => jm2.filter(l => l.startsWith(`0 ${lx} ${lz}: `)).map(l => parseInt(l.slice(l.indexOf(': ') + 2)));
         const pairs = [0, 1, 2, 3].map(i => {
             const lx = MAT[i][0] - 3136;
             return {
@@ -725,17 +790,21 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
                 sign: placedAt(lx, 4821 - 4800).includes(LocType.getId(`loc_${10068 + i}`))
             };
         });
-        check('  ...and the map puts each sign in its own mat’s column',
-            pairs.every(q => q.mat && q.sign), true);
-        check('  ...each reading the post varbit the script writes for that mat',
+        check(
+            '  ...and the map puts each sign in its own mat’s column',
+            pairs.every(q => q.mat && q.sign),
+            true
+        );
+        check(
+            '  ...each reading the post varbit the script writes for that mat',
             [0, 1, 2, 3].map(i => LocType.get(LocType.getId(`loc_${10068 + i}`)).multivarbit),
-            [0, 1, 2, 3].map(i => VarBitType.getByName(`macro_drilldemon_post_${i + 1}`)!.id));
+            [0, 1, 2, 3].map(i => VarBitType.getByName(`macro_drilldemon_post_${i + 1}`)!.id)
+        );
     }
 
     const settleD = (p: any) => {
         for (let t = 0; t < 40; t++) {
-            if (t >= 2 && !p.activeScript && !p.delayed && !p.target
-                && [...p.queue.all()].length === 0) return;
+            if (t >= 2 && !p.activeScript && !p.delayed && !p.target && [...p.queue.all()].length === 0) return;
             H.tick(1);
         }
         throw new Error('the player never became idle');
@@ -792,8 +861,11 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
         useMat(p, wrongMat);
         check('the wrong mat gets you nowhere', done(p), before.done);
         check('  ...and the order stands', ordered(p), before.order);
-        check('  ...and Damien says so',
-            H.saysFor('macro_drilldemon').some(s => s.text.includes('not what I said')), true);
+        check(
+            '  ...and Damien says so',
+            H.saysFor('macro_drilldemon').some(s => s.text.includes('not what I said')),
+            true
+        );
 
         // AND THE RIGHT ONE DOES.
         const rightMat = [0, 1, 2, 3].find(i => post(p, i) === want)!;
@@ -816,7 +888,10 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
             const want = ordered(p);
             check(`  order ${round + 1} is one he has not called before`, called.includes(want), false);
             called.push(want);
-            useMat(p, [0, 1, 2, 3].find(i => post(p, i) === want)!);
+            useMat(
+                p,
+                [0, 1, 2, 3].find(i => post(p, i) === want)!
+            );
         }
         check('four orders cover all four exercises', [...called].sort().join(','), '0,1,2,3');
         check('  ...and the parade is over', done(p), 15);
@@ -826,8 +901,7 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
         const was = { x: p.x, z: p.z };
         talkToThis(p, nearby('macro_drilldemon', p, 12)!);
         settleD(p);
-        check('Damien pays a piece of the camo outfit',
-            H.invCount(p, 'drill_helm') + H.invCount(p, 'drill_top') + H.invCount(p, 'drill_bottoms'), 1);
+        check('Damien pays a piece of the camo outfit', H.invCount(p, 'drill_helm') + H.invCount(p, 'drill_top') + H.invCount(p, 'drill_bottoms'), 1);
         check('  ...and sends you back where he found you', [p.x, p.z], [3240 + 12, 3250]);
         check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
         check('  ...and clears the yard behind him', [done(p), ...posts(p)], [0, 0, 0, 0, 0]);
@@ -842,8 +916,7 @@ console.log('THE DRILL DEMON MOVES THE SIGNS BETWEEN ORDERS');
 // delay in it and a fixed wait lands the first click while they are still being dragged.
 const settleAny = (p: any) => {
     for (let t = 0; t < 60; t++) {
-        if (t >= 2 && !p.activeScript && !p.delayed && !p.target
-            && [...p.queue.all()].length === 0) return;
+        if (t >= 2 && !p.activeScript && !p.delayed && !p.target && [...p.queue.all()].length === 0) return;
         H.tick(1);
     }
     throw new Error('the player never became idle');
@@ -853,9 +926,7 @@ const startEvent = (p: any, id: number) => {
     H.runProc(p, '[proc,macro_event_general_spawn]', [id]);
     settleAny(p);
 };
-const onGround = (x: number, z: number, level: number, objName: string, p: any) =>
-    World.getObj(x, z, level, ObjType.getId(objName), p.hash64)
-    ?? World.getObj(x, z, level, ObjType.getId(objName), -1n);
+const onGround = (x: number, z: number, level: number, objName: string, p: any) => World.getObj(x, z, level, ObjType.getId(objName), p.hash64) ?? World.getObj(x, z, level, ObjType.getId(objName), -1n);
 
 // ------------------------------------------------------------------------------ Dr Jekyll
 console.log('');
@@ -905,7 +976,10 @@ console.log('DR JEKYLL WANTS YOUR BEST HERB, AND TURNS IF HE DOES NOT GET IT');
     // never here" when what happened is that it looked too late.
     const jekType = NpcType.getId('macro_jekyll');
     let turned = false;
-    for (let i = 0; i < 140 && !turned; i++) { H.tick(1); turned = jek.type !== jekType; }
+    for (let i = 0; i < 140 && !turned; i++) {
+        H.tick(1);
+        turned = jek.type !== jekType;
+    }
     const want = NpcType.getId(`macro_hyde_${H.runProc(r, '[proc,macro_event_combat_level]')[0]}`);
     check('ignored four times, Dr Jekyll is Mr Hyde', jek.type, want);
     // The turn changes type, delays a tick and only then sets %aggressive_npc and the mode, so the
@@ -921,8 +995,7 @@ console.log('DR JEKYLL WANTS YOUR BEST HERB, AND TURNS IF HE DOES NOT GET IT');
     // and npc_changetype_keepall - which this used - is reset=false in Npc.changeType and skips
     // the stat re-init entirely. Hyde inherited Dr Jekyll's levels, and Jekyll, being a talker,
     // has no hitpoints line and defaults to 1. Every Mr Hyde in the game died to one punch.
-    check("  ...and he arrives with Mr Hyde's hitpoints, not Dr Jekyll's",
-        jek.levels[3], NpcType.get(want).stats[3]);
+    check("  ...and he arrives with Mr Hyde's hitpoints, not Dr Jekyll's", jek.levels[3], NpcType.get(want).stats[3]);
 
     // The six Hydes carry the zombie's ladder, which is what their six vislevels are. Read off
     // spawned npcs rather than the config, because that is what a fight would meet.
@@ -934,13 +1007,13 @@ console.log('DR JEKYLL WANTS YOUR BEST HERB, AND TURNS IF HE DOES NOT GET IT');
 console.log('');
 console.log('THE FREAKY FORESTER WANTS A PARTICULAR BIRD');
 {
-    const PHEASANTS = ['macro_pheasant_onetail', 'macro_pheasant_twotail',
-        'macro_pheasant_threetail', 'macro_pheasant_fourtail'];
-    check('the clearing still has its portal',
-        World.getLoc(2611, 4776, 0, LocType.getId('loc_8972')) !== null, true);
-    check('  ...and three of each bird in it',
+    const PHEASANTS = ['macro_pheasant_onetail', 'macro_pheasant_twotail', 'macro_pheasant_threetail', 'macro_pheasant_fourtail'];
+    check('the clearing still has its portal', World.getLoc(2611, 4776, 0, LocType.getId('loc_8972')) !== null, true);
+    check(
+        '  ...and three of each bird in it',
         PHEASANTS.map(n => World.npcs.filter(x => x && x.type === NpcType.getId(n)).length),
-        [3, 3, 3, 3]);
+        [3, 3, 3, 3]
+    );
 
     const p: any = player('forester', 3234, 3260, 0);
     H.clearInv(p);
@@ -970,7 +1043,11 @@ console.log('THE FREAKY FORESTER WANTS A PARTICULAR BIRD');
         let at = { x: bird.x, z: bird.z };
         for (let i = 0; i < 60 && bird.isActive; i++) {
             at = { x: bird.x, z: bird.z };
-            if (i > 0 && i % 15 === 0) { p.teleport(bird.x + 1, bird.z, 0); H.tick(1); H.attackNpc(p, bird); }
+            if (i > 0 && i % 15 === 0) {
+                p.teleport(bird.x + 1, bird.z, 0);
+                H.tick(1);
+                H.attackNpc(p, bird);
+            }
             H.tick(1);
         }
         if (bird.isActive) throw new Error('the pheasant would not die');
@@ -999,8 +1076,7 @@ console.log('THE FREAKY FORESTER WANTS A PARTICULAR BIRD');
     talkToThis(p, nearby('macro_forester_m', p, 20)!);
     settleAny(p);
     check('the forester takes it', H.invCount(p, 'raw_macro_pheasant_good'), 0);
-    check('  ...and pays from the table', H.invCount(p, 'coins') > before
-        || [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+    check('  ...and pays from the table', H.invCount(p, 'coins') > before || [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
 }
 
 // ------------------------------------------------------------------------------ Prison Pete
@@ -1013,19 +1089,31 @@ console.log('PRISON PETE: THREE KEYS, AND THE DOORS WERE ALREADY WIRED TO THEM')
     // lists ever change shape the counting stops meaning anything.
     const keysVarbit = VarBitType.getByName('macro_pete_keys')!.id;
     const doors = [1, 2, 3].map(i => LocType.get(LocType.getId(`prisonpete_door_${i}`)));
-    check('the three doors read the key count', doors.map(d => d.multivarbit),
-        [keysVarbit, keysVarbit, keysVarbit]);
-    check('  ...and drop one barrier per key', doors.map(d => d.multiloc.length), [3, 2, 1]);
+    check(
+        'the three doors read the key count',
+        doors.map(d => d.multivarbit),
+        [keysVarbit, keysVarbit, keysVarbit]
+    );
+    check(
+        '  ...and drop one barrier per key',
+        doors.map(d => d.multiloc.length),
+        [3, 2, 1]
+    );
     const barrier = LocType.getId('prisonpete_energybarrier');
-    check('  ...with every entry in those lists a barrier',
-        doors.every(d => d.multiloc.every(m => m === barrier)), true);
+    check(
+        '  ...with every entry in those lists a barrier',
+        doors.every(d => d.multiloc.every(m => m === barrier)),
+        true
+    );
 
     // The lever's four pictures are raw model ids, which nothing else would catch if model.pack
     // were renumbered under them.
     const models = [1, 2, 3, 4].map(i => EnumType.get(EnumType.getId('macro_pete_balloon_model')).values.get(i) as number);
-    check('the lever shows the balloons’ own models',
-        models.map(m => m), [1, 2, 3, 4].map(i =>
-            NpcType.get(NpcType.getId(`prisonpete_balloon${i}`)).models[0]));
+    check(
+        'the lever shows the balloons’ own models',
+        models.map(m => m),
+        [1, 2, 3, 4].map(i => NpcType.get(NpcType.getId(`prisonpete_balloon${i}`)).models?.[0])
+    );
 
     const p: any = player('pete', 3238, 3260, 0);
     H.clearInv(p);
@@ -1088,10 +1176,11 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
         for (const l of zone.getAllLocsUnsafe()) if (l.type === LocType.getId('loc_8986')) spots++;
     }
     check('the island is ringed with fishing spots', spots, 16);
-    check('  ...with two uncooking pots and a portal',
-        [World.getLoc(2524, 4779, 0, LocType.getId('loc_8985')) !== null,
-            World.getLoc(2526, 4774, 0, LocType.getId('loc_8985')) !== null,
-            World.getLoc(2523, 4777, 0, LocType.getId('loc_8987')) !== null], [true, true, true]);
+    check(
+        '  ...with two uncooking pots and a portal',
+        [World.getLoc(2524, 4779, 0, LocType.getId('loc_8985')) !== null, World.getLoc(2526, 4774, 0, LocType.getId('loc_8985')) !== null, World.getLoc(2523, 4777, 0, LocType.getId('loc_8987')) !== null],
+        [true, true, true]
+    );
 
     const p: any = player('evilbob', 3242, 3260, 0);
     H.clearInv(p);
@@ -1111,10 +1200,10 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
     // three on the net, so the servant had nothing to point at and the only strategy was grinding.
     // Spot coords straight off m39_74.jm2; the stand tile is the land side of each.
     const SHORE: Record<number, [number, number, number, number]> = {
-        1: [2524, 4764, 2524, 4765],   // north
-        2: [2526, 4791, 2526, 4790],   // south
-        3: [2510, 4774, 2511, 4774],   // west
-        4: [2543, 4776, 2542, 4776]    // east
+        1: [2524, 4764, 2524, 4765], // north
+        2: [2526, 4791, 2526, 4790], // south
+        3: [2510, 4774, 2511, 4774], // west
+        4: [2543, 4776, 2542, 4776] // east
     };
     const SHORENAME = ['', 'north', 'south', 'west', 'east'];
     const fishAt = (area: number) => {
@@ -1142,22 +1231,21 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
     const before = H.mesgs.length;
     talkToThis(p, servant);
     settleAny(p);
-    const said = H.mesgs.slice(before).map(m => m.text).join(' | ');
+    const said = H.mesgs
+        .slice(before)
+        .map(m => m.text)
+        .join(' | ');
     check('the servant says which shore is biting', said.includes(SHORENAME[right]), true);
     // ...and names none of the other three, which is the half that would pass by accident.
-    check('  ...and names none of the other three',
-        [1, 2, 3, 4].filter(a => a !== right && said.includes(SHORENAME[a])).length, 0);
+    check('  ...and names none of the other three', [1, 2, 3, 4].filter(a => a !== right && said.includes(SHORENAME[a])).length, 0);
 
     fishAt(wrong);
-    check('the wrong shore gives you the wrong fish',
-        [H.invCount(p, 'evil_bob_cooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_correct')], [1, 0]);
+    check('the wrong shore gives you the wrong fish', [H.invCount(p, 'evil_bob_cooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_correct')], [1, 0]);
     fishAt(right);
-    check('  ...and the right shore gives you the right one, first cast',
-        H.invCount(p, 'evil_bob_cooked_fish_correct'), 1);
+    check('  ...and the right shore gives you the right one, first cast', H.invCount(p, 'evil_bob_cooked_fish_correct'), 1);
 
     uncook('evil_bob_cooked_fish_incorrect');
-    check('the uncooking pot makes it raw',
-        [H.invCount(p, 'evil_bob_uncooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_incorrect')], [1, 0]);
+    check('the uncooking pot makes it raw', [H.invCount(p, 'evil_bob_uncooked_fish_incorrect'), H.invCount(p, 'evil_bob_cooked_fish_incorrect')], [1, 0]);
 
     // A WRONG ONE COSTS YOU A FISH. "Each time you feed Bob an incorrect fish, it will take one
     // more fish to get him to fall asleep."
@@ -1165,14 +1253,12 @@ console.log('EVIL BOB WANTS A RAW FISH, AND EVERYTHING HERE IS BACKWARDS');
     check('he wants one fish to start with', H.getVarBit(p, 'macro_bob_needed'), 1);
     talkToThis(p, bob);
     settleAny(p);
-    check('a wrong fish is disgusting and costs you one',
-        [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [2, 0]);
+    check('a wrong fish is disgusting and costs you one', [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [2, 0]);
 
     uncook('evil_bob_cooked_fish_correct');
     talkToThis(p, bob);
     settleAny(p);
-    check('  ...so one right one is no longer enough',
-        [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [1, 0]);
+    check('  ...so one right one is no longer enough', [H.getVarBit(p, 'macro_bob_needed'), H.getVarBit(p, 'macro_bob_asleep')], [1, 0]);
 
     const lvl = p.baseLevels[10];
     fishAt(right);
@@ -1207,7 +1293,10 @@ console.log('THE MIME HAS A THEATRE AND THE QUIZ MASTER HAS A SET');
         let inloc = false;
         for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m${square}.jm2`, 'ascii').split('\n')) {
             const s = line.trim();
-            if (s.startsWith('====')) { inloc = s.includes('LOC'); continue; }
+            if (s.startsWith('====')) {
+                inloc = s.includes('LOC');
+                continue;
+            }
             if (!inloc || !s.includes(':')) continue;
             const [head, tail] = s.split(':');
             const [lv, x, z] = head.trim().split(/ +/).map(Number);
@@ -1215,23 +1304,20 @@ console.log('THE MIME HAS A THEATRE AND THE QUIZ MASTER HAS A SET');
         }
         return rows;
     };
-    const countOf = (rows: { id: number }[], name: string) =>
-        rows.filter(r => r.id === LocType.getId(name)).length;
+    const countOf = (rows: { id: number }[], name: string) => rows.filter(r => r.id === LocType.getId(name)).length;
 
     // THE THEATRE, counted against the wiki rather than against the script. runescape.wiki's page
     // on the Mime event says the venue had "a total of 84 chairs in the area" and "three
     // mysterious colored audience members" - and the map has exactly that.
     const theatre = fromMap('31_74');
     check('the mime\u2019s theatre is in m31_74, to the chair', countOf(theatre, 'macro_theatre_chair'), 84);
-    check('  ...with a stage floor over the seating',
-        [countOf(theatre, 'macro_theatre_floor'),
-            theatre.filter(r => r.id === LocType.getId('macro_theatre_floor') && r.lv === 1).length], [84, 84]);
-    check('  ...106 walls, two spotlights and four exit signs',
-        [countOf(theatre, 'macro_theatrewall'), countOf(theatre, 'macro_spotlight'),
-            countOf(theatre, 'macro_exitsign')], [106, 2, 4]);
-    check('  ...and three in the audience',
-        ['macro_theatre_saradomin', 'macro_theatre_guthix', 'macro_theatre_zamorak']
-            .map(n => World.npcs.filter(x => x && x.type === NpcType.getId(n)).length), [1, 1, 1]);
+    check('  ...with a stage floor over the seating', [countOf(theatre, 'macro_theatre_floor'), theatre.filter(r => r.id === LocType.getId('macro_theatre_floor') && r.lv === 1).length], [84, 84]);
+    check('  ...106 walls, two spotlights and four exit signs', [countOf(theatre, 'macro_theatrewall'), countOf(theatre, 'macro_spotlight'), countOf(theatre, 'macro_exitsign')], [106, 2, 4]);
+    check(
+        '  ...and three in the audience',
+        ['macro_theatre_saradomin', 'macro_theatre_guthix', 'macro_theatre_zamorak'].map(n => World.npcs.filter(x => x && x.type === NpcType.getId(n)).length),
+        [1, 1, 1]
+    );
     const mimeNpc = World.npcs.find(n => n && n.type === NpcType.getId('macro_mime'))!;
     check('  ...and the mime is on the stage, not in the seats', mimeNpc.level, 1);
 
@@ -1239,16 +1325,10 @@ console.log('THE MIME HAS A THEATRE AND THE QUIZ MASTER HAS A SET');
     // tile on each - which is what a game show is, and why "no walkable ground" was the wrong
     // question to ask of it.
     const studio = fromMap('30_74');
-    check('the quiz set is in m30_74: two podiums, lit, walled in',
-        [countOf(studio, 'loc_8982'), countOf(studio, 'loc_8983'), countOf(studio, 'inviswall')],
-        [2, 2, 8]);
+    check('the quiz set is in m30_74: two podiums, lit, walled in', [countOf(studio, 'loc_8982'), countOf(studio, 'loc_8983'), countOf(studio, 'inviswall')], [2, 2, 8]);
     const quizNpc = World.npcs.find(n => n && n.type === NpcType.getId('macro_magneson'))!;
-    check('  ...and the Quiz Master is on his podium, not under it',
-        [quizNpc.level, quizNpc.x, quizNpc.z], [1, 1952, 4768]);
-    check('  ...with one tile to stand on, on each',
-        [!isFlagged(1952, 4768, 1, CollisionFlag.WALK_BLOCKED),
-            !isFlagged(1952, 4764, 1, CollisionFlag.WALK_BLOCKED),
-            isFlagged(1951, 4764, 1, CollisionFlag.WALK_BLOCKED)], [true, true, true]);
+    check('  ...and the Quiz Master is on his podium, not under it', [quizNpc.level, quizNpc.x, quizNpc.z], [1, 1952, 4768]);
+    check('  ...with one tile to stand on, on each', [!isFlagged(1952, 4768, 1, CollisionFlag.WALK_BLOCKED), !isFlagged(1952, 4764, 1, CollisionFlag.WALK_BLOCKED), isFlagged(1951, 4764, 1, CollisionFlag.WALK_BLOCKED)], [true, true, true]);
 }
 
 // ------------------------------------------------------------------------------ the Mime
@@ -1272,9 +1352,11 @@ console.log('AND YOU COPY WHAT THE MIME DOES');
     // THE EIGHT BUTTONS ARE THE EIGHT ACTS. If macro_mime_act ever names an emote whose button is
     // not in this list the test clicks the wrong thing, so the two are checked against each other
     // rather than assumed.
-    check('every act he can perform has a button in the emote tab',
+    check(
+        'every act he can perform has a button in the emote tab',
         [1, 2, 3, 4, 5, 6, 7, 8].map(i => EnumType.get(EnumType.getId('macro_mime_act')).values.get(i)),
-        [1, 2, 3, 4, 5, 6, 7, 8].map(i => SeqType.getId(`emote_${BUTTON[i]}`)));
+        [1, 2, 3, 4, 5, 6, 7, 8].map(i => SeqType.getId(`emote_${BUTTON[i]}`))
+    );
     const copy = (i: number) => {
         H.ifButton(p, `emotes:${BUTTON[i]}`);
         for (let k = 0; k < 10 && (p.activeScript || p.delayed || [...p.queue.all()].length); k++) H.tick(1);
@@ -1297,11 +1379,15 @@ console.log('AND YOU COPY WHAT THE MIME DOES');
     check('four copied right and the act is over', done() >= 4 || H.getVar(p, 'macro_event') === 0, true);
     console.log(`       he performed ${seen.join(', ')} (of eight)`);
     check('  ...and he sends you back where he found you', [p.x, p.z], [3246, 3260]);
-    check('  ...paying a piece of the mime outfit, or one of his emotes',
-        ['macro_mime_mask', 'macro_mime_top', 'macro_mime_legs', 'macro_mime_gloves', 'macro_mime_boots']
-            .reduce((n, o) => n + H.invCount(p, o), 0)
-        + H.getVarBit(p, 'emote_glasswall') + H.getVarBit(p, 'emote_glassbox')
-        + H.getVarBit(p, 'emote_climbrope') + H.getVarBit(p, 'emote_lean'), 1);
+    check(
+        '  ...paying a piece of the mime outfit, or one of his emotes',
+        ['macro_mime_mask', 'macro_mime_top', 'macro_mime_legs', 'macro_mime_gloves', 'macro_mime_boots'].reduce((n, o) => n + H.invCount(p, o), 0) +
+            H.getVarBit(p, 'emote_glasswall') +
+            H.getVarBit(p, 'emote_glassbox') +
+            H.getVarBit(p, 'emote_climbrope') +
+            H.getVarBit(p, 'emote_lean'),
+        1
+    );
     check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
 }
 
@@ -1333,18 +1419,26 @@ console.log('AND THE QUIZ MASTER ASKS THREE QUESTIONS');
     let answered = 0;
     for (let guard = 0; guard < 400; guard++) {
         const s = p.activeScript;
-        if (!s) { H.tick(1); if (!p.delayed && [...p.queue.all()].length === 0 && guard > 4) break; continue; }
-        if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
-        if (p.modalChat !== tray) { p.executeScript(s, true, true); continue; }
+        if (!s) {
+            H.tick(1);
+            if (!p.delayed && [...p.queue.all()].length === 0 && guard > 4) break;
+            continue;
+        }
+        if (s.execution !== ScriptState.PAUSEBUTTON) {
+            H.tick(1);
+            continue;
+        }
+        if (p.modalChat !== tray) {
+            p.executeScript(s, true, true);
+            continue;
+        }
         // the title says which category, the three slots say what is on offer
-        const title = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'text'
-            && f.com === Component.getId('multiobj3:com_8'))!.text!;
+        const title = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'text' && f.com === Component.getId('multiobj3:com_8'))!.text!;
         let wantCat = -1;
         for (const [k, v] of cats) if (title.includes(v as string)) wantCat = k as number;
         let pick = 2;
         for (let i = 0; i < 3; i++) {
-            const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
-                && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
+            const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
             if (catOf(o) === wantCat) pick = 2 + i;
         }
         answered++;
@@ -1367,17 +1461,25 @@ console.log('AND THE QUIZ MASTER ASKS THREE QUESTIONS');
         let asked = 0;
         for (let guard = 0; guard < 400; guard++) {
             const s = q.activeScript;
-            if (!s) { H.tick(1); if (!q.delayed && [...q.queue.all()].length === 0 && guard > 4) break; continue; }
-            if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
-            if (q.modalChat !== tray) { q.executeScript(s, true, true); continue; }
-            const title = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'text'
-                && f.com === Component.getId('multiobj3:com_8'))!.text!;
+            if (!s) {
+                H.tick(1);
+                if (!q.delayed && [...q.queue.all()].length === 0 && guard > 4) break;
+                continue;
+            }
+            if (s.execution !== ScriptState.PAUSEBUTTON) {
+                H.tick(1);
+                continue;
+            }
+            if (q.modalChat !== tray) {
+                q.executeScript(s, true, true);
+                continue;
+            }
+            const title = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'text' && f.com === Component.getId('multiobj3:com_8'))!.text!;
             let wantCat = -1;
             for (const [k, v] of cats) if (title.includes(v as string)) wantCat = k as number;
             let pick = -1;
             for (let i = 0; i < 3; i++) {
-                const o = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'obj'
-                    && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
+                const o = [...H.ifaces].reverse().find(f => f.who === q.username && f.kind === 'obj' && f.com === Component.getId(`multiobj3:com_${2 + i}`))!.obj!;
                 if (catOf(o) !== wantCat) pick = 2 + i;
             }
             asked++;
@@ -1391,7 +1493,10 @@ console.log('AND THE QUIZ MASTER ASKS THREE QUESTIONS');
     H.opheld(p, 'macro_quiz_mystery_box', 1);
     for (let k = 0; k < 20; k++) {
         const s = p.activeScript;
-        if (s && s.execution === ScriptState.PAUSEBUTTON) { p.executeScript(s, true, true); continue; }
+        if (s && s.execution === ScriptState.PAUSEBUTTON) {
+            p.executeScript(s, true, true);
+            continue;
+        }
         if (!s && !p.delayed) break;
         H.tick(1);
     }
@@ -1411,16 +1516,15 @@ console.log('THE LAND OF THE FROGS, WHICH NOBODY HAD BUILT');
         for (let z = 4822; z <= 4841; z++) if (!isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED)) walk++;
     }
     check('the clearing is twenty by twenty and open', walk, 400);
-    check('  ...and walled in', [isFlagged(2069, 4830, 0, CollisionFlag.WALK_BLOCKED),
-        isFlagged(2090, 4830, 0, CollisionFlag.WALK_BLOCKED),
-        isFlagged(2080, 4821, 0, CollisionFlag.WALK_BLOCKED),
-        isFlagged(2080, 4842, 0, CollisionFlag.WALK_BLOCKED)], [true, true, true, true]);
+    check(
+        '  ...and walled in',
+        [isFlagged(2069, 4830, 0, CollisionFlag.WALK_BLOCKED), isFlagged(2090, 4830, 0, CollisionFlag.WALK_BLOCKED), isFlagged(2080, 4821, 0, CollisionFlag.WALK_BLOCKED), isFlagged(2080, 4842, 0, CollisionFlag.WALK_BLOCKED)],
+        [true, true, true, true]
+    );
     // COUNTED INSIDE THE CLEARING, not in the world: macro_frog_noncombat is an ordinary frog
     // and there are others of it elsewhere.
-    const inClearing = (name: string) => World.npcs.filter(x => x && x.type === NpcType.getId(name)
-        && x.level === 0 && x.x >= 2070 && x.x <= 2089 && x.z >= 4822 && x.z <= 4841).length;
-    check('  ...with a herald, six frogs and one in a crown',
-        ['macro_frog_crier', 'macro_frog_noncombat', 'macro_frog_royal'].map(inClearing), [1, 6, 1]);
+    const inClearing = (name: string) => World.npcs.filter(x => x && x.type === NpcType.getId(name) && x.level === 0 && x.x >= 2070 && x.x <= 2089 && x.z >= 4822 && x.z <= 4841).length;
+    check('  ...with a herald, six frogs and one in a crown', ['macro_frog_crier', 'macro_frog_noncombat', 'macro_frog_royal'].map(inClearing), [1, 6, 1]);
 
     const p: any = player('frog', 3258, 3264, 0);
     H.clearInv(p);
@@ -1438,8 +1542,7 @@ console.log('THE LAND OF THE FROGS, WHICH NOBODY HAD BUILT');
     const royal = H.npcNear('macro_frog_royal', p.x, p.z, 0)!;
     talkToThis(p, royal, [1]);
     settleAny(p);
-    check('kissing the crowned one makes royalty of it',
-        [NpcType.getId('macro_frog_prince'), NpcType.getId('macro_frog_princess')].includes(royal.type), true);
+    check('kissing the crowned one makes royalty of it', [NpcType.getId('macro_frog_prince'), NpcType.getId('macro_frog_princess')].includes(royal.type), true);
     check('  ...and hands you a token', H.invCount(p, 'macro_frog_token'), 1);
     check('  ...and sends you home', [p.x, p.z], [3258, 3264]);
     check('  ...and lets go of the event', H.getVar(p, 'macro_event'), 0);
@@ -1448,8 +1551,7 @@ console.log('THE LAND OF THE FROGS, WHICH NOBODY HAD BUILT');
     // the Varrock clothes shop to get a frog mask, a royal frog costume, or an experience lamp".
     talkToThis(p, H.npcNear('thessalia', 3205, 3417, 0)!, [1]);
     settleAny(p);
-    check('Thessalia turns the token into a frog mask',
-        [H.invCount(p, 'macro_frog_token'), H.invCount(p, 'macro_frog_mask')], [0, 1]);
+    check('Thessalia turns the token into a frog mask', [H.invCount(p, 'macro_frog_token'), H.invCount(p, 'macro_frog_mask')], [0, 1]);
 
     // FIVE WRONG ONES AND THE HERALD GIVES UP, which is the half the run above cannot show.
     const q: any = player('frogwrong', 3262, 3264, 0);
@@ -1485,7 +1587,10 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
         let innpc = false;
         for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/m${square}.jm2`, 'ascii').split('\n')) {
             const s = line.trim();
-            if (s.startsWith('====')) { innpc = s.includes('NPC'); continue; }
+            if (s.startsWith('====')) {
+                innpc = s.includes('NPC');
+                continue;
+            }
             if (!innpc || !s.includes(':')) continue;
             const [head, tail] = s.split(':');
             const [lv, x, z] = head.trim().split(/ +/).map(Number);
@@ -1496,19 +1601,23 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
     for (const [tramp, cx, cz] of CAGES) {
         const sq = `${cx >> 6}_${cz >> 6}`;
         const t = spawnOf(sq, NpcType.getId(tramp))!;
-        check(`${tramp.replace('pillory_tramp_thrower_', '')}: a cage within a tile of its tramp`,
-            Math.max(Math.abs(t.x - cx), Math.abs(t.z - cz)) <= 1, true);
+        check(`${tramp.replace('pillory_tramp_thrower_', '')}: a cage within a tile of its tramp`, Math.max(Math.abs(t.x - cx), Math.abs(t.z - cz)) <= 1, true);
         check('  ...with a door on it', World.getLoc(cx, cz, 0, doorId) !== null, true);
-        check('  ...and a guard at his post beside it',
-            spawnOf(sq, NpcType.getId('macro_pillory_guard')) !== null
-            && World.npcs.some(n => n && n.type === NpcType.getId('macro_pillory_guard')
-                && Math.max(Math.abs(n.x - cx), Math.abs(n.z - cz)) <= 2), true);
+        check(
+            '  ...and a guard at his post beside it',
+            spawnOf(sq, NpcType.getId('macro_pillory_guard')) !== null && World.npcs.some(n => n && n.type === NpcType.getId('macro_pillory_guard') && Math.max(Math.abs(n.x - cx), Math.abs(n.z - cz)) <= 2),
+            true
+        );
     }
 
     // A CAGE HAS TO BE A CAGE. Four walls on one tile, and from inside it every neighbour is on
     // the other side of one of them - which is the only thing that makes the lock worth picking.
-    const sealed = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dz]) =>
-        !canTravel(0, 3228, 3413, dx, dz, 0, CollisionType.NORMAL));
+    const sealed = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].every(([dx, dz]) => !canTravel(0, 3228, 3413, dx, dz, 1, 0, CollisionType.NORMAL));
     check('and from inside the Varrock cage there is nowhere to go', sealed, true);
 
     // AND IT IS A THIEVING RANDOM, not a general one. runescape.wiki/w/Pillory's update history
@@ -1520,12 +1629,9 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
             const e = EnumType.get(EnumType.getId(name));
             return [...e.values.values()] as number[];
         };
-        check('the general roll cannot land on the pillory',
-            [picks('general_macro_events_members_pick').includes(21),
-                picks('general_macro_events_free_pick').includes(21)], [false, false]);
+        check('the general roll cannot land on the pillory', [picks('general_macro_events_members_pick').includes(21), picks('general_macro_events_free_pick').includes(21)], [false, false]);
         const r: any = player('pilroll', 3270, 3264, 0);
-        check('  ...but the event table still knows which npc it is',
-            H.runProc(r, '[proc,macro_event_npc]', [21])[0], NpcType.getId('macro_pillory_guard'));
+        check('  ...but the event table still knows which npc it is', H.runProc(r, '[proc,macro_event_npc]', [21])[0], NpcType.getId('macro_pillory_guard'));
 
         // FOUR HUNDRED PICKPOCKETS' WORTH. The pillory is one slot against the general count,
         // so about one roll in twenty-one; sixty rolls came up once and a check that only asks
@@ -1541,8 +1647,7 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
         }
         H.setVar(r, 'macro_event', 0);
         console.log(`       the pillory came up ${caught} times in 400 pickpocket rolls`);
-        check('  ...and the pickpocket roll does, about one in twenty',
-            caught > 5 && caught < 45, true);
+        check('  ...and the pickpocket roll does, about one in twenty', caught > 5 && caught < 45, true);
     }
 
     const p: any = player('pillory', 3266, 3264, 0);
@@ -1560,19 +1665,24 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
         let shown = -1;
         for (let guard = 0; guard < 80; guard++) {
             const s = p.activeScript;
-            if (!s) { H.tick(1); if (!p.delayed && guard > 3) break; continue; }
-            if (s.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+            if (!s) {
+                H.tick(1);
+                if (!p.delayed && guard > 3) break;
+                continue;
+            }
+            if (s.execution !== ScriptState.PAUSEBUTTON) {
+                H.tick(1);
+                continue;
+            }
             if (p.modalChat === box) {
-                shown = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
-                    && f.com === Component.getId('objbox1:com_0'))!.obj!;
+                shown = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId('objbox1:com_0'))!.obj!;
                 p.executeScript(s, true, true);
                 continue;
             }
             if (p.modalChat === tray) {
                 let slot = -1;
                 for (let i = 0; i < 4; i++) {
-                    const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj'
-                        && f.com === Component.getId(`multiobj4:com_${2 + i}`))!.obj!;
+                    const o = [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId(`multiobj4:com_${2 + i}`))!.obj!;
                     if (correct === (o === shown)) slot = 2 + i;
                 }
                 H.choose(p, `multiobj4:com_${slot}`);
@@ -1595,8 +1705,11 @@ console.log('AND THE PILLORY, WHICH HAPPENS IN PUBLIC');
 
     talkToThis(p, H.npcNear('macro_pillory_guard', 3228, 3413, 0)!);
     settleAny(p);
-    check('the guard lets you off with a gift',
-        [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+    check(
+        'the guard lets you off with a gift',
+        [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)),
+        true
+    );
     check('  ...and you are back where he found you', [p.x, p.z], [3266, 3264]);
     check('  ...and the cage is shut behind you', H.getVarBit(p, 'macro_pillory_open'), 0);
 }
@@ -1609,8 +1722,7 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
     // component's xan, yan and zoom from the ObjType every time (zoom = zoom2d * 100 / scale), so
     // an obj with no 2d params is drawn edge on at the default distance - which is what made all
     // five grave symbols the same dark slab. The carvings are only visible from above.
-    for (const s of ['macro_digger_stonecook', 'macro_digger_stonespade', 'macro_digger_stoneaxe',
-        'macro_digger_stonemine', 'macro_digger_stonevase']) {
+    for (const s of ['macro_digger_stonecook', 'macro_digger_stonespade', 'macro_digger_stoneaxe', 'macro_digger_stonemine', 'macro_digger_stonevase']) {
         const o: any = ObjType.get(ObjType.getId(s));
         check(`${s} is turned face up`, [o.xan2d, o.zoom2d > 2000], [512, true]);
     }
@@ -1623,17 +1735,21 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
         for (let w = 0; w < 12 && !p.activeScript; w++) H.tick(1);
         for (let g = 0; g < max; g++) {
             const sc = p.activeScript;
-            if (!sc) { H.tick(1); if (!p.delayed) break; continue; }
-            if (sc.execution === ScriptState.PAUSEBUTTON) { p.executeScript(sc, true, true); continue; }
+            if (!sc) {
+                H.tick(1);
+                if (!p.delayed) break;
+                continue;
+            }
+            if (sc.execution === ScriptState.PAUSEBUTTON) {
+                p.executeScript(sc, true, true);
+                continue;
+            }
             H.tick(1);
         }
     };
-    const spinOf = (p: any, comName: string) => [...H.ifaces].reverse()
-        .find(f => f.who === p.username && f.kind === 'spin' && f.com === Component.getId(comName));
-    const objOf = (p: any, comName: string) => [...H.ifaces].reverse()
-        .find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId(comName));
-    const textOf = (p: any, comName: string) => [...H.ifaces].reverse()
-        .find(f => f.who === p.username && f.kind === 'text' && f.com === Component.getId(comName));
+    const spinOf = (p: any, comName: string) => [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'spin' && f.com === Component.getId(comName));
+    const objOf = (p: any, comName: string) => [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'obj' && f.com === Component.getId(comName));
+    const textOf = (p: any, comName: string) => [...H.ifaces].reverse().find(f => f.who === p.username && f.kind === 'text' && f.com === Component.getId(comName));
 
     // ---------------------------------------------------------------- the gravedigger's headstone
     {
@@ -1650,8 +1766,7 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
         if (shown) {
             // ...and it is the symbol for whatever that grave wants, not just any of the five.
             const want = H.getVarBit(p, 'macro_digger_coffin_1');
-            const expect = ObjType.getId(['', 'macro_digger_stonecook', 'macro_digger_stonespade',
-                'macro_digger_stoneaxe', 'macro_digger_stonemine', 'macro_digger_stonevase'][want]);
+            const expect = ObjType.getId(['', 'macro_digger_stonecook', 'macro_digger_stonespade', 'macro_digger_stoneaxe', 'macro_digger_stonemine', 'macro_digger_stonevase'][want]);
             check('  ...the one that grave is waiting for', shown.obj, expect);
         }
         const spin = spinOf(p, 'macro_digger_stone:com_0');
@@ -1677,8 +1792,7 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
         const p: any = player('certerask', 3240, 3234, 0);
         H.clearInv(p);
         startEvent(p, 9);
-        const brother = ['macro_niles', 'macro_miles', 'macro_giles']
-            .map(n => nearby(n, p, 10)).find(Boolean)!;
+        const brother = ['macro_niles', 'macro_miles', 'macro_giles'].map(n => nearby(n, p, 10)).find(Boolean)!;
 
         // Drive the custom chooser by hand: A.drive does not know this interface, and the whole
         // point of the check is what is in it.
@@ -1691,8 +1805,15 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
             H.opNpc(p, brother, 1);
             for (let g = 0; g < 160; g++) {
                 const sc = p.activeScript;
-                if (!sc) { H.tick(1); if (!p.delayed && g > 3) break; continue; }
-                if (sc.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+                if (!sc) {
+                    H.tick(1);
+                    if (!p.delayed && g > 3) break;
+                    continue;
+                }
+                if (sc.execution !== ScriptState.PAUSEBUTTON) {
+                    H.tick(1);
+                    continue;
+                }
                 if (p.modalChat === show) {
                     shownObj = objOf(p, 'macro_certer_show:com_0')!.obj!;
                     names = [2, 3, 4].map(i => textOf(p, `macro_certer_show:com_${i}`)!.text!);
@@ -1711,25 +1832,33 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
         check('  ...and offers three names for it', names.length, 3);
         // THE ANSWER IS AMONG THEM EXACTLY ONCE. Three objs with their names written underneath -
         // which is what this was - gave the answer away and left him holding nothing.
-        check('  ...one of which is right',
-            names.filter(n => n === ObjType.get(shownObj).name).length, 1);
-        check('  ...and naming it is paid for',
-            [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)), true);
+        check('  ...one of which is right', names.filter(n => n === ObjType.get(shownObj).name).length, 1);
+        check(
+            '  ...and naming it is paid for',
+            [...Array(28).keys()].some(k => p.getInventory(InvType.INV)!.get(k)),
+            true
+        );
 
         // AND GETTING IT WRONG IS NOT. The control: the same walk through, picking a name that is
         // not the object's.
         const q: any = player('certerwrong', 3244, 3234, 0);
         H.clearInv(q);
         startEvent(q, 9);
-        const brother2 = ['macro_niles', 'macro_miles', 'macro_giles']
-            .map(n => nearby(n, q, 10)).find(Boolean)!;
+        const brother2 = ['macro_niles', 'macro_miles', 'macro_giles'].map(n => nearby(n, q, 10)).find(Boolean)!;
         q.teleport(brother2.x + 1, brother2.z, brother2.level);
         H.tick(1);
         H.opNpc(q, brother2, 1);
         for (let g = 0; g < 160; g++) {
             const sc = q.activeScript;
-            if (!sc) { H.tick(1); if (!q.delayed && g > 3) break; continue; }
-            if (sc.execution !== ScriptState.PAUSEBUTTON) { H.tick(1); continue; }
+            if (!sc) {
+                H.tick(1);
+                if (!q.delayed && g > 3) break;
+                continue;
+            }
+            if (sc.execution !== ScriptState.PAUSEBUTTON) {
+                H.tick(1);
+                continue;
+            }
             if (q.modalChat === show) {
                 const o = objOf(q, 'macro_certer_show:com_0')!.obj!;
                 const ns = [2, 3, 4].map(i => textOf(q, `macro_certer_show:com_${i}`)!.text!);
@@ -1740,8 +1869,11 @@ console.log('THE CHATBOX CAN SHOW YOU A SHAPE NOW');
             q.executeScript(sc, true, true);
         }
         settleAny(q);
-        check('  ...while getting it wrong is not',
-            [...Array(28).keys()].some(k => q.getInventory(InvType.INV)!.get(k)), false);
+        check(
+            '  ...while getting it wrong is not',
+            [...Array(28).keys()].some(k => q.getInventory(InvType.INV)!.get(k)),
+            false
+        );
     }
 }
 
@@ -1758,13 +1890,11 @@ console.log('THE MIME STAGE IS A FLOOR AND NOT A BRIDGE');
     // The stage is simply an upper floor, so the bit is gone and the floor is level everywhere.
     const STAGE: [number, number][] = [];
     for (let x = 2002; x <= 2017; x++) for (let z = 4761; z <= 4766; z++) STAGE.push([x, z]);
-    check('the whole stage is one height', new Set(STAGE.map(([x, z]) =>
-        (World.gameMap as any).levelHeightmap?.[1]?.[x]?.[z] ?? 'n/a')).size <= 1, true);
+    check('the whole stage is one height', new Set(STAGE.map(([x, z]) => (World.gameMap as any).levelHeightmap?.[1]?.[x]?.[z] ?? 'n/a')).size <= 1, true);
     // The wings are curtained off and solid - local x 19-20 and 31-32 - which is the stage, not a
     // mistake. The boards you perform on are the middle.
     const BOARDS = STAGE.filter(([x]) => x >= 2005 && x <= 2014);
-    check('  ...and you can walk on all of the boards',
-        BOARDS.filter(([x, z]) => isFlagged(x, z, 1, CollisionFlag.WALK_BLOCKED)).length, 0);
+    check('  ...and you can walk on all of the boards', BOARDS.filter(([x, z]) => isFlagged(x, z, 1, CollisionFlag.WALK_BLOCKED)).length, 0);
 
     const p: any = player('mimefloor', 3230, 3266, 0);
     H.clearInv(p);
@@ -1773,8 +1903,7 @@ console.log('THE MIME STAGE IS A FLOOR AND NOT A BRIDGE');
     // HE STANDS STILL. wanderrange defaults to 5, and five tiles off a sixteen-wide stage is off
     // the stage.
     check('  ...and the mime does not wander off it', NpcType.get(NpcType.getId('macro_mime')).wanderrange, 0);
-    check('  ...and he is a person, not a cat',
-        SeqType.get(NpcType.get(NpcType.getId('macro_mime')).readyanim).debugname, 'human_ready');
+    check('  ...and he is a person, not a cat', SeqType.get(NpcType.get(NpcType.getId('macro_mime')).readyanim).debugname, 'human_ready');
 }
 
 console.log(`RANDOMEVENTS ${R.ok} ok, ${R.bad} FAIL`);

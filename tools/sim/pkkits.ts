@@ -37,7 +37,7 @@ const setStats = (p: Player, levels: Partial<Record<PlayerStat, number>>) => {
 
 await H.boot();
 Environment.NODE_BOTS = true;
-BotManager.start({ ...DEFAULT_BOT_CONFIG, roamers: { low: 0, mid: 0, high: 0, max: 0 }, pkers: 0 });
+BotManager.start({ ...DEFAULT_BOT_CONFIG, roamers: { low: 0, mid: 0, high: 0, max: 0 }, pkers: { low: 0, mid: 0, high: 0, max: 0 } });
 // MELEE BOTS ARE PENNED unless this is cleared: areaFor() hands a melee kit config.meleeArea in
 // place of its bracket's range, so the two melee kits below would not count a victim standing
 // outside that pen as attackable at all - and the first run of this reported, wrongly, that

@@ -73,7 +73,9 @@ function clientReadsPublic(p: Player): string {
     // the CHAT block exactly as the renderer writes it for observers, read as Client.java reads mask 0x40
     const rp = new RsPlayer(7);
     rp.masks = PlayerInfoProt.CHAT;
-    rp.chat = new Chat(p.chatMessage!.slice(), p.chatColour, p.chatEffect, p.chatRights);
+    // ?? 0 on the three: they are null on a player who has not spoken, and this is only ever
+    // called on one who just has - the engine does not write a CHAT mask without them either.
+    rp.chat = new Chat(p.chatMessage!.slice(), p.chatColour ?? 0, p.chatEffect ?? 0, p.chatRights ?? 0);
     const pr = new PlayerRenderer();
     pr.computeInfo(rp);
     const out = new RsPacket(300);

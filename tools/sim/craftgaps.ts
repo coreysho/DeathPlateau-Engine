@@ -129,7 +129,7 @@ if (want('smith')) {
 
     // Every metal, so the odd-one-out row is checked in the two places it is wrong and the four
     // where it is right.
-    const metals: { bar: string; other: string; odd: string | null; column: string }[] = [
+    const metals: { bar: string; other: string | null; odd: string | null; column: string }[] = [
         { bar: 'bronze_bar', other: 'Bronze wire', odd: 'bronzecraftwire', column: 'smithing:column5' },
         { bar: 'iron_bar', other: 'Iron spit', odd: 'spit_iron', column: 'smithing:column5' },
         { bar: 'steel_bar', other: 'Steel studs', odd: 'studs', column: 'smithing:column5' },

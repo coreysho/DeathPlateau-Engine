@@ -6,6 +6,7 @@
 // The island came across with import474map.py and almost nothing on it was wired. The doors are
 // done; the rest is listed by the `dead` mode so it can be worked through rather than rediscovered.
 import World from '#/engine/World.js';
+import type Npc from '#/engine/entity/Npc.js';
 import * as H from './harness.ts';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -206,7 +207,7 @@ const PEOPLE: [string, number, number, string][] = [
 ];
 for (const [name, x, z, why] of PEOPLE) {
     const id = NpcType.getId(name);
-    const found = [...World.npcs].filter(n => n.type === id && n.x >= X1 && n.x <= X2);
+    const found = [...World.npcs].filter((n): n is Npc => !!n && n.type === id && n.x >= X1 && n.x <= X2);
     check(
         `${name} spawns at ${x},${z}${why ? ` (${why})` : ''}`,
         found.map(n => `${n.startX},${n.startZ}`),
@@ -219,7 +220,7 @@ for (const [name, x, z, why] of PEOPLE) {
 // untouched, so there are two of him and only one moved.
 {
     const id = NpcType.getId('lokar_searunner');
-    const all = [...World.npcs].filter(n => n.type === id);
+    const all = [...World.npcs].filter((n): n is Npc => !!n && n.type === id);
     check('two Lokar spawns, Rellekka and the Cove', all.map(n => `${n.startX},${n.startZ}`).sort(), ['2204,3806', '2625,3694'].sort());
 }
 
