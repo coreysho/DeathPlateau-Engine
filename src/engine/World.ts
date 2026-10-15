@@ -70,6 +70,7 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
 import UpdateIgnoreList from '#/network/game/server/model/UpdateIgnoreList.js';
 import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
 import ClientSocket from '#/server/ClientSocket.js';
+import { spawnThread } from '#/server/Threads.js';
 import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
@@ -120,15 +121,15 @@ type LogoutRequest = {
 };
 
 class World {
-    private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
-    private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
-    private loggerThread = new Worker(new URL('../server/logger/LoggerThread.ts', import.meta.url));
+    private loginThread = spawnThread(new URL('../server/login/LoginThread.ts', import.meta.url));
+    private friendThread = spawnThread(new URL('../server/friend/FriendThread.ts', import.meta.url));
+    private loggerThread = spawnThread(new URL('../server/logger/LoggerThread.ts', import.meta.url));
     private devThread: Worker | null = null;
     // custom (2026-09-21) - only when Discord is configured; see server/discord/DiscordThread.ts.
     // AND ONLY ON THE MAIN THREAD. LoginServer imports Player and web.ts, both of which import this
     // file, so with EASY_STARTUP the login worker builds a World of its own - and without this check
     // it started a second bot, which answered every /link a second time against the same codes.
-    private discordThread: Worker | null = isMainThread && Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? new Worker(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
+    private discordThread: Worker | null = isMainThread && Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? spawnThread(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
 
     private static readonly PLAYERS: number = Environment.NODE_MAX_PLAYERS;
     private static readonly NPCS: number = Environment.NODE_MAX_NPCS;
@@ -2028,7 +2029,7 @@ class World {
     }
 
     private createDevThread() {
-        this.devThread = new Worker(new URL('../cache/DevThread.ts', import.meta.url));
+        this.devThread = spawnThread(new URL('../cache/DevThread.ts', import.meta.url));
 
         this.devThread.on('message', msg => {
             try {
