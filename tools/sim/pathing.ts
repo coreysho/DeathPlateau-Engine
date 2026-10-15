@@ -67,7 +67,16 @@ const origPlayerAnim = (Player.prototype as any).playAnimation;
 (Player.prototype as any).playAnimation = function (seq: number, delay: number) {
     const t = opponent.get(this);
     if (t && seq !== -1 && !DEFEND.has(seq)) {
-        swings.push({ tick: World.currentTick, who: this.username, px: this.x, pz: this.z, tx: t.x, tz: t.z, reach: reachedEntity(this.level, this.x, this.z, t.x, t.z, t.width, t.length, this.width), los: isLineOfSight(this.level, this.x, this.z, t.x, t.z) });
+        swings.push({
+            tick: World.currentTick,
+            who: this.username,
+            px: this.x,
+            pz: this.z,
+            tx: t.x,
+            tz: t.z,
+            reach: reachedEntity(this.level, this.x, this.z, t.x, t.z, t.width, t.length, this.width),
+            los: isLineOfSight(this.level, this.x, this.z, t.x, t.z)
+        });
     }
     return origPlayerAnim.call(this, seq, delay);
 };
@@ -80,6 +89,10 @@ const origNpcExec = (Npc.prototype as any).executeScript;
         swings.push({ tick: World.currentTick, who: 'npc', px: this.x, pz: this.z, tx: t.x, tz: t.z, reach: reachedEntity(this.level, this.x, this.z, t.x, t.z, t.width, t.length, this.width), los: true });
     }
     const was = runningNpc;
+    // WHICH NPC IS EXECUTING, kept in a module variable so ~npc_meleeattack's own patch below can
+    // tell whose swing it is - the command runs with no argument naming the npc. That is what the
+    // patched method's `this` is for, and there is no other way to hand it along from here.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     runningNpc = this;
     try {
         return origNpcExec.call(this, state);
@@ -290,7 +303,11 @@ scenario('diagonal  a man one tile diagonally away (melee)', () => {
     run(p, npc, 6);
     const s = playerSwings(p);
     check('swings', s.length > 0, true);
-    check('never from the diagonal - it steps beside him first', s.every(x => x.reach), true);
+    check(
+        'never from the diagonal - it steps beside him first',
+        s.every(x => x.reach),
+        true
+    );
     cleanup(p, npc);
 });
 
@@ -299,7 +316,7 @@ scenario('fence  a man two tiles the other side of the cow-field fence (melee)',
     const npc = npcAt('man', 3267, 3270);
     clickAttack(p, npc);
     const ticks = run(p, npc, 30);
-    const across = swings.filter(s => s.who === p.username && (s.px <= 3265) !== (s.tx <= 3265));
+    const across = swings.filter(s => s.who === p.username && s.px <= 3265 !== s.tx <= 3265);
     check('no swing across the fence', across.length, 0);
     const gaveUp = H.mesgs.some(m => m.who === p.username && m.text === "I can't reach that!");
     const walkedRound = playerSwings(p).some(s => s.reach);
@@ -332,7 +349,11 @@ scenario('door  a man in a doorway, attacked from outside, diagonally, across th
     run(p, npc, 8);
     const s = playerSwings(p);
     check('swings', s.length > 0, true);
-    check('never from the diagonal across the wall - from the doorway step', s.every(x => x.reach), true);
+    check(
+        'never from the diagonal across the wall - from the doorway step',
+        s.every(x => x.reach),
+        true
+    );
     cleanup(p, npc);
 });
 
@@ -344,7 +365,11 @@ scenario('wall  a man inside the stone building, shot at from outside its east w
     clickAttack(p, npc);
     run(p, npc, 14);
     const s = playerSwings(p);
-    check('every shot has line of sight (none through the wall)', s.every(x => x.los), true);
+    check(
+        'every shot has line of sight (none through the wall)',
+        s.every(x => x.los),
+        true
+    );
     check('  and it does get a shot, through the doorway', s.length > 0, true);
     cleanup(p, npc);
 });
@@ -357,7 +382,11 @@ scenario('around  a man walking along the far side of the building, the player g
         if (i <= 6) npc.queueWaypoint(npc.x + 1, npc.z);
     });
     check('gets round the building to him and swings from beside him', playerSwings(p).length > 0 && playerSwings(p).every(s => s.reach), true);
-    check('  and never stands still short of him with a route it cannot walk', ticks.some((t, i) => i > 0 && t.target && !playerSwings(p).length && t.px === ticks[i - 1].px && t.pz === ticks[i - 1].pz && Math.max(Math.abs(t.px - t.tx), Math.abs(t.pz - t.tz)) > 1), false);
+    check(
+        '  and never stands still short of him with a route it cannot walk',
+        ticks.some((t, i) => i > 0 && t.target && !playerSwings(p).length && t.px === ticks[i - 1].px && t.pz === ticks[i - 1].pz && Math.max(Math.abs(t.px - t.tx), Math.abs(t.pz - t.tz)) > 1),
+        false
+    );
     cleanup(p, npc);
 });
 
@@ -370,7 +399,11 @@ scenario('bank  "Bank" on a Draynor banker behind the counter, from across the r
     p.setInteraction(Interaction.ENGINE, banker, ServerTriggerType.APNPC3);
     const ticks = run(p, banker, 10);
     check('walks to the counter and the bank opens', (p as any).modalMain !== -1 || (p as any).modalState !== 0, true);
-    check('  without a "cannot reach" on the way', H.mesgs.some(m => m.who === p.username && m.text === "I can't reach that!"), false);
+    check(
+        '  without a "cannot reach" on the way',
+        H.mesgs.some(m => m.who === p.username && m.text === "I can't reach that!"),
+        false
+    );
     void ticks;
     H.despawn(p);
     H.tick(1);
@@ -387,7 +420,11 @@ scenario('npcchase  an aggressive man chasing a player who walks away, then stop
     H.walkTo(p, 3273, 3259);
     run(p, npc, 14);
     check('it catches up and hits', H.hits.filter(h => h.who === p.username).length > 0, true);
-    check('  only ever attacking from beside the player', swings.filter(x => x.who === 'npc').every(x => x.reach), true);
+    check(
+        '  only ever attacking from beside the player',
+        swings.filter(x => x.who === 'npc').every(x => x.reach),
+        true
+    );
     cleanup(p, npc);
 });
 
@@ -397,12 +434,16 @@ scenario('bignpc  a greater demon (3x3) chasing a player to its north-east, who 
     H.setNpcMode(npc, 'OPPLAYER2', p);
     opponent.set(npc, p);
     const npcTiles: { x: number; z: number }[] = [];
-    const ticks = run(p, npc, 16, i => {
+    const _ticks = run(p, npc, 16, i => {
         npcTiles.push({ x: npc.x, z: npc.z });
         if (i === 8) H.walkTo(p, p.x + 1, p.z - 3);
     });
     check('it closes in and hits', H.hits.filter(h => h.who === p.username).length > 0, true);
-    check('  only ever attacking from beside the player', swings.filter(x => x.who === 'npc').every(x => x.reach), true);
+    check(
+        '  only ever attacking from beside the player',
+        swings.filter(x => x.who === 'npc').every(x => x.reach),
+        true
+    );
     check('  and when the player walks under it, it steps out rather than hitting from on top', swings.filter(x => x.who === 'npc' && CoordGrid.intersects(x.tx, x.tz, 1, 1, x.px, x.pz, 3, 3)).length, 0);
     log.push(`    demon: ${npcTiles.map(t => `${t.x},${t.z}`).join(' ')}`);
     cleanup(p, npc);
@@ -482,7 +523,11 @@ for (const b of BOSSES) {
         check('from the diagonal: attacks, and never in melee', [diag.hits > 0, diag.melee.length], [true, 0]);
         // against the east face: melee reaches
         const face = bossRound(b.name, x, z, x + size, z, 16);
-        check('against its face: every melee swing reaches', face.melee.every(m => m.reach), true);
+        check(
+            'against its face: every melee swing reaches',
+            face.melee.every(m => m.reach),
+            true
+        );
         if (b.meleeAlways) check('  and it does swing in melee there', face.melee.length > 0, true);
     });
 }

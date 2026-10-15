@@ -34,7 +34,11 @@ for (const file of ifFiles('../content/scripts')) {
     let cur: Com | null = null;
     for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
         const head = /^\[(\w+)\]/.exec(line);
-        if (head) { cur = { name: head[1], file, x: 0, y: 0, w: 0, h: 0, scroll: 0, hasScroll: false }; coms.push(cur); continue; }
+        if (head) {
+            cur = { name: head[1], file, x: 0, y: 0, w: 0, h: 0, scroll: 0, hasScroll: false };
+            coms.push(cur);
+            continue;
+        }
         if (!cur) continue;
         const kv = /^(\w+)=(.*)$/.exec(line);
         if (!kv) continue;
@@ -43,8 +47,10 @@ for (const file of ifFiles('../content/scripts')) {
         else if (k === 'y') cur.y = Number(v);
         else if (k === 'width') cur.w = Number(v);
         else if (k === 'height') cur.h = Number(v);
-        else if (k === 'scroll') { cur.scroll = Number(v); cur.hasScroll = true; }
-        else if (k === 'layer') cur.layer = v;
+        else if (k === 'scroll') {
+            cur.scroll = Number(v);
+            cur.hasScroll = true;
+        } else if (k === 'layer') cur.layer = v;
         else if (k === 'type') cur.type = v;
     }
     windows.set(file, coms);
@@ -72,7 +78,7 @@ for (const [file, coms] of windows) {
         if (c.type !== 'layer' || !c.hasScroll) continue;
         scrollers++;
         if (c.x + c.w + SCROLLBAR_W > right) {
-            over.push(`${file.split(/[\/]/).pop()} ${c.name}: bar ends at ${c.x + c.w + SCROLLBAR_W}, the window at ${right}`);
+            over.push(`${file.split('/').pop()} ${c.name}: bar ends at ${c.x + c.w + SCROLLBAR_W}, the window at ${right}`);
         }
     }
 }

@@ -25,9 +25,11 @@ import Obj from '#/engine/entity/Obj.js';
 await H.boot();
 H.loginOrder();
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -46,8 +48,7 @@ const origAdd = (World as any).addObj.bind(World);
 // Eight killers side by side, so a run of N kills costs N/8 ticks of wall clock rather than N.
 // Spread far enough apart that no two of them can ever be handed the same ground pile.
 const PLAYERS = 8;
-const players = Array.from({ length: PLAYERS }, (_, i) =>
-    H.makePlayer('dpick' + i, 3200 + i * 16, 3230, 60 + i));
+const players = Array.from({ length: PLAYERS }, (_, i) => H.makePlayer('dpick' + i, 3200 + i * 16, 3230, 60 + i));
 H.tick(2);
 for (const p of players) {
     H.maxOut(p);
@@ -96,13 +97,10 @@ for (const [npc, label, each, oneIn] of CASES) {
     const { kills, picks } = roll(npc, each);
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
     if (oneIn === null) {
-        check(`${label}: no dragon pickaxe in ${kills} kills`, picks === 0,
-            { picks, was: 'a 1/128 drop before this change, so ~' + Math.round(kills / 128) + ' expected if it were still there', secs });
+        check(`${label}: no dragon pickaxe in ${kills} kills`, picks === 0, { picks, was: 'a 1/128 drop before this change, so ~' + Math.round(kills / 128) + ' expected if it were still there', secs });
     } else {
         const { exp, lo, hi } = band(kills, oneIn);
-        check(`${label}: dragon pickaxe 1/${oneIn} over ${kills} kills`, picks >= lo && picks <= hi,
-            { picks, expected: +exp.toFixed(1), window: [+lo.toFixed(1), +hi.toFixed(1)],
-              observed: picks ? '1/' + Math.round(kills / picks) : 'never', secs });
+        check(`${label}: dragon pickaxe 1/${oneIn} over ${kills} kills`, picks >= lo && picks <= hi, { picks, expected: +exp.toFixed(1), window: [+lo.toFixed(1), +hi.toFixed(1)], observed: picks ? '1/' + Math.round(kills / picks) : 'never', secs });
     }
 }
 

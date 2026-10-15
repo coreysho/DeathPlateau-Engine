@@ -28,12 +28,9 @@ const runProtected = (p: Player, name: string, args: unknown[] = []): void => {
     p.executeScript(ScriptRunner.init(script, p, null, args as never[]), true);
 };
 
-const charges = (p: Player): number =>
-    p.getVar(VarPlayerType.getByName('dfs_charges')!.id) as number;
-const wornShield = (p: Player): string =>
-    ObjType.get(p.getInventory(InvType.WORN)!.get(5)!.id).debugname!;
-const param = (objName: string, paramName: string): unknown =>
-    ObjType.get(ObjType.getId(objName)).params?.get(ParamType.getId(paramName));
+const charges = (p: Player): number => p.getVar(VarPlayerType.getByName('dfs_charges')!.id) as number;
+const wornShield = (p: Player): string => ObjType.get(p.getInventory(InvType.WORN)!.get(5)!.id).debugname!;
+const param = (objName: string, paramName: string): unknown => ObjType.get(ObjType.getId(objName)).params?.get(ParamType.getId(paramName));
 
 console.log('NOTHING STILL ASKS FOR THE SHIELD BY NAME');
 {
@@ -71,8 +68,7 @@ console.log('NOTHING STILL ASKS FOR THE SHIELD BY NAME');
 console.log('\nTHE PARAM IS ON EVERYTHING THAT SHOULD CARRY IT');
 {
     const carries = H.objNamesByParam('antidragon').sort();
-    check('  exactly the three shields', carries,
-        ['antidragonbreathshield', 'dragonfire_shield', 'dragonfire_shield_uncharged'].sort());
+    check('  exactly the three shields', carries, ['antidragonbreathshield', 'dragonfire_shield', 'dragonfire_shield_uncharged'].sort());
 }
 
 console.log('\nAND THE PROC AGREES WITH THE PARAM');
@@ -96,20 +92,18 @@ console.log('\nAND THE PROC AGREES WITH THE PARAM');
     H.despawn(p);
 }
 
-console.log('\nSTATS ARE OLD SCHOOL\'S');
+console.log("\nSTATS ARE OLD SCHOOL'S");
 {
-    check('  defence 20/25/22 melee, 10 magic, 22 ranged',
-        ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence']
-            .map(k => param('dragonfire_shield', k)),
-        [20, 25, 22, 10, 22]);
-    check('  attack -10 magic, -5 ranged',
-        [param('dragonfire_shield', 'magicattack'), param('dragonfire_shield', 'rangeattack')], [-10, -5]);
+    check(
+        '  defence 20/25/22 melee, 10 magic, 22 ranged',
+        ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence'].map(k => param('dragonfire_shield', k)),
+        [20, 25, 22, 10, 22]
+    );
+    check('  attack -10 magic, -5 ranged', [param('dragonfire_shield', 'magicattack'), param('dragonfire_shield', 'rangeattack')], [-10, -5]);
     check('  strength +7', param('dragonfire_shield', 'strengthbonus'), 7);
     check('  uncharged carries the same base', param('dragonfire_shield_uncharged', 'slashdefence'), 25);
-    check('  the charged one cannot be traded',
-        (ObjType.get(ObjType.getId('dragonfire_shield')) as unknown as { tradeable: boolean }).tradeable, false);
-    check('  and the uncharged one can',
-        (ObjType.get(ObjType.getId('dragonfire_shield_uncharged')) as unknown as { tradeable: boolean }).tradeable, true);
+    check('  the charged one cannot be traded', (ObjType.get(ObjType.getId('dragonfire_shield')) as unknown as { tradeable: boolean }).tradeable, false);
+    check('  and the uncharged one can', (ObjType.get(ObjType.getId('dragonfire_shield_uncharged')) as unknown as { tradeable: boolean }).tradeable, true);
     check('  the visage is worth what Old School says', ObjType.get(ObjType.getId('draconic_visage')).cost, 750000);
 }
 
@@ -119,7 +113,7 @@ console.log('\nCHARGES ARE WORTH +1 DEFENCE EACH');
     H.equip(p, { lhand: 'dragonfire_shield' });
     const slashAt = (charges: number): number => {
         H.setVar(p, 'dfs_charges', charges);
-        return H.runProc(p, '[proc,equip_get_bonuses]', [])[6];   // slashdefence
+        return H.runProc(p, '[proc,equip_get_bonuses]', [])[6]; // slashdefence
     };
     check('  empty, the shield is its base 25', slashAt(0), 25);
     check('  one charge is 26', slashAt(1), 26);
@@ -135,8 +129,7 @@ console.log('\nABSORBING A BREATH CHARGES IT');
     H.setVar(p, 'dfs_charges', 0);
     H.equip(p, { lhand: 'dragonfire_shield_uncharged' });
     runProtected(p, '[proc,dfs_absorb]');
-    check('  the first breath swaps the tradeable shield for the charged one',
-        wornShield(p), 'dragonfire_shield');
+    check('  the first breath swaps the tradeable shield for the charged one', wornShield(p), 'dragonfire_shield');
     check('  and leaves one charge on it', charges(p), 1);
     for (let i = 0; i < 60; i++) {
         runProtected(p, '[proc,dfs_absorb]');
@@ -152,15 +145,13 @@ console.log('\nAND EMPTYING GIVES THE TRADEABLE ONE BACK');
     H.setVar(p, 'dfs_charges', 30);
     runProtected(p, '[label,wearop2_dragonfire_shield]');
     check('  no charges left', charges(p), 0);
-    check('  and the shield is tradeable again',
-        wornShield(p), 'dragonfire_shield_uncharged');
+    check('  and the shield is tradeable again', wornShield(p), 'dragonfire_shield_uncharged');
     H.despawn(p);
 }
 
 console.log('\nTHE PIECES THE ACTIVATE IS BUILT FROM EXIST');
 {
-    for (const s of ['[label,wearop1_dragonfire_shield]', '[proc,dfs_find_target]', '[proc,dfs_fire]',
-                     '[label,dfs_smith_at_anvil]', '[label,oziach_dragonfire_shield]']) {
+    for (const s of ['[label,wearop1_dragonfire_shield]', '[proc,dfs_find_target]', '[proc,dfs_fire]', '[label,dfs_smith_at_anvil]', '[label,oziach_dragonfire_shield]']) {
         check('  ' + s, !!ScriptProvider.getByName(s), true);
     }
 }

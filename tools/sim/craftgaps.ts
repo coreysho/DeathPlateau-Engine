@@ -14,9 +14,8 @@
 //
 // Usage: npx tsx tools/sim/craftgaps.ts [smith|herb ...]
 import * as A from './a1lib.js';
-import { H, World, LocType, ObjType, ScriptProvider, ServerTriggerType, Player, check, R } from './a1lib.js';
+import { H, ObjType, Player, check, R } from './a1lib.js';
 import Component from '#/cache/config/Component.js';
-import InvType from '#/cache/config/InvType.js';
 import StructType from '#/cache/config/StructType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import VarNpcType from '#/cache/config/VarNpcType.js';
@@ -101,7 +100,11 @@ function clickInv(p: Player, comName: string, objName: string, op = 1): boolean 
     if (!inv) return false;
     const objId = ObjType.getId(objName);
     let slot = -1;
-    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === objId) { slot = i; break; }
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === objId) {
+            slot = i;
+            break;
+        }
     if (slot === -1) return false;
     return invBtn.handle(new InvButton(op, objId, slot, com), p);
 }
@@ -183,7 +186,7 @@ if (want('smith')) {
     const p = mkPlayer('sm_spit', 3222, 3218);
     H.give(p, 'spit_iron');
     H.give(p, 'raw_rabbit');
-    let from = A.mark();
+    const from = A.mark();
     A.useHeld(p, 'spit_iron', 'raw_rabbit');
     check('  iron spit on raw rabbit makes a skewered rabbit', H.invCount(p, 'spit_skewered_rabbit_meat'), 1);
     check('  and does not say nothing happens', A.said(p, from, 'Nothing interesting happens'), false);
@@ -220,7 +223,11 @@ if (want('herb')) {
     // screen is already written by the time drive() starts recording. Mark the interface log
     // before the click, not after.
     const ifMark = () => H.ifaces.length;
-    const ifSince = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text).map(i => i.text!);
+    const ifSince = (p: Player, from: number) =>
+        H.ifaces
+            .slice(from)
+            .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+            .map(i => i.text!);
     const sawIf = (p: Player, from: number, s: string) => ifSince(p, from).some(t => t.includes(s));
 
     const P = (n: string) => {
@@ -326,13 +333,13 @@ if (want('herb')) {
     lowbrew.setLevel(15 /* herblore */, 30);
     H.give(lowbrew, 'unicorn_horn_dust');
     H.give(lowbrew, 'iritvial');
-    let from = ifMark();
+    const from = ifMark();
     A.useHeld(lowbrew, 'unicorn_horn_dust', 'iritvial');
     check(' Herblore 30 cannot make superantipoison', sawIf(lowbrew, from, 'Herblore level of at least 48'), true);
     const noquest = mkPlayer('herb_noquest', 3222, 3218);
     H.give(noquest, 'eye_of_newt');
     H.give(noquest, 'guamvial');
-    let mfrom = A.mark();
+    const mfrom = A.mark();
     A.useHeld(noquest, 'eye_of_newt', 'guamvial');
     check(' and Druidic Ritual still gates the skill', A.said(noquest, mfrom, 'Druidic Ritual'), true);
     H.despawn(lowbrew, noquest);
@@ -363,10 +370,18 @@ if (want('herb')) {
     A.useHeld(anti, 'torstol', 'antivenom4');
     check('  torstol makes anti-venom+', H.invCount(anti, 'antivenom+4'), 1);
     // antidote+ sits in the cache beside antidote++ and has nothing behind it.
-    console.log(`  --   antidote+ objs: unfinished ${ObjType.getId('unfinished_antidote+') === -1 ? 'missing' : 'in the cache'}, antidote+4 ${ObjType.getId('antidote+4') === -1 ? 'missing' : 'in the cache'}, recipe ${brews.some(b => nm(b.mix) === 'antidote+4') ? 'exists' : 'NONE'}`);
+    console.log(
+        `  --   antidote+ objs: unfinished ${ObjType.getId('unfinished_antidote+') === -1 ? 'missing' : 'in the cache'}, antidote+4 ${ObjType.getId('antidote+4') === -1 ? 'missing' : 'in the cache'}, recipe ${brews.some(b => nm(b.mix) === 'antidote+4') ? 'exists' : 'NONE'}`
+    );
 
     // Each antipoison in the line actually clears poison, which is the only reason to make one.
-    for (const [obj, what] of [['3doseantipoison', 'antipoison'], ['3dose2antipoison', 'superantipoison'], ['antidote++4', 'antidote++'], ['antivenom4', 'anti-venom'], ['antivenom+4', 'anti-venom+']] as [string, string][]) {
+    for (const [obj, what] of [
+        ['3doseantipoison', 'antipoison'],
+        ['3dose2antipoison', 'superantipoison'],
+        ['antidote++4', 'antidote++'],
+        ['antivenom4', 'anti-venom'],
+        ['antivenom+4', 'anti-venom+']
+    ] as [string, string][]) {
         H.clearInv(anti);
         H.give(anti, obj);
         H.setVar(anti, 'poison', 20);
@@ -415,7 +430,10 @@ if (want('herb')) {
     const sev = ParamType.getId('poison_severity');
     for (const w of ['rune_dagger_p', 'rune_dagger_p+', 'rune_dagger_p++', 'rune_spear_p', 'rune_arrow_p', 'rune_arrow_p+', 'rune_arrow_p++', 'poison_bolt', 'poison_bolt+', 'poison_bolt++']) {
         const id = ObjType.getId(w);
-        if (id === -1) { console.log(`  --   ${w}: no such obj`); continue; }
+        if (id === -1) {
+            console.log(`  --   ${w}: no such obj`);
+            continue;
+        }
         const t = ObjType.get(id);
         console.log(`  ok   ${w.padEnd(18)} poison_severity ${t.params?.get(sev) ?? 'unset'}, stab bonus ${t.params ? 'params set' : 'no params'}`);
     }
@@ -439,7 +457,11 @@ if (want('herb')) {
     check('  the severity a poisoned dagger carries poisons an npc', (giant.getVar(varn.id) as number) > 0, true);
     const before = H.npcHits.length;
     for (let t = 0; t < 45 && giant.isActive; t++) H.tick(1);
-    check('  and the poison then does damage', H.npcHits.slice(before).some(h => h.type === 2), true);
+    check(
+        '  and the poison then does damage',
+        H.npcHits.slice(before).some(h => h.type === 2),
+        true
+    );
 
     const giant2 = H.addNpc('firegiant', 3224, 3218);
     H.attackNpc(fighter, giant2);

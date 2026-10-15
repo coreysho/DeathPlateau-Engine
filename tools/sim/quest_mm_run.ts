@@ -35,7 +35,7 @@ const marimArrest = (count: number): Step[] => [
     { go: [2771, 2797], r: 32, why: 'out into Marim' }
 ];
 // and IN as a monkey, which nobody looks at twice
-const marimIn = (): Step[] => [
+const _marimIn = (): Step[] => [
     { go: [2720, 2764], r: 250, why: 'the Marim gate' },
     { loc: 'mm_bamboo_largedoor', at: [2719, 2766], why: 'slip through' }
 ];
@@ -63,7 +63,7 @@ const m: Manifest = {
 
         { note: 'wiki steps 2-5: the glider to Gandius, monkey bones, the shipyard, and Caranock' },
         { setpos: [2956, 3030, 0], why: 'Gandius, by gnome glider from the top of the Grand Tree - the glider network is pre-existing world travel, not part of this quest' },
-        { go: [2955, 3022], r: 200, why: "the shipyard office, north through the gate" },
+        { go: [2955, 3022], r: 200, why: 'the shipyard office, north through the gate' },
         { talk: 'mm_caranock', why: 'he wants to see the seal' },
         { varis: 'mm_caranock', to: 1 },
 
@@ -71,7 +71,6 @@ const m: Manifest = {
         { setpos: [2465, 3497, 0], why: 'the Grand Tree, by glider again' },
         { talk: 'grandtree_narnode', why: 'report what Caranock said' },
         { has: 'mm_narnode_orders' },
-
 
         { note: 'real step 7: Daero in the Blurberry bar, through every chat option' },
         { go: [2466, 3494], why: 'the ladder up the Grand Tree' },
@@ -213,7 +212,10 @@ const m: Manifest = {
         { go: [2467, 3495], r: 64, why: 'the ladder down the Grand Tree' },
         { loc: 'laddermiddle', at: [2466, 3495], op: 3, why: 'climb down' },
         { level: 0 },
-        { setpos: [2608, 3290, 0], why: 'Ardougne. The Tree Gnome Stronghold has no walkable exit on level 0 in this build - you leave by gnome glider, which is world travel rather than this quest. The glider carries the monkey: gnome_glider.rs2 has no teleport gate at all.' },
+        {
+            setpos: [2608, 3290, 0],
+            why: 'Ardougne. The Tree Gnome Stronghold has no walkable exit on level 0 in this build - you leave by gnome glider, which is world travel rather than this quest. The glider carries the monkey: gnome_glider.rs2 has no teleport gate at all.'
+        },
         { go: [2596, 3275], r: 250, why: 'the zoo' },
         { talk: 'mm_monkey_minder', why: 'as a monkey, get into the cage' },
         { talk: 'mm_zoo_monkey', picks: [1], why: 'into the backpack' },

@@ -7,7 +7,7 @@
 //
 //   npx tsx tools/sim/quest_feud_run.ts
 import * as H from './harness.js';
-import { play, Manifest, Step } from './questrun.js';
+import { play, Manifest } from './questrun.js';
 
 await H.boot();
 

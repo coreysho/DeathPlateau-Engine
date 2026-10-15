@@ -70,12 +70,9 @@ const cells = bankCom.width * bankCom.height;
 const TABS = 8;
 const padding = TABS * (bankCom.width - 1);
 
-console.log(`bank: ${bankInv.size} slots, grid ${bankCom.width}x${bankCom.height} = ${cells} cells, ` +
-    `ClientSocket.out = ${outBytes} bytes`);
+console.log(`bank: ${bankInv.size} slots, grid ${bankCom.width}x${bankCom.height} = ${cells} cells, ` + `ClientSocket.out = ${outBytes} bytes`);
 
-check(cells >= bankInv.size + padding,
-    `the grid has a cell for every bank slot plus the worst-case tab padding: ` +
-    `${cells} >= ${bankInv.size} + ${padding}`);
+check(cells >= bankInv.size + padding, 'the grid has a cell for every bank slot plus the worst-case tab padding: ' + `${cells} >= ${bankInv.size} + ${padding}`);
 
 const enc = new UpdateInvFullEncoder();
 
@@ -96,31 +93,26 @@ const fresh = () => new Inventory(InvType.getId('bank'), bankInv.size);
 
 // ---- the trim
 const empty = fresh();
-check(sizeField(empty) === 0 && bytes(empty) === 4,
-    `an empty bank transmits no slots at all: size ${sizeField(empty)}, ${bytes(empty)} bytes`);
+check(sizeField(empty) === 0 && bytes(empty) === 4, `an empty bank transmits no slots at all: size ${sizeField(empty)}, ${bytes(empty)} bytes`);
 
 const one = fresh();
 one.items[0] = { id: 1, count: 1 };
-check(sizeField(one) === 1 && bytes(one) === 4 + 3,
-    `one item in slot 0 transmits one slot: size ${sizeField(one)}, ${bytes(one)} bytes`);
+check(sizeField(one) === 1 && bytes(one) === 4 + 3, `one item in slot 0 transmits one slot: size ${sizeField(one)}, ${bytes(one)} bytes`);
 
 const gap = fresh();
 gap.items[0] = { id: 1, count: 1 };
 gap.items[9] = { id: 2, count: 1 };
-check(sizeField(gap) === 10,
-    `a gap in the middle is still transmitted - the trim only cuts the tail: size ${sizeField(gap)}`);
+check(sizeField(gap) === 10, `a gap in the middle is still transmitted - the trim only cuts the tail: size ${sizeField(gap)}`);
 
 const last = fresh();
 last.items[bankInv.size - 1] = { id: 1, count: 1 };
-check(sizeField(last) === bankInv.size,
-    `an item in the last slot transmits the whole inv: size ${sizeField(last)} of ${bankInv.size}`);
+check(sizeField(last) === bankInv.size, `an item in the last slot transmits the whole inv: size ${sizeField(last)} of ${bankInv.size}`);
 
 // a placeholder is an Item with count 0. If the trim treated it as empty, a bank whose tail is all
 // placeholders would come back with them silently gone.
 const ph = fresh();
 ph.items[100] = { id: 42, count: 0 };
-check(sizeField(ph) === 101,
-    `a placeholder (count 0) counts as occupied: size ${sizeField(ph)}`);
+check(sizeField(ph) === 101, `a placeholder (count 0) counts as occupied: size ${sizeField(ph)}`);
 
 // ---- the fit
 const full = fresh();
@@ -129,19 +121,15 @@ for (let i = 0; i < bankInv.size; i++) {
     full.items[i] = { id: 4151, count: 2_000_000_000 };
 }
 const worst = bytes(full) + HEADER;
-check(worst <= outBytes,
-    `the worst case - all ${bankInv.size} slots holding a stack over 255 - fits in the buffer: ` +
-    `${worst} <= ${outBytes} bytes`);
-check(enc.test(new UpdateInvFull(comId, full)) === bytes(full),
-    `test() predicts what encode() writes: ${enc.test(new UpdateInvFull(comId, full))} vs ${bytes(full)}`);
+check(worst <= outBytes, `the worst case - all ${bankInv.size} slots holding a stack over 255 - fits in the buffer: ` + `${worst} <= ${outBytes} bytes`);
+check(enc.test(new UpdateInvFull(comId, full)) === bytes(full), `test() predicts what encode() writes: ${enc.test(new UpdateInvFull(comId, full))} vs ${bytes(full)}`);
 
 // and the reason the trim earns its keep: the common case is nothing like the worst case
 const typical = fresh();
 for (let i = 0; i < 200; i++) {
     typical.items[i] = { id: 1000 + i, count: 1 };
 }
-check(bytes(typical) === 4 + 200 * 3,
-    `a 200-item bank costs 200 slots, not ${bankInv.size}: ${bytes(typical)} bytes`);
+check(bytes(typical) === 4 + 200 * 3, `a 200-item bank costs 200 slots, not ${bankInv.size}: ${bytes(typical)} bytes`);
 
 console.log();
 console.log(bad === 0 ? 'ALL PASS' : `${bad} FAILED`);

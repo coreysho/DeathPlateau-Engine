@@ -51,10 +51,12 @@ const origWrite = (Player.prototype as any).write;
     return origWrite.call(this, m);
 };
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const text = (p: Player, com: string) => last[p.username]?.[com]?.text;
@@ -92,8 +94,13 @@ check('total level', text(a, 'questtab_summary:total'), '2,277');
 check('total XP past the millions carry', text(a, 'questtab_summary:xp'), 'Total XP: @whi@299,791,913');
 
 console.log('SWITCHING');
-const pages: [string, string][] = [['summary', 'questtab_summary'], ['quests', 'questlist'], ['collection', 'questtab_collection'],
-    ['pstats', 'questtab_pstats'], ['sstats', 'questtab_sstats']];
+const pages: [string, string][] = [
+    ['summary', 'questtab_summary'],
+    ['quests', 'questlist'],
+    ['collection', 'questtab_collection'],
+    ['pstats', 'questtab_pstats'],
+    ['sstats', 'questtab_sstats']
+];
 const badBefore = bad;
 for (const [, from] of pages) {
     for (const [key, to] of pages) {
@@ -107,7 +114,11 @@ check('%questtab_page follows the last one pressed (Server -> Player Statistics)
 
 console.log('COLLECTION LOG');
 H.ifButton(a, 'questtab_summary:tab_collection');
-check('four rows, named from the log', [0, 1, 2, 3].map(i => text(a, `questtab_collection:row${i}_name`)), ['Bosses', 'Clues', 'Minigames', 'Other']);
+check(
+    'four rows, named from the log',
+    [0, 1, 2, 3].map(i => text(a, `questtab_collection:row${i}_name`)),
+    ['Bosses', 'Clues', 'Minigames', 'Other']
+);
 check('  nothing obtained: red, and the bar slid all the way out', [text(a, 'questtab_collection:row0_count')?.slice(0, 7), pos(a, 'questtab_collection:row0_fill')], ['@red@0 ', [-168, 0]]);
 check('  nothing logged yet', text(a, 'questtab_collection:latest'), 'Nothing yet');
 const head = ObjType.getId('barrows_ahrim_head');
@@ -123,7 +134,11 @@ check('  the summary counts it too', (H.ifButton(a, 'questtab_collection:tab_sum
 
 console.log('COUNTERS');
 H.ifButton(a, 'questtab_summary:tab_pstats');
-check('a fresh account: no deaths, kills or tasks', ['deaths', 'pvp', 'npcs', 'slayer'].map(k => text(a, `questtab_pstats:${k}`)), ['0', '0', '0', '0']);
+check(
+    'a fresh account: no deaths, kills or tasks',
+    ['deaths', 'pvp', 'npcs', 'slayer'].map(k => text(a, `questtab_pstats:${k}`)),
+    ['0', '0', '0', '0']
+);
 check('  XP locked: No, in green', text(a, 'questtab_pstats:locked'), '@gre@No');
 check('  Drop rates: the never-chosen mode reads as Realism, +25% in green', text(a, 'questtab_pstats:drops'), '@gre@+25%');
 check('  right-aligned in the value column', pos(a, 'questtab_pstats:drops'), [84 - p12.stringWidth('+25%'), 0]);
@@ -150,7 +165,11 @@ a.executeScript(ScriptRunner.init(ScriptProvider.getByName('[proc,complete_task]
 check('a Slayer task completed', H.getVar(a, 'slayer_tasks_done'), 1);
 H.setVar(a, 'player_playtime', 1440 * 33 + 60 * 6 + 37);
 H.ifButton(a, 'questtab_summary:tab_pstats');
-check('the page shows them', ['deaths', 'pvp', 'npcs', 'slayer', 'playtime'].map(k => text(a, `questtab_pstats:${k}`)), ['0', '1', '1', '1', '33d 6h 37m']);
+check(
+    'the page shows them',
+    ['deaths', 'pvp', 'npcs', 'slayer', 'playtime'].map(k => text(a, `questtab_pstats:${k}`)),
+    ['0', '1', '1', '1', '33d 6h 37m']
+);
 H.setVar(a, 'slayer_points', 1234);
 H.ifButton(a, 'questtab_summary:tab_pstats');
 check('  and the Slayer points', text(a, 'questtab_pstats:slpoints'), '1,234');
@@ -162,11 +181,13 @@ check('a minute online is a minute played', H.getVar(a, 'player_playtime'), befo
 
 console.log('BANK');
 const bank = InvType.getId('bank');
-const coins = ObjType.getId('coins'), whip = ObjType.getId('abyssal_whip'), rune = ObjType.getId('rune_platebody');
+const coins = ObjType.getId('coins'),
+    whip = ObjType.getId('abyssal_whip'),
+    rune = ObjType.getId('rune_platebody');
 a.invAdd(bank, coins, 180_000_000);
 a.invAdd(bank, whip, 3);
 a.invAdd(bank, rune, 10);
-const k = Math.trunc(180_000_000 / 1000) + Math.trunc(3 * ObjType.get(whip).cost / 1000) + Math.trunc(10 * ObjType.get(rune).cost / 1000);
+const k = Math.trunc(180_000_000 / 1000) + Math.trunc((3 * ObjType.get(whip).cost) / 1000) + Math.trunc((10 * ObjType.get(rune).cost) / 1000);
 H.ifButton(a, 'questtab_summary:tab_pstats');
 check(`the bank's worth in obj cost (${commas(k)}K)`, text(a, 'questtab_pstats:bank'), `@yel@${Math.trunc(k / 1000)}.${Math.trunc((k % 1000) / 100)}M`);
 a.invAdd(bank, coins, 1_900_000_000);
@@ -178,8 +199,7 @@ console.log('SERVER');
 H.ifButton(a, 'questtab_summary:tab_sstats');
 check('players online', text(a, 'questtab_sstats:online'), `Players online: @gre@${World.getTotalPlayers()}`);
 // US Eastern, as the platform's own time zone data has it: "10:05 AM EDT"
-const eastern = (d: Date) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })
-    .format(d).replace(/\s/g, ' ');
+const eastern = (d: Date) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' }).format(d).replace(/\s/g, ' ');
 check('the time in US Eastern', text(a, 'questtab_sstats:time'), `Server time: @gre@${eastern(new Date())}`);
 // world_minute counts from 1 January 2025, UTC; around both of 2026's changes, and a year of hours
 const EPOCH = Date.UTC(2025, 0, 1);
@@ -195,7 +215,10 @@ for (let t = Date.UTC(2025, 0, 2, 3, 7); t < Date.UTC(2031, 0, 1); t += 3 * 3600
 check('  every 3h17m from 2025 to 2030 agrees with the time zone database', clockBad, 0);
 check('uptime from map_clock', text(a, 'questtab_sstats:uptime'), `Uptime: @gre@${Math.floor(World.currentTick / 100)} mins`);
 // a sim player is not a NetworkPlayer, so the modal is read off the player rather than the wire
-const modal = () => { const m = (a as any).modalMain; return m === -1 ? null : Component.get(m).comName; };
+const modal = () => {
+    const m = (a as any).modalMain;
+    return m === -1 ? null : Component.get(m).comName;
+};
 H.ifButton(a, 'questtab_sstats:act_bosses');
 check('View boss kill counts opens the boss kill window', modal(), 'boss_kills');
 H.ifButton(a, 'questtab_sstats:act_collog');
@@ -205,7 +228,7 @@ check('  as do the Character Summary button', modal(), 'collection_log');
 H.ifButton(a, 'questtab_sstats:act_drops');
 check('View monster drop tables opens the monster browser', modal(), 'npc_browser');
 H.ifButton(a, 'npc_browser:letter_g');
-check('  a letter scrolls the list to its heading', last[a.username]['npc_browser:list']?.scroll! > 0, true);
+check('  a letter scrolls the list to its heading', (last[a.username]['npc_browser:list']?.scroll ?? 0) > 0, true);
 H.ifButton(a, 'npc_browser:m0');
 check('  a monster opens its drop table', [modal(), text(a, 'npc_drops:title')], ['npc_drops', 'Aberrant specter']);
 check('    with Back to list showing', last[a.username]['npc_drops:back']?.hidden, false);
@@ -235,7 +258,16 @@ check('back on the quest list, the rows are coloured again: started yellow, not 
 H.ifButton(a, 'questtab_sstats:act_mode');
 const chat = (a as any).modalChat;
 check('Game mode & XP rate explains it in a message box', chat === -1 ? null : Component.get(chat).comName?.split(':')[0].replace(/\d$/, ''), 'message');
-check('  which names the mode and the rate', H.ifaces.filter(i => i.who === a.username && i.kind === 'text').slice(-3).map(i => i.text).join(' ').includes('Realism: 1x experience'), true);
+check(
+    '  which names the mode and the rate',
+    H.ifaces
+        .filter(i => i.who === a.username && i.kind === 'text')
+        .slice(-3)
+        .map(i => i.text)
+        .join(' ')
+        .includes('Realism: 1x experience'),
+    true
+);
 
 if (process.env.QT_DUMP) {
     fs.writeFileSync(process.env.QT_DUMP, JSON.stringify(last[a.username], null, 1));

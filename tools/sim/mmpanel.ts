@@ -15,19 +15,18 @@ import InvType from '#/cache/config/InvType.js';
 
 await H.boot();
 
-const PIECES = 24;
+const _PIECES = 24;
 
 // The slide is [opheld5,_trail_puzzle_piece] - an op 5 on a piece inside the puzzle interface's own
 // inventory, which the client sends as an InvButton. bankux.ts drives the bank the same way.
 const inv = InvType.getId('trail_puzzleinv');
-
 
 console.log('=== THE PANEL, in the hangar');
 {
     const p: any = H.makePlayer('panel', 2586, 4508);
     H.tick(2);
     p.teleport(2586, 4508, 0);
-    H.setVar(p, 'mm_main', 3);              // ^mm_in_hangar
+    H.setVar(p, 'mm_main', 3); // ^mm_in_hangar
     H.tick(1);
 
     H.clearLogs();
@@ -48,8 +47,7 @@ console.log('=== THE PANEL, in the hangar');
     check('a solved board reads as solved', H.runProc(p, '[proc,trail_puzzle_complete]'), [1]);
     const inHangar = p.x >= 2560 && p.x <= 2623 && p.z >= 4480 && p.z <= 4543;
     check('  and the player is inside the hangar zone the hook checks', inHangar, true);
-    check('  so the panel is still shut until the last piece moves',
-        H.getVarBit(p, 'mm_hangar_puzzle_complete'), 0);
+    check('  so the panel is still shut until the last piece moves', H.getVarBit(p, 'mm_hangar_puzzle_complete'), 0);
 }
 
 console.log('\n=== THE SAME PUZZLE AS A CLUE, in Varrock, which must NOT open anything');
@@ -57,7 +55,7 @@ console.log('\n=== THE SAME PUZZLE AS A CLUE, in Varrock, which must NOT open an
     const p: any = H.makePlayer('cluer', 3210, 3424);
     H.tick(2);
     p.teleport(3210, 3424, 0);
-    H.setVar(p, 'mm_main', 3);              // the same stage, nowhere near the hangar
+    H.setVar(p, 'mm_main', 3); // the same stage, nowhere near the hangar
     H.tick(1);
     for (let i = 0; i < 24; i++) {
         p.invSet(inv, ObjType.getId('trail_slidingpuzzleb' + String(i + 1).padStart(2, '0')), 1, i);
@@ -76,8 +74,8 @@ console.log('\n=== GLOUGH, through the bars of his cage');
     const p: any = H.makePlayer('bribe', 2479, 3465);
     H.tick(2);
     const g = findNpc('grandtree_glough', p);
-    p.teleport(g.x, g.z + 1, g.level);      // against the bars, which is where a player stands
-    H.setVar(p, 'grandtree', 160);          // The Grand Tree complete
+    p.teleport(g.x, g.z + 1, g.level); // against the bars, which is where a player stands
+    H.setVar(p, 'grandtree', 160); // The Grand Tree complete
     H.setVar(p, 'mm_main', 3);
     H.give(p, 'coins', 200000);
     H.tick(2);

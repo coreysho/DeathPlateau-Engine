@@ -12,15 +12,17 @@ import ParamType from '#/cache/config/ParamType.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const obj = (n: string) => ObjType.getId(n);
 // the pet's own line; the collection log's "New item added" can come after it
-const told = (p: any, text: string) => H.mesgs.some(m => m.who === p.username && m.text === text) ? text : null;
+const told = (p: any, text: string) => (H.mesgs.some(m => m.who === p.username && m.text === text) ? text : null);
 const follower = (p: any) => {
     const o = H.getVar(p, 'follower_obj');
     return o === -1 ? null : ObjType.get(o).debugname;
@@ -34,7 +36,10 @@ const atProbita = (p: any) => {
 };
 // through the killer's queue, as a death table gives one - a queue has the protected access the
 // follower varps need, which a bare proc run from here does not
-const receive = (p: any, pet: string) => { H.runProc(p, '[proc,pet_receive_later]', [obj(pet), 0]); H.tick(2); };
+const receive = (p: any, pet: string) => {
+    H.runProc(p, '[proc,pet_receive_later]', [obj(pet), 0]);
+    H.tick(2);
+};
 
 const p: any = H.makePlayer('pets_a', 3222, 3218, 70);
 H.tick(3);
@@ -78,7 +83,6 @@ H.tick(2);
 check('a pet handed over by ~pet_receive_later follows the killer a tick later', follower(q), 'bosspet_kbd_item');
 check('  and %pet_pending is cleared', H.getVar(q, 'pet_pending'), -1);
 
-
 // ---------------------------------------------------------------- every pet, both ways round
 // A pet is two configs that have to name each other: the item's follower_id and the npc's
 // pet_item_id. Miss one and nothing complains - the item simply drops like any other and never
@@ -94,7 +98,10 @@ console.log('\nEVERY BOSS PET NAMES ITS OTHER HALF');
         if (!t || t.category !== PET || t.certlink !== -1) continue;
         n++;
         const npc = t.params?.get(ParamType.getId('follower_id')) ?? null;
-        if (npc === null) { bad.push(`${t.debugname} has no follower_id`); continue; }
+        if (npc === null) {
+            bad.push(`${t.debugname} has no follower_id`);
+            continue;
+        }
         const back = (NpcType.get(npc) as any)?.params?.get(ParamType.getId('pet_item_id')) ?? null;
         if (back !== i) bad.push(`${t.debugname} -> ${NpcType.get(npc)?.debugname} does not point back`);
     }

@@ -43,10 +43,12 @@ import { PlayerInfoProt } from '#/network/rsbuf/prot.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -163,7 +165,11 @@ console.log('OUTSIDE THE SET, SPACES, LENGTH');
 check('{ | } ~ dropped, runs of spaces closed up', send('a{b|c}d~e    f'), all3('Abcde f'));
 {
     const long = 'z'.repeat(120);
-    check('a line is cut at 80 characters', Object.values(send(long)).map(s => s.length), [80, 80, 80]);
+    check(
+        'a line is cut at 80 characters',
+        Object.values(send(long)).map(s => s.length),
+        [80, 80, 80]
+    );
 }
 check('an empty line (or only dropped characters) is not sent', send('~~~'), all3(''));
 
@@ -185,7 +191,11 @@ console.log('::YELL - A GAME MESSAGE, READ FOR TAGS');
     const said = line.substring(line.indexOf(': ') + 2);
     check('the yell arrives, case kept, with every "@" as LITERAL_AT', said, 'Hi \u007fcr2\u007f and \u007fred\u007fRED a_b <x>');
     check('  and no "@xxx@" tag survives in what the player typed', /@...@/.test(said), false);
-    check('  and LITERAL_AT is measured as wide as "@"', [0, 1, 2].map(f => FontType.get(f).stringWidth('\u007f') === FontType.get(f).stringWidth('@')), [true, true, true]);
+    check(
+        '  and LITERAL_AT is measured as wide as "@"',
+        [0, 1, 2].map(f => FontType.get(f).stringWidth('\u007f') === FontType.get(f).stringWidth('@')),
+        [true, true, true]
+    );
     H.despawn(watcher);
 }
 
@@ -198,7 +208,10 @@ console.log('THE CENSOR');
     const word = ['shit', 'fuck', 'bastard', 'arse'].find(w => WordEnc.filter(w) === '*'.repeat(w.length));
     check('the censor, switched on, has a word to catch', word !== undefined, true);
     if (word) {
-        const mixed = word.split('').map((c, i) => (i % 2 ? c.toUpperCase() : c)).join('');
+        const mixed = word
+            .split('')
+            .map((c, i) => (i % 2 ? c.toUpperCase() : c))
+            .join('');
         const r = send(`Look ${mixed} PvP ${word.toUpperCase()} :D`);
         const masked = `Look ${'*'.repeat(word.length)} PvP ${'*'.repeat(word.length)} :D`;
         check(`  "${mixed}" and "${word.toUpperCase()}" are masked, the rest keeps its case`, r, all3(masked));

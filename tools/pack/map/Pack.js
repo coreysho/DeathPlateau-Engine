@@ -1,5 +1,6 @@
 import fs from 'fs';
 
+import NpcTypeStatic from '#/cache/config/NpcType.js';
 import { compressGz } from '#/io/GZip.js';
 import Packet from '#/io/Packet.js';
 
@@ -10,14 +11,22 @@ import { getArtifactManifestPath, getArtifactSourceStamp, loadArtifactManifest, 
 import { MapPack, shouldBuild, shouldBuildFile } from '#tools/pack/PackFile.js';
 import { didFileSetChange } from '#tools/pack/FsCache.js';
 
-let npcTypePromise = null;
+// STATICALLY, and the lint rule above this file says why: package.json's "#/*" key is invalid to
+// Node, so a dynamic import('#/...') is handed to Node's own resolver, and the module graph it pulls
+// in spawns a worker thread that throws ERR_INVALID_MODULE_SPECIFIER out of a nextTick - past every
+// catch. That cost three sims their output silently before the rule was written, and this file was
+// the last dynamic one left. Importing the module is not loading the data: the two callers below
+// still call NpcType.load('data/pack') when they reach the point where the pack exists, and this
+// wrapper keeps that one-load-per-run shape without the import.
+let npcTypeLoaded = false;
 
-async function getNpcType() {
-    if (!npcTypePromise) {
-        npcTypePromise = import('#/cache/config/NpcType.js').then(module => module.default);
+function getNpcType() {
+    if (!npcTypeLoaded) {
+        NpcTypeStatic.load('data/pack');
+        npcTypeLoaded = true;
     }
 
-    return npcTypePromise;
+    return NpcTypeStatic;
 }
 
 function packKey(level, x, z) {
@@ -188,8 +197,7 @@ export async function collectMapModelFlags(modelFlags) {
         return;
     }
 
-    const NpcType = await getNpcType();
-    NpcType.load('data/pack');
+    const NpcType = getNpcType();
 
     for (let id = 0; id < MapPack.max; id++) {
         const name = MapPack.getById(id);
@@ -458,8 +466,7 @@ export async function packMaps(cache, modelFlags) {
         artifactManifestDirty = true;
 
         if (!NpcType) {
-            NpcType = await getNpcType();
-            NpcType.load('data/pack');
+            NpcType = getNpcType();
         }
 
         updateModelFlags(map.npc, modelFlags, NpcType);

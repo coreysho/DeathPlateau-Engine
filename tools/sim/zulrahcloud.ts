@@ -6,7 +6,7 @@
 //
 //   npx tsx tools/sim/zulrahcloud.ts
 import * as H from './harness.ts';
-import { World, LocType, check, R } from './a1lib.ts';
+import { LocType, check, R } from './a1lib.ts';
 
 await H.boot();
 
@@ -23,18 +23,14 @@ check('  it animates', t.anim !== -1 && t.anim !== undefined, true);
 console.log('WHERE IT LANDS');
 // loc_add takes the SOUTH-WEST tile, so a 3x3 centred on the cloud tile starts one south and west.
 // Get this wrong and the gas sits a tile off the damage it does - which nobody would see in a log.
-const CLOUD = { x: 2268, z: 3073, level: 0 };   // any free tile; the arithmetic is what is on trial
+const CLOUD = { x: 2268, z: 3073, level: 0 }; // any free tile; the arithmetic is what is on trial
 const sw = { x: CLOUD.x - 1, z: CLOUD.z - 1 };
 const covered: string[] = [];
 for (let dx = 0; dx < t.width; dx++) {
     for (let dz = 0; dz < t.length; dz++) covered.push(`${sw.x + dx},${sw.z + dz}`);
 }
 check('  a 3x3 from the south-west tile covers the cloud tile', covered.includes(`${CLOUD.x},${CLOUD.z}`), true);
-check('  and is centred on it', [
-    covered.includes(`${CLOUD.x - 1},${CLOUD.z - 1}`),
-    covered.includes(`${CLOUD.x + 1},${CLOUD.z + 1}`),
-    covered.length,
-], [true, true, 9]);
+check('  and is centred on it', [covered.includes(`${CLOUD.x - 1},${CLOUD.z - 1}`), covered.includes(`${CLOUD.x + 1},${CLOUD.z + 1}`), covered.length], [true, true, 9]);
 
 console.log('AND IT IS THE MODEL THE OWNER WANTED');
 // 240 x 124 x 240: about two tiles across and under one tall. The thing it replaced was 42x50x74

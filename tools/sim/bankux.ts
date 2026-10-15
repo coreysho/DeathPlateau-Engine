@@ -91,7 +91,7 @@ const invSlotOf = (p: Player, objName: string) => {
 };
 
 // The quantity buttons, in the order their ^bank_qty_* constants are numbered.
-const QTY_BUTTONS = ['bankqty1', 'bankqty5', 'bankqty10', 'bankqtyx', 'bankqtyall'];
+const _QTY_BUTTONS = ['bankqty1', 'bankqty5', 'bankqty10', 'bankqtyx', 'bankqtyall'];
 const WITHDRAW_ALL_FIVE = ['Withdraw 1', 'Withdraw 5', 'Withdraw 10', 'Withdraw X', 'Withdraw All'];
 
 let bucket = 1;
@@ -109,7 +109,11 @@ console.log('THE BANK MENU OFFERS ALL FIVE AMOUNTS WHATEVER THE BUTTONS SAY');
     const p = player('bankux_menu');
     openBank(p);
     check('a fresh bank opens on Withdraw 1 and offers all five', opsOf(p, 'bank_main:bank'), WITHDRAW_ALL_FIVE);
-    check('...and the side pack mirrors it', opsOf(p, 'bank_side:inv'), WITHDRAW_ALL_FIVE.map(o => o.replace('Withdraw', 'Deposit')));
+    check(
+        '...and the side pack mirrors it',
+        opsOf(p, 'bank_side:inv'),
+        WITHDRAW_ALL_FIVE.map(o => o.replace('Withdraw', 'Deposit'))
+    );
 
     // Every mode: the selected amount is option 1 (the left click) and the other four follow in
     // OSRS's own order. THE POINT OF THE ROUND is that "Withdraw 1" is in every one of these lists.
@@ -123,7 +127,11 @@ console.log('THE BANK MENU OFFERS ALL FIVE AMOUNTS WHATEVER THE BUTTONS SAY');
         H.ifButton(p, `bank_main:${button}`);
         H.tick(1);
         check(`${button} sets the five options to`, opsOf(p, 'bank_main:bank'), want[button]);
-        check(`...and the pack's to`, opsOf(p, 'bank_side:inv'), want[button].map(o => o.replace('Withdraw', 'Deposit')));
+        check(
+            "...and the pack's to",
+            opsOf(p, 'bank_side:inv'),
+            want[button].map(o => o.replace('Withdraw', 'Deposit'))
+        );
     }
 
     // X is the odd one out: the SELECTED entry spells the stored amount out, the explicit entry
@@ -132,9 +140,8 @@ console.log('THE BANK MENU OFFERS ALL FIVE AMOUNTS WHATEVER THE BUTTONS SAY');
     H.setVar(p, 'bankquantity', 3); // ^bank_qty_x, without the p_countdialog the button would run
     H.runProc(p, '[proc,bank_apply_quantity]');
     H.tick(1);
-    check('with X set to 250 the menu reads', opsOf(p, 'bank_main:bank'),
-        ['Withdraw 250', 'Withdraw 1', 'Withdraw 5', 'Withdraw 10', 'Withdraw All']);
-    check('...and the X button\'s face says', H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && i.com === com('bank_main:bankqtyxtext')).pop()?.text, '250');
+    check('with X set to 250 the menu reads', opsOf(p, 'bank_main:bank'), ['Withdraw 250', 'Withdraw 1', 'Withdraw 5', 'Withdraw 10', 'Withdraw All']);
+    check("...and the X button's face says", H.ifaces.filter(i => i.who === p.username && i.kind === 'text' && i.com === com('bank_main:bankqtyxtext')).pop()?.text, '250');
     check('a stored X of 250 still leaves Withdraw 1 in the menu', opsOf(p, 'bank_main:bank').includes('Withdraw 1'), true);
 
     // and the wording is never a lie: op -> amount comes from the same proc the labels do
@@ -154,8 +161,7 @@ console.log('AND THE WITHDRAW-1 ENTRY REALLY TAKES ONE');
     // put 100 feathers in the bank through the real deposit op, which also exercises the pack's
     // rewritten options: option 5 with qty 1 selected is "Deposit All".
     H.give(p, 'feather', 100);
-    check('Deposit All from the pack is accepted', invButton.handle(
-        new InvButton(5, ObjType.getId('feather'), invSlotOf(p, 'feather'), com('bank_side:inv')), p), true);
+    check('Deposit All from the pack is accepted', invButton.handle(new InvButton(5, ObjType.getId('feather'), invSlotOf(p, 'feather'), com('bank_side:inv')), p), true);
     H.tick(1);
     check('100 feathers are banked', p.getInventory(InvType.getId('bank'))!.get(bankSlotOf(p, 'feather'))?.count, 100);
 
@@ -166,15 +172,13 @@ console.log('AND THE WITHDRAW-1 ENTRY REALLY TAKES ONE');
     const ops = opsOf(p, 'bank_main:bank');
     const one = ops.indexOf('Withdraw 1') + 1;
     check('the menu has a Withdraw 1 entry while All is selected', one > 0, true);
-    check('Withdraw 1 is accepted', invButton.handle(
-        new InvButton(one, ObjType.getId('feather'), bankSlotOf(p, 'feather'), com('bank_main:bank')), p), true);
+    check('Withdraw 1 is accepted', invButton.handle(new InvButton(one, ObjType.getId('feather'), bankSlotOf(p, 'feather'), com('bank_main:bank')), p), true);
     H.tick(1);
     check('exactly one feather came out', H.invCount(p, 'feather'), 1);
     check('...and ninety-nine are still banked', p.getInventory(InvType.getId('bank'))!.get(bankSlotOf(p, 'feather'))?.count, 99);
 
     // the left click still means All
-    check('the left click (op 1) is accepted', invButton.handle(
-        new InvButton(1, ObjType.getId('feather'), bankSlotOf(p, 'feather'), com('bank_main:bank')), p), true);
+    check('the left click (op 1) is accepted', invButton.handle(new InvButton(1, ObjType.getId('feather'), bankSlotOf(p, 'feather'), com('bank_main:bank')), p), true);
     H.tick(1);
     check('...and takes the lot', H.invCount(p, 'feather'), 100);
 }
@@ -214,8 +218,7 @@ console.log('THE BANK REMEMBERS ITS SETTINGS ACROSS A CLOSE AND A LOGIN');
     for (const [what, varp, value] of settings) {
         check(`${what} survives closing and reopening the bank`, H.getVar(p, varp), value);
     }
-    check('...and reopening re-sends all five options, which if_setinvop does not keep',
-        opsOf(p, 'bank_main:bank'), ['Withdraw All', 'Withdraw 1', 'Withdraw 5', 'Withdraw 10', 'Withdraw X']);
+    check('...and reopening re-sends all five options, which if_setinvop does not keep', opsOf(p, 'bank_main:bank'), ['Withdraw All', 'Withdraw 1', 'Withdraw 5', 'Withdraw 10', 'Withdraw X']);
 
     // A LOGOUT AND BACK IN. Player.save writes only perm varps, so this is the real test of the
     // fix: a temp varp comes back as 0 here however the session left it.

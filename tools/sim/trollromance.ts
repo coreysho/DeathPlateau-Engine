@@ -32,14 +32,17 @@ import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 await H.boot();
 H.loginOrder();
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -53,7 +56,11 @@ const origNpcAnim = (Npc.prototype as any).playAnimation;
 
 const stage = (p: Player) => H.getVar(p, 'troll_love');
 const comName = (id: number) => Component.get(id).comName ?? String(id);
-const textsSince = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text').map(i => ({ com: comName(i.com), text: i.text ?? '' }));
+const textsSince = (p: Player, from: number) =>
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => ({ com: comName(i.com), text: i.text ?? '' }));
 /** Every line of dialogue (chatnpc/chatplayer/mesbox/objbox) set since `from`, joined. */
 const chatSince = (p: Player, from: number) =>
     textsSince(p, from)
@@ -157,7 +164,8 @@ function ride(p: Player, x: number, z: number) {
     const path: string[] = [];
     const steps: number[] = [];
     H.opLoc(p, x, z, 'trollromance_piste_walk_barrier_down', 1);
-    let lx = p.x, lz = p.z;
+    let lx = p.x,
+        lz = p.z;
     for (let t = 0; t < 60; t++) {
         H.tick(1);
         if (p.x !== lx || p.z !== lz) {
@@ -237,7 +245,7 @@ H.give(p, 'iron_bar');
 H.give(p, 'rope');
 said = talkTo(p, dunstan, ['Talk about a quest', 'Where can I get wax', 'Where can I get swamp tar', 'What else', 'See you!']);
 check('with them: a sled', [stage(p), H.invCount(p, 'trollromance_toboggon'), H.invCount(p, 'yew_logs'), H.invCount(p, 'iron_bar'), H.invCount(p, 'rope')], [22, 1, 0, 0, 0]);
-for (const line of ['starts making a sled', 'it will need to be waxed', 'like a cake tin', 'look for some bees', "south of Lumbridge", 'cake tin to store the wax in', 'Thank you, come again.']) {
+for (const line of ['starts making a sled', 'it will need to be waxed', 'like a cake tin', 'look for some bees', 'south of Lumbridge', 'cake tin to store the wax in', 'Thank you, come again.']) {
     truthy(`  "${line}"`, said.includes(line), '');
 }
 said = talkTo(p, dunstan, ['Talk about a quest', 'See you!']);
@@ -278,7 +286,11 @@ H.tick(1);
 H.opLoc(p, 2772, 3835, 'trollromance_piste_walk_barrier_down', 1);
 H.tick(3);
 drain(p);
-truthy('without the sled worn: "You need to have a waxed sled equipped!"', H.mesgs.some(m => m.who === p.username && m.text === 'You need to have a waxed sled equipped!'), '');
+truthy(
+    'without the sled worn: "You need to have a waxed sled equipped!"',
+    H.mesgs.some(m => m.who === p.username && m.text === 'You need to have a waxed sled equipped!'),
+    ''
+);
 H.opheld(p, 'trollromance_toboggon_waxed', 2);
 H.tick(1);
 truthy('Ride puts the sled on', worn(p, 'trollromance_toboggon_waxed'), '');
@@ -287,9 +299,20 @@ let r = ride(p, 2772, 3835);
 console.log('    path', r.path.join(' '));
 check('it ends in the clearing, 0_43_59_38_18', [p.x, p.z], abs(0, 43, 59, 38, 18).slice(0, 2));
 truthy('every leg of the ride a two-tile run (a real run, not a teleport a tick)', r.legs >= 15 && r.runs === r.legs, { legs: r.legs, runs: r.runs });
-check('  said on the way', H.says.slice(s0).filter(s => s.who === p.username).map(s => s.text), ['Here we go!', 'That was quite a ride!']);
+check(
+    '  said on the way',
+    H.says
+        .slice(s0)
+        .filter(s => s.who === p.username)
+        .map(s => s.text),
+    ['Here we go!', 'That was quite a ride!']
+);
 check('  25 Agility', xp(p, PlayerStat.AGILITY) - agi0, 25);
-truthy('  sounds: start, loop, jump, stop', ['sled_start', 'sled_loop', 'sled_jump', 'sled_stop'].every(n => H.soundsFor(p.username).some(s => s.synth === n)), '');
+truthy(
+    '  sounds: start, loop, jump, stop',
+    ['sled_start', 'sled_loop', 'sled_jump', 'sled_stop'].every(n => H.soundsFor(p.username).some(s => s.synth === n)),
+    ''
+);
 
 // the Trollweiss, with no room and with
 const [fx, fz] = abs(0, 43, 59, 25, 8);
@@ -316,7 +339,11 @@ p.teleport(ux + 1, uz, 0);
 H.tick(1);
 H.opLoc(p, ux, uz, 'trollromance_piste_walk_barrier_up', 1);
 H.tick(3);
-truthy('slide at the bottom of a slope: "Nothing interesting happens."', H.mesgs.some(m => m.who === p.username && m.text === 'Nothing interesting happens.'), '');
+truthy(
+    'slide at the bottom of a slope: "Nothing interesting happens."',
+    H.mesgs.some(m => m.who === p.username && m.text === 'Nothing interesting happens.'),
+    ''
+);
 const agi1 = xp(p, PlayerStat.AGILITY);
 s0 = H.says.length;
 const a0 = H.anims.length;
@@ -327,14 +354,28 @@ console.log('    path', r.path.join(' '));
 check('it ends in the rocks above the tunnel, 0_43_58_41_13', [p.x, p.z], abs(0, 43, 58, 41, 13).slice(0, 2));
 truthy('a two-tile run all the way to the crash', r.legs >= 20 && r.runs === r.legs, { legs: r.legs, runs: r.runs });
 check('  down the chute to its end before the crash', r.path.slice(-2, -1), [abs(0, 43, 58, 41, 17).slice(0, 2).join(',')]);
-check('  said on the way', H.says.slice(s0).filter(s => s.who === p.username).map(s => s.text), ['Here we go!', "O-oh, this doesn't look good!"]);
-const crashAnims = H.anims.slice(a0).filter(a => a.who === p.username).map(a => SeqType.get(a.seq).debugname);
+check(
+    '  said on the way',
+    H.says
+        .slice(s0)
+        .filter(s => s.who === p.username)
+        .map(s => s.text),
+    ['Here we go!', "O-oh, this doesn't look good!"]
+);
+const crashAnims = H.anims
+    .slice(a0)
+    .filter(a => a.who === p.username)
+    .map(a => SeqType.get(a.seq).debugname);
 check('  the crash and getting up are seen (the sled pose lets them through)', [crashAnims.includes('trollromance_toboggan_crashing'), crashAnims.includes('trollromance_toboggan_getup'), (p as any).animProtect], [true, true, 1]);
 drain(p);
 said = chatSince(p, from);
 truthy('  "And I thought snow was soft..." / "...softer than the rock I hit."', said.includes('And I thought snow was soft...') && said.includes('softer than the rock I hit'), said);
 check('  25 Agility', xp(p, PlayerStat.AGILITY) - agi1, 25);
-truthy('  sledcrash sound', H.soundsFor(p.username).some(s => s.synth === 'sledcrash'), '');
+truthy(
+    '  sledcrash sound',
+    H.soundsFor(p.username).some(s => s.synth === 'sledcrash'),
+    ''
+);
 
 console.log('LEAVING WITH THE SLED');
 const [tx, tz] = abs(0, 43, 58, 43, 5);
@@ -386,7 +427,8 @@ truthy('journal: I have to defeat Arrg', j.includes('I have to defeat @dre@Arrg'
 // Arrg lands both his attacks: stand in the arena on 99 Hitpoints and 1 Defence and take it.
 p.setLevel(PlayerStat.DEFENCE, 1);
 p.setLevel(PlayerStat.HITPOINTS, 99);
-const n0 = npcAnims.length, h0 = H.hits.length;
+const n0 = npcAnims.length,
+    h0 = H.hits.length;
 talkTo(p, arrg, ['I am here to kill you!']);
 const inArena = Math.abs(p.x - 2914) < 20 && Math.abs(p.z - 3611) < 20;
 truthy('"let\'s take it outside": off to the arena', inArena, [p.x, p.z, p.level]);
@@ -407,8 +449,16 @@ const landedAfter = (ticks: number[], lo: number, hi: number) => ticks.filter(t 
 console.log(`    ${melee.length} swings, ${thrown.length} rocks, ${myHits.length} hits, biggest ${Math.max(...myHits.map(h => h.damage))}`);
 truthy('he swings in melee, and it lands', melee.length > 0 && landedAfter(melee, 0, 1) > 0, [melee.length, landedAfter(melee, 0, 1)]);
 truthy('he throws rocks, and they land', thrown.length > 0 && landedAfter(thrown, 1, 3) > 0, [thrown.length, landedAfter(thrown, 1, 3)]);
-truthy('  the rock is the thrower trolls\' (sound troll_with_rock_attack)', H.soundsFor(p.username).some(s => s.synth === 'troll_with_rock_attack'), '');
-truthy('  no hit over his max of 38', myHits.every(h => h.damage <= 38), Math.max(...myHits.map(h => h.damage)));
+truthy(
+    "  the rock is the thrower trolls' (sound troll_with_rock_attack)",
+    H.soundsFor(p.username).some(s => s.synth === 'troll_with_rock_attack'),
+    ''
+);
+truthy(
+    '  no hit over his max of 38',
+    myHits.every(h => h.damage <= 38),
+    Math.max(...myHits.map(h => h.damage))
+);
 // and he dies
 if (foe) {
     foe.levels[3] = 1;
@@ -428,15 +478,22 @@ truthy('Arrg afterwards: "Oh mighty man-warrior, please no hurt Arrg."', said.in
 // =============================================================================================
 console.log('ENDING');
 H.clearInv(p);
-const agi2 = xp(p, PlayerStat.AGILITY), str2 = xp(p, PlayerStat.STRENGTH);
+const agi2 = xp(p, PlayerStat.AGILITY),
+    str2 = xp(p, PlayerStat.STRENGTH);
 from = H.ifaces.length;
 said = talkTo(p, ug);
 check('Ug: quest complete', stage(p), 45);
 truthy('  "Ug go to Aga now."', said.includes('Ug go to Aga now.'), said.slice(-80));
 check('  the gems: 1 diamond, 2 rubies, 4 emeralds', [H.invCount(p, 'uncut_diamond'), H.invCount(p, 'uncut_ruby'), H.invCount(p, 'uncut_emerald')], [1, 2, 4]);
 check('  8,000 Agility and 4,000 Strength', [xp(p, PlayerStat.AGILITY) - agi2, xp(p, PlayerStat.STRENGTH) - str2], [8000, 4000]);
-const scroll = textsSince(p, from).filter(t => t.com.startsWith('inter_238')).map(t => t.text);
-check('  the scroll', scroll.filter(t => t.length > 0), ['You have completed the\\nTroll Romance Quest!', '2 Quest Points', '8,000 Agility XP', '4,000 Strength XP', '7 Uncut Gems']);
+const scroll = textsSince(p, from)
+    .filter(t => t.com.startsWith('inter_238'))
+    .map(t => t.text);
+check(
+    '  the scroll',
+    scroll.filter(t => t.length > 0),
+    ['You have completed the\\nTroll Romance Quest!', '2 Quest Points', '8,000 Agility XP', '4,000 Strength XP', '7 Uncut Gems']
+);
 j = journal(p);
 truthy('journal: Ug finally found the courage... QUEST COMPLETE!', j.includes('Ug finally found the courage') && j.includes('QUEST COMPLETE!'), j.slice(-140));
 said = talkTo(p, ug);
