@@ -570,11 +570,17 @@ guard('myreque2', () => {
     check('down into the cellar, beside the ladder, not in it', [at(p), walkable(0, p.x, p.z)], [[3490, 9631, 0], true]);
     check('the cellar reaches Veliaf and the chest', [reachesNear(0, p.x, p.z, 3494, 9628), reachesNear(0, p.x, p.z, 3493, 9632)], [true, true]);
     talk(p, 'burgh_rescue_veliaf_hurtz_talk');
-    check('Veliaf moves in and sends you to Paterdomus: stage 80', gv(p, 'myreque_2_quest'), 80);
+    // THE ESCORT GOES BETWEEN THESE TWO LINES NOW. Veliaf used to send you straight to Paterdomus
+    // (stage 80) and the library key used to sit in an invented chest in this cellar. Ivan Strom's
+    // walk is what reaches the temple since, and Drezel - the man who has been sitting on the key -
+    // hands it over at the end of it (areas/area_mausoleum/scripts/drezel.rs2, m2_drezel_takes_ivan),
+    // so stage 72 is "Veliaf has asked, and Ivan is in the cellar". tools/sim/myrequeescort.ts drives
+    // that step in full; this block takes the shortcut past it rather than driving it twice.
+    check('Veliaf moves in and hands Ivan over: stage 72', gv(p, 'myreque_2_quest'), 72);
+    sv(p, 'myreque_2_quest', 80); // ^m2_temple, which the escort reaches
+    H.give(p, 'burgh_key'); // and Drezel's key with it
     p.teleport(3492, 9631, 0);
     H.tick(1);
-    op(p, 3493, 9632, 'burgh_chest_closed', 1);
-    check('the cellar chest: the library key', H.invCount(p, 'burgh_key'), 1);
     op(p, 3490, 9632, 'burgh_inn_basement_ladderup', 1);
     check('the cellar ladder climbs back out into the inn beside the trapdoor', [at(p), walkable(0, p.x, p.z)], [[3491, 3232, 0], true]);
 
@@ -604,7 +610,17 @@ guard('myreque2', () => {
     H.tick(1);
     talk(p, 'route_veliaf_hurtz');
     H.tick(3);
-    check('Veliaf: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3], [110, true]);
+    // AND THE QUEST NO LONGER ENDS HERE. Opening the tomb used to be the last step; the Rod of
+    // Ivandis - the reward the quest guide names the quest for - is the ending since, and Veliaf
+    // reading the plaster fragment is where that recipe starts: 102, then the mould (104), the
+    // casting (106), the well (108), and 110 with the quest points. tools/sim/myrequerod.ts drives
+    // the chain, so again this takes the shortcut and then asks Veliaf for the ending itself.
+    check('Veliaf reads the fragment and the recipe starts: stage 102', gv(p, 'myreque_2_quest'), 102);
+    sv(p, 'myreque_2_quest', 108); // ^m2_charged, which the rod chain reaches
+    H.give(p, 'burgh_rod_command_final_10');
+    talk(p, 'route_veliaf_hurtz');
+    H.tick(3);
+    check('the charged rod, handed over and handed straight back: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3, H.invCount(p, 'burgh_rod_command_final_10')], [110, true, 1]);
 });
 
 // =============================================================================== Regicide

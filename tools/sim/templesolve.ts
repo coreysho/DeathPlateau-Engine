@@ -232,12 +232,13 @@ function route(segment: string) {
         }
     }
     if (!best) return null;
-    // THE WALK BACK NEEDS A VISITED SET, and without one this sim hangs. parent is written every
-    // time a cheaper cost is found, and the graph is full of ZERO-weight edges (a pillar the beam
-    // passes straight through is free), so two keys can end up each other's parent at the same
-    // cost - and then this loop never ends. It spun for twenty-five minutes of CPU on a sweep run,
-    // printing nothing, until the per-sim cap killed it. A truncated route fails a check loudly;
-    // a loop that never returns fails nothing and takes the sweep's slot with it.
+    // THE WALK BACK KEEPS A VISITED SET. parent is written every time a cheaper cost is found, and
+    // the graph is full of ZERO-weight edges (a pillar the beam passes straight through is free),
+    // so two keys could end up each other's parent at the same cost and this loop would never end.
+    // That is a guard, not a cure: the twenty-five minute hang on sweep5 that it was first written
+    // for was the missing process.exit at the foot of this file, which the log proved by printing
+    // every route and then stopping. The guard stays because the tie it describes is real and a
+    // truncated route fails a check loudly where a loop that never returns fails nothing.
     const steps: string[] = [];
     const seen = new Set<number>();
     let k: number | undefined = best[0];
@@ -265,3 +266,10 @@ for (const [what, seg] of [
     console.log(what + ': ' + (r ? r.cost + ' mirrors' : 'no route'));
     if (r) for (const s of r.steps) console.log('   ' + s);
 }
+
+// AND THE EXIT, WHICH IS WHY THIS SIM HUNG. The parent walk above was not the cause: sweep5's log
+// shows every line of this file's output, the last route included, and then twenty-five minutes of
+// nothing until the per-sim cap killed it. The world keeps worker threads and timers alive, so a
+// sim that runs off the end of the file never finishes - templerooms, templetiles, gwdmap and
+// feudhouse all carry this same line and the same comment, and this file was simply missing it.
+process.exit(0);
