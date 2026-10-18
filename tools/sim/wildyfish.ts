@@ -16,11 +16,12 @@
 // dragons, far enough apart to be a queue, and - the one that matters most - a Harpoon click that
 // actually starts at every one of them.
 //
-// IT ALSO PRINTS THE WATER OVERLAY under each spot, straight out of maps/*.jm2, because that is
-// what the last move was about: `o6` is the whole tile, `o6;shape` and `o6;shape;rotation` are the
-// beach tiles that cut a tile diagonally (tools/unpack/map/Unpack.ts:204-210 writes all three
-// forms), and an npc draws at the centre of its tile. It is printed rather than asserted because
-// how much of a tile shape 3 or 4 covers is a question for the client, not for this sim.
+// AND IT ASSERTS THAT EACH ONE DRAWS OVER WATER, which is what the last move was about and what
+// this sim could only print until the client was read. The overlay under a tile comes out of
+// maps/*.jm2 as `o6`, `o6;shape` or `o6;shape;rotation` (tools/unpack/map/Unpack.ts:204-210 writes
+// all three forms) and an npc draws at the CENTRE of its tile, so the question is whether the
+// centre of that tile is overlay or underlay. CENTRE_WATER below is that question answered from
+// the client's own geometry rather than from a chart or from a screenshot - see the comment on it.
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
@@ -87,6 +88,24 @@ const onFoot = (x: number, z: number, tx: number, tz: number, radius = 60) => {
     return false;
 };
 
+// WHICH MAP SHAPES PUT WATER UNDER THE MIDDLE OF THE TILE, computed from the client's own two
+// tables - javaclient/src/main/java/jagex2/dash3d/Ground.java field925 (the vertices each shape
+// uses) and field926 (its triangles, each tagged 0 for underlay and 1 for overlay) - by asking
+// which triangles contain the tile's centre point.
+//
+// THE OFF-BY-ONE IS THE WHOLE TRICK. World3D.method279 treats its shape argument as 0 = a plain
+// underlay tile, 1 = a plain OVERLAY tile and 2+ = the shaped tables; and World.java:491 passes
+// `overlayShape + 1`. So map shape 0 is a whole water tile (which is what `o6` with no shape
+// means) and map shape n indexes the client's table at n + 1. Reading the tables without that
+// shift says a plain `o6` is dry, which is exactly backwards.
+//
+// Rotation never changes the answer: it turns the tile about its own centre, so the centre is
+// water or land whatever the rotation is. The share of the tile that is water is carried beside it
+// only to be printed - a spot on a half-water tile is not wrong, it is just closer to the shore.
+const CENTRE_WATER = new Set([0, 1, 4, 5, 6, 8, 10]);
+const WATER_PCT: Record<number, number> = { 0: 100, 1: 50, 2: 25, 3: 25, 4: 75, 5: 75, 6: 50, 7: 12.5, 8: 87.5, 9: 34.4, 10: 65.6, 11: 18.8 };
+/** The shape out of an overlay token: 'o6' is shape 0, 'o6;4' is 4, 'o6;3;1' is 3. */
+const shapeOf = (overlay: string) => (overlay.includes(';') ? parseInt(overlay.split(';')[1]) : 0);
 /** The water overlay token under a tile, read out of the map source: 'o6', 'o6;4', 'o6;3;1'... */
 const overlayAt = (x: number, z: number) => {
     const file = `${Environment.BUILD_SRC_DIR}/maps/m${Math.floor(x / 64)}_${Math.floor(z / 64)}.jm2`;
@@ -121,8 +140,24 @@ console.log('== the spots, wherever they have been moved to this time');
     const placed = spots();
     check('four of them, and nowhere else', placed.length, 4);
     for (const [x, z] of placed) {
-        console.log(`    ${x},${z}  Wilderness ${Math.floor((z - 3520) / 8) + 1}  overlay ${overlayAt(x, z)}  banks ${JSON.stringify(banks(x, z))}`);
+        const ov = overlayAt(x, z);
+        const sh = shapeOf(ov);
+        console.log(`    ${x},${z}  Wilderness ${Math.floor((z - 3520) / 8) + 1}  overlay ${ov} (shape ${sh}, ${WATER_PCT[sh] ?? '?'}% water, centre ${CENTRE_WATER.has(sh) ? 'water' : 'LAND'})  banks ${JSON.stringify(banks(x, z))}`);
     }
+    // THE ONE THE GAME REPORTED: "close, but the bubbles were on the sand". An npc draws at the
+    // centre of its tile, so a spot on a quarter-water beach tile stands on the dry three quarters
+    // however much water is in the tile. This is the check that says so - 3385,3687 was o6;3 and
+    // failed it, and nothing above would have caught that.
+    check(
+        'every one of them draws over water and not over the sand beside it',
+        placed.filter(([x, z]) => !CENTRE_WATER.has(shapeOf(overlayAt(x, z)))),
+        []
+    );
+    check(
+        'and each one is water, not the swamp water next to it',
+        placed.filter(([x, z]) => !/^o6(;|$)/.test(overlayAt(x, z))),
+        []
+    );
     // THE SHAPE EVERY CACHE FISHING SPOT HAS: the npc stands on a blocked water tile and the bank
     // is beside it, sharing an edge, so the spot is reachable from the shore and from nowhere else.
     check(
