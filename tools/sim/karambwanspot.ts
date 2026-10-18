@@ -177,13 +177,40 @@ console.log('\nAND AT 65 IT CATCHES, OUT OF THE SPOT RATHER THAN OUT OF THE INVE
         }
     }
     check('it catches karambwan from the spot', caught >= 1, true);
-    // 80 and not Old School's 50: quest_tbwt.rs2 has paid 80 since it was written, and the spot
-    // reaches the same catch rather than carrying a second number of its own. What the wiki says
-    // is 50 now and 105 before a 2016 rebalance, so 2006 would have been 105 - a decision for the
-    // owner, and this check is here so that whichever way it goes, both doors move together.
-    check('  at the same experience the hand-dropped vessel pays, 80', caught > 0 ? xpForCatches / caught : 0, 80);
+    // 50, which is Old School's figure and now the struct's. It was 80 - a number of mine - until
+    // the owner called it; the original 2004 value is 105 and RuneScape 3 still pays that, but this
+    // build follows Old School wherever it has the choice. The check reads whatever the catch pays
+    // through BOTH doors, so the spot can never drift from the hand-dropped vessel.
+    check('  at the same experience the hand-dropped vessel pays, 50', caught > 0 ? xpForCatches / caught : 0, 50);
     check('  and the empty vessel comes back every time', H.invCount(p, VESSEL), 1);
     console.log(`    (${caught} karambwan in ${tries} drops at 65 Fishing)`);
+    H.despawn(p);
+}
+
+console.log('\nAND THE EXPERIENCE GOES THROUGH THE FISHING FUNNEL, NOT STRAIGHT INTO THE STAT');
+{
+    // stat_advance(fishing, 800) was what this label used to call, which is a fish that pays no
+    // attention to the angler's outfit and can never give up a Heron. ~fishing_xp is the funnel
+    // every other spot uses, and the whole set is worth 2.5% there (^outfit_xp_bonus 25), so a
+    // 50-experience catch in full angler pays 51.2 and a catch that skipped the funnel pays 50.
+    const spot = spots('lubufu_karambwan')[0];
+    const p = fisher('karaangler', spot, 65);
+    H.equip(p, { hat: 'angler_hat', torso: 'angler_top', legs: 'angler_waders', feet: 'angler_boots' });
+    H.tick(1);
+    let paid = 0;
+    for (let i = 0; i < 40 && paid === 0; i++) {
+        H.give(p, LOADED, 1);
+        H.tick(1);
+        const xp0 = p.stats[PlayerStat.FISHING];
+        H.opNpc(p, spot, 1);
+        for (let t = 0; t < 20 && H.invCount(p, LOADED) > 0; t++) H.tick(1);
+        H.tick(2);
+        if (H.invCount(p, 'tbwt_raw_karambwan') > 0) {
+            paid = p.stats[PlayerStat.FISHING] - xp0;
+            break;
+        }
+    }
+    check('a catch in full angler pays 51.2 and not a flat 50', paid, 512);
     H.despawn(p);
 }
 
