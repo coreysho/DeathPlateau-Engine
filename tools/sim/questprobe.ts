@@ -3,6 +3,11 @@
 // that is not spawned at all has to be told apart from one that is simply far away.
 //
 //   npx tsx tools/sim/questprobe.ts npc:ahoy_velorina loc:ahoy_town_barrier
+//   npx tsx tools/sim/questprobe.ts sq:51-53,45-50 loc:feud_cactus_row
+//
+// A loc has to be hunted for, so the sweep is a band of mapsquares and `sq:` moves it. Editing the
+// numbers in the source instead - which this did twice, once for Ape Atoll and once for
+// Pollnivneach - leaves the next caller sweeping somebody else's quest and reading NOT PLACED.
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -10,8 +15,19 @@ import LocType from '#/cache/config/LocType.js';
 
 await H.boot();
 
+// the band to sweep for locs: mapsquare x from..to, mapsquare z from..to
+let sweep = [42, 43, 42, 43];
+for (const arg of process.argv.slice(2)) {
+    if (!arg.startsWith('sq:')) continue;
+    const [xs, zs] = arg.slice(3).split(',');
+    const [x0, x1] = xs.split('-').map(Number);
+    const [z0, z1] = zs.split('-').map(Number);
+    sweep = [x0, x1 ?? x0, z0, z1 ?? z0];
+}
+
 for (const arg of process.argv.slice(2)) {
     const [kind, name] = arg.split(':');
+    if (kind === 'sq') continue;
     if (kind === 'npc') {
         const id = NpcType.getId(name);
         if (id === -1) {
@@ -31,9 +47,10 @@ for (const arg of process.argv.slice(2)) {
             continue;
         }
         const where: string[] = [];
-        // every zone in the world is too much; sweep the mapsquares Morytania and Ape Atoll use
-        for (let mx = 42; mx <= 43; mx++) {
-            for (let mz = 42; mz <= 43; mz++) {
+        // every zone in the world is too much, so the sweep is a band - Morytania and Ape Atoll by
+        // default, and anywhere else with sq:MX0-MX1,MZ0-MZ1 in front of the names.
+        for (let mx = sweep[0]; mx <= sweep[1]; mx++) {
+            for (let mz = sweep[2]; mz <= sweep[3]; mz++) {
                 for (let lvl = 0; lvl < 4; lvl++) {
                     for (let zx = 0; zx < 8; zx++) {
                         for (let zz = 0; zz < 8; zz++) {

@@ -32,14 +32,17 @@ H.loginOrder();
 
 const only = process.argv.slice(2);
 const want = (s: string) => only.length === 0 || only.includes(s);
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, wantv: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(wantv);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(wantv)})`}`);
 };
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -74,6 +77,13 @@ function player(name: string, x: number, z: number, level = 0) {
     H.clearInv(p);
     H.setVar(p, 'viking', 10); // The Fremennik Trials
     H.setVar(p, 'heroquest', 15); // Heroes' Quest
+    // NO RANDOM EVENTS, which is shape three in tools/sim/README.md. This sim mines, chops, fishes
+    // and farms its way across Miscellania for a hundred and forty checks, which is exactly the
+    // kind of run an anti-macro event lands in the middle of: a sweep run had the pirate turn up
+    // between the coal and Magnus's own rock ("Right. Ye asked for this.") and the next loc click
+    // printed nothing, so a working message read as a missing one.
+    // ~macro_event_allowed refuses to spawn one while %macro_event is already set.
+    H.setVar(p, 'macro_event', 1);
     H.tick(1);
     return p;
 }
@@ -115,7 +125,7 @@ function drive(p: Player, picks: Pick[] = [], counts: number[] = [], from = H.if
         if (open.startsWith('multi')) {
             const buttons = p.resumeButtons.filter((id: number) => (Component.get(id).comName ?? '').startsWith(open + ':'));
             const opts = buttons.map(id => comText(p, id));
-            const pick = picks.length ? picks.shift() : autoAnswer ?? undefined;
+            const pick = picks.length ? picks.shift() : (autoAnswer ?? undefined);
             if (pick === undefined) throw new Error('unexpected menu: ' + opts.join(' / '));
             let idx: number;
             if (typeof pick === 'number') idx = pick - 1;
@@ -130,7 +140,10 @@ function drive(p: Player, picks: Pick[] = [], counts: number[] = [], from = H.if
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.map(String).join(','));
     if (p.activeScript && process.env.MISC_DEBUG) console.log('    [still running: ' + p.activeScript.script.name + ' state ' + p.activeScript.execution + ']');
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 const said = (lines: string[], s: string) => lines.some(l => l.includes(s));
 
@@ -142,7 +155,14 @@ function npcAt(name: string, x: number, z: number, level: number): Npc {
 /** Talk to an npc, standing beside it first. */
 function talk(p: Player, npc: Npc, picks: Pick[] = [], counts: number[] = [], op = 1): string[] {
     const from = H.ifaces.length;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -160,7 +180,14 @@ function slotOf(p: Player, objName: string) {
 /** Use an inventory item on an npc: OpNpcUHandler. */
 function useOnNpc(p: Player, npc: Npc, objName: string, picks: Pick[] = []): string[] {
     const from = H.ifaces.length;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         p.clearPendingAction();
@@ -198,10 +225,18 @@ function settle(p: Player) {
 function op(p: Player, x: number, z: number, locName: string, n = 1, picks: Pick[] = []) {
     settle(p);
     H.tick(4); // a door or stall mid-change is not there to click
-    const from = H.ifaces.length, m = H.mesgs.length;
+    const from = H.ifaces.length,
+        m = H.mesgs.length;
     H.opLoc(p, x, z, locName, n);
     const out = drive(p, picks, [], from);
-    if (process.env.MISC_DEBUG) console.log(`    [op ${locName} from ${p.x},${p.z}: ${H.mesgs.slice(m).filter(x => x.who === p.username).map(x => x.text).join(' | ')}]`);
+    if (process.env.MISC_DEBUG)
+        console.log(
+            `    [op ${locName} from ${p.x},${p.z}: ${H.mesgs
+                .slice(m)
+                .filter(x => x.who === p.username)
+                .map(x => x.text)
+                .join(' | ')}]`
+        );
     return out;
 }
 const locAt = (name: string, level: number, x: number, z: number) => World.getLoc(x, z, level, LocType.getId(name));
@@ -216,7 +251,11 @@ const opened = (p: Player, from: number, _ifname: string) => {
     return H.ifaces.slice(from).some(i => i.who === p.username && i.kind === 'text' && i.com === coffers) && (p as any).modalMain !== -1;
 };
 
-const VARGAS = [2501, 3859, 1], GHRIM = [2499, 3857, 1], BRAND = [2502, 3852, 1], ASTRID = [2502, 3868, 1], SIGRID = [2612, 3877, 1];
+const VARGAS = [2501, 3859, 1],
+    GHRIM = [2499, 3857, 1],
+    BRAND = [2502, 3852, 1],
+    ASTRID = [2502, 3868, 1],
+    SIGRID = [2612, 3877, 1];
 const vargas = () => npcAt('misc_king_vargas', VARGAS[0], VARGAS[1], 1);
 const ghrim = () => npcAt('misc_advisor_ghrim', GHRIM[0], GHRIM[1], 1);
 const brand = () => npcAt('misc_prince_brand', BRAND[0], BRAND[1], 1);
@@ -288,7 +327,12 @@ if (want('talk')) {
         const got = talk(p, n, [...picks]);
         truthy(`${name}: "${line}"`, said(got, line), got.find(l => l.includes(line)) ?? got.slice(0, 3));
         // if_openmain_side, which the harness does not record; the shop's title is written first
-        if (name.endsWith('monger')) truthy('  ...and opens the shop', H.ifaces.slice(f).some(i => i.who === p.username && i.com === Component.getId('shop_template:com_76')), '');
+        if (name.endsWith('monger'))
+            truthy(
+                '  ...and opens the shop',
+                H.ifaces.slice(f).some(i => i.who === p.username && i.com === Component.getId('shop_template:com_76')),
+                ''
+            );
         p.closeModal();
     }
     const g = talk(p, npcAt('misc_ulby_doorguard', 2505, 3856, 1));
@@ -301,13 +345,14 @@ if (want('doors')) {
     const p = player('miscdoors', 2506, 3855, 1);
     H.setVar(p, 'heroquest', 0);
     let got = op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
-    check('not a Heroes\' Guild member: the guard stops you outside', [at(p), said(got, 'If you become a member of the Heroes\' Guild')], [[2506, 3856, 1], true]);
+    check("not a Heroes' Guild member: the guard stops you outside", [at(p), said(got, "If you become a member of the Heroes' Guild")], [[2506, 3856, 1], true]);
     check('  and the door stays shut', locAt('misc_ulby_throneroomdoor', 1, 2506, 3857) !== null, true);
     H.setVar(p, 'heroquest', 15);
     settle(p);
     H.opLoc(p, 2506, 3857, 'misc_ulby_throneroomdoor', 1);
     // through the guard's dialogue, then watch the door itself
-    let swung = false, shutWhileOpen = true;
+    let swung = false,
+        shutWhileOpen = true;
     for (let t = 0; t < 40; t++) {
         const s = p.activeScript;
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
@@ -324,7 +369,13 @@ if (want('doors')) {
     check('a hero: "Then you may pass." and in', [at(p), vb(p, 'misc_grantedaudience')], [[2506, 3857, 1], 1]);
     check('  the door swings open onto the corridor while you pass (the inactive door, turned)', [swung, shutWhileOpen], [true, true]);
     check('  and shuts behind you', [locAt('misc_ulby_throneroomdoor', 1, 2506, 3857) !== null, locAt('misc_ulby_throneroomdoor_inactive', 1, 2506, 3856) === null], [true, true]);
-    truthy('  with the door sound', H.soundsFor(p.username).some(s => s.synth === 'door_open'), H.soundsFor(p.username).map(s => s.synth).slice(-3));
+    truthy(
+        '  with the door sound',
+        H.soundsFor(p.username).some(s => s.synth === 'door_open'),
+        H.soundsFor(p.username)
+            .map(s => s.synth)
+            .slice(-3)
+    );
     op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
     check('out again, no questions', at(p), [2506, 3856, 1]);
     got = op(p, 2506, 3857, 'misc_ulby_throneroomdoor');
@@ -332,13 +383,23 @@ if (want('doors')) {
     p.teleport(2506, 3862, 1);
     H.tick(1);
     op(p, 2506, 3863, 'misc_ulby_throneroomdoor');
-    check('the north door: out to Astrid\'s side', at(p), [2506, 3864, 1]);
+    check("the north door: out to Astrid's side", at(p), [2506, 3864, 1]);
     op(p, 2506, 3863, 'misc_ulby_throneroomdoor');
     check('and in', at(p), [2506, 3863, 1]);
 }
 
 // =============================================================================================
-const BRAND_RIGHT = ['Be still, my heart.', 'They don\'t understand your poetry as I do.', 'You will be the greatest bard!', 'How poetic.', 'How inspiring!', 'A much nobler pursuit, to be sure.', 'That was lovely. I\'m touched!', 'I wouldn\'t presume to have the skill...', 'I\'m glad to hear it.'];
+const BRAND_RIGHT = [
+    'Be still, my heart.',
+    "They don't understand your poetry as I do.",
+    'You will be the greatest bard!',
+    'How poetic.',
+    'How inspiring!',
+    'A much nobler pursuit, to be sure.',
+    "That was lovely. I'm touched!",
+    "I wouldn't presume to have the skill...",
+    "I'm glad to hear it."
+];
 const answer = (right: string[]) => (opts: string[]) => {
     const i = opts.findIndex(o => right.includes(o));
     if (i < 0) throw new Error('no right answer in ' + opts.join(' / '));
@@ -349,7 +410,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     console.log('THE QUEST');
     const p = player('miscquest', 2502, 3859, 1);
     H.setVarBit(p, 'misc_grantedaudience', 1);
-    let got = talk(p, vargas(), ['Yes.', 'I want to earn Prince Brand\'s approval.']);
+    let got = talk(p, vargas(), ['Yes.', "I want to earn Prince Brand's approval."]);
     check('Vargas: the quest starts, courting Prince Brand', [v(p, 'misc_quest'), vb(p, 'misc_finish_gender')], [10, 0]);
     truthy('  "I survived, barely"', said(got, 'I survived, barely'), '');
     got = talk(p, ghrim(), ['How do I make peace with Etceteria?']);
@@ -363,7 +424,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     got = talk(p, brand());
     check('Prince Brand writes the awful anthem', [H.invCount(p, 'misc_awful_anthem'), said(got, 'So I wrote a song about it.')], [1, true]);
     got = talk(p, sigrid());
-    check('Sigrid: "this simply won\'t do"', [v(p, 'misc_quest'), said(got, 'simply won\'t do')], [40, true]);
+    check('Sigrid: "this simply won\'t do"', [v(p, 'misc_quest'), said(got, "simply won't do")], [40, true]);
     got = talk(p, ghrim(), ['What am I meant to be doing again?']);
     check('Ghrim makes something of it', [H.invCount(p, 'misc_awful_anthem'), H.invCount(p, 'misc_good_anthem')], [0, 1]);
     got = talk(p, sigrid());
@@ -373,7 +434,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     H.clearInv(p);
     H.give(p, 'misc_treaty');
     got = talk(p, npcAt('misc_smithy', 2551, 3897, 0), ['I have a slightly strange request...']);
-    check('Derrik wants an iron bar', [H.invCount(p, 'misc_giant_nib'), said(got, 'I\'ll need an iron bar')], [0, true]);
+    check('Derrik wants an iron bar', [H.invCount(p, 'misc_giant_nib'), said(got, "I'll need an iron bar")], [0, true]);
     H.give(p, 'iron_bar');
     talk(p, npcAt('misc_smithy', 2551, 3897, 0), ['I have a slightly strange request...']);
     check('Derrik makes the giant nib', [H.invCount(p, 'misc_giant_nib'), H.invCount(p, 'iron_bar')], [1, 0]);
@@ -387,11 +448,11 @@ if (want('quest') || want('kingdom') || want('losses')) {
     check('the first talk: "...you have to earn my approval?"', [vb(p, 'misc_court_stage'), said(got, 'Ahahahaha!')], [1, true]);
     H.give(p, 'gold_ring');
     got = useOnNpc(p, brand(), 'gold_ring');
-    check('a ring too early: "I couldn\'t possibly accept this."', [said(got, 'couldn\'t possibly accept'), H.invCount(p, 'gold_ring')], [true, 1]);
+    check('a ring too early: "I couldn\'t possibly accept this."', [said(got, "couldn't possibly accept"), H.invCount(p, 'gold_ring')], [true, 1]);
     // one wrong answer on the way, which costs a little and leaves the question open
     got = talk(p, brand(), [(opts: string[]) => opts.findIndex(o => !BRAND_RIGHT.includes(o) && o !== opts[3])]);
     const afterWrong = vb(p, 'misc_affection');
-    check('a wrong answer: no bit, affection floored at the round\'s start', afterWrong, 0);
+    check("a wrong answer: no bit, affection floored at the round's start", afterWrong, 0);
     const round = (r: number) => vb(p, `misc_s${r}_d1`) + vb(p, `misc_s${r}_d2`) + vb(p, `misc_s${r}_d3`);
     for (let i = 0; i < 6 && round(1) < 3; i++) talk(p, brand(), [answer(BRAND_RIGHT)]);
     check('three right answers: round one done', [vb(p, 'misc_s1_d1'), vb(p, 'misc_s1_d2'), vb(p, 'misc_s1_d3')], [1, 1, 1]);
@@ -421,7 +482,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     truthy('all answered: "Hello, dear"', said(got, 'Hello, dear'), got);
     check('round three answered', [vb(p, 'misc_s3_d1'), vb(p, 'misc_s3_d2'), vb(p, 'misc_s3_d3')], [1, 1, 1]);
     got = useOnNpc(p, brand(), 'gold_ring');
-    check('no kiss yet: he still will not take the ring', said(got, 'couldn\'t possibly accept'), true);
+    check('no kiss yet: he still will not take the ring', said(got, "couldn't possibly accept"), true);
     ef = H.ifaces.length;
     H.ifButton(p, 'emotes:blow_kiss');
     got = drive(p, [], [], ef);
@@ -437,7 +498,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     ef = H.ifaces.length;
     H.ifButton(p, 'emotes:blow_kiss');
     got = drive(p, [], [], ef);
-    truthy('  a kiss for her: "Sorry, sir, but I\'m not interested."', said(got, 'but I\'m not interested'), got);
+    truthy('  a kiss for her: "Sorry, sir, but I\'m not interested."', said(got, "but I'm not interested"), got);
 
     console.log('Princess Astrid, courted (a second regent-to-be):');
     const q = player('miscastrid', 2502, 3859, 1);
@@ -460,7 +521,10 @@ if (want('quest') || want('kingdom') || want('losses')) {
     let jf = H.ifaces.length;
     H.ifButton(p, 'questlist:misc');
     H.tick(1);
-    let journal = H.ifaces.slice(jf).filter(i => i.who === p.username && i.kind === 'text').map(i => i.text ?? '');
+    let journal = H.ifaces
+        .slice(jf)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => i.text ?? '');
     truthy('mid-quest: the treaty and the trust', journal.some(l => l.includes('Sigrid')) && journal.some(l => l.includes('Prince Brand')), journal.filter(l => l.length > 3).slice(0, 4));
 
     console.log('The treaty signed:');
@@ -475,17 +539,29 @@ if (want('quest') || want('kingdom') || want('losses')) {
     H.tick(1);
     let m = H.mesgs.length;
     op(p, 2525, 3853, 'misc_heather_dark');
-    check('weeding without a rake', H.mesgs.slice(m).some(x => x.text.includes('You need a rake')), true);
+    check(
+        'weeding without a rake',
+        H.mesgs.slice(m).some(x => x.text.includes('You need a rake')),
+        true
+    );
     H.give(p, 'rake');
     let a = vb(p, 'misc_approval');
     let s0 = npcSays.length;
     op(p, 2525, 3853, 'misc_heather_dark');
     check('weeding: +1 approval, a weed, the patch bare', [vb(p, 'misc_approval') - a, H.invCount(p, 'weeds'), locAt('misc_heather_dark_noweeds', 0, 2525, 3853) !== null], [1, 1, true]);
-    truthy('  Gardener Gunnhild: "Thanks!"', npcSays.slice(s0).some(x => x.who === 'misc_gardener' && x.text === 'Thanks!'), npcSays.slice(s0));
+    truthy(
+        '  Gardener Gunnhild: "Thanks!"',
+        npcSays.slice(s0).some(x => x.who === 'misc_gardener' && x.text === 'Thanks!'),
+        npcSays.slice(s0)
+    );
     m = H.mesgs.length;
     p.teleport(2527, 3851, 0);
     op(p, 2526, 3851, 'misc_dummy_heather_normal');
-    check('Gunnhild\'s own patch is hers', H.mesgs.slice(m).some(x => x.text.includes('Gardener Gunnhild is already weeding')), true);
+    check(
+        "Gunnhild's own patch is hers",
+        H.mesgs.slice(m).some(x => x.text.includes('Gardener Gunnhild is already weeding')),
+        true
+    );
 
     // coal
     H.give(p, 'rune_pickaxe');
@@ -493,7 +569,13 @@ if (want('quest') || want('kingdom') || want('losses')) {
     H.tick(1);
     a = vb(p, 'misc_approval');
     s0 = npcSays.length;
-    const rocks: [number, number, string][] = [[2528, 3892, 'coalrock2'], [2529, 3890, 'coalrock2'], [2529, 3892, 'coalrock2'], [2528, 3895, 'coalrock2'], [2526, 3895, 'coalrock1']];
+    const rocks: [number, number, string][] = [
+        [2528, 3892, 'coalrock2'],
+        [2529, 3890, 'coalrock2'],
+        [2529, 3892, 'coalrock2'],
+        [2528, 3895, 'coalrock2'],
+        [2526, 3895, 'coalrock1']
+    ];
     for (const [x, z, name] of rocks) {
         if (!locAt(name, 0, x, z)) continue;
         settle(p);
@@ -502,10 +584,18 @@ if (want('quest') || want('kingdom') || want('losses')) {
         if (vb(p, 'misc_approval') > a) break;
     }
     check('coal goes to Miner Magnus: approval up, none in the pack', [vb(p, 'misc_approval') > a, H.invCount(p, 'coal')], [true, 0]);
-    truthy('  Magnus: "Thanks!"', npcSays.slice(s0).some(x => x.who === 'misc_miner' && x.text === 'Thanks!'), npcSays.slice(s0));
+    truthy(
+        '  Magnus: "Thanks!"',
+        npcSays.slice(s0).some(x => x.who === 'misc_miner' && x.text === 'Thanks!'),
+        npcSays.slice(s0)
+    );
     m = H.mesgs.length;
     op(p, 2526, 3892, 'misc_dummy_coalrock1');
-    check('Magnus\'s own rock is his', H.mesgs.slice(m).some(x => x.text.includes('Miner Magnus is already mining')), true);
+    check(
+        "Magnus's own rock is his",
+        H.mesgs.slice(m).some(x => x.text.includes('Miner Magnus is already mining')),
+        true
+    );
 
     // maples
     H.give(p, 'rune_axe');
@@ -521,7 +611,11 @@ if (want('quest') || want('kingdom') || want('losses')) {
     p.teleport(2549, 3867, 0);
     m = H.mesgs.length;
     op(p, 2550, 3867, 'misc_dummy_mapletree');
-    check('"Lumberjack Leif is already cutting that down."', H.mesgs.slice(m).some(x => x.text === 'Lumberjack Leif is already cutting that down.'), true);
+    check(
+        '"Lumberjack Leif is already cutting that down."',
+        H.mesgs.slice(m).some(x => x.text === 'Lumberjack Leif is already cutting that down.'),
+        true
+    );
 
     // fish
     H.give(p, 'harpoon');
@@ -533,7 +627,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
     H.opNpc(p, spot, 3);
     for (let t = 0; t < 120 && p.stats[PlayerStat.FISHING] === fx0; t++) H.tick(1);
     for (let t = 0; t < 20; t++) H.tick(1);
-    check('the docks\' spots fish now, and the fish go to Frodi', [p.stats[PlayerStat.FISHING] > fx0, H.invCount(p, 'raw_tuna') + H.invCount(p, 'raw_swordfish')], [true, 0]);
+    check("the docks' spots fish now, and the fish go to Frodi", [p.stats[PlayerStat.FISHING] > fx0, H.invCount(p, 'raw_tuna') + H.invCount(p, 'raw_swordfish')], [true, 0]);
     p.clearPendingAction();
     settle(p);
 
@@ -564,8 +658,15 @@ if (want('quest') || want('kingdom') || want('losses')) {
     jf = H.ifaces.length;
     H.ifButton(p, 'questlist:misc');
     H.tick(1);
-    journal = H.ifaces.slice(jf).filter(i => i.who === p.username && i.kind === 'text').map(i => i.text ?? '');
-    truthy('the journal: complete, with the approval and the coffers', journal.some(l => l.includes('QUEST COMPLETE')) && journal.some(l => l.includes('Coffers')), journal.filter(l => l.includes('Approval')));
+    journal = H.ifaces
+        .slice(jf)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => i.text ?? '');
+    truthy(
+        'the journal: complete, with the approval and the coffers',
+        journal.some(l => l.includes('QUEST COMPLETE')) && journal.some(l => l.includes('Coffers')),
+        journal.filter(l => l.includes('Approval'))
+    );
 
     // ==========================================================================================
     if (want('kingdom') || only.length === 0) {
@@ -622,8 +723,16 @@ if (want('quest') || want('kingdom') || want('losses')) {
         truthy('  and the window again', opened(p, f, 'inter_210'), '');
 
         console.log('Raw and cooked fish, and herbs:');
-        button(p, 'com_12'); button(p, 'com_12'); button(p, 'com_12'); button(p, 'com_12'); button(p, 'com_12');
-        button(p, 'com_47'); button(p, 'com_47'); button(p, 'com_47'); button(p, 'com_47'); button(p, 'com_47');
+        button(p, 'com_12');
+        button(p, 'com_12');
+        button(p, 'com_12');
+        button(p, 'com_12');
+        button(p, 'com_12');
+        button(p, 'com_47');
+        button(p, 'com_47');
+        button(p, 'com_47');
+        button(p, 'com_47');
+        button(p, 'com_47');
         for (let i = 0; i < 5; i++) button(p, 'com_62');
         for (let i = 0; i < 5; i++) button(p, 'com_27');
         button(p, 'com_107');
@@ -631,7 +740,17 @@ if (want('quest') || want('kingdom') || want('losses')) {
         talk(p, ghrim(), ['How is the Kingdom faring?', 'Yes']);
         // 5*158*2048/2048 = 790: 395 tuna, 118 swordfish; 5*11 = 55 herbs
         check('five fishing, cooked: 395 tuna, 118 swordfish', [bankCount(p, 'tuna'), bankCount(p, 'swordfish'), bankCount(p, 'raw_tuna')], [395, 118, 0]);
-        const herbs = ['unidentified_tarromin', 'unidentified_harralander', 'unidentified_irit', 'unidentified_avantoe', 'unidentified_ranarr', 'unidentified_kwuarm', 'unidentified_cadantine', 'unidentified_dwarf_weed', 'unidentified_lantadyme'].reduce((s, n) => s + bankCount(p, n), 0);
+        const herbs = [
+            'unidentified_tarromin',
+            'unidentified_harralander',
+            'unidentified_irit',
+            'unidentified_avantoe',
+            'unidentified_ranarr',
+            'unidentified_kwuarm',
+            'unidentified_cadantine',
+            'unidentified_dwarf_weed',
+            'unidentified_lantadyme'
+        ].reduce((s, n) => s + bankCount(p, n), 0);
         check('five on herbs: 55 grimy herbs, never guam', [herbs, bankCount(p, 'unidentified_guam')], [55, 0]);
 
         console.log('A long absence:');
@@ -651,13 +770,18 @@ if (want('quest') || want('kingdom') || want('losses')) {
         }
         const held = new Set<number>();
         for (let i = 0; i < bank.capacity; i++) if (bank.get(i)) held.add(bank.get(i)!.id);
-        const skip = (n: string) => ['tuna', 'swordfish', 'raw_tuna', 'raw_swordfish', 'casket', 'vikingboots', 'vikinggloves', 'keyhalf1', 'keyhalf2'].includes(n) || n.startsWith('uncut_') || n.startsWith('trail_') || n.startsWith('unidentified_') || n.endsWith('_seed');
+        const skip = (n: string) =>
+            ['tuna', 'swordfish', 'raw_tuna', 'raw_swordfish', 'casket', 'vikingboots', 'vikinggloves', 'keyhalf1', 'keyhalf2'].includes(n) || n.startsWith('uncut_') || n.startsWith('trail_') || n.startsWith('unidentified_') || n.endsWith('_seed');
         const fillers = [...ObjType.configNames.values()].filter(id => ObjType.get(id).certtemplate === -1 && !held.has(id) && !skip(ObjType.get(id).debugname ?? ''));
         let k = 0;
         for (let i = 0; i < bank.capacity; i++) if (!bank.get(i)) bank.set(i, { id: fillers[k++], count: 1 });
         const rest = vb(p, 'misc_restotal');
         got = talk(p, ghrim(), ['How is the Kingdom faring?', 'Yes']);
-        truthy('a full bank: "you will need N more free spaces"', said(got, 'more free space'), got.filter(l => l.includes('space')));
+        truthy(
+            'a full bank: "you will need N more free spaces"',
+            said(got, 'more free space'),
+            got.filter(l => l.includes('space'))
+        );
         check('  and nothing is lost', vb(p, 'misc_restotal'), rest);
         for (let i = 0; i < bank.capacity; i++) bank.delete(i);
     }
@@ -674,7 +798,12 @@ if (want('quest') || want('kingdom') || want('losses')) {
         for (let t = 0; t < 200 && man.isActive; t++) {
             // stand beside him (he wanders) and swing again until a hit lands
             if (t % 5 === 0 && (!p.target || p.target !== man)) {
-                const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][(t / 5) % 4];
+                const [dx, dz] = [
+                    [1, 0],
+                    [-1, 0],
+                    [0, 1],
+                    [0, -1]
+                ][(t / 5) % 4];
                 p.teleport(man.x + dx, man.z + dz, 0);
                 H.tick(1);
                 H.opNpc(p, man, 2);
@@ -695,13 +824,13 @@ if (want('quest') || want('kingdom') || want('losses')) {
         grocer.teleport(2540, 3880, 0);
         H.tick(1);
         op(p, 2517, 3862, 'misc_veg_market', 2);
-        check('robbing Miscellania\'s veg stall: -4 approval, a vegetable', [vb(p, 'misc_approval'), ['potato', 'cabbage', 'onion', 'tomato', 'garlic'].reduce((s, n) => s + H.invCount(p, n), 0)], [90, 1]);
+        check("robbing Miscellania's veg stall: -4 approval, a vegetable", [vb(p, 'misc_approval'), ['potato', 'cabbage', 'onion', 'tomato', 'garlic'].reduce((s, n) => s + H.invCount(p, n), 0)], [90, 1]);
         const etcGrocer = npcAt('etc_veg_monger', 2602, 3876, 0);
         etcGrocer.teleport(2620, 3860, 0);
         p.teleport(2600, 3875, 0);
         H.tick(20);
         op(p, 2600, 3876, 'etc_veg_market', 2);
-        check('Etceteria\'s veg stall: a vegetable, no approval lost', [vb(p, 'misc_approval'), ['potato', 'cabbage', 'onion', 'tomato', 'garlic'].reduce((s, n) => s + H.invCount(p, n), 0)], [90, 2]);
+        check("Etceteria's veg stall: a vegetable, no approval lost", [vb(p, 'misc_approval'), ['potato', 'cabbage', 'onion', 'tomato', 'garlic'].reduce((s, n) => s + H.invCount(p, n), 0)], [90, 2]);
     }
 }
 
@@ -709,6 +838,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
 if (want('migrate')) {
     console.log('OLD SAVES');
     const p = H.makePlayer('miscold', 2520, 3860, bucket++);
+    H.setVar(p, 'macro_event', 1);
     H.setVar(p, 'misc_quest', 7);
     H.setVarBit(p, 'misc_approval', 100);
     H.setVarBit(p, 'misc_points_wood', 4);
@@ -720,6 +850,7 @@ if (want('migrate')) {
     check('the old quest finished: complete, approval 100% on the 0-127 scale, trusted', [v(p, 'misc_quest'), vb(p, 'misc_approval'), vb(p, 'misc_court_stage')], [100, 127, 4]);
     check('  its fifteen workers idle (there are ten), its coffers kept', [vb(p, 'misc_points_wood') + vb(p, 'misc_points_herb') + vb(p, 'misc_points_fish') + vb(p, 'misc_points_mine'), vb(p, 'misc_coffers')], [0, 750000]);
     const q = H.makePlayer('miscold2', 2520, 3861, bucket++);
+    H.setVar(q, 'macro_event', 1);
     H.setVar(q, 'misc_quest', 4);
     H.setVarBit(q, 'misc_approval', 100);
     H.tick(3);

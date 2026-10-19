@@ -25,10 +25,13 @@ import ScriptPointer from '#/engine/script/ScriptPointer.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0, n = 0;
+let ok = 0,
+    bad = 0,
+    n = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -85,7 +88,7 @@ console.log('A BOW DOES NOT PICK UP A MELEE STYLE');
     check('Block is the fourth style and is remembered for slash weapons', [style(p), slot(p, 'atkstyle_slash')], [3, 3]);
     wield(p, 'shortbow');
     check('the bow comes up ACCURATE, not Longrange', style(p), 0);
-    check('  and the scimitar\'s Block was not written over the bow\'s slot', [slot(p, 'atkstyle_slash'), slot(p, 'atkstyle_bow')], [3, 0]);
+    check("  and the scimitar's Block was not written over the bow's slot", [slot(p, 'atkstyle_slash'), slot(p, 'atkstyle_bow')], [3, 0]);
     H.despawn(p);
 }
 
@@ -111,7 +114,7 @@ console.log('\nEACH CATEGORY KEEPS ITS OWN STYLE');
     check('a whip nobody has ever set a style on opens on its first option', style(p), 0);
     H.ifButton(p, 'combat_whip:whip2'); // Block
     wield(p, 'rune_2h_sword');
-    check('a two-hander is its own category, not the scimitar\'s', style(p), 0);
+    check("a two-hander is its own category, not the scimitar's", style(p), 0);
     wield(p, 'abyssal_whip');
     check('the whip kept its Block', style(p), 2);
     wield(p, 'bronze_scimitar');
@@ -162,7 +165,7 @@ console.log('\nTHE MEMORY SURVIVES A LOGOUT');
     World.newPlayers.add(back);
     H.tick(10);
     check('they logged back in with the bow still equipped', ObjType.get(back.getInventory(InvType.WORN)!.get(RHAND)!.id).debugname, 'shortbow');
-    check('the bow is on Rapid, not Longrange and not the scimitar\'s Block', style(back), 1);
+    check("the bow is on Rapid, not Longrange and not the scimitar's Block", style(back), 1);
     wield(back, 'bronze_scimitar');
     check('the scimitar still has its Block from before the logout', style(back), 3);
     wield(back, 'abyssal_whip');
@@ -182,7 +185,7 @@ console.log('\nA STAFF STILL HAS FIVE OPTIONS');
     H.ifButton(p, 'combat_staff_2:auto_cast');
     H.ifButton(p, 'staff_spells:ssb0'); // Wind Strike - this ends in ~initalltabs
     check('the plain Spell box survives the tab redraw picking a spell causes', [style(p), H.getVarBit(p, 'autocast_set')], [3, 1]);
-    check('  and it went into the staff\'s slot, not anything else\'s', [slot(p, 'atkstyle_staff'), slot(p, 'atkstyle_unarmed')], [3, 0]);
+    check("  and it went into the staff's slot, not anything else's", [slot(p, 'atkstyle_staff'), slot(p, 'atkstyle_unarmed')], [3, 0]);
     H.ifButton(p, 'combat_staff_2:auto_defensive');
     H.ifButton(p, 'staff_spells:ssb0');
     check('the defensive Spell box is the fifth style and sticks', [style(p), slot(p, 'atkstyle_staff')], [4, 4]);

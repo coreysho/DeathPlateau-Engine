@@ -19,11 +19,13 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-let ok = 0, fail = 0;
+let ok = 0,
+    fail = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const good = JSON.stringify(got) === JSON.stringify(want);
     console.log(`  ${good ? 'ok  ' : 'FAIL'} ${what}${good ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}`}`);
-    good ? ok++ : fail++;
+    if (good) ok++;
+    else fail++;
 };
 
 /** Exactly what the snapshot claims the newest mtime is, without adding an accessor for a test. */
@@ -59,15 +61,22 @@ let agreed = 0;
 const RUNS = 12;
 for (let i = 0; i < RUNS; i++) {
     const snap = await SourceSnapshot.create([{ path: tmp, exts: ['.loc'] }]);
-    if (reported(snap, tmp, '.loc', [...mtimes].sort((a, b) => b - a)) === want) agreed++;
+    if (
+        reported(
+            snap,
+            tmp,
+            '.loc',
+            [...mtimes].sort((a, b) => b - a)
+        ) === want
+    )
+        agreed++;
 }
 check(`  reports the newest on all ${RUNS} runs, not an arbitrary one`, agreed, RUNS);
 
 // ------------------------------------------------------------------ an extension it was not asked for
 {
     const snap = await SourceSnapshot.create([{ path: tmp, exts: ['.npc'] }]);
-    check('  an extension with no files reports nothing newer than zero',
-        snap.isNewer(tmp, '.npc', 0), false);
+    check('  an extension with no files reports nothing newer than zero', snap.isNewer(tmp, '.npc', 0), false);
 }
 
 // ------------------------------------------------------------------ a root that is not there

@@ -618,7 +618,7 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
                 H.tick(3);
                 check(`a hit of ${hit} rebounds`, dmg('ra'), want);
                 check(`  ...and the effect is ${hit ? 'used up' : 'still on'}`, veng(b), hit ? 0 : 1);
-                check(`  ..."Taste vengeance!" said`, taste('rb'), hit ? 1 : 0);
+                check('  ..."Taste vengeance!" said', taste('rb'), hit ? 1 : 0);
             }
             H.despawn(a, b);
         },
@@ -642,10 +642,24 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
             H.tick(2);
             const first = H.hitsFor('mb').find(h => h.damage > 0)!;
             const zeros = H.hitsFor('mb').filter(h => h.tick < first.tick && h.damage === 0).length;
-            note(`defender took ${H.hitsFor('mb').map(h => `${rel(h.tick, t0)}:${h.damage}`).join(' ')}`);
-            note(`attacker took ${H.hitsFor('ma').map(h => `${rel(h.tick, t0)}:${h.damage}`).join(' ') || '(nothing)'}`);
+            note(
+                `defender took ${H.hitsFor('mb')
+                    .map(h => `${rel(h.tick, t0)}:${h.damage}`)
+                    .join(' ')}`
+            );
+            note(
+                `attacker took ${
+                    H.hitsFor('ma')
+                        .map(h => `${rel(h.tick, t0)}:${h.damage}`)
+                        .join(' ') || '(nothing)'
+                }`
+            );
             check(`the first hit that did damage (${first.damage}) rebounds 75%`, dmg('ma'), [Math.max(1, Math.floor((first.damage * 3) / 4))]);
-            check('  ...on the tick it landed', H.hitsFor('ma').map(h => h.tick - first.tick), [0]);
+            check(
+                '  ...on the tick it landed',
+                H.hitsFor('ma').map(h => h.tick - first.tick),
+                [0]
+            );
             check(`  ...and the ${zeros} miss(es) before it did not use it up`, taste('mb'), 1);
             check('  ...and it is used up', veng(b), 0);
             H.despawn(a, b);
@@ -708,7 +722,13 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
             // sits ahead of the victim in the player loop has already had both of the tick's queue
             // passes by then - which is exactly how the ring of recoil lands too.
             // only the ticks vengeance was armed for: the loop's 120, not the two after it
-            const ticks = [...new Set(H.hitsFor('svic').filter(h => h.damage > 0 && h.tick - t0 < 120).map(h => h.tick))].sort((p, q) => p - q);
+            const ticks = [
+                ...new Set(
+                    H.hitsFor('svic')
+                        .filter(h => h.damage > 0 && h.tick - t0 < 120)
+                        .map(h => h.tick)
+                )
+            ].sort((p, q) => p - q);
             const rebounds = [...H.hitsFor('smage'), ...H.hitsFor('smele')].filter(h => h.tick - t0 < 120).sort((p, q) => p.tick - q.tick);
             const latency: Record<string, number> = {};
             let wrong = 0;
@@ -753,7 +773,11 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
             inject(a, b, 40);
             H.tick(6);
             check('b took', dmg('cb'), [40]);
-            check('a took the vengeance 30 and the recoil 5, and nothing else', dmg('ca').sort((p, q) => p - q), [5, 30]);
+            check(
+                'a took the vengeance 30 and the recoil 5, and nothing else',
+                dmg('ca').sort((p, q) => p - q),
+                [5, 30]
+            );
             check("a's vengeance, untouched by either rebound", veng(a), 1);
             check("b's vengeance, used up", veng(b), 0);
             check('who said "Taste vengeance!"', [taste('ca'), taste('cb')], [0, 1]);
@@ -789,7 +813,11 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
             H.castOnPlayer(d, e, 'lunar_magic:vengeance_other');
             H.tick(2);
             check('Vengeance Other puts it on the target', veng(e), 1);
-            check('  ...and tells them', H.mesgs.filter(m => m.who === 'ke').map(m => m.text), ['You have the power of vengeance!']);
+            check(
+                '  ...and tells them',
+                H.mesgs.filter(m => m.who === 'ke').map(m => m.text),
+                ['You have the power of vengeance!']
+            );
             check('  ...3 astral, 2 death, 10 earth from the caster', [H.invCount(d, 'astralrune'), H.invCount(d, 'deathrune'), H.invCount(d, 'earthrune')], [997, 998, 990]);
             check("  ...the caster's own Vengeance now waits", cast(d), ['You can only cast vengeance spells every 30 seconds.']);
             check("  ...and the target's cooldown is not started", H.getVar(e, 'vengeance_cooldown') <= World.currentTick, true);
@@ -826,11 +854,25 @@ if (which === 'vengeance' || which.startsWith('vengeance:')) {
                 first = H.hitsFor('np').find(h => h.damage > 0) ?? null;
             }
             H.tick(3);
-            note(`player took ${H.hitsFor('np').map(h => `${rel(h.tick, t0)}:${h.damage}`).join(' ')}`);
-            note(`demon took  ${H.npcHitsFor('black_demon').map(h => `${rel(h.tick, t0)}:${h.damage}`).join(' ') || '(nothing)'}`);
+            note(
+                `player took ${H.hitsFor('np')
+                    .map(h => `${rel(h.tick, t0)}:${h.damage}`)
+                    .join(' ')}`
+            );
+            note(
+                `demon took  ${
+                    H.npcHitsFor('black_demon')
+                        .map(h => `${rel(h.tick, t0)}:${h.damage}`)
+                        .join(' ') || '(nothing)'
+                }`
+            );
             check('the demon landed a hit', first !== null, true);
             if (first) {
-                check(`its first damaging hit (${first.damage}) rebounds 75% onto it`, H.npcHitsFor('black_demon').map(h => h.damage), [Math.max(1, Math.floor((first.damage * 3) / 4))]);
+                check(
+                    `its first damaging hit (${first.damage}) rebounds 75% onto it`,
+                    H.npcHitsFor('black_demon').map(h => h.damage),
+                    [Math.max(1, Math.floor((first.damage * 3) / 4))]
+                );
                 check('  ..."Taste vengeance!"', taste('np'), 1);
                 check('  ...used up', veng(p), 0);
             }
@@ -955,8 +997,16 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
     const cases: Record<string, () => void> = {
         teleports: () => {
             console.log('TELEPORTS  the eight, each from Lumbridge');
-            const dests: [string, number, number][] = [['moonclan', 2113, 3915], ['ourania', 2468, 3246], ['waterbirth', 2546, 3755], ['barbarian', 2543, 3568],
-                ['khazard', 2636, 3167], ['fishing_guild', 2611, 3393], ['catherby', 2804, 3433], ['ice_plateau', 2972, 3873]];
+            const dests: [string, number, number][] = [
+                ['moonclan', 2113, 3915],
+                ['ourania', 2468, 3246],
+                ['waterbirth', 2546, 3755],
+                ['barbarian', 2543, 3568],
+                ['khazard', 2636, 3167],
+                ['fishing_guild', 2611, 3393],
+                ['catherby', 2804, 3433],
+                ['ice_plateau', 2972, 3873]
+            ];
             for (const [d, cx, cz] of dests) {
                 fresh();
                 const p = mage('tp_' + d.slice(0, 6));
@@ -1110,7 +1160,10 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             check('NPC Contact: the Choose a character window, and no astral yet', [(p as any).containsModalInterface(), a0 - H.invCount(p, 'astralrune')], [true, 0]);
             H.ifButton(p, 'npc_contact:turael');
             H.tick(2);
-            const heard = H.ifaces.filter(i => i.who === 'cont' && i.kind === 'text').map(i => i.text).filter(s => s && s.length > 8);
+            const heard = H.ifaces
+                .filter(i => i.who === 'cont' && i.kind === 'text')
+                .map(i => i.text)
+                .filter(s => s && s.length > 8);
             console.log('       Turael: ' + heard.slice(-2).join(' / '));
             check('NPC Contact: Turael answered, and one astral went', [heard.length > 0, a0 - H.invCount(p, 'astralrune')], [true, 1]);
             p.closeModal();
@@ -1134,7 +1187,11 @@ if (which === 'lunarspells' || which.startsWith('lunarspells:')) {
             check('a hunter kit', H.invCount(p, 'hunter_kit'), 1);
             H.opheld(p, 'hunter_kit', 1);
             H.tick(1);
-            check('opened: the gear that exists so far', ['hunter_kit', 'noose_wand', 'hunter_bird_snare', 'teasing_stick', 'torch_unlit', 'hunter_box_trap'].map(o => H.invCount(p, o)), [0, 1, 1, 1, 1, 1]);
+            check(
+                'opened: the gear that exists so far',
+                ['hunter_kit', 'noose_wand', 'hunter_bird_snare', 'teasing_stick', 'torch_unlit', 'hunter_box_trap'].map(o => H.invCount(p, o)),
+                [0, 1, 1, 1, 1, 1]
+            );
             H.despawn(p);
         },
         farming: () => {
@@ -1189,8 +1246,7 @@ if (which === 'comborunes') {
         return p;
     };
     const pouchCount = (p: any, obj: string) => p.invTotal(POUCH, ObjType.getId(obj));
-    const has = (p: any, want: Record<string, number>) =>
-        Object.entries(want).every(([obj, count]) => H.invCount(p, obj) === count);
+    const has = (p: any, want: Record<string, number>) => Object.entries(want).every(([obj, count]) => H.invCount(p, obj) === count);
     const held = (p: any, objs: string[]) => objs.map(o => `${o}=${H.invCount(p, o)}`).join(' ');
     const said = (p: any) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
     const row = (name: string) => {
@@ -1214,7 +1270,7 @@ if (which === 'comborunes') {
         const p = caster('ws_' + combo.slice(0, 4), { [combo]: 1, mindrune: 1 });
         check(canCast(p, 'magic_combat_wind_strike'), `one ${combo} is enough air`);
         pay(p, 'magic_combat_wind_strike');
-        check(has(p, { [combo]: 0, mindrune: 0 }), `and it is what the cast spends`);
+        check(has(p, { [combo]: 0, mindrune: 0 }), 'and it is what the cast spends');
     }
     {
         const p = caster('ws_mud', { mudrune: 5, mindrune: 1 });
@@ -1307,8 +1363,7 @@ if (which === 'comborunes') {
         const p = caster('alch_click6', { naturerune: 1, lavarune: 6 });
         H.castOnHeld(p, 'lavarune', 'magic:highlvl_alchemy');
         H.tick(6);
-        check(has(p, { naturerune: 0, lavarune: 0 }) && H.invCount(p, 'coins') > 0,
-            'cast on the sixth lava rune: five pay the fire, one is alched: ' + held(p, ['naturerune', 'lavarune', 'coins']));
+        check(has(p, { naturerune: 0, lavarune: 0 }) && H.invCount(p, 'coins') > 0, 'cast on the sixth lava rune: five pay the fire, one is alched: ' + held(p, ['naturerune', 'lavarune', 'coins']));
         const q = caster('alch_click5', { naturerune: 1, lavarune: 5 });
         H.clearLogs();
         H.castOnHeld(q, 'lavarune', 'magic:highlvl_alchemy');

@@ -39,14 +39,33 @@ const check = (what: string, got: unknown, want: unknown) => {
 };
 
 // map square 54_51
-const X = 3456, Z = 3264;
+const X = 3456,
+    Z = 3264;
 const at = (lx: number, lz: number) => [X + lx, Z + lz] as const;
-const RAZMIRE = at(33, 32), ULSQUIRE = at(40, 25), SHELF = at(25, 15), ALTAR = at(50, 52), WALL = at(48, 52), PYRE = at(6, 18);
+const RAZMIRE = at(33, 32),
+    ULSQUIRE = at(40, 25),
+    SHELF = at(25, 15),
+    ALTAR = at(50, 52),
+    WALL = at(48, 52),
+    PYRE = at(6, 18);
 
 const S = {
-    not_started: 0, read_diary: 5, made_serum: 10, kill_shades: 15, killed_1: 20, killed_2: 25, killed_5: 40,
-    shades_to_razmire: 45, shades_to_ulsquire: 47, ulsquire_temple: 50, rebuild_temple: 55, can_light_altar: 60,
-    created_sacred_oil: 65, created_pyre_logs: 70, logs_on_pyre: 75, complete: 80
+    not_started: 0,
+    read_diary: 5,
+    made_serum: 10,
+    kill_shades: 15,
+    killed_1: 20,
+    killed_2: 25,
+    killed_5: 40,
+    shades_to_razmire: 45,
+    shades_to_ulsquire: 47,
+    ulsquire_temple: 50,
+    rebuild_temple: 55,
+    can_light_altar: 60,
+    created_sacred_oil: 65,
+    created_pyre_logs: 70,
+    logs_on_pyre: 75,
+    complete: 80
 };
 const BIT = { ulsquire_visible: 1, razmire_visible: 3 };
 const stage = (p: Player) => H.getVar(p, 'morttonquest');
@@ -77,7 +96,7 @@ function settle(p: Player, picks: number[] = [], max = 200): string[] {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -94,7 +113,10 @@ function settle(p: Player, picks: number[] = [], max = 200): string[] {
         } else idle = 0;
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function npcNear(name: string, x: number, z: number) {
@@ -161,11 +183,35 @@ function useOnHeld(p: Player, used: string, target: string) {
     return settle(p);
 }
 
-const typeName = (n: Npc) => NpcType.get(n.type).debugname;
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+const typeName = (n: Npc) => NpcType.get(n.type).debugname ?? `npc_${n.type}`;
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 
 /** Attack the nearest shadow of a kind and fight it to the death. Returns the npc and every type it was. */
+// ONE ATTEMPT IS NOT A KILL. The sweep found kills 3 and 4 of five coming back "rose, died:
+// [false,false]" - the shadow neither turned into a shade nor died - with kills 1, 2 and 5 fine, so
+// the tally stopped at three and Razmire offered his shops instead of moving the quest on (which is
+// then the multi3 that aborted the sim three checks later). The README's own "one fight per process"
+// note is the likely reason: %lastcombat and %aggressive_npc outlive a fight and the content's
+// singles rule refuses the next one until they clear. So this tries again rather than reporting a
+// kill that did not happen, and says what state it gave up in if all three tries miss.
 function killShade(p: Player, kind = 'shadeshadow_level1'): { npc: Npc; types: Set<string>; died: boolean } {
+    let last = killShadeOnce(p, kind);
+    for (let attempt = 1; attempt < 3 && !(last.died && last.types.size > 1); attempt++) {
+        console.log(
+            `    [killShade retry ${attempt}] ${kind}: died=${last.died} types=${[...last.types].join(',')}` + ` npc=${last.npc.x},${last.npc.z},active=${last.npc.isActive} player=${p.x},${p.z}` + ` target=${p.target !== null} delayed=${p.delayed}`
+        );
+        settle(p);
+        H.tick(20);
+        last = killShadeOnce(p, kind);
+    }
+    return last;
+}
+
+function killShadeOnce(p: Player, kind: string): { npc: Npc; types: Set<string>; died: boolean } {
     const npc = npcNear(kind, p.x, p.z);
     p.teleport(npc.x + 1, npc.z, 0);
     H.tick(1);
@@ -190,7 +236,7 @@ function killShade(p: Player, kind = 'shadeshadow_level1'): { npc: Npc; types: S
 }
 
 // ============================================================================================
-console.log('MORT\'TON  Razmire\'s shops (the reported inv_transmit -1)');
+console.log("MORT'TON  Razmire's shops (the reported inv_transmit -1)");
 {
     const p = player('mortshop', S.kill_shades, RAZMIRE[0] + 1, RAZMIRE[1]);
     H.setVar(p, 'morttonmulti', 1 << BIT.razmire_visible);
@@ -202,7 +248,7 @@ console.log('MORT\'TON  Razmire\'s shops (the reported inv_transmit -1)');
     check('  %shop is razmiregeneralstore', H.getVar(p, 'shop'), InvType.getId('razmiregeneralstore'));
     p.closeModal();
     talk(p, 'razmire_keelgan_afflicted', ...RAZMIRE, [2]);
-    check('builders\' store opens', opened(), true);
+    check("builders' store opens", opened(), true);
     check('  %shop is razmirebuildingstore', H.getVar(p, 'shop'), InvType.getId('razmirebuildingstore'));
     check('  no script errors', errors.slice(e0), []);
     p.closeModal();
@@ -238,13 +284,17 @@ H.equip(q, { rhand: 'rune_scimitar' });
     H.despawn(n);
 }
 
-console.log('Razmire\'s dose');
+console.log("Razmire's dose");
 {
     const raz = npcNear('razmire_keelgan_afflicted', ...RAZMIRE);
     useOnNpc(q, 'mort_serum4', raz);
     check('dose taken, stage kill_shades, Razmire lucid', [H.invCount(q, 'mort_serum3'), stage(q), (H.getVar(q, 'morttonmulti') >> BIT.razmire_visible) & 1], [1, S.kill_shades, 1]);
     const text = talk(q, 'razmire_keelgan_afflicted', ...RAZMIRE, [3]);
-    check('he gives the job', text.some(t => /five/i.test(t)), true);
+    check(
+        'he gives the job',
+        text.some(t => /five/i.test(t)),
+        true
+    );
 }
 
 // ============================================================================================
@@ -294,7 +344,11 @@ console.log('A shadow that hunts a player rises too, and sinks back when left al
         if (shadow.isActive && typeName(shadow) === 'shade_level1') rose = true;
     }
     check('hunting a player: the shadow rises on its own', rose, true);
-    check('  and the shade attacks them', H.hits.slice(h0).some(h => h.who === v.username), true);
+    check(
+        '  and the shade attacks them',
+        H.hits.slice(h0).some(h => h.who === v.username),
+        true
+    );
     const nid = shadow.nid;
     v.teleport(X + 3, Z + 60, 0); // well away
     H.despawn(v);
@@ -308,7 +362,7 @@ console.log('A shadow that hunts a player rises too, and sinks back when left al
     check('  with its stats carried over (not healed to 0 or anything odd)', hp > 0 && hp <= 38, true);
 }
 
-console.log('The catacombs\' shadows rise the same way, and do not count for the quest');
+console.log("The catacombs' shadows rise the same way, and do not count for the quest");
 {
     const c = player('mortcata', S.kill_shades, 3490, 9690);
     H.equip(c, { rhand: 'rune_scimitar' });
@@ -410,7 +464,11 @@ console.log('The altar, the oil, the logs, the pyre');
     check('pyre lit: QUEST COMPLETE', stage(q), S.complete);
     check('  no script errors at the end', errors.slice(e0), []);
     const text = talk(q, 'razmire_keelgan_afflicted', ...RAZMIRE, [3]);
-    check('Razmire afterwards', text.some(t => /temple is lit/.test(t)), true);
+    check(
+        'Razmire afterwards',
+        text.some(t => /temple is lit/.test(t)),
+        true
+    );
 }
 
 check('no script errors anywhere', errors, []);

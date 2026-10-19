@@ -5,6 +5,7 @@ import Player from '#/engine/entity/Player.js';
 import Npc from '#/engine/entity/Npc.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
+import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
@@ -35,7 +36,12 @@ import OpHeldU from '#/network/game/client/model/OpHeldU.js';
 import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
 import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
 
-export type Hit = { tick: number; who: string; damage: number; type: number };
+// 'nid' is the npc's own index, so a hit can be attributed to ONE npc rather than to every npc
+// sharing its debugname. Without it a sim measuring "how often does my target get poisoned per
+// hit" counted hits on every npc in the world: huntpolish read 53 poisons in "1345 hits" - 3.9%
+// against a real rate of about 25% - because 1,200 ticks of a live world is full of other npcs
+// hitting each other. It is optional so nothing that only wants `who` has to change.
+export type Hit = { tick: number; who: string; damage: number; type: number; nid?: number };
 export type Say = { tick: number; who: string; text: string };
 export type Sound = { tick: number; who: string; synth: string; loops: number; delay: number };
 // 'invop' is an if_setinvop: the server rewriting one right-click option of a server-side
@@ -45,6 +51,10 @@ export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
+// ...and the same for npcs. Whether a monster PLAYED its attack, block or death animation was
+// unanswerable from a sim until this existed - the params can all be present and correct and still
+// never reach the client, and a config reader cannot tell the difference.
+export const npcAnims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
 export const sounds: Sound[] = [];
 export const ifaces: Iface[] = [];
@@ -89,7 +99,7 @@ export async function boot() {
     };
     const origNpcApply = (Npc.prototype as any).applyDamage;
     (Npc.prototype as any).applyDamage = function (damage: number, type: number) {
-        npcHits.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), damage: Math.min(damage, this.levels[3]), type });
+        npcHits.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), damage: Math.min(damage, this.levels[3]), type, nid: this.nid });
         return origNpcApply.call(this, damage, type);
     };
     const origSay = (Player.prototype as any).say;
@@ -109,6 +119,11 @@ export async function boot() {
     (Player.prototype as any).playAnimation = function (seq: number, delay: number) {
         if (seq !== -1) anims.push({ tick: World.currentTick, who: this.username, seq });
         return origAnim.call(this, seq, delay);
+    };
+    const origNpcAnim = (Npc.prototype as any).playAnimation;
+    (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
+        if (seq !== -1) npcAnims.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), seq });
+        return origNpcAnim.call(this, seq, delay);
     };
     // WARM UP PAST TICK 8. Half the combat guards in the content are of the form
     // `if (add(%lastcombat, 8) > map_clock)`, and on a world that has only just started map_clock
@@ -168,6 +183,7 @@ export function clearLogs() {
     npcHits.length = 0;
     says.length = 0;
     anims.length = 0;
+    npcAnims.length = 0;
     mesgs.length = 0;
 }
 
@@ -289,10 +305,24 @@ export function fillInv(p: Player) {
     }
 }
 
-export function runProc(p: Player, name: string, args: any[] = [], secondary?: Player): number[] {
+/**
+ * Run a proc by name, as `[proc,name]`.
+ *
+ * PROTECTED ACCESS: a transmitted varp can only be written by a script that has it, and every
+ * op trigger does - so a proc that writes one works in game and throws "requires protected access"
+ * here, which is a difference in the CALLER and not a bug in the proc. Pass protect to stand in for
+ * the trigger. (Mourning's End Part II's door table is the case that found this: ~m2_doors writes
+ * the fourteen mourning_door_* bits, and testing it any other way means solving the light puzzle
+ * from the inside five times over.)
+ */
+export function runProc(p: Player, name: string, args: any[] = [], secondary?: Player, protect = false): number[] {
     const script = ScriptProvider.getByName(name);
     if (!script) throw new Error('no such script: ' + name);
     const state = ScriptRunner.init(script, p, secondary ?? null, args);
+    if (protect) {
+        state.pointerAdd(ScriptPointer.ProtectedActivePlayer);
+        state.pointerAdd(ScriptPointer.ProtectedActivePlayer2);
+    }
     ScriptRunner.execute(state);
     return (state as any).intStack.slice(0, (state as any).isp);
 }
@@ -422,6 +452,25 @@ export function ifButton(p: Player, comName: string) {
 }
 
 /**
+ * What clicking one of a component's inventory options does - Make 1, Make 5, Make 10 on a crafting
+ * panel, which is an INV_BUTTON and not an IF_BUTTON. ifButton cannot reach these: the trigger type
+ * is different, and a panel slot that looks like a button to the player is an inv.
+ */
+export function invButton(p: Player, comName: string, op = 1, slot = 0) {
+    const comId = Component.getId(comName);
+    if (comId === -1) throw new Error('no such component: ' + comName);
+    p.lastCom = comId;
+    p.lastSlot = slot;
+    const trigger = ServerTriggerType.INV_BUTTON1 + (op - 1);
+    const script = ScriptProvider.getByTriggerSpecific(trigger, comId, -1);
+    if (!script) throw new Error('no inv_button' + op + ' trigger for ' + comName);
+    const com = Component.get(comId);
+    const root = Component.get(com.rootLayer);
+    p.executeScript(ScriptRunner.init(script, p), root.overlay == false);
+    return true;
+}
+
+/**
  * What "Cast on" a player does: OpPlayerTHandler, minus the visibility checks - the spell's
  * component rides with the interaction and the engine fires [applayert,<com>] / [opplayert,<com>].
  */
@@ -523,7 +572,11 @@ export function castOnHeld(p: Player, objName: string, comName: string) {
     if (id === -1 || comId === -1) throw new Error(`no ${objName} / ${comName}`);
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
-    for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === id) { slot = i; break; }
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === id) {
+            slot = i;
+            break;
+        }
     if (slot === -1) throw new Error('not carrying ' + objName);
     p.lastItem = id;
     p.lastSlot = slot;

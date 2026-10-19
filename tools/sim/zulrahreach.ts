@@ -7,7 +7,6 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import { NpcType, ObjType, check, R } from './a1lib.ts';
 import InstanceMap from '#/engine/InstanceMap.js';
-import InvType from '#/cache/config/InvType.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
 import { isFlagged } from '#/engine/GameMap.js';
 
@@ -21,7 +20,8 @@ for (let i = 0; i < 40000; i++) {
     if (!t || !t.debugname || !t.debugname.includes('halberd')) continue;
     if (t.wearpos !== 3) continue;
     const vals = [...(t.params?.values() ?? [])];
-    if (vals.includes(2)) have++; else missing.push(t.debugname);
+    if (vals.includes(2)) have++;
+    else missing.push(t.debugname);
 }
 check('  every wielded halberd reaches two tiles', missing.length, 0);
 if (missing.length) console.log('    still at fist range:', missing.join(', '));
@@ -30,18 +30,22 @@ check(`  and ${have} of them do`, have > 0, true);
 console.log('\nHOW FAR ZULRAH SITS FROM THE WALKWAY');
 const ids = new Set(['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => NpcType.getId(x)));
 const p: any = H.makePlayer('reach', 34 * 64 + 36, 47 * 64 + 48, 270);
-H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000);
-H.setVar(p, 'regicide_quest', 15); H.setVar(p, 'zulrah_volunteered', 1);
+H.tick(2);
+H.maxOut(p);
+H.clearInv(p);
+H.setVar(p, 'tutorial', 1000);
+H.setVar(p, 'regicide_quest', 15);
+H.setVar(p, 'zulrah_volunteered', 1);
 H.tick(1);
 A.op(p, 34 * 64 + 38, 47 * 64 + 48, 'osrsloc_46242', 1);
 H.tick(8);
 const inst = H.getVar(p, 'zulrah_instance') as number;
 const [ix, iz] = [(inst >> 14) & 0x3fff, inst & 0x3fff];
 const SLOT = InstanceMap.INSTANCE_ZONES * 8;
-const snake = () => (World as any).npcs.find((s: any) => s && s.isActive && ids.has(s.type)
-    && s.x >= ix && s.x < ix + SLOT && s.z >= iz && s.z < iz + SLOT) ?? null;
+const snake = () => (World as any).npcs.find((s: any) => s && s.isActive && ids.has(s.type) && s.x >= ix && s.x < ix + SLOT && s.z >= iz && s.z < iz + SLOT) ?? null;
 
-let best = 99, bestAt = '';
+let best = 99,
+    bestAt = '';
 for (let i = 0; i < 400; i++) {
     const s = snake();
     if (s && s.level === 0) {
@@ -52,7 +56,10 @@ for (let i = 0; i < 400; i++) {
                 const dx = Math.max(s.x - x, 0, x - (s.x + s.width - 1));
                 const dz = Math.max(s.z - z, 0, z - (s.z + s.length - 1));
                 const d = Math.max(dx, dz);
-                if (d > 0 && d < best) { best = d; bestAt = `${x},${z} -> snake at ${s.x},${s.z}`; }
+                if (d > 0 && d < best) {
+                    best = d;
+                    bestAt = `${x},${z} -> snake at ${s.x},${s.z}`;
+                }
             }
         }
     }

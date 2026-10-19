@@ -299,7 +299,6 @@ if (run('ahoy')) {
     console.log('GHOSTS AHOY');
     const p = player('ahoy1', 3648, 3485);
     wear(p, { front: 'amulet_of_ghostspeak' });
-    const stage = () => gv(p, 'ahoy_questvar');
     const door = (who: Player, x: number, z: number, l: number) => {
         op(who, x, z, 'ahoy_harbour_door', 1);
         return World.getLoc(x, z, l, LocType.getId('ahoy_harbour_door')) === null;
@@ -346,7 +345,16 @@ if (run('ahoy')) {
     check('climbs to the temple upper floor, walkable', [p.level, walkable(p.x, p.z, p.level)], [1, true]);
     const upstairs = [p.x, p.z] as const;
     check('  the coffin is behind a door...', reaches(1, p.x, p.z, 3659, 3513, 2), false);
-    check('  ...which opens', door(player('ahoydoor2', 3657, 3514, 1), 3656, 3514, 1), true);
+    // AND THE DOOR IS LOCKED, which it was not when these two lines were written. The Ghosts Ahoy
+    // rebuild put the upstairs door behind %ahoy_templedoor_unlocked, which only the bone key
+    // Necrovarus drops can set - and that is the quest, not a fault. A bare player clicking it gets
+    // "The door is locked, and the lock is bone", so the click has to carry the key to say anything
+    // about the geometry on the far side of it.
+    check('  ...and a player with no key does not get through it', door(player('ahoydoor2a', 3657, 3514, 1), 3656, 3514, 1), false);
+    const keyed = player('ahoydoor2', 3657, 3514, 1);
+    H.give(keyed, 'ahoy_bone_key');
+    H.tick(1);
+    check('  ...which opens for whoever carries the bone key', door(keyed, 3656, 3514, 1), true);
     check('  and the coffin can be reached', reaches(1, upstairs[0], upstairs[1], 3659, 3513, 2), true);
     op(p, 3666, 3520, 'ahoy_tower_stairs_lv1_top', 1);
     check('and back down, walkable', [p.level, walkable(p.x, p.z, p.level)], [0, true]);
@@ -371,78 +379,21 @@ if (run('ahoy')) {
     op(p, 3609, 3543, 'ahoy_ghostship_laddertop', 1);
     check('and down to the ground, walkable', [p.level, walkable(p.x, p.z, 0)], [0, true]);
 
-    console.log('The quest:');
-    p.teleport(inside[0], inside[1], 0);
-    H.tick(1);
-    talk(p, 'ahoy_velorina', [1]);
-    check('Velorina: stage 1', stage(), 1);
-    talk(p, 'ahoy_necrovarus');
-    check('Necrovarus refuses: stage 2', stage(), 2);
-    talk(p, 'ahoy_velorina');
-    check('Velorina: petition, stage 3', [stage(), H.invCount(p, 'ahoy_petition')], [3, 1]);
-    talk(p, 'ahoy_robin');
-    check('Robin asks for his model ship', gv(p, 'ahoy_subquest_toyboat'), 1);
-    talk(p, 'ahoy_oldman');
-    talk(p, 'ahoy_crone');
-    p.teleport(3621, 3543, 1);
-    H.tick(1);
-    op(p, 3622, 3543, 'ahoy_skull_captain', 1);
-    check('the pirate captain has the chest key', H.invCount(p, 'ahoy_chest_key'), 1);
-    p.teleport(3617, 3541, 2);
-    H.tick(1);
-    op(p, 3618, 3541, 'ahoy_chest_locked', 1);
-    check('the chest has the model ship in it', H.invCount(p, 'ahoy_toy_boat'), 1);
-    check('Repair has a handler now', hasOp('obj', 'ahoy_toy_boat', 1), true);
-    held(p, 'ahoy_toy_boat', 1);
-    check('  no silk: still broken', [H.invCount(p, 'ahoy_toy_boat'), H.invCount(p, 'ahoy_toy_boat_repaired')], [1, 0]);
-    H.give(p, 'silk');
-    held(p, 'ahoy_toy_boat', 1);
-    check('  with silk: mended, silk used', [H.invCount(p, 'ahoy_toy_boat'), H.invCount(p, 'ahoy_toy_boat_repaired'), H.invCount(p, 'silk')], [0, 1, 0]);
-    talk(p, 'ahoy_robin');
-    check('Robin signs', gv(p, 'ahoy_signaturecounter'), 1);
-    H.give(p, 'cup_of_nettletea');
-    talk(p, 'ahoy_oldman');
-    check('the old man signs for his tea', gv(p, 'ahoy_signaturecounter'), 2);
-    talk(p, 'ahoy_ghost_innkeeper');
-    check('the innkeeper hands over a bedsheet', H.invCount(p, 'ahoy_bedsheet'), 1);
-    talk(p, 'ahoy_crone');
-    check('the crone signs: petition full, stage 4', [gv(p, 'ahoy_signaturecounter'), stage()], [3, 4]);
-    talk(p, 'ahoy_necrovarus');
-    check('Necrovarus names the book: stage 5', stage(), 5);
-    talk(p, 'ahoy_disciple');
-    check('the disciple has the Book of Haricanto', H.invCount(p, 'ahoy_book_of_haricanto'), 1);
-    H.give(p, 'magic_longbow');
-    talk(p, 'ahoy_akharanu_multi');
-    check('Ak-Haranu trades the manual for a magic longbow', H.invCount(p, 'ahoy_translation_manual'), 1);
-    useOnHeld(p, 'ahoy_book_of_haricanto', 'ahoy_translation_manual');
-    check('book translated: stage 6', stage(), 6);
-    p.teleport(3621, 3543, 1);
-    H.tick(1);
-    op(p, 3622, 3543, 'ahoy_skull_captain', 1);
-    check('scrap 1 off the pirate captain', H.invCount(p, 'ahoy_map_scrap_1'), 1);
-    p.teleport(upstairs[0], upstairs[1], 1);
-    H.tick(1);
-    op(p, 3659, 3513, 'ahoy_coffin', 1);
-    check('scrap 2 out of the coffin, walked to on the upper floor', H.invCount(p, 'ahoy_map_scrap_2'), 1);
-    talk(p, 'ahoy_ghost_captain_2');
-    check('scrap 3 off the harbour captain', H.invCount(p, 'ahoy_map_scrap_3'), 1);
-    useOnHeld(p, 'ahoy_map_scrap_1', 'ahoy_map_scrap_2');
-    check('the map joined: stage 7', [stage(), H.invCount(p, 'ahoy_map_complete')], [7, 1]);
-    talk(p, 'ahoy_ghost_captain_1');
-    check('the ghost captain sails to Dragontooth, walkable landing', [p.x > 3770, walkable(p.x, p.z, 0)], [true, true]);
-    check('  the dig spot is walkable from the landing', connected(0, p.x, p.z, 3803, 3530), true);
-    H.give(p, 'spade');
-    p.teleport(3803, 3530, 0);
-    H.tick(1);
-    held(p, 'spade', 1);
-    check('dig: the robes, stage 8', [stage(), H.invCount(p, 'ahoy_robes_of_necrovarus')], [8, 1]);
-    talk(p, 'ahoy_ghost_captain_1');
-    check('sailed back to the port', [p.x > 3690 && p.x < 3720, walkable(p.x, p.z, 0)], [true, true]);
-    const pray = p.stats[5];
-    talk(p, 'ahoy_necrovarus');
-    H.tick(3);
-    check('Necrovarus shown the robes: complete, ectophial, prayer xp', [stage(), H.invCount(p, 'ectophial'), p.stats[5] - pray], [10, 1, 25000]);
-    check('quest points counted', H.runProc(p, '[proc,count_questpoints]')[0] >= 2, true);
+    // THE WALKTHROUGH THAT USED TO BE HERE IS GONE, and deliberately.
+    //
+    // It played Ghosts Ahoy end to end - Velorina handing out the petition, the crone signing it,
+    // Necrovarus naming the book, stages 1 through 10 - and every one of those is a statement about
+    // the quest that WAS here. The 13 October rebuild replaced it with the quest the wiki describes:
+    // Gravingas hands out the petition, the stages run 0 to 15, and ^ahoy_complete is 15 rather than
+    // 10. Re-pinning each line to the new numbers would leave two walkthroughs of one quest in the
+    // tree, and tools/sim/quest_ahoy_run.ts already IS the new one - played on foot, with each step
+    // carrying its wiki step number, and covering every item this block covered (the toy boat and
+    // its silk, the chest key, the three map scraps, the coffin, the bedsheet, the manual, the
+    // robes, the ectophial). Two walkthroughs where one is wrong is worse than one.
+    //
+    // What stays here is what audit3 is for and quest_ahoy_run.ts does not assert: that the town's
+    // geometry is walkable and its locs have handlers - the barriers, the doors, the ladders and the
+    // stairs above. Run the quest itself with:  npx tsx tools/sim/quest_ahoy_run.ts
 }
 
 // =============================================================================== Eadgar's Ruse
@@ -541,6 +492,11 @@ if (run('zogre')) {
     check('  and it cannot be climbed before Grish', p.x, 2455);
     talk(p, 'zogre_ogre_shaman', [1]);
     check('Grish: stage 2', stage(), 2);
+    // THE BARRICADE IS THE GUARD'S (2026-10-15): "Speak to Ogre guard to the east, he will remove
+    // the barricade" - Grish used to do it himself in the same breath as the warning.
+    check('  and it is still up until the guard is asked', gv(p, 'thzfe_blocking_barricade'), 0);
+    talk(p, 'zogre_ogre_guard');
+    check('the ogre guard puts his shoulder to it', gv(p, 'thzfe_blocking_barricade'), 1);
     p.teleport(2455, 3049, 0);
     H.tick(1);
     op(p, 2456, 3049, 'zogre_multi_blocking_barricade_r', 1);
@@ -577,30 +533,91 @@ if (run('zogre')) {
     check('  picking one inside the tomb does not throw you back to the landing', [p.level, lastMes(p).includes('Bones')], [2, true]);
     standBy(p, 2446, 9417, 2);
     op(p, 2443, 9417, 'ogre_stairs_down', 1);
-    check('down to the deepest chamber, walkable, and the stand is in reach', [p.level, walkable(p.x, p.z, 0), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
-    op(p, 2443, 9417, 'ogre_stairs', 1);
-    check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
+    // the ceremonial chamber is behind the ogre gate now, and the key is three conversations away
+    check('the way down to the chamber is barred this early', [p.level, saw(p, 'ogre gate')], [2, true]);
     p.teleport(landing[0], landing[1], 2);
     H.tick(1);
     op(p, 2442, 9433, 'ogre_cavedoorl', 1);
     check('out through the tomb door, walkable', [p.level, p.z < 4000, walkable(p.x, p.z, p.level)], [0, true, true]);
-    p.teleport(2588, 3088, 0);
-    H.tick(1);
-    talk(p, 'zogre_human_zavistic_rarve');
-    check('Rarve reads the evidence: the potion, stage 8', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [8, 1]);
+    // INCRIMINATING SITHIK (2026-10-15). Rarve used to hand over the potion for a prism and a
+    // backpack; he now wants the case the cache kept seven bits for. tools/sim/zogreyanille.ts
+    // goes through it a line at a time - this is the walkthrough getting past it.
     standBy(p, 2597, 3107, 0);
     op(p, 2597, 3107, 'ladder', 1);
     check("up the ladder in Sithik's house", p.level, 1);
     op(p, 2591, 3105, 'loc_1530', 1);
     check('  his bed reachable up there, through his door', reaches(1, p.x, p.z, 2591, 3103), true);
-    op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
-    op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
-    check('Sithik drinks it, turns, confesses: stage 10', [stage(), gv(p, 'thzfe_sithik_transformed')], [10, 1]);
-    p.teleport(2598, 3084, 0);
+    standAt(p, 'sithiks_drawers', 2593, 3103, 1);
+    op(p, 2593, 3103, 'sithiks_drawers', 1);
+    standAt(p, 'sithiks_cupboard', 2593, 3104, 1);
+    op(p, 2593, 3104, 'sithiks_cupboard', 1);
+    standAt(p, 'sithiks_wardrobe', 2590, 3103, 1);
+    op(p, 2590, 3103, 'sithiks_wardrobe', 1);
+    check('his own rooms: paper, charcoal, and two books he should not have', [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal'), H.invCount(p, 'zogre_necrobook'), H.invCount(p, 'zogre_hambook')], [1, 1, 1, 1]);
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+    useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'zogre_necrobook');
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+    useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'zogre_hambook');
+    check('and he denies both to your face', [gv(p, 'thzfe_shownnecrobook'), gv(p, 'thzfe_shownhambook')], [1, 1]);
+    for (let i = 0; i < 40 && H.invCount(p, 'zogre_sithik_portrait_good') === 0; i++) {
+        if (H.invCount(p, 'papyrus') === 0) H.give(p, 'papyrus');
+        const bad = H.invCount(p, 'zogre_sithik_portrait_bad');
+        if (bad > 0) p.invDel(InvType.INV, ObjType.getId('zogre_sithik_portrait_bad'), bad, slotOf(p, 'zogre_sithik_portrait_bad'));
+        standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+        useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'papyrus');
+    }
+    check('a likeness of him that an innkeeper would know', H.invCount(p, 'zogre_sithik_portrait_good'), 1);
+    p.teleport(2556, 3081, 0);
     H.tick(1);
-    op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
+    const innkeeper = nearest('dragon_bartender', p);
+    useOnNpc(p, 'zogre_dragon_tankard', innkeeper);
+    useOnNpc(p, 'zogre_sithik_portrait_good', innkeeper);
+    check('the innkeeper knows the tankard and signs the portrait', [gv(p, 'thzfe_innkeepermugshown'), H.invCount(p, 'zogre_sithik_portrait_signed')], [1, 1]);
+    p.teleport(2588, 3088, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('Rarve hears the hunch and asks for the case', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [6, 0]);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('and with all four of them: the potion, stage 8', [stage(), H.invCount(p, 'zogre_ogre_trans_potion')], [8, 1]);
+    standBy(p, 2597, 3107, 0);
+    op(p, 2597, 3107, 'ladder', 1);
+    // his door stays open behind you, so there is no loc_1530 to click a second time
+    const tea = World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), p.hash64) ?? World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), -1n);
+    check('the cup of tea is on his bedroom floor', tea !== null, true);
+    if (tea) {
+        p.teleport(2592, 3104, 1);
+        H.tick(1);
+        p.clearPendingAction();
+        p.lastUseItem = ObjType.getId('zogre_ogre_trans_potion');
+        p.lastUseSlot = slotOf(p, 'zogre_ogre_trans_potion');
+        p.setInteraction(Interaction.ENGINE, tea, ServerTriggerType.APOBJU);
+        for (let t = 0; t < 15; t++) H.tick(1);
+        p.closeModal();
+    }
+    check('the potion goes in it, and he is still a man: stage 9', [stage(), gv(p, 'thzfe_sithik_transformed')], [9, 0]);
+    H.tick(110);
+    check('he drinks it when you are not watching', gv(p, 'thzfe_sithik_transformed'), 1);
+    standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
+    op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
+    check('Sithik confesses, and teaches the arrows and the balm: stage 10', [stage(), gv(p, 'thzfe_makebrutalarrow'), gv(p, 'thzfe_makecuredisease')], [10, 1, 1]);
+    // THE CEREMONIAL CHAMBER (2026-10-15). Grish hands over the ogre gate key once Sithik has
+    // talked, and the stairs down to the chamber are what it opens - Slash Bash used to be woken
+    // by ringing the Wizards' Guild bell in Yanille, which was a stand-in for this.
+    p.teleport(2443, 3049, 0);
+    H.tick(1);
+    talk(p, 'zogre_ogre_shaman');
+    check('Grish gives the ogre gate key', H.invCount(p, 'zogre_tomb_artefact_key'), 1);
+    p.teleport(landing[0], landing[1], 2);
+    H.tick(1);
+    standBy(p, 2443, 9417, 2);
+    op(p, 2443, 9417, 'ogre_stairs_down', 1);
+    check('and it opens the way down into the chamber, with the stand in reach', [p.level, walkable(p.x, p.z, p.level), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
+    op(p, 2443, 9417, 'ogre_stairs', 1);
+    check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
+    standBy(p, 2446, 9417, 2);
+    op(p, 2443, 9417, 'ogre_stairs_down', 1);
     const bash = H.npcNear('zogre_slash_bash', 2440, 9458, 2);
-    check('the bell wakes Slash Bash in the tomb, on a walkable tile', [bash !== null, bash ? walkable(bash.x, bash.z, 2) : false], [true, true]);
+    check('which is where Slash Bash stops pretending to be dead', [bash !== null, bash ? walkable(bash.x, bash.z, 2) : false], [true, true]);
     if (bash) {
         const t = NpcType.get(bash.type);
         check('Slash Bash has real stats now (100 hp, not 1)', [bash.levels[3], t.stats?.[0] ?? bash.baseLevels[0]], [100, 100]);
@@ -610,9 +627,19 @@ if (run('zogre')) {
         const before = H.npcHitsFor('zogre_slash_bash').length;
         const died = kill(p, bash);
         check('killed, and it took more than one hit', [died, H.npcHitsFor('zogre_slash_bash').length - before > 1], [true, true]);
-        H.tick(3);
+        // THREE TICKS WAS NOT ENOUGH, which a sweep run showed by reporting a quest that works as
+        // broken: killed, took more than one hit, and then stage 10 with no artefact. The drop and
+        // the stage write live in [ai_queue3,zogre_slash_bash] (quests/quest_zogre/scripts/
+        // quest_zogre.rs2), an npc queue that runs some ticks AFTER the death, so the sim has to
+        // wait for it rather than count ticks. If it still does not come, the queue itself refused
+        // - it needs npc_findhero and then p_finduid - and that is worth seeing as a failure.
+        for (let t = 0; t < 20 && stage() < 14; t++) H.tick(1);
         check('the kill registers: stage 14', stage(), 14);
-        const art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        let art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        for (let t = 0; t < 10 && art === null; t++) {
+            H.tick(1);
+            art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        }
         check('the ogre artefact drops', art !== null, true);
     }
     H.give(p, 'zogre_artifacts');
@@ -779,11 +806,40 @@ if (run('troll')) {
     standBy(p, 2848, 10107, 1);
     op(p, 2848, 10107, 'troll_stronghold_prison_door_closed', 1);
     check('the prison door: stage 30', st(), 30);
-    const g1 = nearest('troll_prison_guard1', p);
+    // THE GUARD CYCLES, so he is waited for rather than demanded.
+    // troll_stronghold_camp_guard.rs2 puts an [ai_timer] on BOTH forms: troll_prison_guard1
+    // changetypes into troll_prison_guard1_awake and back again every 500 ticks, and a failed
+    // steal wakes him immediately as well. Only the sleeping form carries the opnpc3 that can be
+    // robbed, so when he is awake there is no npc of that type in the world at all and
+    // nearest() threw "no npc troll_prison_guard1", killing the whole file.
+    //
+    // It looked solid for years of section-only runs because barely any ticks pass there and he
+    // is still asleep where he spawned. It only shows up in a FULL run, after thousands of ticks
+    // of earlier sections have let him cycle - the same shared-world trap as anything else in
+    // this file that ticks.
+    //
+    // The wait happens from the prison door rather than from his elbow: the awake form fights
+    // back, and standing next to it for up to 700 ticks is a good way to die holding the key.
+    const whenSleeping = () => {
+        let g = H.npcNear('troll_prison_guard1', p.x, p.z, 0);
+        if (g) return g;
+        p.teleport(2848, 10107, 0);
+        for (let w = 0; w < 700 && !g; w++) {
+            H.tick(1);
+            g = H.npcNear('troll_prison_guard1', p.x, p.z, 0);
+        }
+        return g;
+    };
+    const g1 = whenSleeping();
+    if (!g1) throw new Error('troll_prison_guard1 never came back round to asleep');
     p.teleport(g1.x + 1, g1.z, 0);
     H.tick(1);
     for (let i = 0; i < 10 && H.invCount(p, 'troll_key_godric') === 0; i++) {
-        talkHere(p, nearest('troll_prison_guard1', p), [], 3);
+        const g = whenSleeping();
+        if (!g) break;
+        p.teleport(g.x + 1, g.z, 0);
+        H.tick(1);
+        talkHere(p, g, [], 3);
         H.tick(6);
     }
     check("Godric's cell key off the sleeping guard", H.invCount(p, 'troll_key_godric'), 1);
@@ -814,9 +870,17 @@ if (run('dt')) {
     sv(p, 'desertrescue', 30);
     talk(p, 'fourdiamonds_indiana', [1]);
     check('the Archaeologist starts it: etchings, stage 1', [st(), H.invCount(p, 'four_diamonds_etchings')], [1, 1]);
-    const expert = nearest('archaeological_expert', p);
-    standBy(p, expert.x, expert.z, expert.level);
-    useOnNpc(p, 'four_diamonds_etchings', expert);
+    // TERRY MOVES, AND THE USE NEEDS TICKS. He is stood beside once and the etchings used on him
+    // once, which lands only if he is still on the tile standBy measured and the script gets to run
+    // before the next line reads the stage. A sweep run caught this at [1,0] against [2,1] and then
+    // aborted two lines later on a menu the Archaeologist only offers at stage 3, after the file had
+    // passed alone minutes before. Re-approach and re-use until the stage moves.
+    for (let t = 0; t < 6 && st() < 2; t++) {
+        const expert = nearest('archaeological_expert', p);
+        standBy(p, expert.x, expert.z, expert.level);
+        useOnNpc(p, 'four_diamonds_etchings', expert);
+        H.tick(3);
+    }
     check('Terry translates: stage 2', [st(), H.invCount(p, 'four_diamonds_translation_primer')], [2, 1]);
     talk(p, 'fourdiamonds_indiana');
     check('back to the Archaeologist: stage 3', st(), 3);
@@ -870,14 +934,26 @@ if (run('dt')) {
     sv(s, 'deserttreasure', 11);
     talk(s, 'shadow_warrior_rasool');
     check('Rasolo wants his cross', gv(s, 'fd_shadowwarrior_quest'), 1);
-    H.give(s, 'lockpick', 5);
+    // THIRTY LOCKPICKS, NOT FIVE. The chest has three locks and [oploc1,fd_bandit_shutchest] picks
+    // all three inside one click: any single stat_random miss snaps the pick, poisons you and
+    // returns, so an attempt needs three in a row and costs a pick when it does not get them. With
+    // five picks the sim ran out of picks long before it ran out of its six retries - "the cross,
+    // out of the chest: 0" - and the ring-of-visibility check below it went down with the cross.
+    // Thirty picks and a dozen tries put the odds of a clean run past anything worth worrying about.
+    H.give(s, 'lockpick', 30);
     check('the bandit chest can be walked to from the camp', reaches(0, 3163, 2980, 3169, 2967), true);
     standBy(s, 3169, 2967, 0);
-    for (let i = 0; i < 6 && H.invCount(s, 'fd_sword_cross') === 0; i++) {
-        s.levels[3] = 99;
+    for (let i = 0; i < 12 && H.invCount(s, 'fd_sword_cross') === 0; i++) {
+        s.levels[3] = 99; // the needle jab, and the poison it queues
         op(s, 3169, 2967, 'fd_bandit_shutchest', 1);
     }
     check('the cross, out of the chest', H.invCount(s, 'fd_sword_cross'), 1);
+    // AND PUT THE PICKS DOWN BEFORE TALKING TO HIM. Lockpicks do not stack, so thirty of them is
+    // thirty slots: @dt_rasolo_reward checks inv_freespace before handing the ring over and said
+    // "Make some space and I'll hand it over" instead, which failed the next check and was my own
+    // fix for the chest doing it.
+    s.invDel(InvType.INV, ObjType.getId('lockpick'), 30);
+    H.tick(1);
     talk(s, 'shadow_warrior_rasool');
     check('Rasolo: the ring of visibility, the ladder shows', [H.invCount(s, 'fd_ring_visibility'), gv(s, 'fd_shadowwarrior_quest'), gv(s, 'fd_ladder_present')], [1, 2, 1]);
 
@@ -1249,12 +1325,27 @@ if (run('sheep')) {
     talk(p, 'fred_the_farmer', [1, 1, 1, 1]);
     check('Fred: started', gv(p, 'sheep'), 1);
     H.give(p, 'shears');
-    const sheep = ['sheepunsheered', 'sheepunsheered2', 'sheepunsheered3'].map(n => (NpcType.getId(n) >= 0 ? H.npcNear(n, 3200, 3265, 0) : null)).find(n => n);
-    if (sheep) {
+    // ONE SHEAR IN FOUR GETS NOTHING, BY DESIGN. shear_sheep.rs2 rolls random(4) and on a zero the
+    // sheep "manages to get away from you!" and runs off with no wool and no changetype. This
+    // check used to shear once and demand wool, so it failed a quarter of the time - and nobody
+    // saw it, because this section sits below Eadgar's Ruse and had never run until that abort was
+    // fixed. Measured at 2 passes in 5 before this.
+    //
+    // So it retries. Twelve attempts is 0.25^12 of a false red, which is about one run in
+    // sixteen million, and each attempt re-finds the sheep because an escaped one has fled the
+    // tile the last one was standing on.
+    const sheepTypes = ['sheepunsheered', 'sheepunsheered2', 'sheepunsheered3'].filter(n => NpcType.getId(n) >= 0);
+    const anySheep = sheepTypes.some(n => H.npcNear(n, 3200, 3265, 0));
+    let escapes = 0;
+    for (let attempt = 0; attempt < 12 && H.invCount(p, 'wool') === 0 && anySheep; attempt++) {
+        const sheep = sheepTypes.map(n => H.npcNear(n, 3200, 3265, 0)).find(n => n);
+        if (!sheep) break;
         standBy(p, sheep.x, sheep.z, 0);
         useOnNpc(p, 'shears', sheep);
+        if (H.invCount(p, 'wool') === 0) escapes++;
     }
-    check('a sheep sheared', H.invCount(p, 'wool') > 0 || !sheep, true);
+    check('a sheep sheared', H.invCount(p, 'wool') > 0 || !anySheep, true);
+    console.log(`  (${escapes} sheep got away first - shear_sheep.rs2 rolls random(4))`);
     H.give(p, 'ball_of_wool', 12);
     talk(p, 'fred_the_farmer');
     check('twelve balls handed in', [gv(p, 'sheep'), H.invCount(p, 'ball_of_wool')], [13, 0]);

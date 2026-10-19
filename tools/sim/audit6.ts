@@ -57,7 +57,6 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
 const saidSince = (p: Player, from: number, s: string) => H.mesgs.slice(from).some(m => m.who === p.username && m.text.includes(s));
 const free = (p: Player) => !isMapBlocked(p.x, p.z, p.level);
 
@@ -93,7 +92,10 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function findNpc(npcName: string, p: Player): Npc {
@@ -105,7 +107,18 @@ function findNpc(npcName: string, p: Player): Npc {
 /** Talk to the nearest npc of a type, standing next to it first (for steps nobody changed). */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = findNpc(npcName, p);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -185,10 +198,20 @@ function reach(level: number, x: number, z: number, radius = 120) {
     const q = [[x, z]];
     while (q.length) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return (tx: number, tz: number, r = 1) => {
@@ -242,7 +265,11 @@ console.log('MOUNTAIN DAUGHTER');
     // the pearls: the bushes on White Wolf Mountain
     const b = player('md_bush', 2849, 3496);
     let picks = 0;
-    for (let i = 0; i < 40 && H.invCount(b, 'mdaughter_white_pearl_fruit') < 3; i++) { op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3); picks++; }
+    for (let i = 0; i < 40 && H.invCount(b, 'mdaughter_white_pearl_fruit') < 3; i++) {
+        op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3);
+        picks++;
+    }
+    console.log(`  three white pearls took ${picks} picks of the bush`);
     check('white pearls can be picked from the thorny bushes', H.invCount(b, 'mdaughter_white_pearl_fruit') >= 3, true);
     H.give(p, 'mdaughter_white_pearl_fruit', 3);
     talk(p, 'mdaughter_hamal');
@@ -321,7 +348,7 @@ console.log('MOUNTAIN DAUGHTER');
     check('  the second tree and its stump', [at(p), free(p)], [[2808, 3703, 0], true]);
     H.setVarBit(p, 'mdaughter_bear_multi_state', 1); // what the old fight code left behind
     op(p, 2809, 3703, 'mdaughter_caveentrance');
-    check('into the Kendal\'s cave, on a free tile, and the Kendal visible again', [at(p), free(p), H.getVarBit(p, 'mdaughter_bear_multi_state')], [[2807, 10104, 0], true, 0]);
+    check("into the Kendal's cave, on a free tile, and the Kendal visible again", [at(p), free(p), H.getVarBit(p, 'mdaughter_bear_multi_state')], [[2807, 10104, 0], true, 0]);
     check('  the Kendal is in reach', reach(0, p.x, p.z)(2786, 10081, 2), true);
 
     const kendal = findNpc('mdaughter_multi_bear', p);
@@ -330,7 +357,8 @@ console.log('MOUNTAIN DAUGHTER');
     void kt;
     talk(p, 'mdaughter_multi_bear', [1]);
     check('  unmasked, he fights - and the multi stays on the visible Kendal', H.getVarBit(p, 'mdaughter_bear_multi_state'), 0);
-    const kx = kendal.x, kz = kendal.z;
+    const kx = kendal.x,
+        kz = kendal.z;
     const hitsBefore = H.npcHits.length;
     const died = kill(p, kendal);
     check('  a melee player actually hits him', H.npcHits.slice(hitsBefore).length > 0, true);
@@ -367,7 +395,7 @@ console.log('SPIRITS OF THE ELID');
     op(p, 3347, 9533, 'elid_underground_exit');
     check('  and Leave takes you back up', at(p), [3374, 2903, 0]);
     talk(p, 'elid_shiratti');
-    check('Shiratti\'s key', H.invCount(p, 'elid_key'), 1);
+    check("Shiratti's key", H.invCount(p, 'elid_key'), 1);
     p.teleport(3374, 2904, 0);
     H.tick(1);
     op(p, 3373, 2904, 'elid_crevice_clickzone');
@@ -400,8 +428,18 @@ console.log('SPIRITS OF THE ELID');
     op(p, 3372, 9556, 'elid_blackgolem_door');
     check('black golem door: through, east', [at(p), free(p)], [[3373, 9556, 0], true]);
     H.give(p, 'bronze_arrow', 5);
+    // THE SHOT IS TAKEN FROM A DISTANCE, AND THE FIRST CLICK ONLY SETS THE RANGE. The channel runs
+    // between the target and the black golem's room so nobody can stand beside it, which is why the
+    // content uses [apnpcu]: it opens with `if (npc_range(coord) > 7) { p_aprange(7); return; }`, so
+    // a click from further out asks the engine to re-run the trigger once the player has walked into
+    // range - and the walk needs ticks the sim was not giving it. One click with no ticks lands the
+    // arrow only when the black golem's door happens to leave the player inside seven tiles, which
+    // is why this passed alone and failed in a sweep twenty minutes later.
     const target = findNpc('elid_ranging_target_multinpc', p);
-    useOnNpc(p, target, 'bronze_arrow');
+    for (let t = 0; t < 30 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
+        if (t % 10 === 0) useOnNpc(p, target, 'bronze_arrow');
+        H.tick(1);
+    }
     check('  an arrow on the target from across the channel', [H.getVarBit(p, 'elid_rangingchannel'), H.getVarBit(p, 'elidquest')], [1, 35]);
     op(p, 3372, 9556, 'elid_blackgolem_door');
 
@@ -409,7 +447,7 @@ console.log('SPIRITS OF THE ELID');
     p.teleport(3374, 2904, 0);
     H.tick(1);
     op(p, 3373, 2904, 'elid_crevice_clickzone', 1, [2]);
-    check('the crevice now forks: the genie\'s cave, on a free tile', [at(p), free(p)], [[3374, 9306, 0], true]);
+    check("the crevice now forks: the genie's cave, on a free tile", [at(p), free(p)], [[3374, 9306, 0], true]);
     check('  the genie cannot be walked to with his door shut', reach(0, p.x, p.z)(3371, 9320), false);
     op(p, 3371, 9312, 'elid_genie_door');
     check('  through his door', [at(p), free(p)], [[3371, 9313, 0], true]);
@@ -436,7 +474,7 @@ console.log('SPIRITS OF THE ELID');
     const n = player('nardah', 3427, 2892);
     H.clearLogs();
     op(n, 3426, 2893, 'elid_bankbooth', 2);
-    check('Nardah\'s bank booth opens the bank', n.containsModalInterface() || H.ifaces.some(i => i.who === 'nardah' && i.kind === 'open'), true);
+    check("Nardah's bank booth opens the bank", n.containsModalInterface() || H.ifaces.some(i => i.who === 'nardah' && i.kind === 'open'), true);
     n.closeModal();
     n.teleport(3403, 2926, 0);
     H.tick(1);
@@ -447,7 +485,7 @@ console.log('SPIRITS OF THE ELID');
     n.teleport(3445, 2910, 0);
     H.tick(1);
     op(n, 3446, 2911, 'elid_mayor_stairs');
-    check('Awusah\'s stairs go up, onto a free tile', [at(n), free(n)], [[3446, 2910, 1], true]);
+    check("Awusah's stairs go up, onto a free tile", [at(n), free(n)], [[3446, 2910, 1], true]);
     op(n, 3447, 2911, 'elid_mayor_stairstop');
     check('  and down', [at(n), free(n)], [[3445, 2911, 0], true]);
 }
@@ -466,7 +504,7 @@ console.log('FORGETTABLE TALE OF A DRUNKEN DWARF');
     talk(p, 'dwarf_city_black_guard_supreme_leader');
     check('  second time, with a beer: started (was the same speech forever)', [H.getVarBit(p, 'forget_quest'), H.invCount(p, 'beer')], [10, 0]);
     talk(p, 'dwarf_city_gardener_dwarf');
-    check('Rind\'s letter', H.invCount(p, 'forget_gardener_letter'), 1);
+    check("Rind's letter", H.invCount(p, 'forget_gardener_letter'), 1);
     talk(p, 'elstan');
     talk(p, 'dwarf_city_gardener_dwarf');
     check('Elstan, then Rind: seeds', H.getVarBit(p, 'forget_quest'), 20);
@@ -520,7 +558,7 @@ console.log('SWAN SONG');
     check('  Franklin cannot be walked to past the shut gate', reach(0, p.x, p.z)(2344, 3667), false);
     op(p, 2343, 3662, 'loc_14929');
     check('  the colony gate: through', [at(p)[1] >= 3663, free(p)], [true, true]);
-    check('  Franklin, Arnold, Herman\'s desk and the fishing grounds are in reach', [reach(0, p.x, p.z)(2344, 3667), reach(0, p.x, p.z)(2330, 3691), reach(0, p.x, p.z)(2354, 3683), reach(0, p.x, p.z)(2343, 3702)], [true, true, true, true]);
+    check("  Franklin, Arnold, Herman's desk and the fishing grounds are in reach", [reach(0, p.x, p.z)(2344, 3667), reach(0, p.x, p.z)(2330, 3691), reach(0, p.x, p.z)(2354, 3683), reach(0, p.x, p.z)(2343, 3702)], [true, true, true, true]);
     op(p, 2343, 3662, 'loc_14929');
     check('  and back out through the gate', at(p)[1] <= 3662, true);
     op(p, 2343, 3662, 'loc_14929');
@@ -568,7 +606,7 @@ console.log('SWAN SONG');
         H.opNpc(p, spot, 1);
         drive(p);
     }
-    check('monkfish from the colony\'s spots', H.getVarBit(p, 'swansong_fish') >= 5, true);
+    check("monkfish from the colony's spots", H.getVarBit(p, 'swansong_fish') >= 5, true);
     talk(p, 'swan_herman');
     check('fed; the letter goes; the Wise Old Man arrives', H.getVarBit(p, 'swansong'), 30);
     talk(p, 'swan_multioutside');
@@ -591,7 +629,7 @@ console.log('SWAN SONG');
     const k = player('kathy', 2367, 3485);
     H.setVarBit(k, 'swansong', 5);
     talk(k, 'swan_boat_boatwoman', [], 3);
-    check('Kathy\'s boat, stronghold end: Travel to the colony, a free tile', [at(k), free(k)], [[2357, 3639, 0], true]);
+    check("Kathy's boat, stronghold end: Travel to the colony, a free tile", [at(k), free(k)], [[2357, 3639, 0], true]);
     talk(k, 'swan_boatwoman_2', [], 3);
     check('  and back', [at(k), free(k)], [[2368, 3485, 0], true]);
 }
@@ -602,17 +640,17 @@ console.log('IN SEARCH OF THE MYREQUE');
     const p = player('myreque', 3494, 3463);
     H.setVar(p, 'routequest', 0);
     op(p, 3494, 3464, 'thrt_tavern_trap_door');
-    check('down the trapdoor, below the ladder on a free tile (was the ladder\'s own tile)', [at(p), free(p)], [[3477, 9845, 0], true]);
+    check("down the trapdoor, below the ladder on a free tile (was the ladder's own tile)", [at(p), free(p)], [[3477, 9845, 0], true]);
     check('  Veliaf cannot be reached from the cellar on foot', reach(0, p.x, p.z)(3506, 9838), false);
     op(p, 3480, 9837, 'thrttavernbasementfalsewall');
     check('Search the false wall: through into the Hollows', [at(p), free(p)], [[3480, 9836, 0], true]);
-    check('  the Myreque\'s door is in reach', reach(0, p.x, p.z)(3500, 9812), true);
+    check("  the Myreque's door is in reach", reach(0, p.x, p.z)(3500, 9812), true);
     op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
     check('  their door: into the hideout', [at(p), free(p)], [[3505, 9832, 0], true]);
     check('  Veliaf, on foot', walkTalk(p, 'route_veliaf_hurtz', [1, 1, 1, 1]), true);
     check('  three questions right: sent for the route', H.getVar(p, 'routequest'), 3);
     op(p, 3505, 9831, 'route_cavewalltunnel');
-    check('the hideout\'s tunnel: back out by the door', [at(p), free(p)], [[3500, 9811, 0], true]);
+    check("the hideout's tunnel: back out by the door", [at(p), free(p)], [[3500, 9811, 0], true]);
 
     // the ladder, Cyreg, Curpile
     p.teleport(3483, 9842, 0);
@@ -636,14 +674,24 @@ console.log('IN SEARCH OF THE MYREQUE');
     check('Veliaf: complete', H.getVar(p, 'routequest'), 5);
     H.clearLogs();
     talk(p, 'multi_vanstrom_stranger_entity');
-    check('the man in the tavern chair answers Talk-to', H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('passing through')), true);
+    check(
+        'the man in the tavern chair answers Talk-to',
+        H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('passing through')),
+        true
+    );
 }
 
 // ============================================================================== getting there on foot
 console.log('GETTING THERE ON FOOT');
 {
-    // The colony's outside ground is an island in this cache: Kathy's boat is the way there.
-    check('Swan Song: the ground Herman stands on is not joined to the mainland on foot', reach(0, 2461, 3382, 300)(2345, 3650), false);
+    // IT IS NOT AN ISLAND, which is what this used to assert. A flood from Herman's tile reaches the
+    // Stronghold gate in 388 steps, down the coast at x 2346-2367 from z 3650 to z 3425 and then
+    // east - a real walking route, not a gap in the collision map - and Old School is the same: the
+    // Piscatoris colony can be walked to from the Eagles' Peak side and Kathy's boat is a shortcut
+    // rather than the only way in. So the check now asserts the route, which is the thing worth
+    // holding: if an import ever walls the coast off, the boat still works and nothing else would
+    // notice. Kathy's own two legs are below.
+    check('Swan Song: the ground Herman stands on can be walked to from the mainland', reach(0, 2461, 3382, 300)(2345, 3650), true);
     check('  Kathy Corkat, Stronghold end, can be walked to from outside the Stronghold gate', reach(0, 2461, 3382, 300)(2368, 3486), true);
     const k0 = player('kathy0', 2367, 3485);
     H.setVarBit(k0, 'swansong', 0);

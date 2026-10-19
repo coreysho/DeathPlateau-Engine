@@ -16,6 +16,7 @@ import VarBitType from '#/cache/config/VarBitType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 
 import { CoordGrid } from '#/engine/CoordGrid.js';
+import InstanceMap from '#/engine/InstanceMap.js';
 import World from '#/engine/World.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import Loc from '#/engine/entity/Loc.js';
@@ -98,13 +99,30 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                     player.messageGame("You can't teleport home from the Wilderness.");
                     return false;
                 }
+
+                // (2026-10-19) Fight Cave, solo Pest Control, Zulrah, a house: each has its own way out,
+                // which is what ends the instance and gives it back to the pool - ::home walked out of
+                // them and left the slot taken, and the minigame's own state half-finished.
+                if (InstanceMap.at(player.x, player.z) !== null) {
+                    player.messageGame("You can't teleport home from here. Use the way out.");
+                    return false;
+                }
             }
 
             player.clearInteraction();
             player.unsetMapFlag();
 
-            player.teleJump((48 << 6) + 14, (54 << 6) + 35, 0);
-            player.messageGame('You teleport home to Edgeville.');
+            // (2026-10-19) The teleport itself is content's (misc/scripts/home_teleport.rs2), so it is
+            // refused wherever any teleport is - a duel, Castle Wars, the trawler, a random event, the
+            // quests that forbid it - and the rum and plague sample are lost as on any other. This used to
+            // teleJump straight to Edgeville, which skipped all of that.
+            const script = ScriptProvider.getByName('[proc,home_teleport]');
+            if (!script) {
+                // a content build from before home_teleport.rs2
+                player.messageGame("You can't teleport home right now.");
+                return false;
+            }
+            player.executeScript(ScriptRunner.init(script, player), true);
             return true;
         }
 
@@ -253,7 +271,8 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // developer and above, ON LIVE TOO - which is the whole reason this sits above the
             // block below rather than in it. ::godmode was asked for (2026-10-03) for testing boss
             // rotations on the real server, and a [debugproc,] cannot do that: debugprocs are
-            // owner-only on a live world. Nothing here touches another player or the economy.
+            // owner-only on a live world. It cannot be used against players: while it is on, content's
+            // [proc,pvp_is_attackable] refuses attacking a player and being attacked by one (2026-10-19).
 
             if (cmd === 'godmode') {
                 // The switch itself is content - misc/scripts/godmode.rs2 - so what it restores and

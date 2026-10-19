@@ -12,7 +12,6 @@
 //
 //   npx tsx tools/sim/deathuntradeable.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import ObjType from '#/cache/config/ObjType.js';
 import Obj from '#/engine/entity/Obj.js';
@@ -49,9 +48,7 @@ function floor(p: Player): { name: string; owner: string; reveals: boolean }[] {
             for (const obj of World.gameMap.getZone(zx << 3, zz << 3, p.level).getAllObjsSafe()) {
                 if (Math.abs(obj.x - p.x) > 2 || Math.abs(obj.z - p.z) > 2) continue;
                 if (obj.lifecycle !== EntityLifeCycle.DESPAWN) continue;
-                const who = obj.receiver64 === Obj.NO_RECEIVER
-                    ? 'everyone'
-                    : (World.getPlayerByHash64(obj.receiver64)?.username ?? 'someone');
+                const who = obj.receiver64 === Obj.NO_RECEIVER ? 'everyone' : (World.getPlayerByHash64(obj.receiver64)?.username ?? 'someone');
                 out.push({
                     name: ObjType.get(obj.type).debugname ?? String(obj.type),
                     owner: who,
@@ -65,22 +62,19 @@ function floor(p: Player): { name: string; owner: string; reveals: boolean }[] {
 
 function clearFloor(p: Player): void {
     for (let zx = (p.x - 2) >> 3; zx <= (p.x + 2) >> 3; zx++)
-        for (let zz = (p.z - 2) >> 3; zz <= (p.z + 2) >> 3; zz++)
-            for (const obj of World.gameMap.getZone(zx << 3, zz << 3, p.level).getAllObjsSafe())
-                if (obj.lifecycle === EntityLifeCycle.DESPAWN) World.removeObj(obj, 0);
+        for (let zz = (p.z - 2) >> 3; zz <= (p.z + 2) >> 3; zz++) for (const obj of World.gameMap.getZone(zx << 3, zz << 3, p.level).getAllObjsSafe()) if (obj.lifecycle === EntityLifeCycle.DESPAWN) World.removeObj(obj, 0);
 }
 
-const show = (rows: ReturnType<typeof floor>) =>
-    rows.map(r => `${r.name} -> ${r.owner}${r.reveals ? ' (will go public)' : ''}`);
+const show = (rows: ReturnType<typeof floor>) => rows.map(r => `${r.name} -> ${r.owner}${r.reveals ? ' (will go public)' : ''}`);
 
 // Five things carried: three tradeables and two untradeables, one of them a god cape.
 function kit(p: any) {
     H.clearInv(p);
     H.give(p, 'shark', 3);
     H.give(p, 'rune_scimitar', 1);
-    H.give(p, 'amulet_of_ghostspeak', 1);   // untradeable, not a cape
-    H.give(p, 'saradomin_cape', 1);         // untradeable, category armour_godcape
-    H.setVar(p, 'pk_skull', 1);             // skulled, so nothing is kept and the floor is the whole story
+    H.give(p, 'amulet_of_ghostspeak', 1); // untradeable, not a cape
+    H.give(p, 'saradomin_cape', 1); // untradeable, category armour_godcape
+    H.setVar(p, 'pk_skull', 1); // skulled, so nothing is kept and the floor is the whole story
     H.tick(1);
 }
 
@@ -104,11 +98,9 @@ console.log('=== KILLED BY SOMETHING THAT IS NOT A PLAYER (anywhere, Wilderness 
     const after = floor(p);
     console.log('  after the reveal window:');
     for (const line of show(after)) console.log('    ' + line);
-    check('  ...and it is still only theirs once the reveal window has passed',
-        after.find(r => r.name === 'amulet_of_ghostspeak')?.owner, 'pvm');
+    check('  ...and it is still only theirs once the reveal window has passed', after.find(r => r.name === 'amulet_of_ghostspeak')?.owner, 'pvm');
     console.log('  -- the god cape, which tells you Saradomin reclaimed it');
-    check('a god cape is destroyed on a PvM death, as its message says',
-        owner('saradomin_cape'), undefined);
+    check('a god cape is destroyed on a PvM death, as its message says', owner('saradomin_cape'), undefined);
 }
 
 console.log('\n=== KILLED BY A PLAYER');
@@ -129,10 +121,8 @@ console.log('\n=== KILLED BY A PLAYER');
     const after = floor(victim);
     console.log('  after the reveal window:');
     for (const line of show(after)) console.log('    ' + line);
-    check('  ...and is STILL only the victim, so the killer can never take it',
-        after.find(r => r.name === 'amulet_of_ghostspeak')?.owner, 'victim');
-    check('  while the killer share goes public once the window passes',
-        after.find(r => r.name === 'rune_scimitar')?.owner, 'everyone');
+    check('  ...and is STILL only the victim, so the killer can never take it', after.find(r => r.name === 'amulet_of_ghostspeak')?.owner, 'victim');
+    check('  while the killer share goes public once the window passes', after.find(r => r.name === 'rune_scimitar')?.owner, 'everyone');
     check('a god cape IS destroyed on a player kill', owner('saradomin_cape'), undefined);
 }
 
@@ -141,32 +131,28 @@ console.log('\n=== AND WHAT THE THREE KEPT ITEMS CAN BE');
     const p: any = player('keep', 3260, 3218, 0);
     clearFloor(p);
     kit(p);
-    H.setVar(p, 'pk_skull', 0);     // unskulled: three kept
+    H.setVar(p, 'pk_skull', 0); // unskulled: three kept
     H.tick(1);
     runDeath(p, '[proc,player_death_lose_items]');
     const held: string[] = [];
-    for (const n of ['shark', 'rune_scimitar', 'amulet_of_ghostspeak', 'saradomin_cape'])
-        if (H.invCount(p, n) > 0) held.push(`${n} x${H.invCount(p, n)}`);
+    for (const n of ['shark', 'rune_scimitar', 'amulet_of_ghostspeak', 'saradomin_cape']) if (H.invCount(p, n) > 0) held.push(`${n} x${H.invCount(p, n)}`);
     console.log('  kept:', held);
     // THE RANKING IS oc_cost AND NOTHING ELSE - tradeability does not enter into it. The ghostspeak
     // amulet costs 35 and a shark 300, so the amulet loses; that is the whole reason it dropped.
     check('a cheap untradeable loses to a dearer tradeable', H.invCount(p, 'amulet_of_ghostspeak'), 0);
-    check('  ...the three dearest things are what is kept',
-        [H.invCount(p, 'rune_scimitar'), H.invCount(p, 'shark')], [1, 2]);
-    check('  ...and a god cape is barred outright by param=destroy_death',
-        H.invCount(p, 'saradomin_cape'), 0);
+    check('  ...the three dearest things are what is kept', [H.invCount(p, 'rune_scimitar'), H.invCount(p, 'shark')], [1, 2]);
+    check('  ...and a god cape is barred outright by param=destroy_death', H.invCount(p, 'saradomin_cape'), 0);
 
     // And the other way round: the dearest untradeable in the game is kept ahead of everything.
     const q: any = player('keep2', 3280, 3218, 0);
     clearFloor(q);
     H.clearInv(q);
     H.give(q, 'shark', 3);
-    H.give(q, 'dragonfire_shield', 1);      // untradeable, cost 2,000,000
+    H.give(q, 'dragonfire_shield', 1); // untradeable, cost 2,000,000
     H.setVar(q, 'pk_skull', 0);
     H.tick(1);
     runDeath(q, '[proc,player_death_lose_items]');
-    check('an untradeable IS kept when it is the dearest thing carried',
-        H.invCount(q, 'dragonfire_shield'), 1);
+    check('an untradeable IS kept when it is the dearest thing carried', H.invCount(q, 'dragonfire_shield'), 1);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

@@ -50,7 +50,12 @@ const check = (what: string, got: unknown, want: unknown) => {
 const B = { olaf: 2, sigmund: 3, olafAsked: 14, peerRiddle: 24, mLo: 19 };
 const bits = (p: Player) => H.getVar(p, 'viking_bits');
 const bit = (p: Player, n: number) => (bits(p) >>> n) & 1;
-const setBits = (p: Player, ...ns: number[]) => H.setVar(p, 'viking_bits', ns.reduce((v, n) => v | (1 << n), bits(p)));
+const setBits = (p: Player, ...ns: number[]) =>
+    H.setVar(
+        p,
+        'viking_bits',
+        ns.reduce((v, n) => v | (1 << n), bits(p))
+    );
 const step = (p: Player) => (bits(p) >>> B.mLo) & 31;
 const setStep = (p: Player, s: number) => H.setVar(p, 'viking_bits', (bits(p) & ~(31 << B.mLo)) | (s << B.mLo));
 const at = (p: Player) => [p.x - 2624, p.z - 3648, p.level];
@@ -79,7 +84,7 @@ function drain(p: Player, picks: number[] = [], maxTicks = 60) {
         }
         idle = 0;
         const names = (p as any).resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-        const open = (p as any).modalChat === -1 ? '' : Component.get((p as any).modalChat).comName ?? '';
+        const open = (p as any).modalChat === -1 ? '' : (Component.get((p as any).modalChat).comName ?? '');
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             const pick = picks.shift();
@@ -98,7 +103,14 @@ function talk(p: Player, npcName: string, picks: number[] = []): string {
     const npc = H.npcNear(npcName, p.x, p.z, p.level) ?? [0, 1, 2, 3].map(l => H.npcNear(npcName, p.x, p.z, l)).find(n => n);
     if (!npc) throw new Error('no npc ' + npcName);
     const from = H.ifaces.length;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, 1);
@@ -110,7 +122,14 @@ function talk(p: Player, npcName: string, picks: number[] = []): string {
     return text(p, from);
 }
 
-const text = (p: Player, from: number) => H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text').map(i => i.text ?? '').join(' | ').replace(/\|/g, ' ').replace(/\s+/g, ' ');
+const text = (p: Player, from: number) =>
+    H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text')
+        .map(i => i.text ?? '')
+        .join(' | ')
+        .replace(/\|/g, ' ')
+        .replace(/\s+/g, ' ');
 const said = (p: Player, s: string) => H.mesgs.some(m => m.who === p.username && m.text.includes(s));
 const has = (t: string, s: string) => t.includes(s);
 
@@ -219,13 +238,18 @@ console.log('LONGHALL  the backstage door, the bouncer, the performance');
     for (let i = 0; i < 20 && (p.x !== 2624 + 36 || p.z !== 3648 + 36); i++) H.tick(1);
     check('  and walks from backstage onto the stage', at(p), [36, 36, 0]);
     H.clearLogs();
-    H.opheld(p, 'viking_enchanted_strung_lyre', 1);
+    // THE MARK GOES BEFORE THE CLICK. It was taken after, so any interface text the opheld itself
+    // drove - Olaf's "That was awesome!" among it, depending on how far the performance got inside
+    // that call - was already behind the slice and could not be seen. sweep5 caught it with the
+    // trial completed and the vote cast and the line "missing"; batch1012 has the same note at the
+    // top of itself for the same reason.
     const from = H.ifaces.length;
+    H.opheld(p, 'viking_enchanted_strung_lyre', 1);
     drain(p);
     const sung = H.says.filter(s => s.who === p.username).map(s => s.text);
     check('the performance: four sung lines, the default verse with the name', [sung.length, sung[0].endsWith(' is my name,'), sung[3]], [4, true, "I'll just go ahead and play."]);
     check('  the hecklers heckle', npcSays.filter(s => s.who.startsWith('viking_heckler')).length, 4);
-    check("  Olaf: \"That was awesome!\", the Bard's trial done, the vote", [has(text(p, from), 'That was awesome'), said(p, "completed the Bard's Trial"), bit(p, B.olaf)], [true, true, 1]);
+    check('  Olaf: "That was awesome!", the Bard\'s trial done, the vote', [has(text(p, from), 'That was awesome'), said(p, "completed the Bard's Trial"), bit(p, B.olaf)], [true, true, 1]);
     check('  both enchanted lyres lose the blessing', [H.invCount(p, 'viking_enchanted_strung_lyre'), H.invCount(p, 'viking_strung_lyre')], [0, 2]);
 
     // THE BUG: back out through the door from the stage
@@ -245,33 +269,85 @@ console.log('LONGHALL  the backstage door, the bouncer, the performance');
     t = clickLoc(c, ...DOOR, 'viking_bard_backstage_door', 1);
     check('  and after the quest the bouncer keeps you out', [has(t, 'Talent only'), at(c)], [true, OUTSIDE]);
     t = talk(c, 'viking_heckler');
-    check('a heckler talks (Talk-to was a dead click)', has(t, "waiting for the show"), true);
+    check('a heckler talks (Talk-to was a dead click)', has(t, 'waiting for the show'), true);
     H.despawn(p, b, c);
 }
 
 // =====================================================================================
-console.log("SIGMUND  the chain of favours, every link");
+console.log('SIGMUND  the chain of favours, every link');
 {
     // link -> npc; 0 is Sigmund
-    const L = ['viking_sigmund', 'viking_sailor', 'viking_olaf', 'viking_clothing_shopkeeper', 'viking_brundt', 'viking_sigli',
-        'viking_weapons_salesman', 'viking_fisherman1', 'viking_hallifred', 'viking_peer', 'viking_thorvald', 'viking_reveller_3',
-        'viking_longhall_barkeep', 'viking_askelapen'];
+    const L = [
+        'viking_sigmund',
+        'viking_sailor',
+        'viking_olaf',
+        'viking_clothing_shopkeeper',
+        'viking_brundt',
+        'viking_sigli',
+        'viking_weapons_salesman',
+        'viking_fisherman1',
+        'viking_hallifred',
+        'viking_peer',
+        'viking_thorvald',
+        'viking_reveller_3',
+        'viking_longhall_barkeep',
+        'viking_askelapen'
+    ];
     const WHO = ['Sigmund', 'Sailor', 'Olaf', 'Yrsa', 'Brundt', 'Sigli', 'Skulgrimen', 'Fisherman', 'Swensen', 'Peer', 'Thorvald', 'Manni', 'Thora', 'Askeladden'];
     // a phrase from each link's first answer, from its "afterwards" line, and the item it gives
-    const FIRST = ['', 'mysterious flower', 'sturdy boots to replace', 'reduce the sales tax', 'Speak to Sigli then', 'a new string for my hunting bow',
-        'You get me that fish', 'secret map of the best fishing spots', 'no less than a weather forecast', 'I require a bodyguard',
-        "Champions' Token to you", 'give you my champions token', 'NEVER EVER EVER', ''];
-    const AFTER = ['', 'that terrible bard Olaf', 'I would not trouble you', 'Only the Chieftain', 'pay more attention', 'If I knew I would not have asked',
-        "There's another one?", 'rip off navigator', 'from the Seer perhaps', 'simply have asked them myself', 'persuade one of the revellers',
-        'the longhall barkeep has it', 'Knowing the little runt', ''];
-    const GIVES = ['', 'viking_rare_flower', 'viking_song', 'viking_new_boots', 'viking_promissary_note', 'viking_map_to_hunting_grounds', 'viking_bowstring',
-        'viking_unique_fish', 'viking_another_map', 'viking_weather_forecast', 'viking_promissary_note3', 'viking_champion_token',
-        'viking_legendary_cocktail', 'viking_promissary_note2'];
-    const menu = (link: number, then: number[] = []) => [1, ...then]; // "Ask about the Merchant's trial" is always the first option
+    const FIRST = [
+        '',
+        'mysterious flower',
+        'sturdy boots to replace',
+        'reduce the sales tax',
+        'Speak to Sigli then',
+        'a new string for my hunting bow',
+        'You get me that fish',
+        'secret map of the best fishing spots',
+        'no less than a weather forecast',
+        'I require a bodyguard',
+        "Champions' Token to you",
+        'give you my champions token',
+        'NEVER EVER EVER',
+        ''
+    ];
+    const AFTER = [
+        '',
+        'that terrible bard Olaf',
+        'I would not trouble you',
+        'Only the Chieftain',
+        'pay more attention',
+        'If I knew I would not have asked',
+        "There's another one?",
+        'rip off navigator',
+        'from the Seer perhaps',
+        'simply have asked them myself',
+        'persuade one of the revellers',
+        'the longhall barkeep has it',
+        'Knowing the little runt',
+        ''
+    ];
+    const GIVES = [
+        '',
+        'viking_rare_flower',
+        'viking_song',
+        'viking_new_boots',
+        'viking_promissary_note',
+        'viking_map_to_hunting_grounds',
+        'viking_bowstring',
+        'viking_unique_fish',
+        'viking_another_map',
+        'viking_weather_forecast',
+        'viking_promissary_note3',
+        'viking_champion_token',
+        'viking_legendary_cocktail',
+        'viking_promissary_note2'
+    ];
+    const menu = (_link: number, then: number[] = []) => [1, ...then]; // "Ask about the Merchant's trial" is always the first option
 
     const p = player('frem_sigmund', 17, 30);
     let t = talk(p, 'viking_sailor');
-    check('before Sigmund sets the task, the sailor just answers the council question (no menu)', [has(t, "just a sailor"), step(p)], [true, 0]);
+    check('before Sigmund sets the task, the sailor just answers the council question (no menu)', [has(t, 'just a sailor'), step(p)], [true, 0]);
     t = talk(p, 'viking_sigmund', [2]);
     check('Sigmund, "No": no task', [has(t, 'I simply require a flower'), step(p)], [true, 0]);
     t = talk(p, 'viking_sigmund', [1]);
@@ -292,9 +368,21 @@ console.log("SIGMUND  the chain of favours, every link");
         t = talk(p, L[link], menu(link));
         afters.push(`${WHO[link]}:${has(t, AFTER[link]) && step(p) === link + 1 ? 'ok' : t.slice(0, 120)}`);
     }
-    check('a bystander asked at each step has no idea and moves nothing', noIdea, noIdea.map(s => s.split(':')[0] + ':ok'));
-    check('each link, asked in the wiki order, answers and names what they want', firsts, firsts.map(s => s.split(':')[0] + ':ok'));
-    check('each link asked again gives their "afterwards" line', afters, afters.map(s => s.split(':')[0] + ':ok'));
+    check(
+        'a bystander asked at each step has no idea and moves nothing',
+        noIdea,
+        noIdea.map(s => s.split(':')[0] + ':ok')
+    );
+    check(
+        'each link, asked in the wiki order, answers and names what they want',
+        firsts,
+        firsts.map(s => s.split(':')[0] + ':ok')
+    );
+    check(
+        'each link asked again gives their "afterwards" line',
+        afters,
+        afters.map(s => s.split(':')[0] + ':ok')
+    );
     // hints on the way: Manni and Sigli point the right way when asked about somebody else's item
     t = talk(p, 'viking_sigli', menu(5));
     check('Sigli asked about the promise: "Did you even ASK Askeladden?"', has(t, 'Did you even ASK Askeladden'), true);
@@ -330,11 +418,23 @@ console.log("SIGMUND  the chain of favours, every link");
         t = talk(p, L[link], menu(link));
         afterTrades.push(`${WHO[link]}:${step(p) === 27 - link && H.invCount(p, GIVES[link]) === 1 ? 'ok' : t.slice(0, 90)}`);
     }
-    check('on the way back, the wrong person keeps your item and the chain where it was', wrongs, wrongs.map(s => s.split(':')[0] + ':ok'));
-    check('each trade takes exactly what they want and gives exactly their item', trades, trades.map(s => s.split(':')[0] + ':ok'));
-    check('and talking to them again after changes nothing', afterTrades, afterTrades.map(s => s.split(':')[0] + ':ok'));
+    check(
+        'on the way back, the wrong person keeps your item and the chain where it was',
+        wrongs,
+        wrongs.map(s => s.split(':')[0] + ':ok')
+    );
+    check(
+        'each trade takes exactly what they want and gives exactly their item',
+        trades,
+        trades.map(s => s.split(':')[0] + ':ok')
+    );
+    check(
+        'and talking to them again after changes nothing',
+        afterTrades,
+        afterTrades.map(s => s.split(':')[0] + ':ok')
+    );
     t = talk(p, 'viking_sigmund');
-    check("Sigmund takes the flower: his vote, step 27", [has(t, 'Incredible!'), H.invCount(p, 'viking_rare_flower'), step(p), bit(p, B.sigmund)], [true, 0, 27, 1]);
+    check('Sigmund takes the flower: his vote, step 27', [has(t, 'Incredible!'), H.invCount(p, 'viking_rare_flower'), step(p), bit(p, B.sigmund)], [true, 0, 27, 1]);
     t = talk(p, 'viking_sigmund');
     check('  Sigmund afterwards', has(t, 'real boon to the Fremennik'), true);
     t = talk(p, 'viking_sailor', menu(1));
@@ -369,7 +469,7 @@ console.log("SIGMUND  the chain of favours, every link");
 }
 
 // =====================================================================================
-console.log("PEER  the banking spell");
+console.log('PEER  the banking spell');
 {
     const p = player('frem_peer_bank', 10, 21);
     setBits(p, B.peerRiddle);
@@ -387,7 +487,6 @@ console.log("PEER  the banking spell");
     check('  empty-handed: "enter by one door of your house, and leave by the other"', has(t, 'leave by the other'), true);
     H.despawn(p);
 }
-
 
 // =====================================================================================
 console.log('JOURNEY  Brundt, then Manni, Sigli and Peer the whole way through, then Brundt again');
@@ -420,7 +519,16 @@ console.log('JOURNEY  Brundt, then Manni, Sigli and Peer the whole way through, 
     H.clearInv(j);
     t = talk(j, 'viking_sigli', [1]);
     check("Sigli: the hunters' talisman", H.invCount(j, 'viking_draugen_talisman_uncharged'), 1);
-    const spots = [[41, 56, 14, 38], [41, 56, 23, 28], [41, 56, 26, 45], [41, 56, 39, 44], [42, 56, 12, 21], [42, 56, 13, 40], [42, 56, 28, 28], [42, 56, 43, 25]];
+    const spots = [
+        [41, 56, 14, 38],
+        [41, 56, 23, 28],
+        [41, 56, 26, 45],
+        [41, 56, 39, 44],
+        [42, 56, 12, 21],
+        [42, 56, 13, 40],
+        [42, 56, 28, 28],
+        [42, 56, 43, 25]
+    ];
     const hunt = (label: string) => {
         H.opheld(j, 'viking_draugen_talisman_uncharged', 1);
         drain(j);

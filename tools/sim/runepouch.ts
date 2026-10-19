@@ -29,12 +29,17 @@ const load = (p: any) => {
 const stored = (p: any) => {
     const s = p.getInventory(STORE)!;
     const out: [string, number][] = [];
-    for (let i = 0; i < s.capacity; i++) { const o = s.get(i); if (o) out.push([ObjType.get(o.id).debugname, o.count]); }
+    for (let i = 0; i < s.capacity; i++) {
+        const o = s.get(i);
+        if (o) out.push([ObjType.get(o.id).debugname ?? `obj_${o.id}`, o.count]);
+    }
     return out.sort();
 };
-const floorAt = (p: any) => [...World.gameMap.getZone(p.x, p.z, p.level).getAllObjsUnsafe()]
-    .filter((o: any) => o.x === p.x && o.z === p.z)
-    .map((o: any) => [ObjType.get(o.type).debugname, o.count] as [string, number]).sort();
+const floorAt = (p: any) =>
+    [...World.gameMap.getZone(p.x, p.z, p.level).getAllObjsUnsafe()]
+        .filter((o: any) => o.x === p.x && o.z === p.z)
+        .map((o: any) => [ObjType.get(o.type).debugname, o.count] as [string, number])
+        .sort();
 
 console.log('DEATH CARRYING IT');
 {
@@ -43,7 +48,10 @@ console.log('DEATH CARRYING IT');
     load(p);
     A.runProcProtected(p, '[proc,rune_pouch_death_spill]');
     check('  the store is emptied', stored(p), []);
-    check('  the runes are on the floor', floorAt(p), [['airrune', 1500], ['firerune', 500]]);
+    check('  the runes are on the floor', floorAt(p), [
+        ['airrune', 1500],
+        ['firerune', 500]
+    ]);
     H.despawn(p);
 }
 
@@ -52,7 +60,10 @@ console.log('DEATH WITH THE POUCH SAFE IN THE BANK');
     const p = fresh('rp2');
     load(p); // no pouch in the inventory - it is banked, which is a supported way to carry nothing
     A.runProcProtected(p, '[proc,rune_pouch_death_spill]');
-    check('  the store is untouched', stored(p), [['airrune', 1500], ['firerune', 500]]);
+    check('  the store is untouched', stored(p), [
+        ['airrune', 1500],
+        ['firerune', 500]
+    ]);
     check('  nothing spilled', floorAt(p), []);
     H.despawn(p);
 }
@@ -64,7 +75,10 @@ console.log('DEATH WITH THE POUCH PROTECTED');
     // a protected pouch has already been moved to deathkeep by the time the spill runs
     p.invSet(InvType.getId('deathkeep'), id('rune_pouch'), 1, 0);
     A.runProcProtected(p, '[proc,rune_pouch_death_spill]');
-    check('  a kept pouch keeps its runes', stored(p), [['airrune', 1500], ['firerune', 500]]);
+    check('  a kept pouch keeps its runes', stored(p), [
+        ['airrune', 1500],
+        ['firerune', 500]
+    ]);
     check('  nothing spilled', floorAt(p), []);
     H.despawn(p);
 }

@@ -1,19 +1,39 @@
-// THE WILDERNESS FISHING SPOT: sea turtle and manta ray among the west dragons.
+// THE WILDERNESS FISHING SPOTS: sea turtle and manta ray, on the lake beside the east dragons.
 //
 //   npx tsx tools/sim/wildyfish.ts
 //
-// Suggestion #10. The point of the spot is that it is a SIDEGRADE to the Fishing Trawler - same
-// rolls, same xp, more risk - so most of what is checked here is that it really is one: the catch
+// Suggestion #10. The point of the spots is that they are a SIDEGRADE to the Fishing Trawler - same
+// rolls, same xp, more risk - so most of what is checked here is that they really are one: the catch
 // rates are the shark's own numbers and the xp is unchanged, because a Wilderness spot that simply
 // out-earned the Trawler would replace it rather than add to it.
+//
+// MOVED THREE TIMES ON 15 OCTOBER, which is why nothing here is written down any more. The pond
+// among the WEST dragons became four spots on the lake, then the east coast, then two pairs on
+// whole water tiles - and this sim went red on the first two moves for reading coordinates out of
+// its own source. So it now READS THE SPOTS OUT OF THE WORLD and asserts the properties each move
+// was made to get: in water a player cannot walk into, with a tile beside it sharing an EDGE (the
+// engine's reach for an npc is orthogonal only), in the Wilderness, within walking distance of the
+// dragons, far enough apart to be a queue, and - the one that matters most - a Harpoon click that
+// actually starts at every one of them.
+//
+// AND IT ASSERTS THAT EACH ONE DRAWS OVER WATER, which is what the last move was about and what
+// this sim could only print until the client was read. The overlay under a tile comes out of
+// maps/*.jm2 as `o6`, `o6;shape` or `o6;shape;rotation` (tools/unpack/map/Unpack.ts:204-210 writes
+// all three forms) and an npc draws at the CENTRE of its tile, so the question is whether the
+// centre of that tile is overlay or underlay. CENTRE_WATER below is that question answered from
+// the client's own geometry rather than from a chart or from a screenshot - see the comment on it.
 import * as H from './harness.js';
+import World from '#/engine/World.js';
+import Npc from '#/engine/entity/Npc.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import StructType from '#/cache/config/StructType.js';
 import Player from '#/engine/entity/Player.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import { isFlagged, isZoneAllocated } from '#/engine/GameMap.js';
-import { CollisionFlag } from '#/engine/routefinder/index.js';
+import { isFlagged, isZoneAllocated, canTravel } from '#/engine/GameMap.js';
+import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
+import Environment from '#/util/Environment.js';
+import { existsSync, readFileSync } from 'fs';
 
 await H.boot();
 H.loginOrder();
@@ -26,13 +46,87 @@ const check = (what: string, got: unknown, want: unknown) => {
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
-const SPOT: [number, number] = [2977, 3616];
 const TURTLE = 79;
-const sp = (name: string, p: string) => StructType.get(StructType.getId(name)).params.get(ParamType.getId(p));
+const sp = (name: string, p: string) => StructType.get(StructType.getId(name)).params?.get(ParamType.getId(p));
+const blocked = (x: number, z: number) => isFlagged(x, z, 0, CollisionFlag.WALK_BLOCKED);
+/** The tiles beside a spot that share an EDGE with it and are not blocked - the only ones that can reach it. */
+const banks = (x: number, z: number) =>
+    (
+        [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ] as [number, number][]
+    )
+        .map(([dx, dz]) => [x + dx, z + dz] as [number, number])
+        .filter(([bx, bz]) => isZoneAllocated(0, bx, bz) && !blocked(bx, bz));
+
+/** Can you walk from one tile to another? A flood over the real collision map. */
+const onFoot = (x: number, z: number, tx: number, tz: number, radius = 60) => {
+    const seen = new Set<string>([x + ',' + z]);
+    const q = [[x, z]];
+    while (q.length) {
+        const [cx, cz] = q.pop()!;
+        if (cx === tx && cz === tz) return true;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
+            if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
+            if (canTravel(0, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
+        }
+    }
+    return false;
+};
+
+// WHICH MAP SHAPES PUT WATER UNDER THE MIDDLE OF THE TILE, computed from the client's own two
+// tables - javaclient/src/main/java/jagex2/dash3d/Ground.java field925 (the vertices each shape
+// uses) and field926 (its triangles, each tagged 0 for underlay and 1 for overlay) - by asking
+// which triangles contain the tile's centre point.
+//
+// THE OFF-BY-ONE IS THE WHOLE TRICK. World3D.method279 treats its shape argument as 0 = a plain
+// underlay tile, 1 = a plain OVERLAY tile and 2+ = the shaped tables; and World.java:491 passes
+// `overlayShape + 1`. So map shape 0 is a whole water tile (which is what `o6` with no shape
+// means) and map shape n indexes the client's table at n + 1. Reading the tables without that
+// shift says a plain `o6` is dry, which is exactly backwards.
+//
+// Rotation never changes the answer: it turns the tile about its own centre, so the centre is
+// water or land whatever the rotation is. The share of the tile that is water is carried beside it
+// only to be printed - a spot on a half-water tile is not wrong, it is just closer to the shore.
+const CENTRE_WATER = new Set([0, 1, 4, 5, 6, 8, 10]);
+const WATER_PCT: Record<number, number> = { 0: 100, 1: 50, 2: 25, 3: 25, 4: 75, 5: 75, 6: 50, 7: 12.5, 8: 87.5, 9: 34.4, 10: 65.6, 11: 18.8 };
+/** The shape out of an overlay token: 'o6' is shape 0, 'o6;4' is 4, 'o6;3;1' is 3. */
+const shapeOf = (overlay: string) => (overlay.includes(';') ? parseInt(overlay.split(';')[1]) : 0);
+/** The water overlay token under a tile, read out of the map source: 'o6', 'o6;4', 'o6;3;1'... */
+const overlayAt = (x: number, z: number) => {
+    const file = `${Environment.BUILD_SRC_DIR}/maps/m${Math.floor(x / 64)}_${Math.floor(z / 64)}.jm2`;
+    if (!existsSync(file)) return '(no map file)';
+    const line = readFileSync(file, 'utf8')
+        .split('\n')
+        .find(l => l.startsWith(`0 ${x % 64} ${z % 64}: `));
+    return line?.match(/\bo\d+(;\d+)*/)?.[0] ?? '(no overlay)';
+};
+
+const spots = () =>
+    [...World.npcs]
+        .filter((n): n is Npc => !!n && n.type === NpcType.getId('wildyfish'))
+        .map(n => [n.x, n.z] as [number, number])
+        .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
 
 let bucket = 1;
-function player(name: string, fishing: number): Player {
-    const p = H.makePlayer(name, SPOT[0] + 1, SPOT[1], bucket++);
+/** On the bank beside a spot, which is the only tile it can be fished from. */
+function player(name: string, fishing: number, spot: [number, number] = spots()[0]): Player {
+    const [bx, bz] = banks(spot[0], spot[1])[0];
+    const p = H.makePlayer(name, bx, bz, bucket++);
     H.tick(2);
     H.maxOut(p);
     H.clearInv(p);
@@ -41,28 +135,94 @@ function player(name: string, fishing: number): Player {
     return p;
 }
 
-console.log('== the spot is where the dragons are');
+console.log('== the spots, wherever they have been moved to this time');
 {
-    const [x, z] = SPOT;
-    const npc = H.npcNear('wildyfish', x, z);
-    check('it is spawned', npc ? `${npc.x},${npc.z}` : 'nowhere', `${x},${z}`);
-    check('on a tile a player can reach', isZoneAllocated(0, x + 1, z) && !isFlagged(x + 1, z, 0, CollisionFlag.WALK_BLOCKED), true);
-    const t = NpcType.get(NpcType.getId('wildyfish'));
-    check('it does not drift', t.wanderrange, 0);
-    check('and offers Harpoon', t.op[2], 'Harpoon');
-    // Level 13 Wilderness: (3616 - 3520) / 8 + 1. Deep enough to matter, shallow enough to leave.
-    check('at Wilderness level 13', Math.floor((z - 3520) / 8) + 1, 13);
-    // the three green dragons it was put among
-    const near = [
-        [2973, 3620],
-        [2977, 3611],
-        [2982, 3618]
-    ].map(([dx, dz]) => Math.max(Math.abs(dx - x), Math.abs(dz - z)));
+    const placed = spots();
+    check('four of them, and nowhere else', placed.length, 4);
+    for (const [x, z] of placed) {
+        const ov = overlayAt(x, z);
+        const sh = shapeOf(ov);
+        console.log(`    ${x},${z}  Wilderness ${Math.floor((z - 3520) / 8) + 1}  overlay ${ov} (shape ${sh}, ${WATER_PCT[sh] ?? '?'}% water, centre ${CENTRE_WATER.has(sh) ? 'water' : 'LAND'})  banks ${JSON.stringify(banks(x, z))}`);
+    }
+    // THE ONE THE GAME REPORTED: "close, but the bubbles were on the sand". An npc draws at the
+    // centre of its tile, so a spot on a quarter-water beach tile stands on the dry three quarters
+    // however much water is in the tile. This is the check that says so - 3385,3687 was o6;3 and
+    // failed it, and nothing above would have caught that.
     check(
-        'within five tiles of all three west dragons',
-        near.every(d => d <= 5),
-        true
+        'every one of them draws over water and not over the sand beside it',
+        placed.filter(([x, z]) => !CENTRE_WATER.has(shapeOf(overlayAt(x, z)))),
+        []
     );
+    check(
+        'and each one is water, not the swamp water next to it',
+        placed.filter(([x, z]) => !/^o6(;|$)/.test(overlayAt(x, z))),
+        []
+    );
+    // THE SHAPE EVERY CACHE FISHING SPOT HAS: the npc stands on a blocked water tile and the bank
+    // is beside it, sharing an edge, so the spot is reachable from the shore and from nowhere else.
+    check(
+        'each stands in water a player cannot walk into',
+        placed.filter(([x, z]) => !blocked(x, z)),
+        []
+    );
+    check(
+        'each has a tile beside it sharing an edge, which is the only reach the engine gives an npc',
+        placed.filter(([x, z]) => banks(x, z).length === 0),
+        []
+    );
+    const t = NpcType.get(NpcType.getId('wildyfish'));
+    check('they do not drift', t.wanderrange, 0);
+    check('and offer Harpoon', t.op?.[2] ?? null, 'Harpoon');
+    // the Wilderness is the whole point of the spot: deep enough to matter, shallow enough to leave
+    const levels = placed.map(([, z]) => Math.floor((z - 3520) / 8) + 1);
+    check(
+        'all four are in the Wilderness, between 20 and 25',
+        levels.filter(l => l < 20 || l > 25),
+        []
+    );
+    // FOUR AND NOT ONE BECAUSE ONE SPOT IS A QUEUE: far enough apart that a taken one is a few
+    // steps from a free one.
+    let closest = 99;
+    for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) closest = Math.min(closest, Math.max(Math.abs(placed[i][0] - placed[j][0]), Math.abs(placed[i][1] - placed[j][1])));
+    check('no two of them are within three tiles of each other', closest >= 4, true);
+    // AND THE DRAGONS, which are what the Wilderness levels are for - but as the owner's own test
+    // rather than as a radius. A distance in tiles says nothing when a cliff is in the way, so
+    // what his commits check and what this checks is that the bank beside each spot can be WALKED
+    // to from a green dragon's tile; the distances are printed beside it because they moved from
+    // twenty tiles to thirty-six across three moves and that is worth seeing, not failing over.
+    const dragons = [...World.npcs].filter((n): n is Npc => !!n && NpcType.get(n.type).debugname === 'green_dragon').map(n => [n.x, n.z] as [number, number]);
+    const nearest = placed.map(([x, z]) => Math.min(...dragons.map(([dx, dz]) => Math.max(Math.abs(dx - x), Math.abs(dz - z)))));
+    const noWalk = placed.filter(([x, z]) => {
+        const bank = banks(x, z)[0];
+        if (!bank) return true;
+        const near = dragons.filter(([dx, dz]) => Math.max(Math.abs(dx - x), Math.abs(dz - z)) <= 60);
+        return !near.some(([dx, dz]) => onFoot(dx, dz, bank[0], bank[1], 70));
+    });
+    check('every one of them can be walked to from a green dragon, cliffs and all', noWalk, []);
+    console.log(`       (nearest dragon to each: ${nearest.join(', ')} tiles)`);
+}
+
+console.log('== and a Harpoon click starts at every one of them');
+{
+    // THE CHECK THE LAST TWO MOVES NEEDED. A spot on a tile nothing can stand beside looks perfect
+    // in every list above and does nothing when a player clicks it, which is how it was reported
+    // from the game both times. So: stand on the bank of each in turn and click Harpoon.
+    const dead: string[] = [];
+    for (const spot of spots()) {
+        const p = player('wildyreach' + spot[0] + '_' + spot[1], 99, spot);
+        H.tick(1);
+        const npc = H.npcNear('wildyfish', spot[0], spot[1])!;
+        H.clearLogs();
+        H.opNpc(p, npc, 3);
+        let started = false;
+        for (let t = 0; t < 12 && !started; t++) {
+            H.tick(1);
+            if (p.activeScript || H.mesgs.some(m => m.who === p.username)) started = true;
+        }
+        if (!started) dead.push(`${spot[0]},${spot[1]} from ${JSON.stringify(banks(spot[0], spot[1]))}`);
+        H.despawn(p);
+    }
+    check('none of the four is a spot you cannot fish', dead, []);
 }
 
 console.log('== it is a sidegrade, not an upgrade');
@@ -79,7 +239,7 @@ console.log('== it is a sidegrade, not an upgrade');
 console.log('== fishing it');
 {
     const p = player('toolow', TURTLE - 1);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', spots()[0][0], spots()[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 20; t++) H.tick(1);
@@ -88,7 +248,7 @@ console.log('== fishing it');
 {
     // At 79 the turtle is reachable and the manta is not - the roll only offers what you can catch.
     const p = player('turtler', TURTLE);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', spots()[0][0], spots()[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 400 && H.invCount(p, 'raw_seaturtle') + H.invCount(p, 'raw_mantaray') < 6; t++) H.tick(1);
@@ -100,7 +260,7 @@ console.log('== fishing it');
 }
 {
     const p = player('mantaman', 99);
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', spots()[0][0], spots()[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 600 && H.invCount(p, 'raw_mantaray') < 3; t++) H.tick(1);
@@ -110,7 +270,7 @@ console.log('== fishing it');
 {
     const p = player('nokit', 99);
     H.clearInv(p); // no harpoon
-    const npc = H.npcNear('wildyfish', SPOT[0], SPOT[1])!;
+    const npc = H.npcNear('wildyfish', spots()[0][0], spots()[0][1])!;
     H.clearLogs();
     H.opNpc(p, npc, 3);
     for (let t = 0; t < 20; t++) H.tick(1);

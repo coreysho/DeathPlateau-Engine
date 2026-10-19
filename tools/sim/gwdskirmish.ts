@@ -13,7 +13,6 @@
 //
 //   npx tsx tools/sim/gwdskirmish.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { check, R, player, World, NpcType } from './a1lib.ts';
 import ParamType from '#/cache/config/ParamType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
@@ -25,20 +24,24 @@ import { CollisionFlag } from '#/engine/routefinder/index.js';
 
 await H.boot();
 
-const god = (n: string | number) =>
-    (NpcType.get(typeof n === 'number' ? n : NpcType.getId(n)) as any).params?.get(ParamType.getId('gwd_god')) ?? null;
+const god = (n: string | number) => (NpcType.get(typeof n === 'number' ? n : NpcType.getId(n)) as any).params?.get(ParamType.getId('gwd_god')) ?? null;
 const CHAMBER = { x: 2890, z: 5295, level: 2 };
 
 // ---------------------------------------------------------------- the armies are tagged
 console.log('EVERY FOLLOWER KNOWS WHICH GOD IT IS');
 {
     const four = new Set<number>();
-    let tagged = 0, untagged: string[] = [];
+    let tagged = 0;
+    const untagged: string[] = [];
     for (let i = 0; i < NpcType.count; i++) {
         const t = NpcType.get(i) as any;
         if (!t?.debugname?.startsWith('gwd_spiritual_') && !t?.debugname?.startsWith('gwd_aviansie')) continue;
         const g = god(t.debugname);
-        if (g === null || g === 0) untagged.push(t.debugname); else { tagged++; four.add(g); }
+        if (g === null || g === 0) untagged.push(t.debugname);
+        else {
+            tagged++;
+            four.add(g);
+        }
     }
     check('  every spiritual and aviansie carries a god', untagged.length ? untagged.join(' ') : 'yes', 'yes');
     check(`  and all four are represented across ${tagged} of them`, four.size, 4);
@@ -118,21 +121,29 @@ console.log('\nTHE MAIN CHAMBER IS POPULATED');
     const clashes: string[] = [];
     for (const n of inChamber) {
         const t = NpcType.get(n.type);
-        for (let dx = 0; dx < (t.size || 1); dx++) for (let dz = 0; dz < (t.size || 1); dz++) {
-            const k = `${n.startX + dx},${n.startZ + dz}`;
-            if (seen.has(k)) clashes.push(`${t.debugname} on ${seen.get(k)} at ${k}`);
-            else seen.set(k, t.debugname ?? '?');
-            if (isFlagged(n.startX + dx, n.startZ + dz, 2, CollisionFlag.WALK_BLOCKED)) clashes.push(`${t.debugname} blocked at ${k}`);
-        }
+        for (let dx = 0; dx < (t.size || 1); dx++)
+            for (let dz = 0; dz < (t.size || 1); dz++) {
+                const k = `${n.startX + dx},${n.startZ + dz}`;
+                if (seen.has(k)) clashes.push(`${t.debugname} on ${seen.get(k)} at ${k}`);
+                else seen.set(k, t.debugname ?? '?');
+                if (isFlagged(n.startX + dx, n.startZ + dz, 2, CollisionFlag.WALK_BLOCKED)) clashes.push(`${t.debugname} blocked at ${k}`);
+            }
     }
     for (const c of clashes.slice(0, 10)) console.log('    ' + c);
     check('  nobody shares a square or stands in a wall', clashes.length, 0);
 
-    // AND THE TILE YOU ARRIVE ON IS CLEAR. ^gwd_entrance_inside is where the hole drops you, and
-    // a follower standing on it would put a player inside an npc on the way in.
+    // AND NOTHING IS SPAWNED ON THE TILE YOU ARRIVE ON. ^gwd_entrance_inside is where the hole
+    // drops you, and a follower whose home square is that one puts a player inside an npc on the
+    // way in, every single time.
+    //
+    // startX/startZ, LIKE THE CHECK ABOVE IT. This read n.x and n.z, which is where the npc
+    // happens to be standing: everything in the main chamber has a wanderrange, so one drifting
+    // within a tile of the arrival square failed this - about one run in three, at random, with
+    // nothing wrong in the content. A wandering npc can always step onto a tile for a moment and
+    // that is the game working; where it is SPAWNED is the part the maps decide.
     const arrival = { x: 2880, z: 5310 };
-    const onTop = inChamber.filter(n => Math.abs(n.x - arrival.x) <= 1 && Math.abs(n.z - arrival.z) <= 1);
-    check('  and the tile the hole drops you on is empty', onTop.length, 0);
+    const onTop = inChamber.filter(n => Math.abs(n.startX - arrival.x) <= 1 && Math.abs(n.startZ - arrival.z) <= 1);
+    check('  and nothing is spawned on the tile the hole drops you on', onTop.length, 0);
 }
 
 // ---------------------------------------------------------------- a swing hurts the enemy
@@ -143,7 +154,8 @@ console.log('\nA SWING LANDS ON THE OTHER GOD');
     const ally = H.addNpcAt('gwd_spiritual_ranger_zamorak', CHAMBER.x, CHAMBER.z + 1, CHAMBER.level);
     H.tick(1);
     const hp = (n: any) => n.levels[3];
-    const e0 = hp(enemy), a0 = hp(ally);
+    const e0 = hp(enemy),
+        a0 = hp(ally);
 
     // the label directly, so the roll that gates it cannot make this flaky
     for (let i = 0; i < 40; i++) H.runNpcProc(attacker, '[label,gwd_skirmish]');
@@ -160,7 +172,8 @@ console.log('\nSO DO THE ORKS AND THE KNIGHTS');
     const ork = H.addNpcAt('gwd_ork_1', CHAMBER.x + 8, CHAMBER.z, CHAMBER.level);
     const knight = H.addNpcAt('gwd_saradomin_knight_1', CHAMBER.x + 9, CHAMBER.z, CHAMBER.level);
     H.tick(1);
-    const k0 = knight.levels[3], o0 = ork.levels[3];
+    const k0 = knight.levels[3],
+        o0 = ork.levels[3];
     for (let i = 0; i < 40; i++) H.runNpcProc(ork, '[label,gwd_skirmish]');
     check('  a Bandos ork hurts a Saradomin knight', knight.levels[3] < k0, true);
     for (let i = 0; i < 40; i++) H.runNpcProc(knight, '[label,gwd_skirmish]');

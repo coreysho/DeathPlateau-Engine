@@ -10,15 +10,17 @@
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
-import ObjType from '#/cache/config/ObjType.js';
 
 await H.boot();
 
-const ALTAR = { x: 2947, z: 3820 };          // level 38 Wilderness, the training altar
-const CHURCH = { x: 3239, z: 3608 };         // level 12, no bonus in Old School
+const ALTAR = { x: 2947, z: 3820 }; // level 38 Wilderness, the training altar
+const CHURCH = { x: 3239, z: 3608 }; // level 12, no bonus in Old School
 
-const xp = (p: any) => p.stats[5];           // prayer
-const near = (p: any, c: { x: number; z: number }) => { p.teleport(c.x + 2, c.z, 0); H.tick(1); };
+const xp = (p: any) => p.stats[5]; // prayer
+const near = (p: any, c: { x: number; z: number }) => {
+    p.teleport(c.x + 2, c.z, 0);
+    H.tick(1);
+};
 
 // ---------------------------------------------------------------- the rate
 console.log('WHAT ONE OFFERING IS WORTH');
@@ -52,8 +54,7 @@ console.log('HOW LONG AN INVENTORY LASTS');
     const offerings = (xp(p) - before) / 157;
     check('  every bone was eventually consumed', H.invCount(p, 'bones'), 0);
     // 28 bones at a 50% save roll average 56 offerings; allow a wide band for the dice
-    check(`  28 bones bought about 56 offerings (got ${offerings.toFixed(0)})`,
-        offerings > 30 && offerings < 95, true);
+    check(`  28 bones bought about 56 offerings (got ${offerings.toFixed(0)})`, offerings > 30 && offerings < 95, true);
     check('  which is roughly 7x burying', (xp(p) - before) / (28 * 45) > 4, true);
     H.despawn(p);
 }

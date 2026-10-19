@@ -17,16 +17,23 @@ import Player from '#/engine/entity/Player.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0, n = 0;
+let ok = 0,
+    bad = 0,
+    n = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
-const HP = 3, DEF = 1, MAG = 6;
+const HP = 3,
+    DEF = 1,
+    MAG = 6;
 const RUNES = ['airrune', 'waterrune', 'earthrune', 'firerune', 'mindrune', 'chaosrune', 'deathrune', 'bloodrune', 'soulrune'];
-const BLOOD_BLITZ = 206, FIRE_WAVE = 15, WIND_STRIKE = 51;
+const BLOOD_BLITZ = 206,
+    FIRE_WAVE = 15,
+    WIND_STRIKE = 51;
 const FIRE_WAVE_XP = 425; // magic_combat_spells.dbrow: the cast itself, all of it Magic
 
 /** A maxed player with a staff and every rune, standing exactly where asked. */
@@ -86,8 +93,16 @@ console.log('BLOOD SPELLS HEAL THE CASTER');
         heals.push(...rises);
     }
     check('a Blood Blitz that hits heals the caster', landed.length, 3);
-    check('  by a quarter of the damage it dealt', heals.map(h => h.amount), landed.map(h => Math.floor((h.damage * 25) / 100)));
-    check('  on the tick the hitsplat lands, not the tick of the cast', heals.map(h => h.tick), landed.map(h => h.tick));
+    check(
+        '  by a quarter of the damage it dealt',
+        heals.map(h => h.amount),
+        landed.map(h => Math.floor((h.damage * 25) / 100))
+    );
+    check(
+        '  on the tick the hitsplat lands, not the tick of the cast',
+        heals.map(h => h.tick),
+        landed.map(h => h.tick)
+    );
 }
 {
     // at full hitpoints there is nothing to heal: stat_heal never goes past the base level
@@ -109,7 +124,8 @@ console.log('BLOOD SPELLS HEAL THE CASTER');
 {
     // THE KILLING BLOW. The heal used to be taken from the damage AFTER it was trimmed to the
     // monster's remaining hitpoints, so the cast that finished something off healed nothing.
-    let healedOnKills = 0, kills = 0;
+    let healedOnKills = 0,
+        kills = 0;
     for (let i = 0; i < 300 && kills < 60; i++) {
         const p = mage();
         H.setVar(p, 'spellbook', 1);
@@ -136,7 +152,8 @@ console.log('BLOOD SPELLS HEAL THE CASTER');
 }
 {
     // PvP: this side of combat had no heal at all until now. Deep wilderness, both maxed.
-    let healed = -1, dealt = -1;
+    let healed = -1,
+        dealt = -1;
     for (let i = 0; i < 25 && dealt < 0; i++) {
         const a = mage(3100, 3700);
         const b = mage(3102, 3700);
@@ -146,7 +163,8 @@ console.log('BLOOD SPELLS HEAL THE CASTER');
         H.clearLogs();
         H.castOnPlayer(a, b, 'ancient_magic:blood_blitz');
         // b hits back, so only the FIRST rise in the caster's hitpoints is the heal
-        let rise = -1, hp = a.levels[HP];
+        let rise = -1,
+            hp = a.levels[HP];
         for (let t = 0; t < 6; t++) {
             H.tick(1);
             if (rise < 0 && a.levels[HP] > hp) rise = a.levels[HP] - hp;
@@ -207,7 +225,8 @@ function castFor(style: number, manual: boolean) {
     const npc = H.addNpc('mossgiant', p.x + 3, p.z);
     H.tick(1);
     H.clearLogs();
-    const mag = p.stats[MAG], def = p.stats[DEF];
+    const mag = p.stats[MAG],
+        def = p.stats[DEF];
     if (manual) H.castOnNpc(p, npc, 'magic:fire_wave');
     else H.attackNpc(p, npc);
     for (let t = 0; t < 6; t++) H.tick(1);
@@ -246,7 +265,8 @@ console.log('\nNOTHING IS CAST AT A CORPSE');
     // what was left over was the tick in between: 0 hitpoints, not delayed yet, still a valid target.
     // Twelve of a hundred and seventeen kills paid runes for a cast into a corpse there before this
     // (the same loop with the check taken back out of ~pvm_combat_spell_checks).
-    let kills = 0, castsAtACorpse = 0;
+    let kills = 0,
+        castsAtACorpse = 0;
     for (let i = 0; i < 120; i++) {
         const p = mage();
         H.setVarBit(p, 'autocast_set', 1);

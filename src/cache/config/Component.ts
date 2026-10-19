@@ -257,6 +257,12 @@ export default class Component {
         }
     }
 
+    /** How many components decoded. The same accessor InvType has, and tools/invfullcheck.ts's
+     *  "did this directory decode to anything at all?" guard reads both. */
+    static get count(): number {
+        return Component.components.length;
+    }
+
     static get(id: number): Component {
         return Component.components[id];
     }

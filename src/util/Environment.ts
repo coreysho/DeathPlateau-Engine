@@ -60,7 +60,10 @@ export default {
     NODE_SUBMIT_INPUT: tryParseBoolean(process.env.NODE_SUBMIT_INPUT, false),
     // Maximum approximate number of storage bytes allowed per single input tracking session.
     // It does not seem remotely possible to get near this amount under normal inputs.
-    NODE_LIMIT_BYTES_PER_TRACKING_SESSION: tryParseInt(process.env.NODE_MAX_BYTES_PER_TRACKING_SESSION, 50_000),
+    // Named LIMIT and read MAX, which nothing noticed because nothing reads this setting at all -
+    // the property has no other use in the tree. Aligned so the one rule holds everywhere rather
+    // than needing an exception; safe precisely because neither name is documented or read.
+    NODE_LIMIT_BYTES_PER_TRACKING_SESSION: tryParseInt(process.env.NODE_LIMIT_BYTES_PER_TRACKING_SESSION, 50_000),
     NODE_MINIMUM_WEALTH_VALUE_EVENT: tryParseInt(process.env.NODE_MINIMUM_WEALTH_VALUE_EVENT, 10),
     // extra debug info e.g. missing triggers
     NODE_DEBUG: tryParseBoolean(process.env.NODE_DEBUG, true),
@@ -115,6 +118,10 @@ export default {
     // without it every player shares the proxy's, and one per-IP cap.
     NODE_MAX_SOCKETS: tryParseInt(process.env.NODE_MAX_SOCKETS, 2048),
     NODE_MAX_SOCKETS_PER_IP: tryParseInt(process.env.NODE_MAX_SOCKETS_PER_IP, 16),
+    // custom (2026-10-19) - ticks without real input (an action, chat, a click, a camera move) before a
+    // live world logs a player out; three times this and it does not wait for combat to end. 1000 = 10
+    // minutes. 0 = off. Production only; administrators (3+) are never logged out for it. World.processLogouts
+    NODE_IDLE_LOGOUT_TICKS: tryParseInt(process.env.NODE_IDLE_LOGOUT_TICKS, 1000),
     // custom (2026-09-27) - addresses (and IPv4 CIDRs), comma separated, of a proxy or tunnel in front of
     // the game and web ports that sends PROXY protocol, so players keep their own addresses. Empty = off.
     // Connections from these are read for the header (one with none keeps its own address - Tailscale in
@@ -123,7 +130,13 @@ export default {
     NODE_MAX_NPCS: tryParseInt(process.env.NODE_MAX_NPCS, 16383),
     NODE_DEBUGPROC_CHAR: tryParseString(process.env.NODE_DEBUGPROC_CHAR, '~'),
     NODE_WS_ONDEMAND: tryParseBoolean(process.env.NODE_WS_ONDEMAND, false),
-    NODE_HOP_TIME: tryParseInt(process.env.NODE_MAX_NPCS, 45000), // 45s
+    // READS ITS OWN NAME, and did not: it was copy-pasted from NODE_MAX_NPCS three lines up and
+    // the variable was never changed, so the hop timer was however many NPCs the world allowed,
+    // in milliseconds. Harmless only while NODE_MAX_NPCS is unset - and .env.example offers
+    // NODE_MAX_NPCS=8191, so uncommenting a line about NPCs would have quietly cut the relog
+    // delay from 45 seconds to 8. tools/envcheck.ts now fails the build on any key that reads a
+    // different variable than it is named.
+    NODE_HOP_TIME: tryParseInt(process.env.NODE_HOP_TIME, 45000), // 45s
     // limit login attempts
     NODE_RATELIMIT_ADDRESS_LOGIN: tryParseInt(process.env.NODE_RATELIMIT_ADDRESS_LOGIN, 30), // ip (60s)
     NODE_RATELIMIT_DEVICE_LOGIN: tryParseInt(process.env.NODE_RATELIMIT_DEVICE_LOGIN, 5), // uid+ip (15s)

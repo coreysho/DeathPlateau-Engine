@@ -175,7 +175,7 @@ console.log('== the Vote clerk faces east, and only he does');
 console.log('== the vote ticket');
 {
     const t = ObjType.get(ObjType.getId('vote_ticket'));
-    check('stackable', t.stackable > 0, true);
+    check('stackable', t.stackable, true);
     check('tradeable', t.tradeable, true);
     check('cost is 0, so a faucet is worth nothing even if the param is lost', t.cost, 0);
     check('iop1', t.iop[0], 'Redeem');
@@ -335,7 +335,7 @@ console.log('== the Vote clerk');
     check('he is spawned where the map says', npc ? `${npc.x},${npc.z}` : 'nowhere', `${x},${z}`);
     const t = NpcType.get(NpcType.getId('vote_clerk'));
     check('he does not wander', t.wanderrange, 0);
-    check('op3 is Trade', t.op[2], 'Trade');
+    check('op3 is Trade', t.op?.[2] ?? null, 'Trade');
 }
 {
     // drive() clicks through the "click here to continue" pages a ~chatnpc puts up - those carry no

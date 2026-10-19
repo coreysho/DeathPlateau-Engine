@@ -1,5 +1,6 @@
 // stdlib
 import fs from 'fs';
+import { randomInt } from 'crypto';
 import { isMainThread, Worker } from 'worker_threads';
 
 // deps
@@ -70,6 +71,7 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
 import UpdateIgnoreList from '#/network/game/server/model/UpdateIgnoreList.js';
 import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
 import ClientSocket from '#/server/ClientSocket.js';
+import { spawnThread } from '#/server/Threads.js';
 import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
@@ -114,21 +116,25 @@ if (!fs.existsSync(Environment.LOGIN_RSA_KEY_PATH)) {
 }
 const priv = forge.pki.privateKeyFromPem(fs.readFileSync(Environment.LOGIN_RSA_KEY_PATH, 'ascii'));
 
+// The login thread's replies that are a refusal (World.onLoginMessage turns each into the client's
+// message); anything else let the player in.
+const LOGIN_FAILURE_REPLIES = new Set([-1, 1, 3, 5, 6, 7, 8, 9, 10, 11]);
+
 type LogoutRequest = {
     save: Uint8Array;
     lastAttempt: number;
 };
 
 class World {
-    private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
-    private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
-    private loggerThread = new Worker(new URL('../server/logger/LoggerThread.ts', import.meta.url));
+    private loginThread = spawnThread(new URL('../server/login/LoginThread.ts', import.meta.url));
+    private friendThread = spawnThread(new URL('../server/friend/FriendThread.ts', import.meta.url));
+    private loggerThread = spawnThread(new URL('../server/logger/LoggerThread.ts', import.meta.url));
     private devThread: Worker | null = null;
     // custom (2026-09-21) - only when Discord is configured; see server/discord/DiscordThread.ts.
     // AND ONLY ON THE MAIN THREAD. LoginServer imports Player and web.ts, both of which import this
     // file, so with EASY_STARTUP the login worker builds a World of its own - and without this check
     // it started a second bot, which answered every /link a second time against the same codes.
-    private discordThread: Worker | null = isMainThread && Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? new Worker(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
+    private discordThread: Worker | null = isMainThread && Environment.DISCORD_TOKEN && Environment.DISCORD_GUILD_ID ? spawnThread(new URL('../server/discord/DiscordThread.ts', import.meta.url)) : null;
 
     private static readonly PLAYERS: number = Environment.NODE_MAX_PLAYERS;
     private static readonly NPCS: number = Environment.NODE_MAX_NPCS;
@@ -197,6 +203,32 @@ class World {
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
 
     constructor() {
+        // A WORKER ERROR MUST NOT BE AN UNCAUGHT EXCEPTION. These three workers had 'message'
+        // handlers and no 'error' handler, and an unhandled 'error' event on a Worker is rethrown
+        // as an uncaught exception - so anything going wrong inside one of them took the whole
+        // process down with it, with only the worker's own stack to go on.
+        //
+        // It is not hypothetical. Under tsx the worker entries cannot resolve their own "#/"
+        // imports (package.json maps "#/*", and Node's imports field forbids keys starting with
+        // "#/", so only tsx's transform of a static import resolves them - and a worker entry is
+        // loaded by Node directly). So in EVERY tools/sim run all three of these fail to start.
+        // It stayed invisible because the rejection only lands once something yields to the event
+        // loop: a sim that runs straight through to process.exit() never gives it the chance. The
+        // ones that did yield - a dynamic import, or simply having no process.exit() and reaching
+        // teardown - died with ERR_INVALID_MODULE_SPECIFIER and no summary, which is how
+        // blowpipe.ts and huntgaps.ts came to print nothing at all for however long.
+        //
+        // Logged loudly rather than swallowed: a server running without its logger or login worker
+        // is degraded and the operator needs to know, but it is still better than a process that
+        // exits on a worker nobody was watching.
+        for (const [name, worker] of [
+            ['login', this.loginThread],
+            ['friend', this.friendThread],
+            ['logger', this.loggerThread]
+        ] as const) {
+            worker.on('error', err => printError(`${name} worker failed: ${err instanceof Error ? err.message : String(err)}`));
+        }
+
         this.loginThread.on('message', msg => {
             try {
                 this.onLoginMessage(msg);
@@ -229,12 +261,13 @@ class World {
     }
 
     // A one-time code for /link. Unambiguous characters only - no 0/O, 1/I/L - because it is read off
-    // the game screen and typed into Discord.
+    // the game screen and typed into Discord. (2026-10-19) 8 characters from crypto.randomInt: it was 6
+    // from Math.random, the same generator the game's own randomness comes from.
     discordCode(player: Player): string {
         const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
         let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += alphabet[Math.floor(Math.random() * alphabet.length)];
+        for (let i = 0; i < 8; i++) {
+            code += alphabet[randomInt(alphabet.length)];
         }
         this.discordThread?.postMessage({ type: 'code', username: player.username, code });
         return code;
@@ -599,10 +632,22 @@ class World {
                 console.error(err.stack);
             }
 
+            // custom (2026-10-19) - save first, straight to disk. This used to call removePlayer, which
+            // only QUEUES a save for the login thread - and the process exits before that queue is ever
+            // posted, so every player went back to their last autosave (up to 15 minutes) and any crash
+            // was a dupe: hand an item over, the receiver logs out and is saved, crash the world, and the
+            // giver has it back. removePlayer also touches the map and zones, which a crash may be in the
+            // middle of breaking, so it runs after, and each player on their own.
+            this.writeSavesForCrash();
+
             printError('Removing all players...');
 
             for (const player of this.playerLoop.all()) {
-                this.removePlayer(player);
+                try {
+                    this.removePlayer(player);
+                } catch (removeErr) {
+                    console.error(removeErr);
+                }
             }
 
             // TODO inform Friends server that the world has gone offline
@@ -888,6 +933,25 @@ class World {
                 // connection lost for 30s: request idle logout
                 player.requestIdleLogout = true;
                 player.logoutReason = 'connection lost for 30s';
+            } else if (Environment.NODE_PRODUCTION && Environment.NODE_IDLE_LOGOUT_TICKS > 0 && !player.isBot && player.staffModLevel < 3) {
+                // custom (2026-10-19) - idle logout, decided here. The only one there was is the client's
+                // IDLE_TIMER, which a modified client never sends (and which NODE_DEBUG, on by default,
+                // ignores) - so anyone could stand AFK for ever. After NODE_IDLE_LOGOUT_TICKS with no real
+                // input it is the ordinary idle logout, which waits for combat to end; after three times that
+                // it does not wait, so standing in a spot where monsters never stop attacking is not a way
+                // to stay on. Administrators and up are left alone.
+                if (player.lastUserInput === -1) {
+                    player.lastUserInput = this.currentTick;
+                }
+                const idle = this.currentTick - player.lastUserInput;
+                if (idle >= Environment.NODE_IDLE_LOGOUT_TICKS * 3) {
+                    player.loggingOut = true;
+                    force = true;
+                    player.logoutReason = 'idle, in combat';
+                } else if (idle >= Environment.NODE_IDLE_LOGOUT_TICKS) {
+                    player.requestIdleLogout = true;
+                    player.logoutReason = 'idle';
+                }
             }
 
             if (player.requestLogout || player.requestIdleLogout) {
@@ -2002,7 +2066,7 @@ class World {
     }
 
     private createDevThread() {
-        this.devThread = new Worker(new URL('../cache/DevThread.ts', import.meta.url));
+        this.devThread = spawnThread(new URL('../cache/DevThread.ts', import.meta.url));
 
         this.devThread.on('message', msg => {
             try {
@@ -2079,6 +2143,13 @@ class World {
         }
     }
 
+    // custom (2026-10-19) - a socket that closes with its login still with the login thread. The request
+    // used to stay in loginRequests for good (only a reply removed it), holding the socket's ~95 KB of
+    // buffers - and a login that failed inside the thread never got a reply, so it could be repeated.
+    onClientClosed(client: ClientSocket) {
+        this.loginRequests.delete(client.uuid);
+    }
+
     rebuild() {
         if (this.devThread) {
             this.devThread.postMessage({
@@ -2091,6 +2162,12 @@ class World {
         if (isPlayerLoginResponse(msg)) {
             const { socket } = msg;
             if (!this.loginRequests.has(socket)) {
+                // custom (2026-10-19) - the socket closed while the login thread was working (onClientClosed).
+                // A login server has marked the account logged in to this world by now; nobody is going to
+                // play it, so hand it back, or it reads "already logged in" until the world restarts.
+                if (Environment.LOGIN_SERVER && !LOGIN_FAILURE_REPLIES.has(msg.reply)) {
+                    this.loginThread.postMessage({ type: 'player_force_logout', username: msg.username });
+                }
                 return;
             }
 
@@ -2689,6 +2766,44 @@ class World {
             timestamp: Date.now(),
             buf: Buffer.from(buf).toString('base64')
         });
+    }
+
+    // The crash path above. Every player still in the world, and every logout whose save the login
+    // thread has not confirmed, written synchronously before the process exits. data/players/<profile>/
+    // is where both the login thread (LOGIN_SERVER=false) and a login server on this machine keep them.
+    private writeSavesForCrash(): void {
+        const dir = `data/players/${Environment.NODE_PROFILE}`;
+        const saves = new Map<string, Uint8Array>();
+
+        for (const [username, request] of this.logoutRequests) {
+            saves.set(username, request.save);
+        }
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot) {
+                continue;
+            }
+            try {
+                saves.set(player.username, player.save());
+            } catch (err) {
+                printError(`Could not build a save for ${player.username}: ${err instanceof Error ? err.message : err}`);
+            }
+        }
+
+        let written = 0;
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+        } catch {
+            // exists, or the writes below say why
+        }
+        for (const [username, save] of saves) {
+            try {
+                fs.writeFileSync(`${dir}/${username}.sav`, save);
+                written++;
+            } catch (err) {
+                printError(`Could not write the save for ${username}: ${err instanceof Error ? err.message : err}`);
+            }
+        }
+        printError(`Saved ${written} of ${saves.size} players before closing.`);
     }
 
     flushPlayer(player: Player) {

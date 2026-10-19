@@ -34,7 +34,7 @@ const nameOf = (t: number) => NpcType.get(t)?.debugname ?? String(t);
 // THE HARNESS ONLY HOOKS Player.playAnimation, so npc animations go unrecorded and the first
 // version of this reported an empty histogram - which is a fight that proves nothing, not a
 // fight without drops. Hook the npc side.
-const animTicks = new Map<number, number[]>();   // tick -> seqs Zulrah was told to play
+const animTicks = new Map<number, number[]>(); // tick -> seqs Zulrah was told to play
 const origAnim = (NpcEntity.prototype as any).playAnimation;
 (NpcEntity.prototype as any).playAnimation = function (seq: number, delay: number) {
     if (seq !== -1 && ids.has(this.type)) {
@@ -45,7 +45,10 @@ const origAnim = (NpcEntity.prototype as any).playAnimation;
 };
 
 const p: any = H.makePlayer('zvis', 34 * 64 + 36, 47 * 64 + 48, 261);
-H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000);
+H.tick(2);
+H.maxOut(p);
+H.clearInv(p);
+H.setVar(p, 'tutorial', 1000);
 H.setVar(p, 'regicide_quest', 15);
 H.setVar(p, 'zulrah_volunteered', 1);
 H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });
@@ -69,8 +72,10 @@ const cheb = (ax: number, az: number, bx: number, bz: number) => Math.max(Math.a
 type Row = { tick: number; seen: boolean; level: number; dist: number; anim: number; type: string; active: boolean };
 const rows: Row[] = [];
 let tick = 0;
-let lastAnim = -1;
-let prevX = p.x, prevZ = p.z, prevLevel = p.level;
+let _lastAnim = -1;
+let prevX = p.x,
+    prevZ = p.z,
+    prevLevel = p.level;
 
 for (; tick < 900; tick++) {
     const s = snake();
@@ -86,7 +91,9 @@ for (; tick < 900; tick++) {
     // encoder by hand, at the point in the cycle the real server drives it: after computeNpc has
     // mirrored every npc for this tick and before anything else moves.
     rsbuf.npcInfo(0, p.slot, Math.abs(prevX - p.x), Math.abs(prevZ - p.z), prevLevel !== p.level, false);
-    prevX = p.x; prevZ = p.z; prevLevel = p.level;
+    prevX = p.x;
+    prevZ = p.z;
+    prevLevel = p.level;
     const anim = (animTicks.get(World.currentTick) ?? animTicks.get(World.currentTick - 1) ?? [])[0] ?? -1;
     rows.push({
         tick,
@@ -95,24 +102,30 @@ for (; tick < 900; tick++) {
         dist: cheb(p.x, p.z, after.x, after.z),
         anim,
         type: nameOf(after.type),
-        active: after.isActive,
+        active: after.isActive
     });
-    lastAnim = anim;
+    _lastAnim = anim;
     if (tick % 64 === 0) H.clearLogs();
 }
 
 console.log(`${rows.length} ticks of a real fight\n`);
 
 // every tick where membership flipped, and what else was true at the time
-let flips = 0, divesOut = 0, mysteryOut = 0;
+let flips = 0,
+    divesOut = 0,
+    mysteryOut = 0;
 const mystery: Row[] = [];
 for (let i = 1; i < rows.length; i++) {
-    const a = rows[i - 1], b = rows[i];
+    const a = rows[i - 1],
+        b = rows[i];
     if (a.seen === b.seen) continue;
     flips++;
     if (!b.seen) {
         if (b.level !== 0) divesOut++;
-        else { mysteryOut++; mystery.push(b); }
+        else {
+            mysteryOut++;
+            mystery.push(b);
+        }
     }
 }
 
@@ -128,7 +141,13 @@ if (mystery.length) {
 
 // VALIDATE THE EXPERIMENT BEFORE BELIEVING ITS ZERO. A fight in which Zulrah never animated would
 // report no animation-time drops for the most boring reason there is.
-const seqName = (id: number) => { try { return (SeqType.get(id) as any)?.debugname ?? String(id); } catch { return String(id); } };
+const seqName = (id: number) => {
+    try {
+        return (SeqType.get(id) as any)?.debugname ?? String(id);
+    } catch {
+        return String(id);
+    }
+};
 const hist = new Map<number, number>();
 for (const r of rows) if (r.anim !== -1) hist.set(r.anim, (hist.get(r.anim) ?? 0) + 1);
 console.log('');

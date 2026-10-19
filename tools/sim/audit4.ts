@@ -69,8 +69,19 @@ const gv = (p: Player, name: string) => (VarPlayerType.getByName(name) ? H.getVa
 const sv = (p: Player, name: string, v: number) => (VarPlayerType.getByName(name) ? H.setVar(p, name, v) : H.setVarBit(p, name, v));
 void VarBitType;
 const at = (p: Player) => [p.x, p.z, p.level];
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
-const walkable = (level: number, x: number, z: number) => !isMapBlocked(x, z, level) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+const _mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
+const walkable = (level: number, x: number, z: number) =>
+    !isMapBlocked(x, z, level) &&
+    [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
 
 function slotOf(p: Player, objName: string) {
     const id = ObjType.getId(objName);
@@ -108,14 +119,28 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 /** Talk to the nearest npc of a type on the player's level, standing next to it first. */
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = H.npcNear(npcName, p.x, p.z, p.level);
     if (!npc) throw new Error('no npc ' + npcName);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         if (!walkable(npc.level, npc.x + dx, npc.z + dz)) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
@@ -130,7 +155,14 @@ function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[
 function talkK(p: Player, npcName: string, want: RegExp): string[] {
     const npc = H.npcNear(npcName, p.x, p.z, p.level);
     if (!npc) throw new Error('no npc ' + npcName);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         if (!walkable(npc.level, npc.x + dx, npc.z + dz)) continue;
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
@@ -156,13 +188,20 @@ function talkK(p: Player, npcName: string, want: RegExp): string[] {
                 if (n.startsWith(open + ':com_')) texts.set(+n.split('_')[1], i.text ?? '');
             }
             let pick = 1;
-            for (const [k, t] of texts) if (want.test(t) && p.resumeButtons.includes(Component.getId(`${open}:com_${k}`))) { pick = k; break; }
+            for (const [k, t] of texts)
+                if (want.test(t) && p.resumeButtons.includes(Component.getId(`${open}:com_${k}`))) {
+                    pick = k;
+                    break;
+                }
             H.choose(p, `${open}:com_${pick}`);
         } else {
             p.executeScript(sc, true, true);
         }
     }
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 /** Talk without moving first - the walk to the npc is part of what is being tested. */
 function talkHere(p: Player, npcName: string, picks: number[] = []): string[] {
@@ -185,7 +224,7 @@ function useOn(p: Player, x: number, z: number, locName: string, objName: string
     (p as unknown as { opcalled: boolean }).opcalled = true;
     return drive(p, picks);
 }
-function useOnNpc(p: Player, objName: string, npc: Npc) {
+function _useOnNpc(p: Player, objName: string, npc: Npc) {
     p.clearPendingAction();
     p.lastUseItem = ObjType.getId(objName);
     p.lastUseSlot = slotOf(p, objName);
@@ -221,18 +260,33 @@ function connected(level: number, x: number, z: number, tx: number, tz: number, 
     while (q.length) {
         const [cx, cz] = q.pop()!;
         if (cx === tx && cz === tz) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return false;
 }
 /** Reachable to any tile next to (tx,tz) - for things that themselves block. */
 const reachesNear = (level: number, x: number, z: number, tx: number, tz: number) =>
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => connected(level, x, z, tx + dx, tz + dz));
-const hasTrigger = (type: ServerTriggerType, name: string, kind: 'loc' | 'npc') => {
+    [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => connected(level, x, z, tx + dx, tz + dz));
+const _hasTrigger = (type: ServerTriggerType, name: string, kind: 'loc' | 'npc') => {
     const id = kind === 'loc' ? LocType.getId(name) : NpcType.getId(name);
     return ScriptProvider.getByTriggerSpecific(type, id, -1) !== null && ScriptProvider.getByTriggerSpecific(type, id, -1) !== undefined;
 };
@@ -261,7 +315,7 @@ guard('devious', () => {
     p.teleport(2853, 3345, 0);
     H.tick(1);
     op(p, 2853, 3348, 'devious_altar', 1);
-    check('pouch left behind Entrana\'s altar: stage 40, the altar holds it', [gv(p, 'devious_main'), H.getVarBit(p, 'devious_altar'), H.invCount(p, 'devious_glowingpouch')], [40, 1, 0]);
+    check("pouch left behind Entrana's altar: stage 40, the altar holds it", [gv(p, 'devious_main'), H.getVarBit(p, 'devious_altar'), H.invCount(p, 'devious_glowingpouch')], [40, 1, 0]);
     p.levels[5] = 1;
     op(p, 2853, 3348, 'devious_altar', 1);
     check('and praying there still recharges prayer', p.levels[5], 99);
@@ -288,8 +342,11 @@ guard('icslittle', () => {
     check('Sophanem is walled: no way in on foot', connected(0, 3326, 2856, 3281, 2771), false);
     op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
     check('the rocks by the tent lead into Sophanem', [at(p), walkable(0, p.x, p.z)], [[3320, 2796, 0], true]);
-    check('inside, the High Priest, the embalmer, Siamun and the temple door are all on foot', [
-        reachesNear(0, p.x, p.z, 3281, 2772), reachesNear(0, p.x, p.z, 3287, 2755), reachesNear(0, p.x, p.z, 3315, 2786), connected(0, p.x, p.z, 3294, 2781)], [true, true, true, true]);
+    check(
+        'inside, the High Priest, the embalmer, Siamun and the temple door are all on foot',
+        [reachesNear(0, p.x, p.z, 3281, 2772), reachesNear(0, p.x, p.z, 3287, 2755), reachesNear(0, p.x, p.z, 3315, 2786), connected(0, p.x, p.z, 3294, 2781)],
+        [true, true, true, true]
+    );
     op(p, 3321, 2796, 'ics_wall_crack', 1);
     check('the hole in the wall leads back out beside the rocks', [at(p), connected(0, p.x, p.z, 3326, 2856)], [[3324, 2856, 0], true]);
     op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
@@ -304,7 +361,7 @@ guard('icslittle', () => {
     talk(p, 'ics_little_linen2');
     check('Siamun: linen, stage 15', [gv(p, 'ics_little_var'), H.invCount(p, 'ics_little_linen')], [15, 1]);
     talk(p, 'ics_little_hipriest_town');
-    check('embalmed: stage 18, Klenter\'s spectre shows', [gv(p, 'ics_little_var'), H.getVarBit(p, 'ics_specvis')], [18, 1]);
+    check("embalmed: stage 18, Klenter's spectre shows", [gv(p, 'ics_little_var'), H.getVarBit(p, 'ics_specvis')], [18, 1]);
 
     p.teleport(3294, 2781, 0);
     H.tick(1);
@@ -410,7 +467,7 @@ guard('makinghistory', () => {
         H.tick(1);
         talk(p, who);
     }
-    check('Droalak and Melina, reconciled: Bennath\'s journal', [gv(p, 'makinghistory_ghost_prog'), H.invCount(p, 'makinghistory_journal')], [5, 1]);
+    check("Droalak and Melina, reconciled: Bennath's journal", [gv(p, 'makinghistory_ghost_prog'), H.invCount(p, 'makinghistory_journal')], [5, 1]);
 
     p.teleport(2430, 3347, 0);
     H.tick(1);
@@ -424,7 +481,11 @@ guard('makinghistory', () => {
     op(p, 2436, 3345, 'makinghistory_door', 1);
     check('the storeroom door lets you through to the displays', reachesNear(0, p.x, p.z, 2437, 3344), true);
     const said = op(p, 2437, 3344, 'makinghistory_shield_display_multiloc', 1);
-    check('Study on the shield display (the multiloc shell) says something', said.some(t => t.includes('shield')), true);
+    check(
+        'Study on the shield display (the multiloc shell) says something',
+        said.some(t => t.includes('shield')),
+        true
+    );
 });
 
 // =============================================================================== In Aid of the Myreque
@@ -432,6 +493,14 @@ console.log('IN AID OF THE MYREQUE');
 guard('myreque2', () => {
     const p = player('myreque2', 3484, 3246);
     check('Burgh de Rott is fenced in from the swamp road', connected(0, 3484, 3246, 3490, 3240), false);
+    // THE GATE WANTS FEEDING NOW. myreque2_village.rs2 bars it from the inside until Florin has had
+    // something to eat (%myreque_2_quest >= ^m2_fed, which is 12), and only lets you out the other
+    // way without it - so this used to walk straight in and now has to earn it. The feeding itself
+    // is myrequevillage.ts's; what this block is for is the map, so it sets the stage and asks the
+    // gate the same question. The refusal is worth a check of its own while we are here.
+    op(p, 3484, 3244, 'burgh_fencegate_r', 1);
+    check('the gate is barred until Florin is fed', p.z <= 3243, false);
+    sv(p, 'myreque_2_quest', 12); // ^m2_fed
     op(p, 3484, 3244, 'burgh_fencegate_r', 1);
     check('the gate lets you into the village', [p.z <= 3243, reachesNear(0, p.x, p.z, 3490, 3241), reachesNear(0, p.x, p.z, 3517, 3241)], [true, true, true]);
     const f = player('myreque2f', 3475, 3221);
@@ -457,11 +526,13 @@ guard('myreque2', () => {
     H.tick(1);
     for (let i = 0; i < 3; i++) op(p, 3527, 3209, 'burgh_furnace_multiloc', 1);
     check('the furnace: mended, loaded, lit', gv(p, 'burgh_furnace_fix'), 3);
-    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere.
-    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall']) sv(p, b, 1);
-    p.teleport(3517, 3239, 0);
-    H.tick(1);
-    talk(p, 'burgh_general_store_owner');
+    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere -
+    // and STOCKING THE SHOP IS ITS OWN QUEST STEP NOW: once the roof and wall are done, Aurel asks
+    // for ten bronze axes, three tinderboxes and ten of whatever the swamp gave him that week, hands
+    // over a crate, and ~p_choice2 asks whether you will fetch it. A talk() with no pick walks into
+    // that menu and throws "unexpected menu: multi2", which is what it did. myrequecrate.ts is the
+    // sim for that step; here the var goes on with the other three.
+    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall', 'burgh_store_stocked']) sv(p, b, 1);
     check('the store is stocked', gv(p, 'burgh_store_stocked'), 1);
     p.teleport(3490, 3239, 0);
     H.tick(1);
@@ -499,11 +570,17 @@ guard('myreque2', () => {
     check('down into the cellar, beside the ladder, not in it', [at(p), walkable(0, p.x, p.z)], [[3490, 9631, 0], true]);
     check('the cellar reaches Veliaf and the chest', [reachesNear(0, p.x, p.z, 3494, 9628), reachesNear(0, p.x, p.z, 3493, 9632)], [true, true]);
     talk(p, 'burgh_rescue_veliaf_hurtz_talk');
-    check('Veliaf moves in and sends you to Paterdomus: stage 80', gv(p, 'myreque_2_quest'), 80);
+    // THE ESCORT GOES BETWEEN THESE TWO LINES NOW. Veliaf used to send you straight to Paterdomus
+    // (stage 80) and the library key used to sit in an invented chest in this cellar. Ivan Strom's
+    // walk is what reaches the temple since, and Drezel - the man who has been sitting on the key -
+    // hands it over at the end of it (areas/area_mausoleum/scripts/drezel.rs2, m2_drezel_takes_ivan),
+    // so stage 72 is "Veliaf has asked, and Ivan is in the cellar". tools/sim/myrequeescort.ts drives
+    // that step in full; this block takes the shortcut past it rather than driving it twice.
+    check('Veliaf moves in and hands Ivan over: stage 72', gv(p, 'myreque_2_quest'), 72);
+    sv(p, 'myreque_2_quest', 80); // ^m2_temple, which the escort reaches
+    H.give(p, 'burgh_key'); // and Drezel's key with it
     p.teleport(3492, 9631, 0);
     H.tick(1);
-    op(p, 3493, 9632, 'burgh_chest_closed', 1);
-    check('the cellar chest: the library key', H.invCount(p, 'burgh_key'), 1);
     op(p, 3490, 9632, 'burgh_inn_basement_ladderup', 1);
     check('the cellar ladder climbs back out into the inn beside the trapdoor', [at(p), walkable(0, p.x, p.z)], [[3491, 3232, 0], true]);
 
@@ -533,7 +610,17 @@ guard('myreque2', () => {
     H.tick(1);
     talk(p, 'route_veliaf_hurtz');
     H.tick(3);
-    check('Veliaf: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3], [110, true]);
+    // AND THE QUEST NO LONGER ENDS HERE. Opening the tomb used to be the last step; the Rod of
+    // Ivandis - the reward the quest guide names the quest for - is the ending since, and Veliaf
+    // reading the plaster fragment is where that recipe starts: 102, then the mould (104), the
+    // casting (106), the well (108), and 110 with the quest points. tools/sim/myrequerod.ts drives
+    // the chain, so again this takes the shortcut and then asks Veliaf for the ending itself.
+    check('Veliaf reads the fragment and the recipe starts: stage 102', gv(p, 'myreque_2_quest'), 102);
+    sv(p, 'myreque_2_quest', 108); // ^m2_charged, which the rod chain reaches
+    H.give(p, 'burgh_rod_command_final_10');
+    talk(p, 'route_veliaf_hurtz');
+    H.tick(3);
+    check('the charged rod, handed over and handed straight back: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3, H.invCount(p, 'burgh_rod_command_final_10')], [110, true, 1]);
 });
 
 // =============================================================================== Regicide
@@ -560,7 +647,7 @@ guard('regicide', () => {
     p.teleport(2340, 9622, 0);
     H.tick(1);
     op(p, 2341, 9622, 'regicide_voyage_temple_well2', 1);
-    check('and its well back up into Iban\'s temple', at(p), [2372, 9718, 0]);
+    check("and its well back up into Iban's temple", at(p), [2372, 9718, 0]);
 
     const q = player('regicide2', 2204, 3250);
     sv(q, 'regicide_quest', 2);
@@ -610,7 +697,11 @@ guard('trolllove', () => {
     const from = H.ifaces.length;
     H.ifButton(p, 'questlist:troll_love');
     drive(p);
-    check('the journal has a complete page', H.ifaces.slice(from).some(i => i.who === p.username && (i.text ?? '').includes('QUEST COMPLETE')), true);
+    check(
+        'the journal has a complete page',
+        H.ifaces.slice(from).some(i => i.who === p.username && (i.text ?? '').includes('QUEST COMPLETE')),
+        true
+    );
 });
 
 // =============================================================================== upstream starts

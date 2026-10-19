@@ -10,6 +10,18 @@ import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import World from '#/engine/World.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+import fs from 'fs';
+
+// THE QUEST STAGES ARE READ, NOT TYPED. The Ghosts Ahoy rebuild renumbered them - the manual went
+// from 5 to 7 and the translation from 6 to 8 - and this file had both written out as digits, so
+// the translate section seeded a stage that is now the map, watched the content correctly refuse to
+// advance it, and called that a failure. Reading the names out of the constant file cannot rot.
+const AHOY = ((): Record<string, number> => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/quests/quest_ahoy/configs/quest_ahoy.constant', 'utf8');
+    for (const m of src.matchAll(/\^(ahoy_\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
 
 // A ~mesbox is interface text, not a chat line, and it is drawn INSIDE the click - before drive()
 // starts watching - so the mark has to be taken before the click and the slice read afterwards.
@@ -33,7 +45,31 @@ console.log('\n================ THE GRAND TREE CELL');
     // The arrest and the release are one continuous scene: Glough calls the guards, you are put in
     // the cage, Charlie tells you about the shipyard, and King Narnode comes down and lets you out.
     // So what is checked is the scene, plus the fact that the cage you were put in was a real one.
-    const lines = talk(p, 'grandtree_glough', [], 1, false);
+    //
+    // HE WANDERS INSIDE THE CAGE, which is why his tile is re-read here rather than used once.
+    // Nothing overrides wanderrange for grandtree_glough and the engine defaults it to 5, so "him
+    // plus one east" at boot is a tile he may have left by the time the op goes in - and the cage is
+    // sealed (glough.rs2: "no tile beside him can be walked to"), so a refused op prints nothing and
+    // the whole scene below it fails with it. That is what sweep5 reported, six checks deep, on a
+    // sim that passed sweep4. The talk stays teleport=false so the scene itself is never interfered
+    // with; it is only the standing-next-to-him that is retried.
+    let lines: string[] = [];
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [2, 0],
+        [-2, 0],
+        [0, 2],
+        [0, -2]
+    ]) {
+        const g = H.npcNear('grandtree_glough', 2478, 3463, 1)!;
+        p.teleport(g.x + dx, g.z + dz, g.level);
+        H.tick(1);
+        lines = talk(p, 'grandtree_glough', [], 1, false);
+        if (A.saw(lines, 'Guards! Guards!')) break;
+    }
     H.tick(40);
     check('Glough calls the guards', A.saw(lines, 'Guards! Guards!'), true);
     check('Charlie greets you as a fellow prisoner in the cage', A.saw(lines, 'So they got you as well'), true);
@@ -66,7 +102,7 @@ console.log('\n================ ZANARIS: the mushroom gate');
 console.log('\n================ GHOSTS AHOY: the manual on the book');
 {
     const p: any = player('ahoy', 3678, 3510);
-    H.setVarBit(p, 'ahoy_questvar', 5); // ^ahoy_manual
+    H.setVarBit(p, 'ahoy_questvar', AHOY.ahoy_manual);
     H.give(p, 'ahoy_translation_manual');
     H.give(p, 'ahoy_book_of_haricanto');
     H.tick(1);
@@ -74,7 +110,7 @@ console.log('\n================ GHOSTS AHOY: the manual on the book');
     H.useHeldOn(p, 'ahoy_translation_manual', 'ahoy_book_of_haricanto');
     H.tick(14);
     check('translating pays no Prayer experience', xp(p, PlayerStat.PRAYER) - before, 0);
-    check('  ...and still advances the quest', H.getVarBit(p, 'ahoy_questvar'), 6);
+    check('  ...and still advances the quest', H.getVarBit(p, 'ahoy_questvar'), AHOY.ahoy_translated);
     const im = ifaceMark();
     H.useHeldOn(p, 'ahoy_translation_manual', 'ahoy_book_of_haricanto');
     A.drive(p);
@@ -172,7 +208,11 @@ console.log('\n================ THE ECTOFUNTUS');
     H.give(p, 'amulet_of_ghostspeak');
     H.equip(p, { front: 'amulet_of_ghostspeak' });
     H.tick(2);
-    const lines = talk(p, 'ahoy_disciple', [1], 1, false);
+    // NO MENU FOR THIS PLAYER. The rebuild gave the disciple a p_choice2 - the Book of Haricanto, or
+    // the tokens - but only between ^ahoy_crone_told and ^ahoy_translated. This player has never
+    // started the quest, so the handler falls straight through to ~ecto_collect_tokens and there is
+    // nothing to pick; demanding a pick threw and took the ectophial section below down with it.
+    const lines = talk(p, 'ahoy_disciple', [], 1, false);
     H.tick(10);
     console.log('  ', lines.slice(0, 6));
     check('the disciple hands the tokens over', H.invCount(p, 'ectotoken'), 5);
@@ -212,7 +252,7 @@ console.log('\n================ THE ECTOFUNTUS');
     // with it every use for bonemeal - permanently.
     console.log('-- Velorina replaces a lost one');
     const v: any = player('velo', 3678, 3512, 0);
-    H.setVarBit(v, 'ahoy_questvar', 10); // ^ahoy_complete
+    H.setVarBit(v, 'ahoy_questvar', AHOY.ahoy_complete);
     // She cannot be heard without it, and that IS the condition Old School puts on the
     // replacement - so wearing it is part of the test, not setup around it.
     H.equip(v, { front: 'amulet_of_ghostspeak' });
@@ -258,17 +298,44 @@ console.log('\n================ THE ECTOFUNTUS');
 
 console.log('\n================ H.A.M. MEMBERS');
 {
-    const ham = (() => {
-        for (const npc of World.npcs) {
-            if (!npc || !npc.isActive) continue;
-            if (npc.type === (A.NpcType as any).getId('favour_male_ham_civilian')) return npc;
+    // PICK ONE THE PLAYER CAN ACTUALLY STAND NEXT TO. This took the first H.A.M. member out of
+    // World.npcs and put the player on the tile due east of it, which is not a tile at all when the
+    // member happens to be standing against the hideout's east wall - and where it is standing is
+    // decided at boot, at random, within its wander range. Every one of the 80 attempts below then
+    // spent itself on "I can't reach that!", and the section reported H.A.M. pickpocketing as doing
+    // nothing: no loot, no experience, no refusal message. It does work (a probe at 99 Thieving
+    // takes coins, 222 experience a success and plays seq 881); the sim was standing in a wall.
+    //
+    // So: walk the members, take the first with a walkable neighbour that is connected to it, and
+    // stand there. The four-way test is the same collision map the route finder uses.
+    const members: any[] = [];
+    for (const npc of World.npcs) {
+        if (!npc || !npc.isActive) continue;
+        if (npc.type === (A.NpcType as any).getId('favour_male_ham_civilian')) members.push(npc);
+        if (npc.type === (A.NpcType as any).getId('favour_female_ham_civilian')) members.push(npc);
+    }
+    const pick = (() => {
+        for (const npc of members) {
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ]) {
+                const x = npc.x + dx,
+                    z = npc.z + dz;
+                if (A.walkable(npc.level, x, z) && A.connected(npc.level, x, z, npc.x, npc.z, 4)) {
+                    return { npc, at: [x, z] as const };
+                }
+            }
         }
         return null;
     })();
-    check('a H.A.M. member is spawned somewhere', ham !== null, true);
-    if (ham) {
-        console.log('  found one at', [ham.level, ham.x, ham.z]);
-        const p: any = player('ham', ham.x + 1, ham.z, ham.level);
+    check('a H.A.M. member is spawned somewhere a player can stand beside', pick !== null, true);
+    if (pick) {
+        const ham = pick.npc;
+        console.log(`  ${members.length} members about; using the one at`, [ham.level, ham.x, ham.z], 'from', pick.at);
+        const p: any = player('ham', pick.at[0], pick.at[1], ham.level);
         p.setLevel(PlayerStat.THIEVING, 1);
         H.tick(2);
         const im = ifaceMark();
@@ -323,9 +390,12 @@ console.log('\n================ H.A.M. MEMBERS');
             'ham_badge',
             'ham_hood'
         ];
+        // TEN TICKS BETWEEN ATTEMPTS, not four. A failed pickpocket stuns for stun_ticks=8 and
+        // [label,attempt_pick_pocket] returns at once while %stunned holds, so at four ticks apart
+        // roughly half the clicks were thrown away against the stun.
         for (let i = 0; i < 80; i++) {
             H.opNpc(p, ham, 3);
-            H.tick(4);
+            H.tick(10);
         }
         const kinds = names.filter(n => H.invCount(p, n) > 0);
         console.log(`  80 attempts at 99 Thieving produced ${kinds.length} kinds:`, kinds.join(', '));

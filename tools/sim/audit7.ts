@@ -8,6 +8,7 @@
 // Roving Elves and the end of Priest in Peril (with the Port Phasmatys charter gate), and spot
 // checks of the Dig Site's teleports.
 // Usage: npx tsx tools/sim/audit7.ts [deal|misc|garden|hauntedmine|enakh|tbwt|roving|priest|spots ...]
+import fs from 'fs';
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import LocType from '#/cache/config/LocType.js';
@@ -50,10 +51,28 @@ function player(name: string, x: number, z: number, level = 0) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const lastMes = (p: Player) => H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-1)[0] ?? '';
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 const v = (p: Player, name: string) => H.getVar(p, name);
 const vb = (p: Player, name: string) => H.getVarBit(p, name);
+// Quest-stage constants, read rather than typed, so a renumbering cannot make a sim fail for the
+// wrong reason.
+const QUEST: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
+    for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
+const setVarAny = (p: Player, name: string, n: number) => {
+    try {
+        H.setVar(p, name, n);
+    } catch {
+        H.setVarBit(p, name, n);
+    }
+};
 
 /** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
 function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
@@ -80,7 +99,10 @@ function drive(p: Player, picks: number[] = [], guardTicks = 3): string[] {
         }
     }
     if (picks.length) throw new Error('menus not reached: ' + picks.join(','));
-    return H.ifaces.slice(from).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map(i => i.text!);
 }
 
 function npcAny(name: string, x: number, z: number, level: number): Npc | null {
@@ -91,7 +113,18 @@ function npcAny(name: string, x: number, z: number, level: number): Npc | null {
 function talk(p: Player, npcName: string, picks: number[] = [], op = 1): string[] {
     const npc = npcAny(npcName, p.x, p.z, p.level);
     if (!npc) throw new Error('no npc ' + npcName);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [2, 0], [0, 2], [-2, 0], [0, -2]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [2, 0],
+        [0, 2],
+        [-2, 0],
+        [0, -2]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, op);
@@ -107,7 +140,10 @@ function opNpcHere(p: Player, npcName: string, op = 1, picks: number[] = []): bo
     settle(p);
     H.opNpc(p, npc, op);
     let started = false;
-    for (let t = 0; t < 40 && !started; t++) { H.tick(1); if (p.activeScript) started = true; }
+    for (let t = 0; t < 40 && !started; t++) {
+        H.tick(1);
+        if (p.activeScript) started = true;
+    }
     drive(p, picks);
     return started;
 }
@@ -170,10 +206,20 @@ function reachSet(level: number, x: number, z: number, radius = 160) {
     const q = [[x, z]];
     while (q.length) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz, k = nx + ',' + nz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz,
+                k = nx + ',' + nz;
             if (seen.has(k) || Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
-            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([nx, nz]); }
+            if (canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([nx, nz]);
+            }
         }
     }
     return seen;
@@ -181,23 +227,31 @@ function reachSet(level: number, x: number, z: number, radius = 160) {
 /** Can the player standing at (x,z) walk up to (tx,tz) - onto it, or beside it if it is a loc/npc? */
 function reaches(level: number, x: number, z: number, tx: number, tz: number, radius = 160): boolean {
     const s = reachSet(level, x, z, radius);
-    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.has(tx + dx + ',' + (tz + dz))) return true;
+    for (const [dx, dz] of [
+        [0, 0],
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ])
+        if (s.has(tx + dx + ',' + (tz + dz))) return true;
     return false;
 }
 const walkable = (level: number, x: number, z: number) => !isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
 
 /** Remove every closed door/gate (wall-shaped loc with op1 Open) in a box, so a flood can pass them. */
 function openDoors(level: number, x0: number, z0: number, x1: number, z1: number, except: string[] = []) {
-    for (let x = x0; x <= x1 + 8; x += 8) for (let z = z0; z <= z1 + 8; z += 8) {
-        const zone = World.gameMap.getZone(x, z, level);
-        for (const loc of [...zone.getAllLocsUnsafe()]) {
-            if (loc.x < x0 || loc.x > x1 || loc.z < z0 || loc.z > z1) continue;
-            const t = LocType.get(loc.type);
-            if (except.includes(t.debugname!)) continue;
-            const op1 = (t.op ?? [])[0];
-            if ((loc.shape <= 3 || loc.shape === 9) && op1 && /^open$/i.test(op1)) World.removeLoc(loc, 1000000);
+    for (let x = x0; x <= x1 + 8; x += 8)
+        for (let z = z0; z <= z1 + 8; z += 8) {
+            const zone = World.gameMap.getZone(x, z, level);
+            for (const loc of [...zone.getAllLocsUnsafe()]) {
+                if (loc.x < x0 || loc.x > x1 || loc.z < z0 || loc.z > z1) continue;
+                const t = LocType.get(loc.type);
+                if (except.includes(t.debugname!)) continue;
+                const op1 = (t.op ?? [])[0];
+                if ((loc.shape <= 3 || loc.shape === 9) && op1 && /^open$/i.test(op1)) World.removeLoc(loc, 1000000);
+            }
         }
-    }
 }
 function locAt(name: string, level: number, x: number, z: number) {
     return World.getLoc(x, z, level, LocType.getId(name));
@@ -207,7 +261,8 @@ function enqueue(p: Player, name: string, args: number[] = []) {
     if (!s) throw new Error('no script ' + name);
     p.enqueueScript(s, PlayerQueueType.NORMAL, 0, args);
 }
-void enqueue; void NpcType;
+void enqueue;
+void NpcType;
 
 // ======================================================================================= Rum Deal
 if (want('deal')) {
@@ -229,13 +284,17 @@ if (want('deal')) {
         talk(p, 'deal_pirate_' + s, [], 3);
     }
     check('all six intimidated: stage 2', v(p, 'deal_quest'), 2);
-    for (const [bx, tx] of [[2137, 2137], [2149, 2149], [2163, 2163]]) {
+    for (const [bx, tx] of [
+        [2137, 2137],
+        [2149, 2149],
+        [2163, 2163]
+    ]) {
         p.teleport(bx, 5086, 0);
         H.tick(1);
         op(p, bx, 5088, 'deal_stairs_bottom');
         check(`stairs at ${bx} climb into the brewery`, [p.level, walkable(1, p.x, p.z), reaches(1, p.x, p.z, 2144, 5106)], [1, true, true]);
         op(p, tx, 5088, 'deal_stairs_top');
-        check(`and back down`, [p.level, reaches(0, p.x, p.z, 2154, 5076)], [0, true]);
+        check('and back down', [p.level, reaches(0, p.x, p.z, 2154, 5076)], [0, true]);
     }
 
     console.log('The cellar: wrench and seed:');
@@ -277,10 +336,10 @@ if (want('deal')) {
     check('a karamthulhu', H.invCount(p, 'deal_karamthulhu'), 1);
     void squid;
 
-    console.log('Through 50% Luke\'s gate to the stagnant lake:');
+    console.log("Through 50% Luke's gate to the stagnant lake:");
     p.teleport(2129, 5090, 0);
     H.tick(1);
-    check('the west stairs foot is in Luke\'s yard', reaches(0, 2128, 5095, 2120, 5097), true);
+    check("the west stairs foot is in Luke's yard", reaches(0, 2128, 5095, 2120, 5097), true);
     p.teleport(2121, 5094, 0);
     H.tick(1);
     op(p, 2120, 5098, 'deal_gate_closed');
@@ -409,6 +468,13 @@ if (want('misc')) {
 if (want('garden')) {
     console.log('GARDEN OF TRANQUILLITY');
     const p = player('gardenq', 3222, 3474);
+    // PRIEST IN PERIL FIRST, which is a condition on Roald offering the garden at all: ~garden_roald
+    // _available returns false for a player who has not finished it. That is deliberate and it is a
+    // fix in its own right - Roald is also the one who offers Priest in Peril, and handing a brand
+    // new player the garden instead meant nobody could start the way into Morytania. Without it set
+    // here, Roald gave this player his ordinary conversation and the whole section measured nothing.
+    setVarAny(p, 'priestperil', QUEST.priestperil_complete);
+    H.tick(1);
     talk(p, 'king_roald', [1]);
     check('Roald starts it', [vb(p, 'garden_quest'), H.invCount(p, 'garden_list')], [5, 1]);
     H.give(p, 'bucket_compost', 8);
@@ -427,7 +493,17 @@ if (want('garden')) {
     check('every gardener has paid out, the list finished at a gardener: stage 10', [vb(p, 'garden_quest'), vb(p, 'garden_elstan_varbit'), vb(p, 'garden_althric_varbit')], [10, 2, 2]);
     H.give(p, 'rake');
     H.give(p, 'watering_can_8', 1);
-    const seeds: Record<string, string> = { garden_delphinium_patch: 'garden_delphinium_seed', garden_rosebush_patch_white: 'garden_rosebush_seed_white', garden_rosebush_patch_red: 'garden_rosebush_seed_red', garden_rosebush_patch_pink: 'garden_rosebush_seed_pink', garden_snowdrop_patch: 'garden_snowdrop_seed', garden_vine_patch: 'garden_vine_seed', garden_white_tree_patch: 'garden_white_tree_shoot', garden_orchid_pink_patch: 'garden_orchid_pink_seed', garden_orchid_yellow_patch: 'garden_orchid_yellow_seed' };
+    const seeds: Record<string, string> = {
+        garden_delphinium_patch: 'garden_delphinium_seed',
+        garden_rosebush_patch_white: 'garden_rosebush_seed_white',
+        garden_rosebush_patch_red: 'garden_rosebush_seed_red',
+        garden_rosebush_patch_pink: 'garden_rosebush_seed_pink',
+        garden_snowdrop_patch: 'garden_snowdrop_seed',
+        garden_vine_patch: 'garden_vine_seed',
+        garden_white_tree_patch: 'garden_white_tree_shoot',
+        garden_orchid_pink_patch: 'garden_orchid_pink_seed',
+        garden_orchid_yellow_patch: 'garden_orchid_yellow_seed'
+    };
     for (const name of Object.keys(seeds)) {
         // every tile of a patch type shares one varbit, so any instance a gardener can walk up to
         // will do: try them in turn until one of them can be reached from the garden path
@@ -440,9 +516,15 @@ if (want('garden')) {
             H.tick(1);
             const m0 = H.mesgs.length;
             useOn(p, x, z, name, first);
-            if (!mesSince(p, m0).some(m => m.includes('reach'))) { spot = [x, z]; break; }
+            if (!mesSince(p, m0).some(m => m.includes('reach'))) {
+                spot = [x, z];
+                break;
+            }
         }
-        if (!spot) { check(name + ' can be reached from the garden', false, true); continue; }
+        if (!spot) {
+            check(name + ' can be reached from the garden', false, true);
+            continue;
+        }
         const [x, z] = spot;
         if (first === 'rake') for (let i = 0; i < 2; i++) useOn(p, x, z, name, 'rake');
         useOn(p, x, z, name, seeds[name]);
@@ -450,7 +532,11 @@ if (want('garden')) {
         if (!can) H.give(p, 'watering_can_8');
         useOn(p, x, z, name, can ?? 'watering_can_8');
     }
-    check('every bed fully grown (the tree to 8)', ['delphiniums', 'rosebush_white', 'rosebush_red', 'rosebush_pink', 'snowdrops', 'vines', 'white_tree', 'orchids_pink', 'orchids_yellow'].map(g => vb(p, 'garden_' + g + '_varbit')), [7, 7, 7, 7, 7, 7, 8, 7, 7]);
+    check(
+        'every bed fully grown (the tree to 8)',
+        ['delphiniums', 'rosebush_white', 'rosebush_red', 'rosebush_pink', 'snowdrops', 'vines', 'white_tree', 'orchids_pink', 'orchids_yellow'].map(g => vb(p, 'garden_' + g + '_varbit')),
+        [7, 7, 7, 7, 7, 7, 8, 7, 7]
+    );
     check('nine beds up: stage 30', vb(p, 'garden_quest'), 30);
     p.teleport(3222, 3474, 0);
     H.tick(1);
@@ -496,8 +582,18 @@ if (want('hauntedmine')) {
     /** Of the given placements of a loc, op the first one the player can walk to from here. */
     const climbAny = (what: string, name: string, spots: [number, number][]) => {
         const reach = reachSet(p.level, p.x, p.z, 200);
-        const spot = spots.find(([x, z]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => reach.has(x + dx + ',' + (z + dz))));
-        if (!spot) { check(what + ': one can be walked to', false, true); return false; }
+        const spot = spots.find(([x, z]) =>
+            [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ].some(([dx, dz]) => reach.has(x + dx + ',' + (z + dz)))
+        );
+        if (!spot) {
+            check(what + ': one can be walked to', false, true);
+            return false;
+        }
         const before = at(p);
         op(p, spot[0], spot[1], name);
         const moved = JSON.stringify(before) !== JSON.stringify(at(p));
@@ -509,14 +605,34 @@ if (want('hauntedmine')) {
     H.tick(1);
     op(p, 3429, 3225, 'hauntedmine_back_entrance2');
     check('crawl in', p.z > 9000, true);
-    climbAny('m53_150 ladder down', 'hauntedmine_laddertop', [[3413, 9633], [3422, 9625]]);
-    climbAny('level 2 ladder down', 'hauntedmine_laddertop_1sw', [[2797, 4599], [2798, 4567]]);
-    climbAny('level 3 ladder east', 'hauntedmine_laddertop_1e', [[2696, 4497], [2710, 4540], [2725, 4486], [2732, 4529]]);
+    climbAny('m53_150 ladder down', 'hauntedmine_laddertop', [
+        [3413, 9633],
+        [3422, 9625]
+    ]);
+    climbAny('level 2 ladder down', 'hauntedmine_laddertop_1sw', [
+        [2797, 4599],
+        [2798, 4567]
+    ]);
+    climbAny('level 3 ladder east', 'hauntedmine_laddertop_1e', [
+        [2696, 4497],
+        [2710, 4540],
+        [2725, 4486],
+        [2732, 4529]
+    ]);
     check('this side reaches both lever banks and the diagram', [reaches(0, p.x, p.z, 2785, 4517, 200), reaches(0, p.x, p.z, 2768, 4533, 200), reaches(0, p.x, p.z, 2769, 4522, 200)], [true, true, true]);
     op(p, 2769, 4522, 'hauntedmine_points_info');
-    for (const [n, x, z] of [[1, 2785, 4517], [3, 2786, 4517], [4, 2786, 4515], [6, 2768, 4533], [8, 2770, 4533]] as [number, number, number][]) {
+    for (const [n, x, z] of [
+        [1, 2785, 4517],
+        [3, 2786, 4517],
+        [4, 2786, 4515],
+        [6, 2768, 4533],
+        [8, 2770, 4533]
+    ] as [number, number, number][]) {
         // the two banks are a long walk apart - further than one click's path search - so walk over first
-        if (n === 6) { p.teleport(2767, 4532, 0); H.tick(1); }
+        if (n === 6) {
+            p.teleport(2767, 4532, 0);
+            H.tick(1);
+        }
         op(p, x, z, 'hauntedmine_point_lever' + n);
     }
     check('points 1, 3, 4, 6 and 8 thrown: stage 3', [v(p, 'hauntedmine_bits') & 255, v(p, 'hauntedmine')], [173, 3]);
@@ -532,15 +648,36 @@ if (want('hauntedmine')) {
     op(p, 3445, 3236, 'hauntedmine_obstacle_cart');
     check('climb over the cart into it', [p.x < 3445, reaches(0, p.x, p.z, 3440, 3233)], [true, true]);
     op(p, 3440, 3232, 'hauntedmine_secondary_entrance');
-    climbAny('m53_150 ladder down', 'hauntedmine_laddertop', [[3413, 9633], [3422, 9625]]);
-    climbAny('level 2 ladder down', 'hauntedmine_laddertop_1sw', [[2797, 4599], [2798, 4567]]);
+    climbAny('m53_150 ladder down', 'hauntedmine_laddertop', [
+        [3413, 9633],
+        [3422, 9625]
+    ]);
+    climbAny('level 2 ladder down', 'hauntedmine_laddertop_1sw', [
+        [2797, 4599],
+        [2798, 4567]
+    ]);
     const r3 = reachSet(0, p.x, p.z, 200);
-    const e = ([[2732, 4529], [2710, 4540], [2696, 4497]] as [number, number][]).find(([x, z]) => r3.has(x + 1 + ',' + z) || r3.has(x - 1 + ',' + z) || r3.has(x + ',' + (z + 1)) || r3.has(x + ',' + (z - 1)));
+    const e = (
+        [
+            [2732, 4529],
+            [2710, 4540],
+            [2696, 4497]
+        ] as [number, number][]
+    ).find(([x, z]) => r3.has(x + 1 + ',' + z) || r3.has(x - 1 + ',' + z) || r3.has(x + ',' + (z + 1)) || r3.has(x + ',' + (z - 1)));
     op(p, e![0], e![1], 'hauntedmine_laddertop_1e');
     check('the valve side reaches the valve and the lift', [reaches(0, p.x, p.z, 2808, 4497), reaches(0, p.x, p.z, 2806, 4493)], [true, true]);
     op(p, 2807, 4492, 'lift_side_r');
     check('the lift will not go down before the valve', p.z > 4480, true);
-    op(p, 2808, 4496, 'hauntedmine_lift_valve');
+    // AN APPROACH TRIGGER, SO THE WALK NEEDS TICKS. [aploc1,hauntedmine_lift_valve] opens with
+    // `if (distance(loc_coord, coord) > 1) { p_aprange(1); return; }`: a click from further off only
+    // registers the range and the valve turns once the player is beside it. One click with whatever
+    // ticks op() happens to spend left the stage at 3 and the player on the surface about one run in
+    // three, and the level-5 check below went with it. Same class as audit6's arrow across the
+    // channel - these [ap*] triggers all want the approach, not just the click.
+    for (let t = 0; t < 8 && v(p, 'hauntedmine') < 4; t++) {
+        op(p, 2808, 4496, 'hauntedmine_lift_valve');
+        H.tick(4);
+    }
     check('valve: the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
     check('level 5 reaches both staircases down', [reaches(0, p.x, p.z, 2746, 4437), reaches(0, p.x, p.z, 2692, 4437)], [true, true]);
 
@@ -596,7 +733,11 @@ if (want('enakh')) {
     p.teleport(3173, 2920, 0);
     H.tick(1);
     for (let i = 0; i < 4; i++) op(p, 3173, 2918, 'enakh_mining_stone');
-    check('the rock: a pickaxe, then the base, the body and the granite', ['bronze_pickaxe', 'enakh_sandstone_huge_base+legs', 'enakh_sandstone_huge_body', 'enakh_granite_medium'].map(o => H.invCount(p, o)), [1, 1, 1, 1]);
+    check(
+        'the rock: a pickaxe, then the base, the body and the granite',
+        ['bronze_pickaxe', 'enakh_sandstone_huge_base+legs', 'enakh_sandstone_huge_body', 'enakh_granite_medium'].map(o => H.invCount(p, o)),
+        [1, 1, 1, 1]
+    );
     useOnHeld(p, 'enakh_chisel', 'enakh_sandstone_huge_base+legs');
     useOnHeld(p, 'enakh_chisel', 'enakh_sandstone_huge_body');
     p.teleport(3189, 2923, 0);
@@ -612,13 +753,32 @@ if (want('enakh')) {
     check('the head goes on and it all falls in: stage 30', [vb(p, 'enakh_quest'), vb(p, 'enakh_statue_fallen')], [30, 3]);
 
     console.log('Down a boulder into the ring:');
-    for (const [dir, bx, bz] of [['n', 3148, 2937], ['e', 3194, 2925], ['s', 3189, 2888], ['w', 3146, 2908]] as [string, number, number][]) {
+    for (const [dir, bx, bz] of [
+        ['n', 3148, 2937],
+        ['e', 3194, 2925],
+        ['s', 3189, 2888],
+        ['w', 3146, 2908]
+    ] as [string, number, number][]) {
         check(`boulder ${dir} can be walked to from the statue`, reaches(0, 3190, 2923, bx, bz, 200), true);
     }
     const land = (dir: string, bx: number, bz: number) => {
         const r = reachSet(0, 3190, 2923, 200);
-        const s = [[0, 1], [0, -1], [1, 0], [-1, 0], [0, 2], [2, 0], [0, -2], [-2, 0]].map(([dx, dz]) => [bx + dx, bz + dz]).find(([x, z]) => r.has(x + ',' + z));
-        if (s) { p.teleport(s[0], s[1], 0); H.tick(1); }
+        const s = [
+            [0, 1],
+            [0, -1],
+            [1, 0],
+            [-1, 0],
+            [0, 2],
+            [2, 0],
+            [0, -2],
+            [-2, 0]
+        ]
+            .map(([dx, dz]) => [bx + dx, bz + dz])
+            .find(([x, z]) => r.has(x + ',' + z));
+        if (s) {
+            p.teleport(s[0], s[1], 0);
+            H.tick(1);
+        }
         op(p, bx, bz, 'enakh_secret_boulder_multiloc_' + dir);
         check(`boulder ${dir} lands on a walkable tile in the ring`, [p.z > 9000, walkable(0, p.x, p.z)], [true, true]);
     };
@@ -632,7 +792,11 @@ if (want('enakh')) {
     p.teleport(3127, 9327, 0);
     H.tick(1);
     for (let i = 0; i < 4; i++) useOn(p, 3129, 9325, 'enakh_fallen_statue_east_multiloc', 'enakh_chisel');
-    check('four limbs off the fallen statue', ['enakh_arm_left', 'enakh_arm_right', 'enakh_leg_left', 'enakh_leg_right'].map(o => H.invCount(p, o)), [1, 1, 1, 1]);
+    check(
+        'four limbs off the fallen statue',
+        ['enakh_arm_left', 'enakh_arm_right', 'enakh_leg_left', 'enakh_leg_right'].map(o => H.invCount(p, o)),
+        [1, 1, 1, 1]
+    );
     op(p, 3128, 9319, 'enakh_pedestal_sigil_m');
     check('the M sigil from this quadrant', H.invCount(p, 'enakh_sigil_m'), 1);
 
@@ -660,11 +824,23 @@ if (want('enakh')) {
     const temple = at(p);
 
     console.log('The four elements:');
-    check('the temple floor reaches the fountain, the furnace, the braziers and the prison', [reaches(1, p.x, p.z, 3091, 9307), reaches(1, p.x, p.z, 3115, 9323), reaches(1, p.x, p.z, 3116, 9307), reaches(1, p.x, p.z, 3091, 9324)], [true, true, true, true]);
+    check(
+        'the temple floor reaches the fountain, the furnace, the braziers and the prison',
+        [reaches(1, p.x, p.z, 3091, 9307), reaches(1, p.x, p.z, 3115, 9323), reaches(1, p.x, p.z, 3116, 9307), reaches(1, p.x, p.z, 3091, 9324)],
+        [true, true, true, true]
+    );
     H.give(p, 'tinderbox');
     opNpcHere(p, 'enakh_dummy_fountain_multinpc', 2);
     opNpcHere(p, 'enakh_dummy_furnace_multinpc', 2);
-    for (const [i, x, z] of [[1, 3114, 9306], [2, 3116, 9306], [3, 3118, 9306], [4, 3114, 9309], [5, 3116, 9309], [6, 3118, 9309]] as [number, number, number][]) useOn(p, x, z, `enakh_brazier_${i}_multiloc`, 'tinderbox');
+    for (const [i, x, z] of [
+        [1, 3114, 9306],
+        [2, 3116, 9306],
+        [3, 3118, 9306],
+        [4, 3114, 9309],
+        [5, 3116, 9309],
+        [6, 3118, 9309]
+    ] as [number, number, number][])
+        useOn(p, x, z, `enakh_brazier_${i}_multiloc`, 'tinderbox');
     talk(p, 'enakh_pentyn');
     useOn(p, 3091, 9324, 'enakh_light_prison', 'enakh_chisel');
     check('ice, smoke, shadow and blood: stage 50', [vb(p, 'enakh_ice_room'), vb(p, 'enakh_smoke_room'), vb(p, 'enakh_shadow_room'), vb(p, 'enakh_blood_room'), vb(p, 'enakh_quest')], [1, 1, 1, 1, 50]);
@@ -717,9 +893,21 @@ if (want('enakh')) {
     op(p, 3104, 9309, 'enakh_temple_ladderup');
     op(p, 3104, 9309, 'enakh_temple_ladderdown');
     check('down the middle ladder again', [p.level, walkable(0, p.x, p.z)], [0, true]);
-    for (const [x, z] of [[3079, 9306], [3087, 9336], [3121, 9286], [3127, 9329]] as [number, number][]) {
+    for (const [x, z] of [
+        [3079, 9306],
+        [3087, 9336],
+        [3121, 9286],
+        [3127, 9329]
+    ] as [number, number][]) {
         const r = reachSet(0, x + 1, z + 1, 30);
-        const s2 = [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([dx, dz]) => [x + dx, z + dz]).find(([a, b]) => walkable(0, a, b));
+        const s2 = [
+            [0, 1],
+            [0, -1],
+            [1, 0],
+            [-1, 0]
+        ]
+            .map(([dx, dz]) => [x + dx, z + dz])
+            .find(([a, b]) => walkable(0, a, b));
         p.teleport(s2![0], s2![1], 0);
         H.tick(1);
         op(p, x, z, 'enakh_temple_ladderup');
@@ -770,7 +958,13 @@ if (want('tbwt')) {
         }
         if (H.invCount(p, 'tbwt_raw_karambwan') > 0) useOnHeld(p, 'tinderbox', 'tbwt_raw_karambwan');
         if (H.invCount(p, 'tbwt_poorly_cooked_karambwan') > 0) useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
-        if (H.invCount(p, 'tbwt_cooked_karambwan') > 0) H.clearInv(p), H.give(p, 'tinderbox'), H.give(p, 'knife'), H.give(p, 'tbwt_karambwan_vessel'), H.give(p, 'tbwt_raw_karambwanji', 5);
+        if (H.invCount(p, 'tbwt_cooked_karambwan') > 0) {
+            H.clearInv(p);
+            H.give(p, 'tinderbox');
+            H.give(p, 'knife');
+            H.give(p, 'tbwt_karambwan_vessel');
+            H.give(p, 'tbwt_raw_karambwanji', 5);
+        }
     }
     check('a karambwan off the east coast, undercooked into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
     H.give(p, 'iron_spear');
@@ -796,14 +990,23 @@ if (want('tbwt')) {
     talk(p, 'tbwt_timfraku');
     check('Timfraku: complete', v(p, 'tbwt_main'), 6);
 
-    console.log('The sons\' houses:');
-    for (const [x, z] of [[2782, 3057], [2792, 3054], [2802, 3058]] as [number, number][]) {
+    console.log("The sons' houses:");
+    for (const [x, z] of [
+        [2782, 3057],
+        [2792, 3054],
+        [2802, 3058]
+    ] as [number, number][]) {
         p.teleport(x + 1, z, 0);
         H.tick(1);
         const outside = reaches(0, p.x, p.z, 2795, 3080, 60);
+        // A TICK AFTER EACH CLICK. Stepping through a door is a move, and reading the player's tile
+        // on the same tick as the click catches them mid-step: all three of these doors step through
+        // and back when given a moment, and the third one failed its way back without one.
         op(p, x, z, 'tbwt_bamboo_door');
+        H.tick(2);
         const a1 = at(p);
         op(p, x, z, 'tbwt_bamboo_door');
+        H.tick(2);
         const a2 = at(p);
         check(`bamboo door at ${x},${z} steps you through and back`, [outside, a1[0] !== x + 1 || a1[1] !== z, walkable(0, a1[0], a1[1]), a2[0] === x + 1 && a2[1] === z], [true, true, true, true]);
     }
@@ -824,7 +1027,7 @@ if (want('roving')) {
     H.tick(1);
     op(p, 2530, 9844, 'glarials_chest_closed_waterfall_quest');
     op(p, 2530, 9844, 'glarials_chest_open_waterfall_quest');
-    check('the seed in Glarial\'s chest: stage 3', [v(p, 'roving_elves_quest'), H.invCount(p, 'roving_old_consecration_seed')], [3, 1]);
+    check("the seed in Glarial's chest: stage 3", [v(p, 'roving_elves_quest'), H.invCount(p, 'roving_old_consecration_seed')], [3, 1]);
     talk(p, 'roving_female_woodelf');
     check('Eluned wakes it: stage 4', [v(p, 'roving_elves_quest'), H.invCount(p, 'roving_new_consecration_seed')], [4, 1]);
     H.give(p, 'spade');
@@ -858,16 +1061,29 @@ if (want('priest')) {
 
 // ======================================================================================= spot checks
 if (want('spots')) {
-    console.log('SPOT CHECKS (the batch\'s other teleports)');
+    console.log("SPOT CHECKS (the batch's other teleports)");
     // Dig Site: the winch ropes down the two shafts, the ladders back up, and the end of the blast
-    for (const [x, z, what] of [[3370, 9764, 'winch 1, after the blast'], [3370, 9828, 'winch 1, before'], [3353, 9754, 'winch 2, after'], [3353, 9818, 'winch 2, before'], [3370, 3427, 'ladder 1 top'], [3354, 3417, 'ladder 2 top'], [3368, 9831, 'blast run end'], [3368, 9767, 'blast landing']] as [number, number, string][]) {
+    for (const [x, z, what] of [
+        [3370, 9764, 'winch 1, after the blast'],
+        [3370, 9828, 'winch 1, before'],
+        [3353, 9754, 'winch 2, after'],
+        [3353, 9818, 'winch 2, before'],
+        [3370, 3427, 'ladder 1 top'],
+        [3354, 3417, 'ladder 2 top'],
+        [3368, 9831, 'blast run end'],
+        [3368, 9767, 'blast landing']
+    ] as [number, number, string][]) {
         check(`Dig Site ${what} (${x},${z}) is walkable`, walkable(0, x, z), true);
     }
     check('Dig Site: the blast brick stands where the run starts (3379,9826)', walkable(0, 3379, 9826), true);
     const d = player('digsacks', 3355, 9760);
     const m0 = H.mesgs.length;
     op(d, 3354, 9760, 'digsitesackkey');
-    check('Dig Site: the shaft sacks can be searched', mesSince(d, m0).some(m => m.includes('nothing of interest')), true);
+    check(
+        'Dig Site: the shaft sacks can be searched',
+        mesSince(d, m0).some(m => m.includes('nothing of interest')),
+        true
+    );
     // Priest in Peril: through the holy barrier, and the trapdoor down
     check('Priest in Peril: holy barrier far side (3423,3485) is walkable', walkable(0, 3423, 3485), true);
     check('Priest in Peril: east trapdoor bottom (3440,9887) is walkable', walkable(0, 3440, 9887), true);

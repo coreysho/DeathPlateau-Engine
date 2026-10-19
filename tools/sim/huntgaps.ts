@@ -25,42 +25,72 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
+// Static, not await import(): a "#/..." specifier is only resolvable by tsx's transform of a
+// static import, and the dynamic one here escaped to Node's resolver, spawned LoginThread and
+// threw ERR_INVALID_MODULE_SPECIFIER before this file printed a single check.
+import Npc from '#/engine/entity/Npc.js';
 
 await H.boot();
 H.loginOrder();
 // every hit an npc takes, by the npc itself rather than by its type's name (the harness's npcHits)
 const byNpc = new Map<number, number[]>();
 {
-    const Npc = (await import('#/engine/entity/Npc.js')).default;
     const orig = (Npc.prototype as any).applyDamage;
     (Npc.prototype as any).applyDamage = function (damage: number, type: number) {
-        const l = byNpc.get(this.nid) ?? []; l.push(Math.min(damage, this.levels[3])); byNpc.set(this.nid, l);
+        const l = byNpc.get(this.nid) ?? [];
+        l.push(Math.min(damage, this.levels[3]));
+        byNpc.set(this.nid, l);
         return orig.call(this, damage, type);
     };
 }
-let ok = 0, bad = 0, n = 0;
+let ok = 0,
+    bad = 0,
+    n = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
-const ATT = 0, DEF = 1, STR = 2, HP = 3, RNG = 4, MAG = 6, HERB = 15, HUNT = 22;
+const ATT = 0,
+    DEF = 1,
+    STR = 2,
+    HP = 3,
+    RNG = 4,
+    MAG = 6,
+    HERB = 15,
+    HUNT = 22;
 const fresh = (x: number, z: number) => {
-    const p: any = H.makePlayer('hg' + n, x, z, 60 + n); n++;
-    H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000); H.tick(1);
+    const p: any = H.makePlayer('hg' + n, x, z, 60 + n);
+    n++;
+    H.tick(2);
+    H.maxOut(p);
+    H.clearInv(p);
+    H.setVar(p, 'tutorial', 1000);
+    H.tick(1);
     return p;
 };
-const worn = (p: any, slot: number) => { const o = p.getInventory(InvType.WORN)!.get(slot); return o ? { name: ObjType.get(o.id).debugname, count: o.count } : null; };
+const worn = (p: any, slot: number) => {
+    const o = p.getInventory(InvType.WORN)!.get(slot);
+    return o ? { name: ObjType.get(o.id).debugname, count: o.count } : null;
+};
 const multi = (x: number, z: number) => World.gameMap.isMulti(CoordGrid.packCoord(0, x, z));
 // a monster that will not die or wander off mid-test
 const dummy = (name: string, x: number, z: number, hp = 250) => {
     const npc: any = H.addNpc(name, x, z);
-    npc.baseLevels[HP] = hp; npc.levels[HP] = hp;
+    npc.baseLevels[HP] = hp;
+    npc.levels[HP] = hp;
     npc.targetOp = NpcMode.NONE; // stands still until it is attacked
     return npc;
 };
-const setStyle = (p: any, mode: number) => { H.setVar(p, 'com_mode', mode); H.runProc(p, '[proc,player_combat_stat]'); };
-const stopAll = (p: any) => { p.clearPendingAction?.(); p.clearInteraction?.(); };
+const setStyle = (p: any, mode: number) => {
+    H.setVar(p, 'com_mode', mode);
+    H.runProc(p, '[proc,player_combat_stat]');
+};
+const stopAll = (p: any) => {
+    p.clearPendingAction?.();
+    p.clearInteraction?.();
+};
 
 // ------------------------------------------------------------------------------ salamanders
 console.log('SALAMANDERS');
@@ -71,8 +101,14 @@ console.log('SALAMANDERS');
     H.opheld(p, 'black_salamander', 2);
     H.tick(1);
     check('a black salamander refused at 69 Attack/Ranged/Magic', worn(p, 3), null);
-    check('  and it says which', H.mesgs.filter(m => m.who === p.username).map(m => m.text).slice(-4),
-        ['You are not a high enough level to use this item.', 'You need to have an Attack level of 70.', 'You need to have a Ranged level of 70.', 'You need to have a Magic level of 70.']);
+    check(
+        '  and it says which',
+        H.mesgs
+            .filter(m => m.who === p.username)
+            .map(m => m.text)
+            .slice(-4),
+        ['You are not a high enough level to use this item.', 'You need to have an Attack level of 70.', 'You need to have a Ranged level of 70.', 'You need to have a Magic level of 70.']
+    );
     H.maxOut(p);
     H.opheld(p, 'black_salamander', 2);
     H.tick(1);
@@ -104,17 +140,32 @@ for (const st of STYLES) {
         H.tick(1);
         if (!p.target && !p.delayed) H.attackNpc(p, npc);
     }
-    for (let t = 0; t < 6; t++) { stopAll(p); H.tick(1); } // stop, and let the last attack's hit land
+    for (let t = 0; t < 6; t++) {
+        stopAll(p);
+        H.tick(1);
+    } // stop, and let the last attack's hit land
     for (const a of H.anims) if (a.who === p.username && a.seq === attackSeq) swings.push(a.tick);
     const dealt = (byNpc.get(npc.nid) ?? []).reduce((a, h) => a + h, 0);
     const tar = worn(p, 13)?.count ?? 0;
     const gained = (s: number) => p.stats[s] - xp0[s];
     check(`${st.name}: attacks every ${st.rate} ticks`, [...new Set(swings.slice(1).map((t, i) => t - swings[i]))], [st.rate]);
     check(`${st.name}: one harralander tar an attack`, 100 - tar, swings.length);
-    check(`${st.name}: ${[, , 'Strength', , 'Ranged', , 'Magic'][st.skill]} xp is ${st.per / 10} a damage (dealt ${dealt})`, gained(st.skill), st.per * dealt);
-    check(`${st.name}: and no other combat skill but Hitpoints`, [ATT, DEF, STR, RNG, MAG].filter(s => s !== st.skill && gained(s) !== 0), []);
-    check(`${st.name}: Hitpoints 1.33 a damage`, gained(HP), (byNpc.get(npc.nid) ?? []).reduce((a, d) => a + Math.floor(133 * d * 10 / 100), 0));
-    check(`${st.name}: its own sound`, H.sounds.some(s => s.who === p.username && s.synth === st.sound), true);
+    check(`${st.name}: ${{ [STR]: 'Strength', [RNG]: 'Ranged', [MAG]: 'Magic' }[st.skill]} xp is ${st.per / 10} a damage (dealt ${dealt})`, gained(st.skill), st.per * dealt);
+    check(
+        `${st.name}: and no other combat skill but Hitpoints`,
+        [ATT, DEF, STR, RNG, MAG].filter(s => s !== st.skill && gained(s) !== 0),
+        []
+    );
+    check(
+        `${st.name}: Hitpoints 1.33 a damage`,
+        gained(HP),
+        (byNpc.get(npc.nid) ?? []).reduce((a, d) => a + Math.floor((133 * d * 10) / 100), 0)
+    );
+    check(
+        `${st.name}: its own sound`,
+        H.sounds.some(s => s.who === p.username && s.synth === st.sound),
+        true
+    );
     if (st.mode === 2) {
         const most = Math.max(...(byNpc.get(npc.nid) ?? []));
         check('Blaze never beats floor(0.5 + 99 * (64 + 92) / 640) = 24', most <= 24, true);
@@ -138,19 +189,28 @@ for (const st of STYLES) {
 {
     // at a player, in the wilderness: Blaze burns tar and trains Magic there too
     H.clearLogs();
-    const a = fresh(3100, 3770), b = fresh(3101, 3770);
+    const a = fresh(3100, 3770),
+        b = fresh(3101, 3770);
     H.equip(a, { rhand: 'red_salamander' });
     a.invSet(InvType.WORN, ObjType.getId('tarromin_tar'), 30, 13);
     setStyle(a, 2);
     const xp0 = a.stats[MAG];
     H.tick(1);
     H.attack(a, b);
-    for (let t = 0; t < 12; t++) { H.tick(1); if (!a.target && !a.delayed) H.attack(a, b); }
-    stopAll(a); H.tick(3);
+    for (let t = 0; t < 12; t++) {
+        H.tick(1);
+        if (!a.target && !a.delayed) H.attack(a, b);
+    }
+    stopAll(a);
+    H.tick(3);
     const swings = H.anims.filter(x => x.who === a.username && x.seq === SeqType.getId('osrs_salamander_attack')).length;
     const perHit = H.hits.filter(h => h.who === b.username).map(h => h.damage);
     check('PvP Blaze: a tarromin tar a swing', [swings > 1, 30 - (worn(a, 13)?.count ?? 0)], [true, swings]);
-    check('PvP Blaze: Magic xp 2 a damage (times the PvP bonus, 1.125 at these levels)', a.stats[MAG] - xp0, perHit.reduce((t, d) => t + Math.floor(1125 * (20 * d) / 1000), 0));
+    check(
+        'PvP Blaze: Magic xp 2 a damage (times the PvP bonus, 1.125 at these levels)',
+        a.stats[MAG] - xp0,
+        perHit.reduce((t, d) => t + Math.floor((1125 * (20 * d)) / 1000), 0)
+    );
     H.despawn(a, b);
 }
 
@@ -158,7 +218,10 @@ for (const st of STYLES) {
 console.log('CHINCHOMPAS');
 {
     const p = fresh(3222, 3240);
-    const fuse = (style: number, d: number) => { H.setVar(p, 'damagestyle', style); return H.runProc(p, '[proc,chinchompa_fuse_pct]', [d])[0]; };
+    const fuse = (style: number, d: number) => {
+        H.setVar(p, 'damagestyle', style);
+        return H.runProc(p, '[proc,chinchompa_fuse_pct]', [d])[0];
+    };
     const row = (style: number) => [1, 3, 4, 6, 7, 9].map(d => fuse(style, d));
     check('Short fuse at 1,3,4,6,7,9 tiles', row(4), [100, 100, 75, 75, 50, 50]);
     check('Medium fuse', row(5), [75, 75, 100, 100, 75, 75]);
@@ -184,13 +247,18 @@ function throwAt(x: number, z: number, opts: { defence?: number; style?: number 
     H.equip(p, { rhand: 'chinchompa' });
     p.invSet(InvType.WORN, ObjType.getId('chinchompa'), 50, 3);
     setStyle(p, opts.style ?? 0);
-    const tx = x + 5, tz = z;
+    const tx = x + 5,
+        tz = z;
     const target = dummy('man', tx, tz);
     const side = [dummy('cow', tx, tz + 1), dummy('cow', tx + 1, tz - 1)];
     const moth: any = H.addNpc('butterfly', tx - 1, tz);
     moth.targetOp = NpcMode.NONE;
     const far = dummy('cow', tx + 2, tz);
-    if (opts.defence) for (const t of [target, ...side]) { t.baseLevels[DEF] = opts.defence; t.levels[DEF] = opts.defence; }
+    if (opts.defence)
+        for (const t of [target, ...side]) {
+            t.baseLevels[DEF] = opts.defence;
+            t.levels[DEF] = opts.defence;
+        }
     H.tick(1);
     H.attackNpc(p, target);
     let t0 = -1;
@@ -216,19 +284,25 @@ function throwAt(x: number, z: number, opts: { defence?: number; style?: number 
 }
 {
     // scorpion valley, multi-combat
-    const X = 3212, Z = 3918;
+    const X = 3212,
+        Z = 3918;
     check('the multi test ground is multi-combat', [multi(X, Z), multi(X + 6, Z)], [true, true]);
     const r = throwAt(X, Z);
     check('multi: one chinchompa thrown', r.thrown, 1);
     check('multi: the target is hit once', r.targetHits.length, 1);
-    check('multi: both attackable neighbours in the 3x3 are hit once each', r.sideHits.map(h => h.length), [1, 1]);
+    check(
+        'multi: both attackable neighbours in the 3x3 are hit once each',
+        r.sideHits.map(h => h.length),
+        [1, 1]
+    );
     check('multi: all on the same tick', r.landed.length, 1);
     check('multi: not the butterfly (no Attack op), not the cow outside the 3x3', [r.mothHit, r.farHit], [false, false]);
     const m = throwAt(X, Z, { defence: 60000 });
     check('multi: a missed roll on the target misses the whole group', [...m.targetHits, ...m.sideHits.flat()], [0, 0, 0]);
 }
 {
-    const X = 3222, Z = 3250;
+    const X = 3222,
+        Z = 3250;
     check('the single test ground is single-combat', [multi(X, Z), multi(X + 6, Z)], [false, false]);
     const r = throwAt(X, Z);
     check('single: one thrown, the target hit', [r.thrown, r.targetHits.length], [1, 1]);
@@ -236,7 +310,10 @@ function throwAt(x: number, z: number, opts: { defence?: number; style?: number 
 }
 {
     // fuse speeds: Short 4, Medium 3
-    for (const [style, rate] of [[0, 4], [1, 3]]) {
+    for (const [style, rate] of [
+        [0, 4],
+        [1, 3]
+    ]) {
         H.clearLogs();
         const p = fresh(3222 + style * 10, 3260);
         H.equip(p, { rhand: 'red_chinchompa' });
@@ -245,7 +322,10 @@ function throwAt(x: number, z: number, opts: { defence?: number; style?: number 
         const npc = dummy('mossgiant', p.x + 4, p.z, 2000);
         H.tick(1);
         H.attackNpc(p, npc);
-        for (let t = 0; t < 20; t++) { H.tick(1); if (!p.target && !p.delayed) H.attackNpc(p, npc); }
+        for (let t = 0; t < 20; t++) {
+            H.tick(1);
+            if (!p.target && !p.delayed) H.attackNpc(p, npc);
+        }
         const ts = H.anims.filter(a => a.who === p.username && a.seq === SeqType.getId('human_chinchompa_attack')).map(a => a.tick);
         check(`${style ? 'Medium' : 'Short'} fuse throws every ${rate} ticks`, [...new Set(ts.slice(1).map((t, i) => t - ts[i]))], [rate]);
         check('  one red chinchompa a throw, none left on the ground', 50 - (worn(p, 3)?.count ?? 0), ts.length);
@@ -254,22 +334,35 @@ function throwAt(x: number, z: number, opts: { defence?: number; style?: number 
 }
 {
     // at players, in the wilderness: multi splashes onto the player beside the target, single does not
-    for (const [X, Z, isMulti] of [[3212, 3930, true], [3100, 3760, false]] as [number, number, boolean][]) {
+    for (const [X, Z, isMulti] of [
+        [3212, 3930, true],
+        [3100, 3760, false]
+    ] as [number, number, boolean][]) {
         H.clearLogs();
         check(`the wilderness at ${X},${Z} is ${isMulti ? 'multi' : 'single'}-combat`, multi(X + 4, Z), isMulti);
-        const a = fresh(X, Z), b = fresh(X + 4, Z), c = fresh(X + 4, Z + 1);
+        const a = fresh(X, Z),
+            b = fresh(X + 4, Z),
+            c = fresh(X + 4, Z + 1);
         H.equip(a, { rhand: 'chinchompa' });
         a.invSet(InvType.WORN, ObjType.getId('chinchompa'), 20, 3);
-        for (const q of [b, c]) { q.baseLevels[DEF] = 1; q.levels[DEF] = 1; H.runProc(q, '[proc,player_combat_stat]'); }
+        for (const q of [b, c]) {
+            q.baseLevels[DEF] = 1;
+            q.levels[DEF] = 1;
+            H.runProc(q, '[proc,player_combat_stat]');
+        }
         setStyle(a, 0);
         H.tick(1);
         H.attack(a, b);
         let t0 = -1;
-        for (let t = 0; t < 12 && t0 < 0; t++) { H.tick(1); if (H.anims.some(x => x.who === a.username && x.seq === SeqType.getId('human_chinchompa_attack'))) t0 = World.currentTick; }
+        for (let t = 0; t < 12 && t0 < 0; t++) {
+            H.tick(1);
+            if (H.anims.some(x => x.who === a.username && x.seq === SeqType.getId('human_chinchompa_attack'))) t0 = World.currentTick;
+        }
         stopAll(a);
         H.tick(6);
         const first = (h: any) => t0 >= 0 && h.tick >= t0 && h.tick <= t0 + 3;
-        const hb = H.hits.filter(h => h.who === b.username && first(h)), hc = H.hits.filter(h => h.who === c.username && first(h));
+        const hb = H.hits.filter(h => h.who === b.username && first(h)),
+            hc = H.hits.filter(h => h.who === c.username && first(h));
         check(`${isMulti ? 'multi' : 'single'}: the target player takes the throw`, hb.length, 1);
         check(`${isMulti ? 'multi' : 'single'}: the player beside them ${isMulti ? 'is' : 'is not'} caught in it`, hc.length, isMulti ? 1 : 0);
         H.despawn(a, b, c);
@@ -283,19 +376,28 @@ console.log('HERB TAR');
     H.setVar(p, 'druidquest', 4);
     const useTarOnHerb = () => {
         const inv = p.getInventory(InvType.INV)!;
-        const slotOf = (nm: string) => { for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === ObjType.getId(nm)) return i; return -1; };
-        p.lastItem = ObjType.getId('swamp_tar'); p.lastSlot = slotOf('swamp_tar');
-        p.lastUseItem = ObjType.getId('guam_leaf'); p.lastUseSlot = slotOf('guam_leaf');
+        const slotOf = (nm: string) => {
+            for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === ObjType.getId(nm)) return i;
+            return -1;
+        };
+        p.lastItem = ObjType.getId('swamp_tar');
+        p.lastSlot = slotOf('swamp_tar');
+        p.lastUseItem = ObjType.getId('guam_leaf');
+        p.lastUseSlot = slotOf('guam_leaf');
         const script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, ObjType.getId('swamp_tar'), -1)!;
         p.executeScript(ScriptRunner.init(script, p), true);
     };
-    H.give(p, 'pestle_and_mortar'); H.give(p, 'guam_leaf'); H.give(p, 'swamp_tar', 20);
+    H.give(p, 'pestle_and_mortar');
+    H.give(p, 'guam_leaf');
+    H.give(p, 'swamp_tar', 20);
     p.setLevel(HERB, 18);
-    useTarOnHerb(); H.tick(3);
+    useTarOnHerb();
+    H.tick(3);
     check('Herblore 18: no guam tar', H.invCount(p, 'guam_tar'), 0);
     p.setLevel(HERB, 19);
     const xp0 = p.stats[HERB];
-    useTarOnHerb(); H.tick(3);
+    useTarOnHerb();
+    H.tick(3);
     check('Herblore 19: 15 guam tar from 15 swamp tar and the leaf', [H.invCount(p, 'guam_tar'), H.invCount(p, 'swamp_tar'), H.invCount(p, 'guam_leaf')], [15, 5, 0]);
     check('  for 30 Herblore xp', p.stats[HERB] - xp0, 300);
     H.despawn(p);
@@ -305,23 +407,29 @@ console.log('HERB TAR');
 console.log('BLACK WARLOCK');
 {
     const id = NpcType.getId('hunter_black_warlock');
-    const all: any[] = []; for (const npc of World.npcs) if (npc && npc.type === id) all.push(npc);
-    check('seven black warlocks on the Feldip hunting grounds', all.map(w => `${w.startX},${w.startZ}`).sort(),
-        ['2532,2905', '2540,2898', '2540,2914', '2550,2893', '2551,2915', '2563,2920', '2566,2886'].sort());
+    const all: any[] = [];
+    for (const npc of World.npcs) if (npc && npc.type === id) all.push(npc);
+    check('seven black warlocks on the Feldip hunting grounds', all.map(w => `${w.startX},${w.startZ}`).sort(), ['2532,2905', '2540,2898', '2540,2914', '2550,2893', '2551,2915', '2563,2920', '2566,2886'].sort());
     const w = all[0];
     const p = fresh(w.x, w.z - 1);
-    H.give(p, 'net'); H.give(p, 'hunter_butterfly_jar');
+    H.give(p, 'net');
+    H.give(p, 'hunter_butterfly_jar');
     const net = () => {
         const inv = p.getInventory(InvType.INV)!;
-        let slot = -1; for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === ObjType.getId('net')) slot = i;
+        let slot = -1;
+        for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === ObjType.getId('net')) slot = i;
         p.clearPendingAction();
-        p.lastUseItem = ObjType.getId('net'); p.lastUseSlot = slot;
+        p.lastUseItem = ObjType.getId('net');
+        p.lastUseSlot = slot;
         p.setInteraction(Interaction.ENGINE, w, ServerTriggerType.APNPCU);
         p.opcalled = true;
     };
     p.setLevel(HUNT, 44);
     const refused = () => H.mesgs.some(m => m.who === p.username && /Hunter level of 45/.test(m.text)) || H.ifaces.some(i => i.who === p.username && /Hunter level of 45/.test(i.text ?? ''));
-    for (let i = 0; i < 40 && !refused(); i++) { if (!p.target && !p.delayed) net(); H.tick(1); }
+    for (let i = 0; i < 40 && !refused(); i++) {
+        if (!p.target && !p.delayed) net();
+        H.tick(1);
+    }
     check('Hunter 44: refused', [H.invCount(p, 'black_warlock'), refused()], [0, true]);
     p.closeModal?.();
     p.setLevel(HUNT, 45);
@@ -337,7 +445,7 @@ console.log('BLACK WARLOCK');
     const str = p.levels[STR];
     H.opheld(p, 'black_warlock', 4);
     H.tick(1);
-    check('released: the jar back and Strength + 4 + 15%', [H.invCount(p, 'hunter_butterfly_jar'), p.levels[STR] - str], [1, 4 + Math.floor(99 * 15 / 100)]);
+    check('released: the jar back and Strength + 4 + 15%', [H.invCount(p, 'hunter_butterfly_jar'), p.levels[STR] - str], [1, 4 + Math.floor((99 * 15) / 100)]);
     H.despawn(p);
 }
 

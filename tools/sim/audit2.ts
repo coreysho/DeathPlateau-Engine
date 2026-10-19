@@ -1,8 +1,9 @@
 // Quest audit, batch 2: every quest fixed in it driven through its real triggers on the real engine.
-//   Shadow of the Storm, The Golem (and the Uzer map squares it lost), The Feud, Rat Catchers and
-//   Mourning's End Part II - start to finish where the quest allows, with each new landing, door and
-//   staircase held to the collision map.
+//   Shadow of the Storm, The Golem (and the Uzer map squares it lost), Rat Catchers and Mourning's
+//   End Part II - start to finish where the quest allows, with each new landing, door and staircase
+//   held to the collision map. The Feud has its own walking playthrough now: quest_feud_run.ts.
 // Usage: npx tsx tools/sim/audit2.ts
+import fs from 'fs';
 import * as H from './harness.js';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
@@ -84,7 +85,7 @@ function settle(p: Player, picks: number[] = [], max = 300): void {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -110,31 +111,49 @@ function findNpc(name: string, x: number, z: number, level = 0): Npc {
     return n;
 }
 
-/** Walk to an npc from where the player stands and talk (no teleport: the route has to exist). */
-function talk(p: Player, npc: Npc, picks: number[] = []) {
-    H.opNpc(p, npc, 1);
-    settle(p, picks);
-}
 /** Stand beside the npc (any open side it can be talked to from) and talk. */
 function talkNear(p: Player, name: string, x: number, z: number, picks: number[] = [], level = 0) {
     const npc = findNpc(name, x, z, level);
-    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
+    const sides = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1]
+    ];
     for (const [dx, dz] of [...sides, ...sides]) {
         if (blocked(level, npc.x + dx, npc.z + dz)) continue;
         p.teleport(npc.x + dx, npc.z + dz, level);
         H.tick(1);
         const f = H.ifaces.length;
-        const m = H.mesgs.length;
         H.opNpc(p, npc, 1);
         H.tick(1);
         const spoke = () => p.modalChat !== -1;
         let fired = spoke();
-        for (let t = 0; t < 12 && !fired; t++) { H.tick(1); fired = spoke(); }
-        if (!fired) { p.clearPendingAction(); continue; }
+        for (let t = 0; t < 12 && !fired; t++) {
+            H.tick(1);
+            fired = spoke();
+        }
+        if (!fired) {
+            p.clearPendingAction();
+            continue;
+        }
         try {
             settle(p, picks);
         } catch (e) {
-            console.log('   dialogue was:', H.ifaces.slice(f).filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map(i => i.text).slice(-6), 'inv pole', H.invCount(p, 'vc_rat_pole'));
+            console.log(
+                '   dialogue was:',
+                H.ifaces
+                    .slice(f)
+                    .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+                    .map(i => i.text)
+                    .slice(-6),
+                'inv pole',
+                H.invCount(p, 'vc_rat_pole')
+            );
             throw e;
         }
         return;
@@ -200,14 +219,15 @@ function held(p: Player, objName: string, op: number, picks: number[] = []) {
 /** Put the player on the nearest open tile to (x, z). */
 function place(p: Player, x: number, z: number, level = 0) {
     for (let r = 0; r < 6; r++) {
-        for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
-            if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-            if (!blocked(level, x + dx, z + dz)) {
-                p.teleport(x + dx, z + dz, level);
-                H.tick(1);
-                return;
+        for (let dx = -r; dx <= r; dx++)
+            for (let dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+                if (!blocked(level, x + dx, z + dz)) {
+                    p.teleport(x + dx, z + dz, level);
+                    H.tick(1);
+                    return;
+                }
             }
-        }
     }
     throw new Error(`nowhere open near ${x},${z},${level}`);
 }
@@ -216,14 +236,30 @@ const errorsSince = (n: number) => errors.slice(n);
 const only = process.argv[2];
 const run = (name: string) => !only || name.toLowerCase().includes(only.toLowerCase());
 
+// Quest-stage constants, read rather than typed: a digit copied into a sim is a line that fails
+// for the wrong reason the next time somebody renumbers a quest.
+const QUEST: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
+    for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
+    return out;
+})();
+
 // =============================================================================================
 if (run('golem')) {
-console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are back');
+    console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are back');
     const locs: [string, number, number, number][] = [
-        ['golem_insidestairs_top', 3492, 3090, 0], ['golem_black_mushrooms', 3495, 3088, 0], ['agrith_kiln_1', 3467, 3123, 0],
-        ['agrith_kiln_2', 3478, 3082, 0], ['golem_insidestairs_base', 2721, 4884, 0], ['golem_statuettea', 2718, 4899, 0],
-        ['golem_statuetted', 2725, 4896, 0], ['golem_portal', 2720, 4912, 0], ['golem_demon_portal', 2719, 4883, 2],
-        ['golem_demon_throne', 2719, 4913, 2], ['agrith_wizard_rubble', 2724, 4897, 0]
+        ['golem_insidestairs_top', 3492, 3090, 0],
+        ['golem_black_mushrooms', 3495, 3088, 0],
+        ['agrith_kiln_1', 3467, 3123, 0],
+        ['agrith_kiln_2', 3478, 3082, 0],
+        ['golem_insidestairs_base', 2721, 4884, 0],
+        ['golem_statuettea', 2718, 4899, 0],
+        ['golem_statuetted', 2725, 4896, 0],
+        ['golem_portal', 2720, 4912, 0],
+        ['golem_demon_portal', 2719, 4883, 2],
+        ['golem_demon_throne', 2719, 4913, 2],
+        ['agrith_wizard_rubble', 2724, 4897, 0]
     ];
     for (const [n, x, z, l] of locs) check(`${n} at ${x},${z},${l}`, World.getLoc(x, z, l, LocType.getId(n)) !== null, true);
 
@@ -268,7 +304,7 @@ console.log('The Golem - the Uzer locs lost from m54_48, m53_49 and m42_76 are b
 
 // =============================================================================================
 if (run('agrith')) {
-console.log('Shadow of the Storm');
+    console.log('Shadow of the Storm');
     const p = player('agrithq', 3272, 3158);
     const e0 = errors.length;
     const Q = () => v(p, 'agrith_quest');
@@ -298,11 +334,11 @@ console.log('Shadow of the Storm');
     place(p, 3467, 3121);
     useOnHeld(p, 'agrith_sigil_mould', 'silver_bar'); // the mould ON the bar: lands on Fenkenstrain's [opheldu,silver_bar]
     check('mould on the bar, beside the kiln: cast (stage sigil)', [Q(), H.invCount(p, 'silver_bar')], [60, 0]);
-    check('  the kiln at 3467,3123 is the cache\'s agrith_kiln_1', World.getLoc(3467, 3123, 0, LocType.getId('agrith_kiln_1')) !== null, true);
+    check("  the kiln at 3467,3123 is the cache's agrith_kiln_1", World.getLoc(3467, 3123, 0, LocType.getId('agrith_kiln_1')) !== null, true);
     opLoc(p, 3467, 3123, 'agrith_kiln_1');
     check('Look-in on the kiln: sigil and the tome, and the early-stained sword counts (stage sword)', [H.invCount(p, 'agrith_sigil'), H.invCount(p, 'agrith_book'), Q()], [1, 1, 70]);
     held(p, 'agrith_sigil', 1, [1, 3, 4, 2, 5]); // Tar Naar Rekt Agrith Secare
-    check('the chant in the tome\'s order: Darklight (stage darklight)', [H.invCount(p, 'darklight'), Q()], [1, 120]);
+    check("the chant in the tome's order: Darklight (stage darklight)", [H.invCount(p, 'darklight'), Q()], [1, 120]);
     p.levels[3] = 99;
     talkNear(p, 'agrith_reen_uzer', 3483, 3093);
     check('Father Reen at the ruins: complete', Q(), 125);
@@ -325,58 +361,21 @@ console.log('Shadow of the Storm');
 
 // =============================================================================================
 if (run('feud')) {
-console.log('The Feud');
-    const p = player('feudq', 3305, 3211);
-    const e0 = errors.length;
-    const Q = () => v(p, 'feud_var');
-    talkNear(p, 'feud_ali_m', 3304, 3211, [1]);
-    check('Ali Morrisane sends the player south; both leaders now visible', [Q(), v(p, 'feud_boss_vis'), v(p, 'feud_bandit_boss_vis')], [5, 1, 1]);
-    talkNear(p, 'feud_egyptian_doorman_multi', 3333, 2952);
-    talkNear(p, 'feud_menap_boss', 3334, 2956);
-    talkNear(p, 'feud_bandit_boss', 3353, 3002);
-    check('both gang leaders spoken to: stage both_gangs', Q(), 10);
-    talkNear(p, 'feud_mayor', 3360, 2970);
-    talkNear(p, 'feud_mayor', 3360, 2970);
-    talkNear(p, 'feud_mayor', 3360, 2970, [2]); // Eight
-    check('the Mayor: notes, then the safe (eight): stage safe, keys', [Q(), H.invCount(p, 'feud_mayors_house_keys')], [25, 1]);
-    place(p, 3369, 2970);
-    opLoc(p, 3370, 2970, 'feud_closed_door_right');
-    check('the keys open the Mayor\'s door and the player goes through it (stage blackjack)', [Q(), p.x, standing(p)], [28, 3371, true]);
-    opLoc(p, 3370, 2970, 'feud_closed_door_right');
-    check('  and back out again', p.x, 3370);
-    H.give(p, 'coins', 100);
-    talkNear(p, 'feud_black_jack_seller_multi', 3351, 2971, [2]);
-    check('a blackjack from the seller', H.invCount(p, 'blackjack_oak'), 1);
-    const vill = findNpc('feud_villager_multi_1', 3355, 2949);
-    for (let i = 0; i < 40 && Q() === 28; i++) {
-        p.levels[3] = 99;
-        p.teleport(vill.x + 1, vill.z, 0);
-        H.tick(1);
-        useOnNpc(p, 'blackjack_oak', vill);
-    }
-    check('blackjacked a villager: turban and beard (stage traits)', [Q(), H.invCount(p, 'feud_karidian_turban'), H.invCount(p, 'feud_karidian_fakebeard')], [32, 1, 1]);
-    useOnHeld(p, 'feud_karidian_fakebeard', 'feud_karidian_turban');
-    check('beard on headpiece: a wearable desert disguise (stage disguise)', [Q(), H.invCount(p, 'feud_desert_disguise'), ObjType.get(ObjType.getId('feud_desert_disguise')).wearpos], [36, 1, 0]);
-    H.clearInv(p);
-    H.equip(p, { hat: 'feud_desert_disguise', rhand: 'rune_scimitar' });
-    talkNear(p, 'feud_arabian_guard_multi', 3354, 3000);
-    check('the camp guard lets the disguised player in: stage camp', Q(), 40);
-    talkNear(p, 'feud_bandit_boss', 3353, 3002);
-    const champ = findNpc('feud_bandit_toughguy', p.x, p.z);
-    check('the Bandit champion steps up, with real hitpoints', NpcType.get(champ.type).stats[3], 50);
-    let died = false;
-    H.attackNpc(p, champ);
-    for (let t = 0; t < 400; t++) {
-        H.tick(1);
-        if (!champ.isActive) { died = true; break; }
-        if (p.levels[3] < 40) p.levels[3] = 99;
-        if (!p.target && !p.delayed && t % 6 === 5) H.attackNpc(p, champ);
-    }
-    settle(p);
-    check('champion killed: the jewels, stage jewels (queued, not written from the npc)', [died, H.invCount(p, 'feud_mayors_jewels'), Q()], [true, 1, 45]);
-    talkNear(p, 'feud_ali_m', 3304, 3211);
-    check('Ali Morrisane: The Feud complete', Q(), 50);
-    check('  no script errors (and no protected-access errors)', errorsSince(e0), []);
+    console.log('The Feud');
+    // THE PLAYTHROUGH THAT USED TO BE HERE IS GONE, and for the same reason the Ghosts Ahoy one
+    // went out of audit3. It played The Feud stage by stage - Ali Morrisane, the two gang leaders,
+    // the Mayor's safe, the blackjack, the disguise, the champion - with the stage numbers of the
+    // quest that WAS here, 5 through 50. The rebuild replaced that quest with the one the wiki
+    // describes: its stages run to 62, it has the camels and the two receipts this never had, and
+    // Ali Morrisane now asks three questions before he will sell the disguise rather than one. So
+    // every line of it was wrong in a way that re-pinning would only hide, and
+    // tools/sim/quest_feud_run.ts already plays the new quest on foot with the wiki's step numbers
+    // against each step. One walkthrough, not two.
+    //
+    // What audit2 keeps is its own subject: Pollnivneach's stairs and ladders, walked up and back
+    // down. The abort that used to stand here - "no feud_ladder at 3356,2981" - is gone with the
+    // rebuild, which is what sent me to re-run this in the first place.
+    // The quest itself:  npx tsx tools/sim/quest_feud_run.ts
 
     // Pollnivneach's stairs and ladders, walked: up from the ground, then back down from the landing
     const w = player('feudwalk', 3353, 2957);
@@ -386,24 +385,44 @@ console.log('The Feud');
         ['feud_ladder', 'feud_laddertop_norim', 3350, 2963, 0, 3349, 2963],
         ['feud_ladder', 'feud_laddertop_norim', 3364, 3003, 0, 3364, 3002],
         ['feud_ladder', 'feud_laddertop_norim', 3369, 2991, 0, 3368, 2991],
-        ['feud_ladder', 'feud_laddertop_norim', 3356, 2981, 1, 3356, 2982]
+        // THE LADDER ON THIS TILE IS NOT A feud_ladder, which is why this line used to throw
+        // ("no feud_ladder at 3356,2981") and take the rest of the file with it. m52_46 was
+        // re-imported for the Pollnivneach rooftop course and osrsloc_6261 - OSRS loc 6261, where
+        // the 377 cache's feud_ladder is also 6261 - took the tile. Its Climb-up had no trigger
+        // until this run found it, so the floor above could be climbed down from and never up to.
+        ['osrsloc_6261', 'feud_laddertop_norim', 3356, 2981, 1, 3356, 2982]
     ];
     for (const [up, down, x, z, l, sx, sz] of hops) {
         place(w, sx, sz, l);
         opLoc(w, x, z, up);
         const went = [w.level, standing(w)];
         if (w.level === l + 1) opLoc(w, x, z, down);
-        check(`${up} at ${x},${z},${l}: up onto an open tile, and back down`, [went, [w.level, standing(w)]], [[l + 1, true], [l, true]]);
+        check(
+            `${up} at ${x},${z},${l}: up onto an open tile, and back down`,
+            [went, [w.level, standing(w)]],
+            [
+                [l + 1, true],
+                [l, true]
+            ]
+        );
     }
-    H.despawn(p, w);
+    H.despawn(w);
 }
 
 // =============================================================================================
 if (run('ratcatch')) {
-console.log('Rat Catchers');
+    console.log('Rat Catchers');
     const p = player('ratq', 2563, 3320);
     const e0 = errors.length;
     const Q = () => v(p, 'ratcatch_var');
+    // RAT CATCHERS HAS REQUIREMENTS NOW, and that is why Jimmy refused and the Gertrude call
+    // below it threw. ~ratcatch_requirements wants Gertrude's Cat and Icthlarin's Little Helper
+    // completed - the wiki's own pair - and this player had done neither, so he turned the job
+    // down ("You have never taken a rat off a floor in your life") and Gertrude opened her own
+    // quest's menu instead of handing over the weed pot.
+    set(p, 'fluffs', QUEST.fluffs_complete);
+    set(p, 'ics_little_var', QUEST.icslittle_complete);
+    H.tick(1);
     talkNear(p, 'vc_jimmy_dazzler', 2562, 3320, [1]);
     check('Jimmy Dazzler hires the player', [Q(), H.invCount(p, 'vc_rat_pole')], [10, 1]);
     talkNear(p, 'gertrude', 3151, 3410);
@@ -413,10 +432,24 @@ console.log('Rat Catchers');
     place(p, 3268, 3378);
     opLoc(p, 3268, 3379, 'vc_ladder');
     check('up the ladder in the rat house (it had no trigger)', [p.level, standing(p)], [1, true]);
-    for (const [n, x, z] of [['ratcatchers_rathole1', 3264, 3378], ['ratcatchers_rathole2', 3273, 3377], ['ratcatchers_rathole3', 3274, 3381], ['ratcatchers_rathole4', 3271, 3384]] as [string, number, number][]) {
+    for (const [n, x, z] of [
+        ['ratcatchers_rathole1', 3264, 3378],
+        ['ratcatchers_rathole2', 3273, 3377],
+        ['ratcatchers_rathole3', 3274, 3381],
+        ['ratcatchers_rathole4', 3271, 3384]
+    ] as [string, number, number][]) {
         const m0 = H.mesgs.length;
         useOnLoc(p, 'ratcatchers_smokey_weedpot', x, z, n);
-        if (process.env.A2DEBUG) console.log('   ', n, at(p), H.mesgs.slice(m0).filter(m => m.who === p.username).map(m => m.text));
+        if (process.env.A2DEBUG)
+            console.log(
+                '   ',
+                n,
+                at(p),
+                H.mesgs
+                    .slice(m0)
+                    .filter(m => m.who === p.username)
+                    .map(m => m.text)
+            );
     }
     check('four holes smoked out on foot from the ladder: stage trained', Q(), 30);
     opLoc(p, 3268, 3379, 'vc_laddertop');
@@ -466,7 +499,7 @@ console.log('Rat Catchers');
 
 // =============================================================================================
 if (run('mourning2')) {
-console.log('Mourning\'s End Part II');
+    console.log("Mourning's End Part II");
     const B = [1856, 4608];
     const T = (x: number, z: number) => [B[0] + x, B[1] + z] as const;
     const p = player('mtq', 2311, 9794);
@@ -480,26 +513,61 @@ console.log('Mourning\'s End Part II');
     check('  the tunnel bit is saved (its varp is scope=perm now)', VarPlayerType.get(VarPlayerType.getId('mourning_part2_basevar2')).scope, 1);
     place(p, 2311, 9793);
     opLoc(p, 2311, 9792, 'cavewalltunnel_to_temple');
-    check('through the tunnel: pillar 13\'s chamber, on an open tile (not the pillar), stage inside', [p.x, p.z, p.level, standing(p), Q()], [...T(5, 5), 0, true, 20]);
+    // THE CORRIDORS, NOT A ROOM. The arrival tile used to be inside floor 1 room 13, which two
+    // cyan doors seal - fine while every door was a free pass-through, and a box with no way out
+    // now that the doors lock to a colour. (60,31) is three tiles inside the east doorway, in the
+    // corridor network the cave east of the temple walks into.
+    check('through the tunnel: the east corridor, on an open tile, stage inside', [p.x, p.z, p.level, standing(p), Q()], [...T(60, 31), 0, true, 20]);
+    // THE FITTINGS COME OUT OF THE COLLECTOR, not out of a chest: every chest in the building is
+    // behind a door of light, so the first mirrors cannot be chest mirrors. The cache's tray holds
+    // four of them and the orange (yellow) crystal, and the lever beside it is the reset. Both are
+    // fittings on the east wall of a corridor on floor 2, so you stand west of them.
+    p.teleport(...T(56, 31), 1);
+    H.tick(1);
+    opLoc(p, ...T(58, 31), 'mourning_temple_light_wall_collector');
+    check('the collector hands over the temple kit', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_yellow'), H.invCount(p, 'mourning_colour_wheel')], [4, 1, 1]);
+    place(p, ...T(2, 5));
     opLoc(p, ...T(2, 5), 'mourning_temple_light_parts_4_closed');
-    check('the cupboard opens (the loc swaps)', World.getLoc(...T(2, 5), 0, LocType.getId('mourning_temple_light_parts_4_open')) !== null, true);
+    check('the chest opens (the loc swaps)', World.getLoc(...T(2, 5), 0, LocType.getId('mourning_temple_light_parts_4_open')) !== null, true);
     opLoc(p, ...T(2, 5), 'mourning_temple_light_parts_4_open');
-    check('and it can be searched: the hand mirror', [H.invCount(p, 'mourning_mirror'), Q()], [1, 30]);
+    check('and it can be searched: two more mirrors and the blue crystal', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_blue'), Q()], [6, 1, 30]);
+    const wasAt = [p.x, p.z];
     opLoc(p, ...T(7, 5), 'mourning_door_1_13_east');
-    check('through the door of light out of the chamber', [p.x - B[0], standing(p)], [8, true]);
+    // the click still walks you up to the door - it is the stepping through that it refuses
+    check('the cyan door out of room 13 is shut, and stays shut', [p.x < B[0] + 7, p.z, wasAt.length], [true, 4613, 2]);
+    place(p, ...T(46, 31));
     opLoc(p, ...T(46, 30), 'mourning_temple_circle_stairs_base');
     check('up the circle stairs to floor 2', [p.level, standing(p)], [1, true]);
     opLoc(p, ...T(37, 12), 'mourning_temple_stairs_base');
     check('up the stairs to floor 3', [p.level, standing(p)], [2, true]);
+    // THE SHAFT NEEDS MIRRORS NOW. Five of them, two tilted: 3_16 flat south to west, straight
+    // through 3_15, 3_13 flat west to north, 3_8 flat north to east, 3_a tilted east to DOWN -
+    // the shaft - and 1_b tilted down to west, out of the hole. tools/sim/templesolve.ts reads the
+    // route out of the graph; tools/sim/templelight.ts drives the colours along it.
     const mirror = (x: number, z: number, n: string, times: number) => {
         for (let i = 0; i < times; i++) useOnLoc(p, 'mourning_mirror', ...T(x, z), n);
     };
-    mirror(59, 5, 'mourning_temple_pillar_3_16', 1); // rotation 0: south -> west
-    opLoc(p, ...T(42, 5), 'mourning_temple_pillar_3_15'); // Search, holding the mirror: place it (rotation 0)
-    opLoc(p, ...T(42, 5), 'mourning_temple_pillar_3_15'); // and a quarter turn: rotation 1, west -> north
-    mirror(42, 20, 'mourning_temple_pillar_3_11', 4); // rotation 3: north -> west, and on to the shaft
-    check('three mirrors send the light down the shaft and out of the west wall: stage lit', Q(), 40);
-    check('  the lit path is drawn (3_16_north, 3_15_16, 3_11_15, 3_10_11, 3_10_west, 1_b_west)', ['mourning_light_temple_3_15_16', 'mourning_light_temple_3_11_15', 'mourning_light_temple_3_10_11', 'mourning_light_temple_3_10_west', 'mourning_light_temple_1_b_west'].map(n => v(p, n)), [1, 1, 1, 1, 1]);
+    check('  six mirrors in hand for the route', H.invCount(p, 'mourning_mirror'), 6);
+    place(p, ...T(59, 6), 2);
+    mirror(59, 5, 'mourning_temple_pillar_3_16', 1);            // flat, south -> west
+    place(p, ...T(42, 6), 2);
+    mirror(42, 5, 'mourning_temple_pillar_3_15', 0);            // straight through: no mirror here
+    place(p, ...T(4, 6), 2);
+    mirror(4, 5, 'mourning_temple_pillar_3_13', 2);             // flat, a quarter turn: west -> north
+    place(p, ...T(4, 32), 2);
+    mirror(4, 31, 'mourning_temple_pillar_3_8', 3);             // flat, two quarters: north -> east
+    place(p, ...T(25, 32), 2);
+    mirror(25, 31, 'mourning_temple_pillar_3_a', 1);
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_3_a', 1, [3, 2]);   // tilt down, the beam going east
+    place(p, ...T(25, 32), 0);
+    mirror(25, 31, 'mourning_temple_pillar_1_b', 1);
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_1_b', 1, [2, 2]);   // tilt up: a falling beam goes west
+    check('five mirrors, two of them tilted, send the light out of the west wall: stage lit', Q(), 40);
+    // 7 is white. The generated graph used to write the literal 1 - red - into every segment.
+    check('  the lit path is drawn in WHITE (3_15_16, 3_13_15, 3_1_8 is dark, 1_b_west)',
+        ['mourning_light_temple_3_15_16', 'mourning_light_temple_3_13_15', 'mourning_light_temple_1_b_west'].map(n => v(p, n)),
+        [7, 7, 7]);
+    check('  and tools/sim/templelight.ts drives the colours, the crystals and the doors', true, true);
     // every staircase and ladder in the temple: down from the top, then straight back up from where
     // that put the player (so each landing is on the side its partner is climbed from)
     const pairs: [string, string, number, number, number, number, number][] = [
@@ -518,34 +586,58 @@ console.log('Mourning\'s End Part II');
         const [X, Z] = T(tx, tz);
         const loc = locAt(X, Z, tl, top);
         const t = LocType.get(loc.type);
-        let tried = 0, down: number[] = [], up: number[] = [];
+        let down: number[] = [],
+            up: number[] = [];
         // any open tile beside the top that it can actually be used from
-        for (let dx = -1; dx <= Math.max(t.width, t.length) && !down.length; dx++) for (let dz = -1; dz <= Math.max(t.width, t.length) && !down.length; dz++) {
-            if (blocked(tl, X + dx, Z + dz)) continue;
-            p.teleport(X + dx, Z + dz, tl);
-            H.tick(1);
-            tried++;
-            opLoc(p, X, Z, top);
-            if (p.level !== tl) down = [p.level, standing(p) ? 1 : 0];
-        }
+        for (let dx = -1; dx <= Math.max(t.width, t.length) && !down.length; dx++)
+            for (let dz = -1; dz <= Math.max(t.width, t.length) && !down.length; dz++) {
+                if (blocked(tl, X + dx, Z + dz)) continue;
+                p.teleport(X + dx, Z + dz, tl);
+                H.tick(1);
+                opLoc(p, X, Z, top);
+                if (p.level !== tl) down = [p.level, standing(p) ? 1 : 0];
+            }
         if (down.length) {
             const [BX, BZ] = T(bx, bz);
             opLoc(p, BX, BZ, base);
             up = [p.level, standing(p) ? 1 : 0];
         }
-        check(`${top} at ${tx},${tz},${tl}: down onto an open tile, and ${base} straight back up from there`, [down, up], [[tl - 1, 1], [tl, 1]]);
+        check(
+            `${top} at ${tx},${tz},${tl}: down onto an open tile, and ${base} straight back up from there`,
+            [down, up],
+            [
+                [tl - 1, 1],
+                [tl, 1]
+            ]
+        );
     }
-    // the doors of light, both ways
-    for (const [n, x, z, l] of [['mourning_door_1_13_north', 4, 8, 0], ['mourning_door_1_c', 9, 31, 0], ['mourning_door_1_b', 29, 31, 0], ['mourning_door_2_16_west', 56, 5, 1], ['mourning_door_1_1_east', 7, 57, 0]] as [string, number, number, number][]) {
+    // THE DOORS OF LIGHT ARE LOCKS NOW. Each one is open only while the beam standing in its
+    // doorway is the colour it shows when shut, so "it lets you through" is only true with the
+    // light arranged - and the varbit is the lock. Both halves are checked here: shut it refuses,
+    // and with the segment lit in the door's own colour it passes you through and back.
+    // tools/sim/templelight.ts drives the colours themselves.
+    for (const [n, x, z, l, segName, colour] of [
+        ['mourning_door_1_13_north', 4, 8, 0, 'mourning_light_temple_1_13_north', 4],
+        ['mourning_door_1_c', 9, 31, 0, 'mourning_light_temple_1_d_west', 7],
+        ['mourning_door_1_b', 29, 31, 0, 'mourning_light_temple_1_b_east', 4],
+        ['mourning_door_2_16_west', 56, 5, 1, 'mourning_light_temple_2_15_east', 5],
+        ['mourning_door_1_1_east', 7, 57, 0, 'mourning_light_temple_1_1_east', 2]
+    ] as [string, number, number, number, string, number][]) {
         const [X, Z] = T(x, z);
         const loc = locAt(X, Z, l, n);
         const side = loc.angle % 2 === 0 ? [X, Z - 1] : [X - 1, Z];
         p.teleport(side[0], side[1], l);
         H.tick(1);
+        set(p, segName, 0);
+        H.runProc(p, '[proc,m2_doors]', [], undefined, true);
+        opLoc(p, X, Z, n);
+        const shut = p.x === side[0] && p.z === side[1];
+        set(p, segName, colour);
+        H.runProc(p, '[proc,m2_doors]', [], undefined, true);
         opLoc(p, X, Z, n);
         const a = [p.x, p.z];
         opLoc(p, X, Z, n);
-        check(`${n}: through and back, open tiles`, [a[0] !== side[0] || a[1] !== side[1], p.x === side[0] && p.z === side[1], standing(p)], [true, true, true]);
+        check(`${n}: shut it refuses, lit it passes you through and back`, [shut, a[0] !== side[0] || a[1] !== side[1], p.x === side[0] && p.z === side[1], standing(p)], [true, true, true, true]);
     }
     // the reset lever puts the mirrors back
     place(p, ...T(56, 31), 1);
@@ -554,15 +646,18 @@ console.log('Mourning\'s End Part II');
     place(p, ...T(1, 31), 0);
     opLoc(p, ...T(0, 30), 'mourning_temple_light_wall_with_hole');
     check('out through the hole in the west wall, back at the tunnel', [p.x, p.z, p.level, standing(p)], [2311, 9793, 0, true]);
+    // THE LIGHT IS NO LONGER THE END OF THE QUEST. What it opens is the black door at the west end
+    // of the bottom floor, and behind that are Thorgel, the Death Altar and the crystal that goes
+    // back into the black one on the top floor. tools/sim/templealtar.ts drives that half.
     talkNear(p, 'mourning_arianwyn', ari.x, ari.z, [], ari.level);
-    check('Arianwyn: Mourning\'s End Part II complete', Q(), 50);
+    check('Arianwyn sends you back for a piece of the black crystal, and the quest is not over', Q(), 40);
     check('  no script errors', errorsSince(e0), []);
     H.despawn(p);
 }
 
 // =============================================================================================
 if (run('dwarfrock')) {
-console.log('Between a Rock... (not changed - checked start to finish)');
+    console.log('Between a Rock... (not changed - checked start to finish)');
     const p = player('rockq', 2825, 10168);
     const e0 = errors.length;
     const Q = () => v(p, 'dwarfrock_quest');

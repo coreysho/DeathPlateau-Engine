@@ -30,14 +30,17 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 await H.boot();
 H.loginOrder();
 
-let ok = 0, bad = 0;
+let ok = 0,
+    bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 const truthy = (what: string, pass: boolean, got: unknown) => {
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}`);
 };
 
@@ -68,8 +71,16 @@ function player(name: string, x: number, z: number, ip: number) {
     return p;
 }
 const at = (p: Player) => [p.x, p.z, p.level];
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
-const hitsSince = (p: Player, from: number) => H.hits.slice(from).filter(h => h.who === p.username).map(h => h.damage);
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
+const hitsSince = (p: Player, from: number) =>
+    H.hits
+        .slice(from)
+        .filter(h => h.who === p.username)
+        .map(h => h.damage);
 const overlayName = (p: Player) => (p.overlay === -1 ? 'none' : Component.get(p.overlay).comName);
 const heal = (p: Player) => p.setLevel(3, 99);
 
@@ -107,16 +118,60 @@ H.give(s, 'torch_lit');
 let a0 = H.anims.length;
 op(s, 3219, 9618, 'lost_tribe_cellar_wall');
 check('cellar -> cave: through to the cave side', at(s), [3221, 9618, 0]);
-check('  crawling: human_longcrawl (seq 2796)', H.anims.slice(a0).filter(x => x.who === s.username).map(x => x.seq), [LONGCRAWL]);
-check('  and an exactmove across the wall, 0-96 client cycles, facing east', moves.filter(m => m.who === s.username).slice(-1).map(m => [m.from, m.to, m.start, m.end]), [[[3219, 9618], [3221, 9618], 0, 96]]);
+check(
+    '  crawling: human_longcrawl (seq 2796)',
+    H.anims
+        .slice(a0)
+        .filter(x => x.who === s.username)
+        .map(x => x.seq),
+    [LONGCRAWL]
+);
+check(
+    '  and an exactmove across the wall, 0-96 client cycles, facing east',
+    moves
+        .filter(m => m.who === s.username)
+        .slice(-1)
+        .map(m => [m.from, m.to, m.start, m.end]),
+    [[[3219, 9618], [3221, 9618], 0, 96]]
+);
 a0 = H.anims.length;
 op(s, 3221, 9618, 'lost_tribe_cellar_wall_back');
-check('cave -> cellar: back the same way', [at(s), H.anims.slice(a0).filter(x => x.who === s.username).map(x => x.seq), moves.slice(-1).map(m => [m.from, m.to])], [[3219, 9618, 0], [LONGCRAWL], [[[3221, 9618], [3219, 9618]]]]);
+check(
+    'cave -> cellar: back the same way',
+    [
+        at(s),
+        H.anims
+            .slice(a0)
+            .filter(x => x.who === s.username)
+            .map(x => x.seq),
+        moves.slice(-1).map(m => [m.from, m.to])
+    ],
+    [
+        [3219, 9618, 0],
+        [LONGCRAWL],
+        [
+            [
+                [3221, 9618],
+                [3219, 9618]
+            ]
+        ]
+    ]
+);
 s.teleport(3224, 9604, 0);
 tick(2);
 a0 = H.anims.length;
 op(s, 3224, 9601, 'lost_tribe_hole_2');
-check('the hole down to the swamp caves is crawled through too', [at(s), H.anims.slice(a0).filter(x => x.who === s.username).map(x => x.seq)], [[3224, 9600, 0], [LONGCRAWL]]);
+check(
+    'the hole down to the swamp caves is crawled through too',
+    [
+        at(s),
+        H.anims
+            .slice(a0)
+            .filter(x => x.who === s.username)
+            .map(x => x.seq)
+    ],
+    [[3224, 9600, 0], [LONGCRAWL]]
+);
 
 // =============================================================================================
 console.log('DARKNESS');
@@ -134,7 +189,10 @@ check('through the hole with no light: the darkest overlay', [at(d), overlayName
 tick(45);
 const warnAt = H.mesgs.slice(m0).find(m => m.who === d.username && m.text.startsWith('You hear tiny insects'))?.tick ?? -1;
 const swarmAt = H.mesgs.slice(m0).find(m => m.who === d.username && m.text.includes('Tiny biting insects swarm all over you!'))?.tick ?? -1;
-const biteTicks = H.hits.slice(h0).filter(h => h.who === d.username).map(h => h.tick);
+const biteTicks = H.hits
+    .slice(h0)
+    .filter(h => h.who === d.username)
+    .map(h => h.tick);
 const bites = hitsSince(d, h0);
 truthy('  "You hear tiny insects skittering over the ground..." 9 s in, the swarm 9 s after that', warnAt - arrived >= 14 && warnAt - arrived <= 16 && swarmAt - warnAt === 15, { warn: warnAt - arrived, swarm: swarmAt - arrived });
 check('  no bite before the swarm, the first with it', biteTicks[0] - swarmAt, 0);
@@ -187,7 +245,12 @@ m0 = H.mesgs.length;
 H.walkTo(t, 3238, 9622);
 tick(6);
 check('a wrong turn onto a floor trap: down into the swamp caves, by the pool', at(t), [3229, 9582, 0]);
-check('  "The floor collapses beneath you!", "You are swept into an underground river.", and the lights go out', mesSince(t, m0), ['The floor collapses beneath you!', 'You are swept into an underground river.', 'Your lit candle goes out!', 'Your torch goes out!']);
+check('  "The floor collapses beneath you!", "You are swept into an underground river.", and the lights go out', mesSince(t, m0), [
+    'The floor collapses beneath you!',
+    'You are swept into an underground river.',
+    'Your lit candle goes out!',
+    'Your torch goes out!'
+]);
 check('  a torch and a candle, both unlit now', [H.invCount(t, 'torch_lit'), H.invCount(t, 'torch_unlit'), H.invCount(t, 'lit_candle'), H.invCount(t, 'unlit_candle')], [0, 1, 0, 1]);
 tick(2);
 check('  and it is dark down there', overlayName(t), 'inter_248');
@@ -209,7 +272,11 @@ H.walkTo(t, 3249, 9646);
 tick(6);
 const ceil = mesSince(t, m0);
 const rocks = hitsSince(t, h0);
-truthy('a ceiling trap: "The ceiling suddenly collapses!", then the rocks miss you or hit (1-3)', ceil[0] === 'The ceiling suddenly collapses!' && ((ceil[1] === 'You manage to evade the falling rocks.' && rocks.length === 0) || (rocks.length === 1 && rocks[0] >= 1 && rocks[0] <= 3)), { ceil, rocks });
+truthy(
+    'a ceiling trap: "The ceiling suddenly collapses!", then the rocks miss you or hit (1-3)',
+    ceil[0] === 'The ceiling suddenly collapses!' && ((ceil[1] === 'You manage to evade the falling rocks.' && rocks.length === 0) || (rocks.length === 1 && rocks[0] >= 1 && rocks[0] <= 3)),
+    { ceil, rocks }
+);
 check('  and you are back where you came from', at(t), [3248, 9646, 0]);
 // the "pass" side of the ceiling trap at 3255|3256,9616
 t.teleport(3257, 9616, 0);
@@ -228,20 +295,29 @@ check('  its other side is a ceiling trap', [mesSince(t, m0)[0], at(t)], ['The c
 // the way the symbols point touches no trap: from the cellar hole to Mistag without stepping on one
 const trapTiles = new Set<string>();
 for (const [name] of [['lost_tribe_trap_floor'], ['lost_tribe_trap_ceiling']]) {
-    for (let x = 3221; x < 3328; x++) for (let z = 9600; z < 9664; z++) {
-        if (World.getLoc(x, z, 0, LocType.getId(name))) trapTiles.add(`${x},${z}`);
-    }
+    for (let x = 3221; x < 3328; x++)
+        for (let z = 9600; z < 9664; z++) {
+            if (World.getLoc(x, z, 0, LocType.getId(name))) trapTiles.add(`${x},${z}`);
+        }
 }
-check('ten traps\' worth of trap tiles (19 - one pass side)', trapTiles.size, 19);
+check("ten traps' worth of trap tiles (19 - one pass side)", trapTiles.size, 19);
 function flood(x: number, z: number, avoid: Set<string>) {
     const seen = new Set<string>([`${x},${z}`]);
     const q: [number, number][] = [[x, z]];
     while (q.length) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const k = `${cx + dx},${cz + dz}`;
             if (seen.has(k) || avoid.has(k)) continue;
-            if (canTravel(0, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) { seen.add(k); q.push([cx + dx, cz + dz]); }
+            if (canTravel(0, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
+                seen.add(k);
+                q.push([cx + dx, cz + dz]);
+            }
         }
     }
     return seen;
@@ -250,4 +326,3 @@ check('the cellar hole to Mistag, never standing on a trap', flood(3221, 9618, t
 
 console.log(`\n${ok} ok, ${bad} FAIL`);
 process.exit(bad ? 1 : 0);
-

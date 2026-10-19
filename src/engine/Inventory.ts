@@ -105,6 +105,12 @@ export class Inventory {
     }
 
     add(id: number, count = 1, beginSlot = -1) {
+        // custom (2026-10-19) - nothing to add. The loop below places an item BEFORE it compares against
+        // count, so a count of 0 made one (or a 0-count stack in an empty slot).
+        if (count <= 0) {
+            return 0;
+        }
+
         const type = ObjType.get(id);
         const stack = this.stackType != Inventory.NEVER_STACK && (type.stackable || this.stackType == Inventory.ALWAYS_STACK);
 

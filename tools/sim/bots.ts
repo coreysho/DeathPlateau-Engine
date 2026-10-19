@@ -133,11 +133,18 @@ check(
     [...furthest.values()].some(n => n >= 30),
     true
 );
+// THE SLACK IS THE ENGINE'S, as in the melee-area check further down: BotBrain.inArea takes a slack
+// argument and the two places that decide whether to keep chasing a target pass 2 - "with slack
+// levels/tiles of give, for someone it is already fighting" - so a roamer that followed something
+// over the line is inside its leash by design. This was failing on a low roamer at level 17 against
+// a depth of 15, which is that slack exactly. What the check is for is a roamer that has lost its
+// area altogether: travel() clamps every waypoint to z = 3520 + maxLevel * 8 - 1 and pickDestination
+// only picks inside the area, so nothing but a chase can put one past its depth at all.
 check(
-    "  never past their bracket's depth (low 15, mid 30)",
+    "  never past their bracket's depth plus the engine's chase slack (low 15, mid 30, +2)",
     roamers.every(b => {
         const br = BotManager.stateOf(b)?.kit.bracket;
-        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 1;
+        return br === undefined || (deepest.get(b) ?? 0) <= cfg.depth[br] + 2;
     }),
     true
 );
@@ -541,9 +548,15 @@ doomed.invDel(InvType.INV, ObjType.getId('swordfish'), 28);
 doomed.levels[PlayerStat.HITPOINTS] = 4;
 doomed.levels[PlayerStat.PRAYER] = 0;
 let deathTile: { x: number; z: number } | null = null;
-for (let t = 0; t < 300 && !deathTile; t++) {
+for (let t = 0; t < 600 && !deathTile; t++) {
     hunt(doomed);
     doomed.runenergy = 0; // spent: it can only walk, and the killer runs it down
+    // HELD AT FOUR, every tick. Setting it once before the loop leaves the rest of the window to
+    // regeneration and to whatever the bot can still eat or pray, so the killer has to land the
+    // whole bar again - and a sweep run caught this failing with the bot alive at the end of it and
+    // the three drop checks under it failing too. Nearly dead and being run down is the premise of
+    // the test, not a starting condition.
+    if (doomed.levels[PlayerStat.HITPOINTS] > 4) doomed.levels[PlayerStat.HITPOINTS] = 4;
     H.tick(1);
     trace(t, doomed);
     if (getVarp(doomed, 'death') === 1) deathTile = { x: doomed.x, z: doomed.z };
@@ -620,7 +633,10 @@ BotManager.config.meleeArea = structuredClone(DEFAULT_BOT_CONFIG.meleeArea);
     check('melee kits keep to Edgeville, level 5 and below; others to their depth', [areaFor({ style: 'melee', bracket: 'max' }, BotManager.config), areaFor({ style: 'ranged', bracket: 'mid' }, BotManager.config).maxLevel], [area, 30]);
     // spawned with no spot given: where the manager puts a melee kit, then 600 ticks of roaming
     const walkers = ['low-main-melee', 'mid-main-melee', 'high-tank', 'max-dharok'].map(kitId => BotManager.spawn('roamer', { kitId, manual: true }) as BotPlayer);
-    let worst = 0, minX = Infinity, maxX = -Infinity, moved = 0;
+    let worst = 0,
+        minX = Infinity,
+        maxX = -Infinity,
+        moved = 0;
     const s0 = new Map(walkers.map(b => [b, { x: b.x, z: b.z }]));
     for (let t = 0; t < 600; t++) {
         H.tick(1);
@@ -635,13 +651,27 @@ BotManager.config.meleeArea = structuredClone(DEFAULT_BOT_CONFIG.meleeArea);
         }
     }
     console.log(`    melee roamers: deepest level ${worst}, x ${minX}-${maxX}, furthest ${moved} tiles`);
-    check('  melee roamers stay at level 5 or shallower', worst <= area.maxLevel, true);
+    // THE SLACK IS THE ENGINE'S, not a fudge here. BotBrain.inArea takes a slack argument and the
+    // two places that decide whether to keep chasing a target pass 2 - "with slack levels/tiles of
+    // give, for someone it is already fighting" - so a roamer that followed something over the line
+    // is inside its leash by design, and this was failing on a deepest-level of 6 against a maxLevel
+    // of 5. What the check is for is a roamer that has lost its area altogether, which is anything
+    // past that slack.
+    check(`  melee roamers stay within level ${area.maxLevel} plus the chase slack`, worst <= area.maxLevel + 2, true);
     check('  and in the Edgeville stretch', minX >= area.minX - 3 && maxX <= area.maxX + 3, true);
     check('  and still get about', moved >= 15, true);
     for (const b of walkers) BotManager.despawn(b);
     H.tick(5);
 
     // a melee PKer ignores a player at level 10, and goes for one at level 3
+    //
+    // AND NOTHING ELSE IN THE WILDERNESS WHILE IT DECIDES. This is a check about whom a PKer
+    // PICKS, and a sweep run had it pick Bot Vex - another bot still in the world from the block
+    // above - so the prey was never touched and a working brain read as broken. The diagnostic
+    // printed the target, which is how it was caught: `tgt:Bot Vex ... manual attack`. So clear
+    // every bot first and let the hunter be the only one out there.
+    BotManager.despawnAll();
+    H.tick(5);
     for (const [lvlZ, want] of [
         [3596, false],
         [3540, true]
@@ -658,7 +688,17 @@ BotManager.config.meleeArea = structuredClone(DEFAULT_BOT_CONFIG.meleeArea);
             if (H.hitsFor(prey.username).length) hit = true;
         }
         const lvl = wildernessLevel(prey, prey.x, prey.z, 0);
-        if (hit !== want) console.log('    hunter:', BotManager.describe(BotManager.stateOf(hunter)!), BotManager.stateOf(hunter)?.lastAction, hunter.messages.slice(-4).map(m => m.text).join(' / '), `prey cb${prey.combatLevel} hunter cb${hunter.combatLevel}`);
+        if (hit !== want)
+            console.log(
+                '    hunter:',
+                BotManager.describe(BotManager.stateOf(hunter)!),
+                BotManager.stateOf(hunter)?.lastAction,
+                hunter.messages
+                    .slice(-4)
+                    .map(m => m.text)
+                    .join(' / '),
+                `prey cb${prey.combatLevel} hunter cb${hunter.combatLevel}`
+            );
         check(`  a melee PKer ${want ? 'attacks' : 'leaves alone'} a player at level ${lvl}`, hit, want);
         BotManager.despawn(hunter);
         H.despawn(prey);

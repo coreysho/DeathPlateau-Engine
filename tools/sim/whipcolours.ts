@@ -226,7 +226,11 @@ console.log('== the Undertaker sells them');
     const stocked = Array.from(t.stockobj ?? []).map(id => ObjType.get(id).debugname);
     const missing = COLOURS.map(c => `whip_kit_${c}`).filter(k => !stocked.includes(k));
     check('all nine kits are on the shelf', missing, []);
-    check('seventeen rows now', t.size, 17);
+    // EIGHTEEN SINCE THE ROYAL SEED POD. Corey put it on this shelf at stock18 (content
+    // b584ca3d), which is a legitimate row and not a whip colour, so this count moves with the
+    // shelf rather than with the nine kits above it - those are checked by name on the line above,
+    // which is the assertion that actually belongs to this file.
+    check('eighteen rows now', t.size, 18);
     check(
         'and the eight he already sold are still there',
         ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane', 'gravedigger_kit', 'undertaker_cape'].filter(n => !stocked.includes(n)),

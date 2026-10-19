@@ -29,14 +29,17 @@ import VarBitType from '#/cache/config/VarBitType.js';
 import { canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import LocType from '#/cache/config/LocType.js';
-import { findNpc, drive } from './a1lib.js';
+import ObjType from '#/cache/config/ObjType.js';
+import InvType from '#/cache/config/InvType.js';
+import { findNpc, drive, useOn, useOnNpc, take } from './a1lib.js';
 
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
-    | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
+    | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
+    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string }
     | { give: string; n?: number }
     | { setvar: string; to: number; why?: string }
@@ -44,21 +47,24 @@ export type Step =
     | { level: number }
     | { varis: string; to: number }
     | { wait: number; why?: string }
+    | { take: string; why?: string }
+    | { setpos: [number, number, number]; why: string }
     | { has: string; n?: number }
+    | { worn: string }
     | { hasnt: string }
     | { fight: string }
     | { note: string };
 
 export type Manifest = {
     quest: string;
-    source: string;            // the guide this step list came from
-    stageVar: string;          // the quest's own progress varp or varbit
-    done: number;              // its value at completion
+    source: string; // the guide this step list came from
+    stageVar: string; // the quest's own progress varp or varbit
+    done: number; // its value at completion
     start: [number, number, number];
     steps: Step[];
 };
 
-const W = 66;   // how wide a step line is before the verdict column
+const W = 66; // how wide a step line is before the verdict column
 
 // DID THE PLAYER GET THERE? This is the one question the runner cannot afford to get wrong, because
 // getting it wrong means a step that did nothing is reported as a pass, which is worse than no audit
@@ -83,9 +89,13 @@ function arrive(p: Player, tx: number, tz: number, tw = 1, tl = 1, ticks = 50): 
         const dz = Math.max(tz - p.z, 0, p.z - (tz + tl - 1));
         return Math.max(dx, dz) <= 1;
     };
+    // ALREADY STANDING THERE IS NOT THE SAME AS THE OP HAVING RUN. Returning the moment the
+    // player was adjacent made every repeat click on an npc they were already next to look
+    // delivered when the engine had not processed it yet - forty hands of Rune-Draw that were
+    // never dealt. Give the op a few ticks to run before proximity is allowed to count.
     for (let t = 0; t < ticks; t++) {
         if (p.activeScript) return true;
-        if (near() && !p.hasWaypoints()) return true;
+        if (t >= 4 && near() && !p.hasWaypoints()) return true;
         H.tick(1);
     }
     return !!p.activeScript || near();
@@ -102,8 +112,7 @@ function quiet(p: Player, ticks = 10): void {
 export type Result = { n: number; what: string; ok: boolean; detail: string };
 
 /** A walkable route between two tiles, by the engine's own canTravel. [] means there is none. */
-export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96,
-    tol = 0): number[][] {
+export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96, tol = 0): number[][] {
     const key = (a: number, b: number) => a * 20000 + b;
     const prev = new Map<number, number>();
     const seen = new Set<number>([key(x, z)]);
@@ -120,8 +129,15 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
                 }
                 return out;
             }
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nx = cx + dx, nz = cz + dz, k = key(nx, nz);
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ]) {
+                const nx = cx + dx,
+                    nz = cz + dz,
+                    k = key(nx, nz);
                 if (seen.has(k)) continue;
                 if (Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
                 if (!canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
@@ -222,6 +238,26 @@ export function play(m: Manifest, p: Player): Result[] {
             hard('walk to ' + x + ',' + z + (s.why ? ' - ' + s.why : ''), !err, err);
             continue;
         }
+        if ('take' in s) {
+            n++;
+            const got = take(p, s.take, 4);
+            const label2 = (x: string) => (x.length > W ? x.slice(0, W - 1) + '~' : x.padEnd(W));
+            const what2 = 'pick up ' + s.take + (s.why ? ' - ' + s.why : '');
+            out.push({ n, what: what2, ok: got, detail: got ? '' : 'nothing on the floor nearby' });
+            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (got ? ' ok' : ' FAIL'));
+            if (!got) stopped = what2;
+            continue;
+        }
+        if ('setpos' in s) {
+            // THE ONE DELIBERATE CHEAT, and it has to say so. This runner exists because the other
+            // sims teleport, so a jump in a manifest is only ever allowed for a stretch of WORLD
+            // travel that is not the quest - and it prints a line of its own so nobody can mistake
+            // a jumped leg for a walked one. Every use needs a reason in .
+            p.teleport(s.setpos[0], s.setpos[1], s.setpos[2]);
+            H.tick(2);
+            console.log('      -- JUMPED to ' + s.setpos[0] + ',' + s.setpos[1] + ' L' + s.setpos[2] + ': ' + s.why);
+            continue;
+        }
         if ('wait' in s) {
             H.tick(s.wait);
             console.log('      -- waited ' + s.wait + ' ticks' + (s.why ? '   (' + s.why + ')' : ''));
@@ -246,6 +282,24 @@ export function play(m: Manifest, p: Player): Result[] {
             soft('carrying ' + (s.n ?? 1) + ' x ' + s.has, got >= (s.n ?? 1), 'has ' + got);
             continue;
         }
+        if ('worn' in s) {
+            // WEARING IT IS NOT THE SAME AS CLICKING WEAR, and the difference is invisible from
+            // outside: [opheld2,_] matches every obj in the game, so a `held` step on something
+            // with no wearpos reports ok, ~equip bails on the DEBUG line, and the player walks on
+            // in their own face. The Feud's own disguise is exactly that - the cache has one
+            // unwearable combined obj and one with three wearpos entries - and the playthrough
+            // only found out eleven steps later, at a cactus.
+            const inv = p.getInventory(InvType.WORN);
+            let on = 0;
+            if (inv) {
+                for (let i = 0; i < inv.capacity; i++) {
+                    const o = inv.get(i);
+                    if (o && ObjType.get(o.id).debugname === s.worn) on++;
+                }
+            }
+            soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
         if ('hasnt' in s) {
             const got = H.invCount(p, s.hasnt);
             soft(s.hasnt + ' is gone', got === 0, 'still has ' + got);
@@ -266,6 +320,11 @@ export function play(m: Manifest, p: Player): Result[] {
             H.attackNpc(p, npc);
             let t = 0;
             for (; t < 900 && npc.isValid(); t++) H.tick(1);
+            // A kill is not finished when the corpse goes away: the death hook runs on the NPC and
+            // then queues a script on the PLAYER - [ai_queue3,mm_demon] does npc_findhero and then
+            // queue(mm_demon_slain, 0, 0) - so the stage moves a tick or two later. Stopping the
+            // moment the npc stopped being valid read as a demon killed for no credit.
+            H.tick(15);
             hard('kill ' + s.fight, !npc.isValid(), t + ' ticks');
             continue;
         }
@@ -279,6 +338,10 @@ export function play(m: Manifest, p: Player): Result[] {
                 return drive(p, picks);
             } catch (e) {
                 const msg = String(e);
+                if (msg.includes('unexpected menu')) {
+                    unreached = 'an unexpected menu: ' + msg.split('unexpected menu: ')[1];
+                    return [];
+                }
                 if (msg.includes('menus not reached')) {
                     unreached = msg.split('menus not reached: ')[1] ?? '?';
                     return [];
@@ -289,7 +352,7 @@ export function play(m: Manifest, p: Player): Result[] {
         let what = '';
         if ('talk' in s) {
             what = 'talk to ' + s.talk + (s.why ? ' - ' + s.why : '');
-            let npc = null;
+            let npc: ReturnType<typeof findNpc> | null = null;
             try {
                 npc = findNpc(s.talk, p);
             } catch {
@@ -299,21 +362,79 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'no ' + s.talk + ' anywhere near ' + p.x + ',' + p.z);
                 continue;
             }
-            const far = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-            H.opNpc(p, npc, s.op ?? 1);
-            if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + '; player stuck at ' + p.x + ',' + p.z);
+            // ONE ATTEMPT IS NOT ALWAYS A FAIR TEST, and the three ways a talk can come to
+            // nothing look alike from outside: the npc wandered out of reach (Kruk patrols a yard
+            // no tile of which can be stood next to), the dialogue took a branch that never offered
+            // the option, or it ran and refused to do the thing (the monkey child while his aunt is
+            // listening). tries retries the whole click and re-finds the npc each time, because
+            // it has moved.
+            const tries = s.tries ?? 1;
+            let reached = false;
+            let far = 0;
+            for (let a = 0; a < tries; a++) {
+                if (a > 0) {
+                    H.tick(20);
+                    try {
+                        npc = findNpc(s.talk, p);
+                    } catch {
+                        continue;
+                    }
+                }
+                unreached = '';
+                // A dialogue that ended early leaves a suspended script on the player, and the
+                // engine throws the next click away while it is there. Retrying without
+                // clearing it burned forty attempts on Robin without dealing a single hand.
+                if (p.activeScript) {
+                    p.activeScript = null;
+                    // and the DELAY it was sitting in. Dropping the script without this leaves
+                    // the player delayed for ever, every later click is thrown away before it
+                    // reaches the content, and the trace shows forty attempts and no dialogue.
+                    (p as unknown as { delayed: boolean; delayedUntil: number }).delayed = false;
+                    (p as unknown as { delayed: boolean; delayedUntil: number }).delayedUntil = -1;
+                    H.tick(2);
+                }
+                // AND THE INTERFACE. A chat window left open makes the player busy(), and the
+                // engine drops a queued op on a busy player without a word - which is what ate
+                // forty hands of Rune-Draw: the click was accepted and then quietly binned.
+                (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                H.tick(1);
+                far = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
+                // One arrow with the condition inside it, rather than a ternary choosing between
+                // two arrows where the no-op one needed a `void _w;` body to keep eslint quiet:
+                // prettier and eslint's indent rule could not agree on how to lay that out.
+                const dbg = (w: string) => {
+                    if (process.env.QUESTRUN_DEBUG) console.log('        attempt ' + a + ': ' + w);
+                };
+                if (!H.opNpc(p, npc, s.op ?? 1)) {
+                    dbg('click thrown away; delayed=' + (p as unknown as { delayed: boolean }).delayed);
+                    H.tick(5);
+                    continue;
+                }
+                if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
+                    dbg('never arrived; player ' + p.x + ',' + p.z + ' npc ' + npc.x + ',' + npc.z);
+                    continue;
+                }
+                reached = true;
+                lines = run(('picks' in s ? s.picks : undefined) ?? []);
+                dbg('said ' + JSON.stringify(lines.slice(0, 2)) + ' unreached=' + JSON.stringify(unreached));
+                // With until, the item arriving is the signal and a leftover pick is not a
+                // fault: Robin deals one hand per click, so most clicks consume one menu and
+                // the run simply clicks again.
+                const stalled = s.until ? H.invCount(p, s.until) === 0 : unreached !== '';
+                if (!stalled) {
+                    if (a > 0) what = what + ' [took ' + (a + 1) + ' attempts]';
+                    break;
+                }
+            }
+            // until not satisfied after every attempt is a failure, not a pass. Reporting ok
+            // here once hid a Rune-Draw loop that never produced the bow.
+            if (reached && 'until' in s && s.until && H.invCount(p, s.until) === 0) {
+                hard(what, false, 'after ' + tries + ' attempts there is still no ' + s.until + '; the last one said: ' + lines.slice(0, 4).join(' | ').slice(0, 120));
                 continue;
             }
-            lines = run(s.picks ?? []);
-            const tries = s.tries ?? 1;
-            for (let a = 1; a < tries && unreached; a++) {
-                unreached = '';
-                H.tick(20);
-                H.opNpc(p, npc, s.op ?? 1);
-                if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) continue;
-                lines = run(s.picks ?? []);
-                if (!unreached) what = what + ' [took ' + (a + 1) + ' attempts]';
+            if (!reached) {
+                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + '; player stuck at ' + p.x + ',' + p.z);
+                continue;
             }
         } else if ('loc' in s) {
             what = s.loc + ' at ' + s.at[0] + ',' + s.at[1] + (s.why ? ' - ' + s.why : '');
@@ -325,7 +446,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 locw = lt.width;
                 locl = lt.length;
                 sent = H.opLoc(p, s.at[0], s.at[1], s.loc, s.op ?? 1);
-            } catch (e) {
+            } catch (_e) {
                 hard(what, false, 'no ' + s.loc + ' there on level ' + p.level + ' (player at ' + p.x + ',' + p.z + ')');
                 continue;
             }
@@ -337,7 +458,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('held' in s) {
             what = s.held + ' op' + (s.op ?? 1) + (s.why ? ' - ' + s.why : '');
             let heldok = false;
@@ -352,7 +473,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             quiet(p);
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('use' in s) {
             what = 'use ' + s.use[0] + ' on ' + s.use[1] + (s.why ? ' - ' + s.why : '');
             let useok = false;
@@ -367,7 +488,25 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             quiet(p);
-            lines = run(s.picks ?? []);
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
+        } else if ('useLoc' in s) {
+            what = 'use ' + s.obj + ' on ' + s.useLoc + (s.why ? ' - ' + s.why : '');
+            let lw = 1;
+            let ll = 1;
+            try {
+                const lt = LocType.get(LocType.getId(s.useLoc));
+                lw = lt.width;
+                ll = lt.length;
+                useOn(p, s.at[0], s.at[1], s.useLoc, s.obj);
+            } catch (e) {
+                hard(what, false, String(e).replace('Error: ', ''));
+                continue;
+            }
+            if (!arrive(p, s.at[0], s.at[1], lw, ll)) {
+                hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
+                continue;
+            }
+            lines = run(('picks' in s ? s.picks : undefined) ?? []);
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
@@ -380,18 +519,28 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'no ' + s.useNpc + ' anywhere near ' + p.x + ',' + p.z);
                 continue;
             }
-            H.opNpc(p, npc, 5);
-            if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                hard(what, false, 'never reached ' + s.useNpc + '; player at ' + p.x + ',' + p.z);
+            // USE-ON-NPC IS ITS OWN PACKET, not op 5. Sending op 5 reached the npc, reported a
+            // delivered click and never fired [opnpcu,...] at all - three beers handed to Drunken
+            // Ali with nothing to show for it. a1lib.useOnNpc sets lastUseItem and the APNPCU
+            // interaction, which is what the real client does.
+            try {
+                lines = useOnNpc(p, s.useNpc, s.obj, s.picks ?? []);
+            } catch (e) {
+                hard(what, false, String(e).replace('Error: ', ''));
                 continue;
             }
-            lines = run(s.picks ?? []);
+            const joinedUse = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+            if (s.want && !joinedUse.includes(s.want)) {
+                soft(what, false, 'nothing said "' + s.want + '"');
+            } else {
+                hard(what, true);
+            }
+            continue;
         }
 
         const joined = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
-        if (unreached) {
-            soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: '
-                + joined.slice(0, 110));
+        if (unreached && !('until' in s && s.until)) {
+            soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: ' + joined.slice(0, 110));
             continue;
         }
         if (s.want && !joined.includes(s.want)) {

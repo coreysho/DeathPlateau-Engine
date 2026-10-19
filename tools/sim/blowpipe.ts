@@ -28,6 +28,7 @@ import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import SeqType from '#/cache/config/SeqType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import VarNpcType from '#/cache/config/VarNpcType.js';
 import { NpcMode } from '#/engine/entity/NpcMode.js';
 import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
 import Packet from '#/io/Packet.js';
@@ -35,28 +36,51 @@ import ScriptProvider from '#/engine/script/ScriptProvider.js';
 
 await H.boot();
 H.loginOrder();
-let ok = 0, bad = 0, n = 0;
+let ok = 0,
+    bad = 0,
+    n = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
-const HP = 3, RNG = 4, FLETCH = 9;
+const HP = 3,
+    RNG = 4,
+    FLETCH = 9;
 const MAX = 16383;
 const fresh = (x = 3222 + (n % 8) * 4, z = 3218 + Math.floor(n / 8) * 4) => {
-    const p: any = H.makePlayer('bp' + n, x, z, 90 + n); n++;
-    H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000); noRandoms(p); H.tick(1);
+    const p: any = H.makePlayer('bp' + n, x, z, 90 + n);
+    n++;
+    H.tick(2);
+    H.maxOut(p);
+    H.clearInv(p);
+    H.setVar(p, 'tutorial', 1000);
+    noRandoms(p);
+    H.tick(1);
     return p;
 };
 // A random event arriving in the middle of a 1,200-tick fight takes the player away and the count with
 // them (seen once in about ten runs), so the sim's players are left out of them.
-const noRandoms = (p: any) => { const t = ScriptProvider.getByName('[timer,general_macro_events]'); if (t) p.clearTimer(t.id); };
+const noRandoms = (p: any) => {
+    const t = ScriptProvider.getByName('[timer,general_macro_events]');
+    if (t) p.clearTimer(t.id);
+};
 const mes = (p: any) => H.mesgs.filter(m => m.who === p.username).map(m => m.text);
 const lastMes = (p: any) => mes(p).slice(-1)[0];
-const worn = (p: any, slot: number) => { const o = p.getInventory(InvType.WORN)!.get(slot); return o ? ObjType.get(o.id).debugname : null; };
+const worn = (p: any, slot: number) => {
+    const o = p.getInventory(InvType.WORN)!.get(slot);
+    return o ? ObjType.get(o.id).debugname : null;
+};
 const v = (p: any, name: string) => H.getVar(p, name);
-const dartType = (p: any) => { const id = v(p, 'blowpipe_dart_type'); return id >= 0 ? ObjType.get(id).debugname : null; };
-const setStyle = (p: any, mode: number) => { H.setVar(p, 'com_mode', mode); H.runProc(p, '[proc,player_combat_stat]'); };
+const dartType = (p: any) => {
+    const id = v(p, 'blowpipe_dart_type');
+    return id >= 0 ? ObjType.get(id).debugname : null;
+};
+const setStyle = (p: any, mode: number) => {
+    H.setVar(p, 'com_mode', mode);
+    H.runProc(p, '[proc,player_combat_stat]');
+};
 const charge = (p: any, scales: number, darts: number, dart = 'rune_dart') => {
     H.setVar(p, 'blowpipe_scales', scales);
     H.setVar(p, 'blowpipe_darts', darts);
@@ -64,27 +88,43 @@ const charge = (p: any, scales: number, darts: number, dart = 'rune_dart') => {
 };
 const dummy = (name: string, x: number, z: number, hp = 30000) => {
     const npc: any = H.addNpc(name, x, z);
-    npc.baseLevels[HP] = hp; npc.levels[HP] = hp;
+    npc.baseLevels[HP] = hp;
+    npc.levels[HP] = hp;
     npc.targetOp = NpcMode.NONE;
     return npc;
 };
 const setNpcVarRaw = (npc: any, name: string, value: number) => H.setNpcVar(npc, name, value);
+// VarNpcType IS A TOP-LEVEL IMPORT, and the globalThis relay that used to carry it here is gone
+// with the await import() that filled it. A "#/..." specifier only resolves through tsx's
+// transform of a STATIC import - Node's own "imports" field forbids keys starting with "#/" - so
+// the dynamic one escaped to the real resolver, spawned a worker (FriendThread here) and threw
+// ERR_INVALID_MODULE_SPECIFIER out of a nextTick. This file produced NO output at all.
+// The null check is new, and it is not noise: getByName returns null for a name that does not
+// exist, and the globalThis hop this replaced was typed `any`, so the typechecker could not see
+// that. A typo in a var name used to read as getVar(undefined) and quietly measure nothing.
 const npcVar = (npc: any, name: string) => {
-    const VarNpcType = (globalThis as any).__varn;
-    return npc.getVar(VarNpcType.getByName(name).id);
+    const v = VarNpcType.getByName(name);
+    if (!v) throw new Error('no such npc var: ' + name);
+    return npc.getVar(v.id);
 };
-(globalThis as any).__varn = (await import('#/cache/config/VarNpcType.js')).default;
 const ATTACK = SeqType.getId('osrs_blowpipe_attack');
-const shotsOf = (p: any, from = 0) => H.anims.slice(from).filter(a => a.who === p.username && a.seq === ATTACK).map(a => a.tick);
+const shotsOf = (p: any, from = 0) =>
+    H.anims
+        .slice(from)
+        .filter(a => a.who === p.username && a.seq === ATTACK)
+        .map(a => a.tick);
 const gaps = (ts: number[]) => [...new Set(ts.slice(1).map((t, i) => t - ts[i]))];
-const topUp = (...ps: any[]) => { for (const p of ps) p.levels[HP] = p.baseLevels[HP]; };
+const topUp = (...ps: any[]) => {
+    for (const p of ps) p.levels[HP] = p.baseLevels[HP];
+};
 
 // ------------------------------------------------------------------------------ fletching
 console.log('FLETCHING THE FANG');
 {
     const p = fresh();
     p.setLevel(FLETCH, 52);
-    H.give(p, 'chisel'); H.give(p, 'tanzanite_fang');
+    H.give(p, 'chisel');
+    H.give(p, 'tanzanite_fang');
     A.useHeld(p, 'chisel', 'tanzanite_fang');
     check('refused at 52 Fletching', [H.invCount(p, 'tanzanite_fang'), H.invCount(p, 'toxic_blowpipe_empty')], [1, 0]);
     p.setLevel(FLETCH, 53);
@@ -102,7 +142,8 @@ console.log('FLETCHING THE FANG');
 console.log('DISMANTLE');
 {
     const p = fresh();
-    H.give(p, 'tanzanite_fang'); H.give(p, 'toxic_blowpipe_empty');
+    H.give(p, 'tanzanite_fang');
+    H.give(p, 'toxic_blowpipe_empty');
     A.held(p, 'tanzanite_fang', 4, ['Keep']);
     check('Keep it: the fang stays', H.invCount(p, 'tanzanite_fang'), 1);
     A.held(p, 'tanzanite_fang', 4, ['Dismantle']);
@@ -159,13 +200,18 @@ console.log('LOADING DARTS AND SCALES');
     A.held(p, 'toxic_blowpipe', 5, ['Keep']);
     check('Uncharge, Keep it: nothing moves', [v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts')], [2345, 110]);
     A.held(p, 'toxic_blowpipe', 5, ['Uncharge']);
-    check('Uncharge: scales and darts both come back, and it is empty', [H.invCount(p, 'zulrahs_scales') - scales, H.invCount(p, 'mithril_dart'), v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts'), H.invCount(p, 'toxic_blowpipe_empty')], [2345, 110, 0, 0, 1]);
+    check(
+        'Uncharge: scales and darts both come back, and it is empty',
+        [H.invCount(p, 'zulrahs_scales') - scales, H.invCount(p, 'mithril_dart'), v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts'), H.invCount(p, 'toxic_blowpipe_empty')],
+        [2345, 110, 0, 0, 1]
+    );
     check('  the empty one has no Wield', ObjType.get(ObjType.getId('toxic_blowpipe_empty')).iop[1], null);
     // a second blowpipe cannot share the first one's contents
     A.useHeld(p, 'zulrahs_scales', 'toxic_blowpipe_empty');
-    H.give(p, 'toxic_blowpipe_empty'); H.give(p, 'zulrahs_scales', 10);
+    H.give(p, 'toxic_blowpipe_empty');
+    H.give(p, 'zulrahs_scales', 10);
     A.useHeld(p, 'zulrahs_scales', 'toxic_blowpipe_empty');
-    check('a second empty blowpipe will not take the charged one\'s contents', [H.invCount(p, 'toxic_blowpipe'), H.invCount(p, 'toxic_blowpipe_empty'), lastMes(p)], [1, 1, 'You already have a charged blowpipe. Uncharge it before charging another.']);
+    check("a second empty blowpipe will not take the charged one's contents", [H.invCount(p, 'toxic_blowpipe'), H.invCount(p, 'toxic_blowpipe_empty'), lastMes(p)], [1, 1, 'You already have a charged blowpipe. Uncharge it before charging another.']);
     H.despawn(p);
 }
 
@@ -173,7 +219,8 @@ console.log('LOADING DARTS AND SCALES');
 console.log('WIELD AND MAX HIT');
 {
     const p = fresh();
-    p.baseLevels[RNG] = 74; p.levels[RNG] = 74;
+    p.baseLevels[RNG] = 74;
+    p.levels[RNG] = 74;
     charge(p, 1000, 100);
     H.give(p, 'toxic_blowpipe');
     H.opheld(p, 'toxic_blowpipe', 2);
@@ -184,7 +231,15 @@ console.log('WIELD AND MAX HIT');
     H.tick(1);
     check('wielded at 75+, in both hands', [worn(p, 3), ObjType.get(ObjType.getId('toxic_blowpipe')).wearpos2], ['toxic_blowpipe', 5]);
     setStyle(p, 0);
-    const DARTS: [string, number][] = [['bronze_dart', 1], ['iron_dart', 3], ['steel_dart', 4], ['black_dart', 6], ['mithril_dart', 7], ['adamant_dart', 10], ['rune_dart', 14]];
+    const DARTS: [string, number][] = [
+        ['bronze_dart', 1],
+        ['iron_dart', 3],
+        ['steel_dart', 4],
+        ['black_dart', 6],
+        ['mithril_dart', 7],
+        ['adamant_dart', 10],
+        ['rune_dart', 14]
+    ];
     const eff = 99 + 8 + 3; // 99 Ranged, +8, Accurate's +3, no prayer
     for (const [d, str] of DARTS) {
         charge(p, 1000, 100, d);
@@ -194,7 +249,7 @@ console.log('WIELD AND MAX HIT');
     }
     charge(p, 1000, 0, 'rune_dart');
     H.runProc(p, '[proc,player_combat_stat]');
-    check('no darts loaded: the blowpipe\'s +20 alone', v(p, 'com_maxhit'), Math.floor((eff * (20 + 64) + 320) / 640));
+    check("no darts loaded: the blowpipe's +20 alone", v(p, 'com_maxhit'), Math.floor((eff * (20 + 64) + 320) / 640));
     H.despawn(p);
 }
 
@@ -213,16 +268,24 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     const p = fresh(3090, 3300);
     charge(p, 5000, 5000);
     H.equip(p, { rhand: 'toxic_blowpipe' });
-    for (const [mode, rate] of [[0, 3], [1, 2], [2, 3]]) {
+    for (const [mode, rate] of [
+        [0, 3],
+        [1, 2],
+        [2, 3]
+    ]) {
         setStyle(p, mode);
         const npc = dummy('mossgiant', p.x + 3, p.z);
         const a0 = H.anims.length;
         fightNpc(p, npc, 20);
-        p.clearInteraction(); H.tick(4);
+        p.clearInteraction();
+        H.tick(4);
         check(`${['Accurate', 'Rapid', 'Longrange'][mode]}: a shot every ${rate} ticks at a monster`, gaps(shotsOf(p, a0)), [rate]);
         World.removeNpc(npc, -1);
     }
-    const reach = (mode: number) => { setStyle(p, mode); return H.runProc(p, '[proc,player_attackrange]', [ObjType.getId('toxic_blowpipe')])[0]; };
+    const reach = (mode: number) => {
+        setStyle(p, mode);
+        return H.runProc(p, '[proc,player_attackrange]', [ObjType.getId('toxic_blowpipe')])[0];
+    };
     check('reach 5, 7 on Longrange', [reach(0), reach(1), reach(2)], [5, 5, 7]);
     H.despawn(p);
 }
@@ -233,33 +296,40 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     H.equip(p, { rhand: 'toxic_blowpipe' });
     setStyle(p, 1);
     const npc = dummy('mossgiant', p.x + 3, p.z);
-    const a0 = H.anims.length, h0 = H.npcHits.length;
+    const a0 = H.anims.length,
+        h0 = H.npcHits.length;
     let venoms = 0;
     fightNpc(p, npc, 1200, () => {
-        if (npcVar(npc, 'npc_venom') > 0) { venoms++; setNpcVarRaw(npc, 'npc_venom', 0); }
+        if (npcVar(npc, 'npc_venom') > 0) {
+            venoms++;
+            setNpcVarRaw(npc, 'npc_venom', 0);
+        }
     });
-    p.clearInteraction(); H.tick(6);
+    p.clearInteraction();
+    H.tick(6);
     const shots = shotsOf(p, a0).length;
-    const usedScales = 5000 - v(p, 'blowpipe_scales'), usedDarts = 5000 - v(p, 'blowpipe_darts');
+    const usedScales = 5000 - v(p, 'blowpipe_scales'),
+        usedDarts = 5000 - v(p, 'blowpipe_darts');
     const damaging = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && (h.type === 1 || h.type === 7) && h.damage > 0).length;
     console.log(`    ${shots} shots: ${usedScales} scales, ${usedDarts} darts; ${damaging} damaging hits, ${venoms} envenomed`);
     if (shots < 590) console.log('    DEBUG', p.x, p.z, npc.x, npc.z, npc.isActive, p.levels[HP], JSON.stringify(mes(p).slice(-6)), JSON.stringify(H.says.filter(s => s.tick > World.currentTick - 1300).slice(0, 5)));
     check('  ~600 shots in 1,200 ticks on Rapid', shots >= 590 && shots <= 601, true);
     check('  a dart every shot, none saved without a cape', usedDarts, shots);
-    check('  two scales in three shots (within 4 sd)', Math.abs(usedScales - shots * 2 / 3) <= 4 * Math.sqrt(shots * 2 / 9), true);
-    check('  a quarter of the damaging hits envenom (within 4 sd)', Math.abs(venoms - damaging / 4) <= 4 * Math.sqrt(damaging * 3 / 16), true);
+    check('  two scales in three shots (within 4 sd)', Math.abs(usedScales - (shots * 2) / 3) <= 4 * Math.sqrt((shots * 2) / 9), true);
+    check('  a quarter of the damaging hits envenom (within 4 sd)', Math.abs(venoms - damaging / 4) <= 4 * Math.sqrt((damaging * 3) / 16), true);
     // THE DARTS DO LAND, which this asserted the opposite of. Old School: "Using an Ava's device
     // OR PICKING UP USED AMMO will reduce the number of darts needed" - so a fired dart is on the
     // floor unless it broke, and destroying every one of them doubled what the weapon costs to run.
-    check('  a fired dart lands at the target to be picked up',
-        World.getObj(npc.x, npc.z, 0, ObjType.getId('rune_dart'), p.hash64) !== null, true);
+    check('  a fired dart lands at the target to be picked up', World.getObj(npc.x, npc.z, 0, ObjType.getId('rune_dart'), p.hash64) !== null, true);
     // the Ranging cape keeps 72% of them
     H.equip(p, { back: 'ranging_cape' });
     charge(p, 5000, 5000);
     const a1 = H.anims.length;
     fightNpc(p, npc, 600);
-    p.clearInteraction(); H.tick(4);
-    const shots2 = shotsOf(p, a1).length, used2 = 5000 - v(p, 'blowpipe_darts');
+    p.clearInteraction();
+    H.tick(4);
+    const shots2 = shotsOf(p, a1).length,
+        used2 = 5000 - v(p, 'blowpipe_darts');
     console.log(`    with a Ranging cape: ${shots2} shots, ${used2} darts`);
     check('  with a Ranging cape 28% of the darts are used (within 4 sd)', Math.abs(used2 - shots2 * 0.28) <= 4 * Math.sqrt(shots2 * 0.28 * 0.72), true);
     H.despawn(p);
@@ -272,7 +342,7 @@ const fightNpc = (p: any, npc: any, ticks: number, each?: (t: number) => void) =
     charge(p, 0, 100);
     let a0 = H.anims.length;
     fightNpc(p, npc, 6);
-    check('no scales: no shot, OSRS\'s message', [shotsOf(p, a0).length, mes(p).includes("Your blowpipe needs to be charged with Zulrah's scales.")], [0, true]);
+    check("no scales: no shot, OSRS's message", [shotsOf(p, a0).length, mes(p).includes("Your blowpipe needs to be charged with Zulrah's scales.")], [0, true]);
     charge(p, 100, 0);
     a0 = H.anims.length;
     fightNpc(p, npc, 6);
@@ -297,7 +367,10 @@ console.log('VENOM');
     H.runNpcProc(npc, '[proc,npc_venom_start]', host);
     const h0 = H.npcHits.length;
     for (let i = 0; i < 30 * 10 + 2; i++) H.tick(1);
-    const venomHits = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type === 5).map(h => h.damage);
+    const venomHits = H.npcHits
+        .slice(h0)
+        .filter(h => h.who === 'mossgiant' && h.type === 5)
+        .map(h => h.damage);
     check('a monster: 6, 8, ... 20, then 20, one every 30 ticks', venomHits, [6, 8, 10, 12, 14, 16, 18, 20, 20, 20]);
     H.setNpcVar(npc, 'npc_venom', 0);
     World.removeNpc(npc, -1);
@@ -315,8 +388,21 @@ console.log('VENOM');
     const hp0 = H.hits.length;
     H.tick(1);
     check('a player: envenomed at 6', [v(p, 'venom'), lastMes(p)], [6, 'You have been envenomed!']);
-    for (let i = 0; i < 61; i++) { topUp(p); H.tick(1); }
-    check('  hits 6 then 8, with the venom splat', H.hits.slice(hp0).filter(h => h.who === p.username).map(h => [h.damage, h.type]), [[6, 5], [8, 5]]);
+    for (let i = 0; i < 61; i++) {
+        topUp(p);
+        H.tick(1);
+    }
+    check(
+        '  hits 6 then 8, with the venom splat',
+        H.hits
+            .slice(hp0)
+            .filter(h => h.who === p.username)
+            .map(h => [h.damage, h.type]),
+        [
+            [6, 5],
+            [8, 5]
+        ]
+    );
     H.give(p, '4doseantipoison');
     H.opheld(p, '4doseantipoison', 1);
     H.tick(1);
@@ -342,10 +428,11 @@ console.log('TOXIC SIPHON');
     H.equip(p, { rhand: 'toxic_blowpipe' });
     setStyle(p, 0);
     const normalMax = v(p, 'com_maxhit');
-    const specMax = Math.floor(normalMax * 3 / 2);
+    const specMax = Math.floor((normalMax * 3) / 2);
     const npc = dummy('mossgiant', p.x + 3, p.z);
     const specs: { heal: number; hit: number | null; energy: number }[] = [];
-    H.setVar(p, 'sa_energy', 1000); H.setVar(p, 'sa_attack', 1);
+    H.setVar(p, 'sa_energy', 1000);
+    H.setVar(p, 'sa_attack', 1);
     H.attackNpc(p, npc);
     for (let t = 0; t < 400 && specs.length < 40; t++) {
         p.levels[HP] = 20;
@@ -353,17 +440,25 @@ console.log('TOXIC SIPHON');
         const hitsBefore = H.hits.length;
         H.tick(1);
         if (v(p, 'sa_energy') < e0) {
-            const taken = H.hits.slice(hitsBefore).filter(h => h.who === p.username).reduce((a, h) => a + h.damage, 0);
+            const taken = H.hits
+                .slice(hitsBefore)
+                .filter(h => h.who === p.username)
+                .reduce((a, h) => a + h.damage, 0);
             const heal = p.levels[HP] - 20 + taken;
             const tick = World.currentTick;
             specs.push({ heal, hit: null, energy: e0 - v(p, 'sa_energy') });
             // the hit that lands for it
             const h0 = H.npcHits.length;
-            for (let w = 0; w < 5; w++) { p.levels[HP] = 99; H.setNpcVar(npc, 'npc_venom', 0); H.tick(1); }
+            for (let w = 0; w < 5; w++) {
+                p.levels[HP] = 99;
+                H.setNpcVar(npc, 'npc_venom', 0);
+                H.tick(1);
+            }
             const landed = H.npcHits.slice(h0).filter(h => h.who === 'mossgiant' && h.type !== 2);
             specs[specs.length - 1].hit = landed.length ? landed[0].damage : null;
             void tick;
-            H.setVar(p, 'sa_energy', 1000); H.setVar(p, 'sa_attack', 1);
+            H.setVar(p, 'sa_energy', 1000);
+            H.setVar(p, 'sa_attack', 1);
         }
         if (!p.target && !p.delayed) H.attackNpc(p, npc);
     }
@@ -405,7 +500,19 @@ console.log('DEATH');
     const z = World.gameMap.getZone(p.x, p.z, p.level);
     A.runProcProtected(p, '[proc,blowpipe_death_spill]');
     const floor = [...z.getAllObjsUnsafe()].filter((o: any) => o.x === p.x && o.z === p.z).map((o: any) => [ObjType.get(o.type).debugname, o.count]);
-    check('a lost one goes empty, with its scales and darts on the floor', [worn(p, 3), v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts'), floor.sort()], ['toxic_blowpipe_empty', 0, 0, [['rune_dart', 300], ['zulrahs_scales', 500]]]);
+    check(
+        'a lost one goes empty, with its scales and darts on the floor',
+        [worn(p, 3), v(p, 'blowpipe_scales'), v(p, 'blowpipe_darts'), floor.sort()],
+        [
+            'toxic_blowpipe_empty',
+            0,
+            0,
+            [
+                ['rune_dart', 300],
+                ['zulrahs_scales', 500]
+            ]
+        ]
+    );
     H.despawn(p);
 }
 
@@ -415,19 +522,45 @@ console.log('PVP');
     const a: any = H.makePlayer('bpa', 3100, 3700, 201);
     const b: any = H.makePlayer('bpb', 3103, 3700, 202);
     H.tick(2);
-    for (const x of [a, b]) { H.maxOut(x); H.clearInv(x); H.setVar(x, 'tutorial', 1000); noRandoms(x); }
+    for (const x of [a, b]) {
+        H.maxOut(x);
+        H.clearInv(x);
+        H.setVar(x, 'tutorial', 1000);
+        noRandoms(x);
+    }
     charge(a, 5000, 5000);
     H.equip(a, { rhand: 'toxic_blowpipe' });
-    for (const [mode, rate] of [[0, 4], [1, 3]]) {
+    for (const [mode, rate] of [
+        [0, 4],
+        [1, 3]
+    ]) {
         setStyle(a, mode);
-        const a0 = H.anims.length, h0 = H.hits.length;
+        const a0 = H.anims.length,
+            h0 = H.hits.length;
         H.attack(a, b);
-        for (let t = 0; t < 24; t++) { topUp(a, b); H.setVar(b, 'venom', 0); H.tick(1); if (!a.target && !a.delayed) H.attack(a, b); }
-        a.clearInteraction(); b.clearInteraction(); H.tick(4);
+        for (let t = 0; t < 24; t++) {
+            topUp(a, b);
+            H.setVar(b, 'venom', 0);
+            H.tick(1);
+            if (!a.target && !a.delayed) H.attack(a, b);
+        }
+        a.clearInteraction();
+        b.clearInteraction();
+        H.tick(4);
         const ts = shotsOf(a, a0);
         check(`${['Accurate', 'Rapid'][mode]}: a shot every ${rate} ticks at a player`, gaps(ts), [rate]);
-        check('  and it hits them', H.hits.slice(h0).some(h => h.who === b.username && (h.type === 1 || h.type === 7) && h.damage > 0), true);
-        for (let i = 0; i < 20; i++) { a.clearInteraction(); b.clearInteraction(); H.setVar(a, 'lastcombat_pvp', 0); H.setVar(b, 'lastcombat_pvp', 0); H.tick(1); }
+        check(
+            '  and it hits them',
+            H.hits.slice(h0).some(h => h.who === b.username && (h.type === 1 || h.type === 7) && h.damage > 0),
+            true
+        );
+        for (let i = 0; i < 20; i++) {
+            a.clearInteraction();
+            b.clearInteraction();
+            H.setVar(a, 'lastcombat_pvp', 0);
+            H.setVar(b, 'lastcombat_pvp', 0);
+            H.tick(1);
+        }
     }
     // a quarter of the damaging hits envenom a player too
     setStyle(a, 1);
@@ -435,23 +568,39 @@ console.log('PVP');
     const h1 = H.hits.length;
     H.attack(a, b);
     for (let t = 0; t < 300; t++) {
-        topUp(a, b); H.tick(1);
-        if (v(b, 'venom') > 0) { envenomed++; H.setVar(b, 'venom', 0); }
+        topUp(a, b);
+        H.tick(1);
+        if (v(b, 'venom') > 0) {
+            envenomed++;
+            H.setVar(b, 'venom', 0);
+        }
         if (!a.target && !a.delayed) H.attack(a, b);
     }
-    a.clearInteraction(); b.clearInteraction(); H.tick(4);
+    a.clearInteraction();
+    b.clearInteraction();
+    H.tick(4);
     const damaging = H.hits.slice(h1).filter(h => h.who === b.username && (h.type === 1 || h.type === 7) && h.damage > 0).length;
     console.log(`    ${damaging} damaging hits on a player, ${envenomed} envenomed`);
-    check('  a quarter of the damaging hits envenom the player (within 4 sd)', Math.abs(envenomed - damaging / 4) <= 4 * Math.sqrt(damaging * 3 / 16) && envenomed > 0, true);
+    check('  a quarter of the damaging hits envenom the player (within 4 sd)', Math.abs(envenomed - damaging / 4) <= 4 * Math.sqrt((damaging * 3) / 16) && envenomed > 0, true);
     // the special against a player
-    for (let i = 0; i < 12; i++) { a.clearInteraction(); b.clearInteraction(); H.tick(1); }
-    H.setVar(a, 'sa_energy', 1000); H.setVar(a, 'sa_attack', 1);
+    for (let i = 0; i < 12; i++) {
+        a.clearInteraction();
+        b.clearInteraction();
+        H.tick(1);
+    }
+    H.setVar(a, 'sa_energy', 1000);
+    H.setVar(a, 'sa_attack', 1);
     a.levels[HP] = 30;
     H.attack(a, b);
     let specced = false;
-    for (let t = 0; t < 12 && !specced; t++) { b.levels[HP] = 99; H.tick(1); specced = v(a, 'sa_energy') === 500; }
+    for (let t = 0; t < 12 && !specced; t++) {
+        b.levels[HP] = 99;
+        H.tick(1);
+        specced = v(a, 'sa_energy') === 500;
+    }
     check('Toxic Siphon at a player takes 50%', specced, true);
-    a.clearInteraction(); H.tick(2);
+    a.clearInteraction();
+    H.tick(2);
     H.despawn(a, b);
 }
 
@@ -460,32 +609,52 @@ console.log('DUEL ARENA');
     const a: any = H.makePlayer('bpd1', 3340, 3250, 211);
     const b: any = H.makePlayer('bpd2', 3343, 3250, 212);
     H.tick(2);
-    a.teleport(3340, 3250, 0); b.teleport(3343, 3250, 0); // after login, which puts a player found in an arena outside
+    a.teleport(3340, 3250, 0);
+    b.teleport(3343, 3250, 0); // after login, which puts a player found in an arena outside
     H.tick(1);
-    for (const x of [a, b]) { H.maxOut(x); H.clearInv(x); H.setVar(x, 'tutorial', 1000); H.setVar(x, 'duelstatus', 6); }
-    H.setVar(a, 'duel2accept', b.uid); H.setVar(b, 'duel2accept', a.uid);
+    for (const x of [a, b]) {
+        H.maxOut(x);
+        H.clearInv(x);
+        H.setVar(x, 'tutorial', 1000);
+        H.setVar(x, 'duelstatus', 6);
+    }
+    H.setVar(a, 'duel2accept', b.uid);
+    H.setVar(b, 'duel2accept', a.uid);
     charge(a, 5000, 5000);
     H.equip(a, { rhand: 'toxic_blowpipe' });
     setStyle(a, 0);
     H.setVar(a, 'dueloptions', 1 << 13); // no special attacks
-    H.setVar(a, 'sa_energy', 1000); H.setVar(a, 'sa_attack', 1);
+    H.setVar(a, 'sa_energy', 1000);
+    H.setVar(a, 'sa_attack', 1);
     let a0 = H.anims.length;
     H.attack(a, b);
-    for (let t = 0; t < 6; t++) { topUp(a, b); H.tick(1); }
-    a.clearInteraction(); H.tick(2);
+    for (let t = 0; t < 6; t++) {
+        topUp(a, b);
+        H.tick(1);
+    }
+    a.clearInteraction();
+    H.tick(2);
     check('no specials: refused, and the energy kept', [mes(a).includes('Use of special attacks has been turned off for this duel.'), v(a, 'sa_energy')], [true, 1000]);
     H.setVar(a, 'sa_attack', 0);
     H.setVar(a, 'dueloptions', 1 << 4); // no ranged
     a0 = H.anims.length;
     H.attack(a, b);
-    for (let t = 0; t < 6; t++) { topUp(a, b); H.tick(1); }
-    a.clearInteraction(); H.tick(2);
+    for (let t = 0; t < 6; t++) {
+        topUp(a, b);
+        H.tick(1);
+    }
+    a.clearInteraction();
+    H.tick(2);
     check('no ranged: the blowpipe will not fire', [shotsOf(a, a0).length, mes(a).includes('Ranging has been turned off for this duel.')], [0, true]);
     H.setVar(a, 'dueloptions', 0);
     a0 = H.anims.length;
     H.attack(a, b);
-    for (let t = 0; t < 8; t++) { topUp(a, b); H.tick(1); }
-    a.clearInteraction(); H.tick(2);
+    for (let t = 0; t < 8; t++) {
+        topUp(a, b);
+        H.tick(1);
+    }
+    a.clearInteraction();
+    H.tick(2);
     check('with ranged allowed it fires in the arena', shotsOf(a, a0).length > 0, true);
     H.despawn(a, b);
 }
@@ -495,7 +664,8 @@ console.log('DUEL ARENA');
 // player/.../anti_poison.rs2 (drinking), toxic_blowpipe/scripts/venom.rs2 (~venom_cure_immune).
 console.log('ANTI-VENOM');
 {
-    const HERB = 15, FARM = 19;
+    const HERB = 15,
+        FARM = 19;
     const herb = (p: any, level: number) => p.setLevel(HERB, level);
     const herbXp = (p: any) => p.stats[HERB];
     const brewer = (level = 99) => {
@@ -509,51 +679,54 @@ console.log('ANTI-VENOM');
     // -------------------------------------------------- the chain that leads to an anti-venom
     {
         const p = brewer(79);
-        H.give(p, 'coconut'); H.give(p, 'hammer'); H.give(p, 'vial_empty'); H.give(p, 'irit_leaf');
+        H.give(p, 'coconut');
+        H.give(p, 'hammer');
+        H.give(p, 'vial_empty');
+        H.give(p, 'irit_leaf');
         H.give(p, 'magic_roots');
         A.useHeld(p, 'hammer', 'coconut');
         check('a hammer cracks a coconut open', [inv(p, 'coconut'), inv(p, 'coconut_half')], [0, 1]);
         A.useHeld(p, 'coconut_half', 'vial_empty');
-        check('  the half coconut fills a vial, leaving the shell',
-            [inv(p, 'vial_coconut_milk'), inv(p, 'coconut_shell'), inv(p, 'vial_empty')], [1, 1, 0]);
+        check('  the half coconut fills a vial, leaving the shell', [inv(p, 'vial_coconut_milk'), inv(p, 'coconut_shell'), inv(p, 'vial_empty')], [1, 1, 0]);
         let x0 = herbXp(p);
         A.useHeld(p, 'irit_leaf', 'vial_coconut_milk');
-        check('  irit in coconut milk is an antidote++ (unf), for no xp',
-            [inv(p, 'unfinished_antidote++'), herbXp(p) - x0], [1, 0]);
+        check('  irit in coconut milk is an antidote++ (unf), for no xp', [inv(p, 'unfinished_antidote++'), herbXp(p) - x0], [1, 0]);
         x0 = herbXp(p);
         A.useHeld(p, 'magic_roots', 'unfinished_antidote++');
-        check('  magic roots finish it: antidote++(4) and 177.5 xp at 79 Herblore',
-            [inv(p, 'antidote++4'), herbXp(p) - x0], [1, 1775]);
+        check('  magic roots finish it: antidote++(4) and 177.5 xp at 79 Herblore', [inv(p, 'antidote++4'), herbXp(p) - x0], [1, 1775]);
         H.despawn(p);
     }
     {
         const p = brewer(78);
-        H.give(p, 'unfinished_antidote++'); H.give(p, 'magic_roots');
+        H.give(p, 'unfinished_antidote++');
+        H.give(p, 'magic_roots');
         A.useHeld(p, 'magic_roots', 'unfinished_antidote++');
         check('78 Herblore cannot: antidote++ wants 79', inv(p, 'antidote++4'), 0);
         H.despawn(p);
     }
 
     // -------------------------------------------------- anti-venom: 5 scales a dose, 30 xp a dose
-    const doses: [number, string, string][] = [[4, 'antidote++4', 'antivenom4'], [3, 'antidote++3', 'antivenom3'],
-                                               [2, 'antidote++2', 'antivenom2'], [1, 'antidote++1', 'antivenom1']];
+    const doses: [number, string, string][] = [
+        [4, 'antidote++4', 'antivenom4'],
+        [3, 'antidote++3', 'antivenom3'],
+        [2, 'antidote++2', 'antivenom2'],
+        [1, 'antidote++1', 'antivenom1']
+    ];
     for (const [dose, antidote, antivenom] of doses) {
         const p = brewer(87);
-        H.give(p, antidote); H.give(p, 'zulrahs_scales', dose * 5);
+        H.give(p, antidote);
+        H.give(p, 'zulrahs_scales', dose * 5);
         const x0 = herbXp(p);
         A.useHeld(p, 'zulrahs_scales', antidote);
-        check(`${dose} doses: ${dose * 5} scales, ${dose * 30} xp`,
-            [inv(p, antivenom), inv(p, antidote), inv(p, 'zulrahs_scales'), herbXp(p) - x0],
-            [1, 0, 0, dose * 300]);
+        check(`${dose} doses: ${dose * 5} scales, ${dose * 30} xp`, [inv(p, antivenom), inv(p, antidote), inv(p, 'zulrahs_scales'), herbXp(p) - x0], [1, 0, 0, dose * 300]);
         H.despawn(p);
     }
     {
         const p = brewer(87);
-        H.give(p, 'antidote++4'); H.give(p, 'zulrahs_scales', 19);
+        H.give(p, 'antidote++4');
+        H.give(p, 'zulrahs_scales', 19);
         A.useHeld(p, 'zulrahs_scales', 'antidote++4');
-        check('19 scales is not enough for a four-dose',
-            [inv(p, 'antivenom4'), inv(p, 'zulrahs_scales'), lastMes(p)],
-            [0, 19, "You need 20 Zulrah's scales to make that."]);
+        check('19 scales is not enough for a four-dose', [inv(p, 'antivenom4'), inv(p, 'zulrahs_scales'), lastMes(p)], [0, 19, "You need 20 Zulrah's scales to make that."]);
         herb(p, 86);
         H.give(p, 'zulrahs_scales', 1);
         A.useHeld(p, 'zulrahs_scales', 'antidote++4');
@@ -564,19 +737,19 @@ console.log('ANTI-VENOM');
     // -------------------------------------------------- anti-venom+: torstol, and only on the four-dose
     for (const secondary of ['torstol', 'torstolvial']) {
         const p = brewer(94);
-        H.give(p, 'antivenom4'); H.give(p, secondary);
+        H.give(p, 'antivenom4');
+        H.give(p, secondary);
         const x0 = herbXp(p);
         A.useHeld(p, secondary, 'antivenom4');
-        check(`${secondary} on an anti-venom(4): anti-venom+(4) and 125 xp`,
-            [inv(p, 'antivenom+4'), inv(p, secondary), herbXp(p) - x0], [1, 0, 1250]);
+        check(`${secondary} on an anti-venom(4): anti-venom+(4) and 125 xp`, [inv(p, 'antivenom+4'), inv(p, secondary), herbXp(p) - x0], [1, 0, 1250]);
         H.despawn(p);
     }
     {
         const p = brewer(94);
-        H.give(p, 'antivenom3'); H.give(p, 'torstol');
+        H.give(p, 'antivenom3');
+        H.give(p, 'torstol');
         A.useHeld(p, 'torstol', 'antivenom3');
-        check('a 3-dose anti-venom has no recipe, as OSRS has none',
-            [inv(p, 'antivenom+3'), inv(p, 'antivenom+4'), lastMes(p)], [0, 0, 'Nothing interesting happens.']);
+        check('a 3-dose anti-venom has no recipe, as OSRS has none', [inv(p, 'antivenom+3'), inv(p, 'antivenom+4'), lastMes(p)], [0, 0, 'Nothing interesting happens.']);
         herb(p, 93);
         H.give(p, 'antivenom4');
         A.useHeld(p, 'torstol', 'antivenom4');
@@ -587,15 +760,15 @@ console.log('ANTI-VENOM');
         // Declaring [opheldu,<potion>] takes that potion out of the decanting category trigger,
         // so every one of them has to be checked to still decant.
         const p = brewer();
-        H.give(p, 'antivenom2'); H.give(p, 'antivenom1');
+        H.give(p, 'antivenom2');
+        H.give(p, 'antivenom1');
         A.useHeld(p, 'antivenom1', 'antivenom2');
-        check('two anti-venoms still decant into a three-dose',
-            [inv(p, 'antivenom3'), inv(p, 'vial_empty')], [1, 1]);
+        check('two anti-venoms still decant into a three-dose', [inv(p, 'antivenom3'), inv(p, 'vial_empty')], [1, 1]);
         H.clearInv(p);
-        H.give(p, 'antidote++2'); H.give(p, 'antidote++3');
+        H.give(p, 'antidote++2');
+        H.give(p, 'antidote++3');
         A.useHeld(p, 'antidote++3', 'antidote++2');
-        check('  and so do two antidote++s, into a four and a one',
-            [inv(p, 'antidote++4'), inv(p, 'antidote++1')], [1, 1]);
+        check('  and so do two antidote++s, into a four and a one', [inv(p, 'antidote++4'), inv(p, 'antidote++1')], [1, 1]);
         H.despawn(p);
     }
 
@@ -604,13 +777,22 @@ console.log('ANTI-VENOM');
         const p = fresh();
         const roots = ObjType.getId('magic_roots');
         const sapling = ObjType.getId('plantpot_magic_tree_sapling');
-        const table: [number, number][] = [[75, 1], [82, 1], [83, 2], [91, 3], [98, 3], [99, 4]];
+        const table: [number, number][] = [
+            [75, 1],
+            [82, 1],
+            [83, 2],
+            [91, 3],
+            [98, 3],
+            [99, 4]
+        ];
         for (const [level, want] of table) {
-            p.setLevel(FARM, level); H.clearInv(p);
+            p.setLevel(FARM, level);
+            H.clearInv(p);
             H.runProc(p, '[proc,farming_dig_roots]', [roots, sapling]);
             check(`a magic stump at ${level} Farming gives ${want} root(s)`, H.invCount(p, 'magic_roots'), want);
         }
-        p.setLevel(FARM, 15); H.clearInv(p);
+        p.setLevel(FARM, 15);
+        H.clearInv(p);
         H.runProc(p, '[proc,farming_dig_roots]', [ObjType.getId('oak_roots'), ObjType.getId('plantpot_oak_sapling')]);
         check('an oak stump at 15 Farming gives 1 oak root', H.invCount(p, 'oak_roots'), 1);
         H.despawn(p);
@@ -619,24 +801,32 @@ console.log('ANTI-VENOM');
     // -------------------------------------------------- drinking them
     // %venom is the next venom hit while positive and the immunity countdown while negative; one
     // step of that countdown is ^venom_interval, 30 ticks.
-    const envenom = (p: any) => { A.enqueue(p, '[queue,venom_player]', [0]); H.tick(1); };
+    const envenom = (p: any) => {
+        A.enqueue(p, '[queue,venom_player]', [0]);
+        H.tick(1);
+    };
     // Three ticks, not one: %potion_delay is map_clock + 2, so two sips in a row inside that
     // window would silently drop the second (player/scripts/consumption/consume.rs2).
-    const drink = (p: any, potion: string) => { H.give(p, potion); H.opheld(p, potion, 1); H.tick(3); };
+    const drink = (p: any, potion: string) => {
+        H.give(p, potion);
+        H.opheld(p, potion, 1);
+        H.tick(3);
+    };
     {
         const p = fresh();
         drink(p, 'antidote++4');
-        check('antidote++ on a clean player: 12 minutes of poison, 2 ticks of venom',
-            [v(p, 'poison'), v(p, 'venom'), H.invCount(p, 'antidote++3')], [-40, -2, 1]);
+        check('antidote++ on a clean player: 12 minutes of poison, 2 ticks of venom', [v(p, 'poison'), v(p, 'venom'), H.invCount(p, 'antidote++3')], [-40, -2, 1]);
         H.despawn(p);
     }
     {
         const p = fresh();
         envenom(p);
-        for (let i = 0; i < 31; i++) { topUp(p); H.tick(1); } // one venom hit lands: 6, so the next is 8
+        for (let i = 0; i < 31; i++) {
+            topUp(p);
+            H.tick(1);
+        } // one venom hit lands: 6, so the next is 8
         drink(p, 'antidote++4');
-        check('antidote++ on a venomed player: a poison of the same strength and no immunity',
-            [v(p, 'venom'), v(p, 'poison')], [0, 36]);
+        check('antidote++ on a venomed player: a poison of the same strength and no immunity', [v(p, 'venom'), v(p, 'poison')], [0, 36]);
         drink(p, 'antidote++3');
         check('  the second dose is the one that cures and protects', [v(p, 'venom'), v(p, 'poison')], [-2, -40]);
         H.despawn(p);
@@ -645,8 +835,7 @@ console.log('ANTI-VENOM');
         const p = fresh();
         envenom(p);
         drink(p, 'antivenom4');
-        check('anti-venom cures venom outright in one dose, with both immunities',
-            [v(p, 'venom'), v(p, 'poison')], [-3, -40]);
+        check('anti-venom cures venom outright in one dose, with both immunities', [v(p, 'venom'), v(p, 'poison')], [-3, -40]);
         H.despawn(p);
     }
     {
@@ -664,7 +853,9 @@ console.log('ANTI-VENOM');
         const windowOf = (potion: string) => {
             const p = fresh();
             // one tick, not drink()'s three: every tick after the sip has to be counted
-            H.give(p, potion); H.opheld(p, potion, 1); H.tick(1);
+            H.give(p, potion);
+            H.opheld(p, potion, 1);
+            H.tick(1);
             let refused = 0;
             for (let t = 0; t < 600; t++) {
                 envenom(p);
@@ -674,7 +865,12 @@ console.log('ANTI-VENOM');
             H.despawn(p);
             return refused;
         };
-        const windows: [string, number][] = [['macro_triffidfruit', 30], ['antidote++4', 60], ['antivenom4', 90], ['antivenom+4', 360]];
+        const windows: [string, number][] = [
+            ['macro_triffidfruit', 30],
+            ['antidote++4', 60],
+            ['antivenom4', 90],
+            ['antivenom+4', 360]
+        ];
         for (const [potion, ticks] of windows) {
             const got = windowOf(potion);
             console.log(`    ${potion}: envenoming refused for ${got} ticks (${got * 0.6}s)`);
@@ -684,20 +880,23 @@ console.log('ANTI-VENOM');
     {
         const p = fresh();
         envenom(p);
-        for (let i = 0; i < 31; i++) { topUp(p); H.tick(1); }
+        for (let i = 0; i < 31; i++) {
+            topUp(p);
+            H.tick(1);
+        }
         H.setVar(p, 'spellbook', 2); // the Lunar spellbook, and the quest that unlocks it
         H.setVar(p, 'lunar_unlocked', 1);
         H.setVar(p, 'lunar_quest', 150);
         p.setLevel(6, 99); // Magic, for Cure Me's level 71
-        H.give(p, 'astralrune', 100); H.give(p, 'cosmicrune', 100); H.give(p, 'lawrune', 100);
+        H.give(p, 'astralrune', 100);
+        H.give(p, 'cosmicrune', 100);
+        H.give(p, 'lawrune', 100);
         H.ifButton(p, 'lunar_magic:cure_me');
         H.tick(1);
-        check('Cure Me reduces venom to poison, as the wiki groups it with the antipoisons',
-            [v(p, 'venom'), v(p, 'poison')], [0, 36]);
+        check('Cure Me reduces venom to poison, as the wiki groups it with the antipoisons', [v(p, 'venom'), v(p, 'poison')], [0, 36]);
         H.ifButton(p, 'lunar_magic:cure_me');
         H.tick(1);
-        check('  and the second cast clears the poison it left, still with no immunity',
-            [v(p, 'venom'), v(p, 'poison')], [0, 0]);
+        check('  and the second cast clears the poison it left, still with no immunity', [v(p, 'venom'), v(p, 'poison')], [0, 0]);
         H.despawn(p);
     }
 }

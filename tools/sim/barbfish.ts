@@ -10,9 +10,14 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 
 let fails = 0;
+let oks = 0;
 function check(ok: boolean, what: string) {
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`);
-    if (!ok) fails++;
+    if (ok) {
+        oks++;
+    } else {
+        fails++;
+    }
 }
 
 await H.boot();
@@ -21,9 +26,16 @@ H.loginOrder();
 // OpHeldUHandler: [opheldu,b], else [opheldu,a] with the two swapped.
 function useOn(p: any, useName: string, onName: string) {
     const inv = p.getInventory(InvType.INV)!;
-    const slotOf = (id: number) => { for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === id) return i; return -1; };
-    const a = ObjType.getId(useName), b = ObjType.getId(onName);
-    p.lastUseItem = a; p.lastUseSlot = slotOf(a); p.lastItem = b; p.lastSlot = slotOf(b);
+    const slotOf = (id: number) => {
+        for (let i = 0; i < inv.capacity; i++) if (inv.get(i)?.id === id) return i;
+        return -1;
+    };
+    const a = ObjType.getId(useName),
+        b = ObjType.getId(onName);
+    p.lastUseItem = a;
+    p.lastUseSlot = slotOf(a);
+    p.lastItem = b;
+    p.lastSlot = slotOf(b);
     let script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, b, -1);
     if (!script) {
         script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, a, -1);
@@ -61,32 +73,52 @@ function talk(p: any, name: string, wanted: string[]): string[] {
     H.opNpc(p, otto!, 1);
     for (let t = 0; t < 12 && !p.activeScript; t++) H.tick(1);
     const said: string[] = [];
+    // THE OPTIONS ARE READ FROM THE MENU, not from the last few lines of chat. This looked for the
+    // wanted option inside texts().slice(-4), and the client is sent its own chrome - "Players
+    // online: @gre@1", the XP counters - on its own schedule, which pushes a two-option menu out of
+    // a four-line window. When that happened the pick was missed, the else branch continued the
+    // script instead, and the conversation came out somewhere else entirely: Otto's topic menu ended
+    // on "I'd better get going." rather than the rod lesson, which is what failed this file's first
+    // two checks. The options are whatever follows the last "Select an Option", chrome removed.
+    const menu = () => {
+        const all = texts(name);
+        const i = all.lastIndexOf('Select an Option');
+        if (i === -1) return [];
+        return all.slice(i + 1).filter(t => !/Players online|Total XP|Collections logged|Game mode|XP: @whi@/.test(t));
+    };
     for (let i = 0; i < 40 && p.activeScript; i++) {
-        const last = texts(name).slice(-4);
-        const pick = want.find(w => last.includes(w) && p.resumeButtons?.length);
+        const opts = menu();
+        const pick = p.resumeButtons?.length ? want.find(w => opts.includes(w)) : undefined;
         if (pick) {
-            const all = texts(name); const opts = all.slice(all.lastIndexOf('Select an Option') + 1);
             const multi = opts.length === 3 ? 'multi3' : 'multi2';
             const ok = H.choose(p, `${multi}:com_${opts.indexOf(pick) + 1}`);
             said.push('> ' + pick + (ok ? '' : ' (NOT CHOSEN)'));
             want.splice(want.indexOf(pick), 1);
         } else {
-            said.push(last.slice(-1)[0]);
+            said.push(texts(name).slice(-1)[0]);
             p.executeScript(p.activeScript, true, true);
         }
         H.tick(1);
     }
+    // THE LAST LINE ARRIVES AFTER THE LAST PICK. The loop above runs while the script is active, so
+    // it stops on the tick the conversation ends - and Otto's closing line ("In that case,
+    // farewell.") renders on the tick after that. Both of the checks below used to demand it as
+    // said's final element and so could never see it; what they saw instead was whatever interface
+    // text was newest, which on a quiet world is "Players online: @gre@1".
+    H.tick(4);
     console.log('  dialogue:\n    ' + said.join('\n    '));
     return said;
 }
-const said = talk(a, 'barbA', ['You think so?', 'What can I learn about the use of a fishing rod?', 'I have no more questions at this time.']);
-check(H.getVar(a, 'barbarian_fishing') === 1 && !(a as any).activeScript && said.slice(-1)[0] === 'In that case, farewell.', "Otto's rod lesson sets %barbarian_fishing to 1; 'no more questions' ends it");
+/** Did this player hear the line, anywhere in the conversation? Reads the chat the client was sent. */
+const heard = (name: string, phrase: string) => texts(name).some(l => l.includes(phrase));
+talk(a, 'barbA', ['You think so?', 'What can I learn about the use of a fishing rod?', 'I have no more questions at this time.']);
+check(H.getVar(a, 'barbarian_fishing') === 1 && !(a as any).activeScript && heard('barbA', 'In that case, farewell.'), "Otto's rod lesson sets %barbarian_fishing to 1; 'no more questions' ends it");
 (a as any).closeModal();
 H.setVar(a, 'barbarian_fishing', 1);
 H.opLoc(a, 2500, 3490, 'loc474_25268', 1);
 H.tick(12);
 console.log(`  at the bed: ${a.x},${a.z}; ${mes('barbA').slice(-1)}`);
-check(H.invCount(a, 'barbarian_rod') === 1, 'bed after Otto\'s lesson: a barbarian rod');
+check(H.invCount(a, 'barbarian_rod') === 1, "bed after Otto's lesson: a barbarian rod");
 
 // ---- fishing: levels 80/50/50 reach all three fish
 a.setLevel(PlayerStat.FISHING, 80);
@@ -111,11 +143,14 @@ const agstr = fish.trout * 5 + fish.salmon * 6 + fish.sturgeon * 7;
 check(dxp.ag === agstr && dxp.st === agstr, `Agility ${dxp.ag} and Strength ${dxp.st} xp = 5/6/7 per fish (${agstr})`);
 check(H.invCount(a, 'feather') === 200 - caught, 'one feather per catch');
 check(H.getVar(a, 'barbarian_fishing') === 2, 'a catch moves %barbarian_fishing to 2');
-check(mes('barbA').some(m => m === 'You catch a leaping sturgeon.'), 'catch message');
+check(
+    mes('barbA').some(m => m === 'You catch a leaping sturgeon.'),
+    'catch message'
+);
 a.teleport(2503, 3488, 0);
 H.tick(2);
 const said2 = talk(a, 'barbA', ["I've fished with a barbarian rod!", 'I have no more questions at this time.']);
-check(said2.some(l => l.includes('roe and caviar is more useful for us')) && said2.slice(-1)[0] === 'In that case, farewell.', 'after a catch Otto talks of the eggs and the knife');
+check(said2.some(l => l.includes('roe and caviar is more useful for us')) && heard('barbA', 'In that case, farewell.'), 'after a catch Otto talks of the eggs and the knife');
 
 // ---- trout-only levels catch only trout
 const c = H.makePlayer('barbC', 2502, 3487, 2130706435);
@@ -134,7 +169,8 @@ c.teleport(spot2.x - 1, spot2.z, 0);
 H.tick(2);
 H.opNpc(c, spot2, 1);
 H.tick(150);
-const cT = H.invCount(c, 'leaping_trout'), cO = H.invCount(c, 'leaping_salmon') + H.invCount(c, 'leaping_sturgeon');
+const cT = H.invCount(c, 'leaping_trout'),
+    cO = H.invCount(c, 'leaping_salmon') + H.invCount(c, 'leaping_sturgeon');
 console.log(`  20 Agility: trout ${cT}, other ${cO}, offcuts ${H.invCount(c, 'fish_offcuts')}, feathers ${H.invCount(c, 'feather')}`);
 check(cT > 0 && cO === 0, '20 Agility catches trout only');
 check(H.invCount(c, 'fish_offcuts') === Math.max(0, 5 - cT) && (cT <= 5 || H.invCount(c, 'feather') === 50 - (cT - 5)), 'offcuts are used before feathers');
@@ -152,7 +188,10 @@ H.tick(2);
 H.opNpc(b, spot, 1);
 H.tick(20);
 console.log('  47 Fishing texts:', texts('barbB'));
-check(texts('barbB').some(t => t.includes('You need at least 48 Fishing, 15 Agility and 15 Strength')), '47 Fishing refused with the message');
+check(
+    texts('barbB').some(t => t.includes('You need at least 48 Fishing, 15 Agility and 15 Strength')),
+    '47 Fishing refused with the message'
+);
 check(H.invCount(b, 'leaping_trout') === 0 && H.invCount(b, 'feather') === 50, 'nothing caught, no bait used');
 // no bait
 H.clearInv(b);
@@ -160,7 +199,10 @@ b.setLevel(PlayerStat.FISHING, 99);
 H.give(b, 'barbarian_rod');
 H.opNpc(b, spot, 1);
 H.tick(10);
-check(texts('barbB').some(t => t.includes("You don't have any bait left.")), 'no bait: refused');
+check(
+    texts('barbB').some(t => t.includes("You don't have any bait left.")),
+    'no bait: refused'
+);
 
 // ---- gutting: knife on each fish, both directions; 99 Cooking
 H.clearLogs();
@@ -203,9 +245,14 @@ check(d.levels[PlayerStat.HITPOINTS] === 53, `roe heals 3 (${d.levels[PlayerStat
 // ---- spots move on their own timer
 const s3 = spots.find(n => n.timerInterval > 0)!;
 const seen = new Set([`${s3.x},${s3.z}`]);
-for (let t = 0; t < 1200; t++) { H.tick(1); seen.add(`${s3.x},${s3.z}`); }
+for (let t = 0; t < 1200; t++) {
+    H.tick(1);
+    seen.add(`${s3.x},${s3.z}`);
+}
 console.log(`  the free spot stood at: ${[...seen].join(' ')}`);
 check(seen.size > 1 && [...seen].every(c => ['2504,3497', '2520,3518', '2506,3493', '2500,3506', '2500,3512'].includes(c)), 'a spot moves among the five wiki positions');
 
-console.log(fails ? `${fails} FAILED` : 'all ok');
+// The tally in the shape every other sim prints it, so a sweep can read it: this used to say only
+// "2 FAILED" or "all ok", which is no summary at all to anything grepping for one.
+console.log(`\n${oks} ok, ${fails} FAIL`);
 process.exit(fails ? 1 : 0);
