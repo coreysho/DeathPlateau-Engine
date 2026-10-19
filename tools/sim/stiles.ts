@@ -43,14 +43,29 @@ console.log('THE FENCE SOUTH OF VARROCK, WHICH ANSWERED NOTHING AT ALL');
     check('  it is where OSRS has it', World.getLoc(3240, 3335, 0, LocType.getId('loc_9300')) !== null, true);
     // 12 is refused by name and goes nowhere; the message is the only thing a player gets, so it
     // is the thing worth checking rather than the absence of movement alone
-    const low = cross('loc_9300', 3240, 3335, [3241, 3335], 12);
-    check('  Agility 12 is refused, and told the number', [low.at, low.said.some(s => /agility level of 13/.test(s))], [[3241, 3335], true]);
-    // and at 13 it crosses, from either side - the fence is a wall on one edge of its tile, so
-    // which side you start on decides which way you go
-    const east = cross('loc_9300', 3240, 3335, [3241, 3335], 13);
-    check('  Agility 13 crosses it westward', [east.at[0] < 3240, east.said], [true, []]);
-    const west = cross('loc_9300', 3240, 3335, [3239, 3335], 13);
-    check('  ...and eastward', [west.at[0] > 3240, west.said], [true, []]);
+    const low = cross('loc_9300', 3240, 3335, [3240, 3334], 12);
+    check('  Agility 12 is refused, and told the number', [low.at, low.said.some(s => /agility level of 13/.test(s))], [[3240, 3334], true]);
+
+    // WHICH WAY IT CROSSES, which this used to get wrong in exactly the way the game did. It asked
+    // whether the player had MOVED east or west and was happy when they had - so the bug report
+    // "jumps you to the east/west instead of north/south" was a thing this sim had blessed. What
+    // makes a crossing a crossing is the blocked edge: the fence is a wall on the south edge of
+    // 3240,3335, so a plain step from 3334 to 3335 is refused, and the jump is what gets you there.
+    {
+        const w: any = player('st_block', 3240, 3334, 0);
+        H.walkTo(w, 3240, 3335);
+        for (let t = 0; t < 6; t++) H.tick(1);
+        check('  a plain step north is blocked by the fence', [w.x, w.z], [3240, 3334]);
+        H.despawn(w);
+    }
+    const north = cross('loc_9300', 3240, 3335, [3240, 3334], 13);
+    check('  Agility 13 jumps it northward, onto the far side', [north.at, north.said], [[3240, 3335], []]);
+    const south = cross('loc_9300', 3240, 3335, [3240, 3336], 13);
+    check('  ...and southward, back over it', [south.at, south.said], [[3240, 3334], []]);
+    // ...and standing beside the fence rather than square to it still crosses it, rather than
+    // sliding along the fence line, which is what the old reading did from every side.
+    const beside = cross('loc_9300', 3240, 3335, [3239, 3335], 13);
+    check('  and from beside it, the player still ends up across', beside.at, [3240, 3334]);
 }
 
 console.log('\nAND THE OTHER THREE CALLERS OF THE SAME PROC STILL WORK');

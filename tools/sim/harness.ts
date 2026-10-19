@@ -51,6 +51,10 @@ export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
+// ...and the same for npcs. Whether a monster PLAYED its attack, block or death animation was
+// unanswerable from a sim until this existed - the params can all be present and correct and still
+// never reach the client, and a config reader cannot tell the difference.
+export const npcAnims: { tick: number; who: string; seq: number }[] = [];
 export const mesgs: Say[] = [];
 export const sounds: Sound[] = [];
 export const ifaces: Iface[] = [];
@@ -116,6 +120,11 @@ export async function boot() {
         if (seq !== -1) anims.push({ tick: World.currentTick, who: this.username, seq });
         return origAnim.call(this, seq, delay);
     };
+    const origNpcAnim = (Npc.prototype as any).playAnimation;
+    (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
+        if (seq !== -1) npcAnims.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), seq });
+        return origNpcAnim.call(this, seq, delay);
+    };
     // WARM UP PAST TICK 8. Half the combat guards in the content are of the form
     // `if (add(%lastcombat, 8) > map_clock)`, and on a world that has only just started map_clock
     // is 0-4 - so an untouched player reads as "in combat two seconds ago" and monsters refuse to
@@ -174,6 +183,7 @@ export function clearLogs() {
     npcHits.length = 0;
     says.length = 0;
     anims.length = 0;
+    npcAnims.length = 0;
     mesgs.length = 0;
 }
 
