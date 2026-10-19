@@ -66,6 +66,18 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
         idle = 0;
         const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
         const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
+        // A MAKE-X PANEL IS NOT AN OPTION LIST. skillmulti1..5 are their own interfaces with their
+        // own Make X / 10 / 5 / 1 buttons, and resuming them without pressing one closes them - so
+        // spinning wool looked like it had worked and produced nothing. A numeric pick here is the
+        // button's own com number (6 is Make 1 on a one-product panel); a string matches its name.
+        if (open.startsWith('skillmulti')) {
+            const pick = picks.shift();
+            if (pick === undefined) throw new Error('unexpected make-x panel: ' + open + ': ' + names.filter(Boolean).join(' | '));
+            const com = typeof pick === 'number' ? `${open}:com_${pick}` : names.find((n: string) => n.toLowerCase().includes(String(pick).toLowerCase()));
+            if (!com) throw new Error(`no button "${pick}" on ${open}: ${names.filter(Boolean).join(' | ')}`);
+            H.choose(p, com);
+            continue;
+        }
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             let pick = picks.shift();

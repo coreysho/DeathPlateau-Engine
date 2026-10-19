@@ -58,7 +58,7 @@ export type Step =
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
-    | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string }
+    | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
     | { setvar: string; to: number; why?: string }
     | { stage: number }
@@ -72,6 +72,7 @@ export type Step =
     | { hasnt: string }
     | { fight: string; until?: string; why?: string }
     | { nearnpc: string; r?: number; why?: string }
+    | { press: string; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -359,6 +360,23 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
+        if ('press' in s) {
+            // A BUTTON ON AN INTERFACE, which drive() cannot reach: it only knows the multi1..5
+            // option lists, and a make-x panel (skillmulti1..5) is a different interface with its
+            // own buttons. Spinning wool opens one of those, so there is no way to spin without it.
+            let pressed = false;
+            try {
+                H.choose(p, s.press);
+                pressed = true;
+            } catch (e) {
+                soft('press ' + s.press + (s.why ? ' - ' + s.why : ''), false, String(e).replace('Error: ', ''));
+            }
+            if (pressed) {
+                for (let t = 0; t < 20 && p.activeScript; t++) H.tick(1);
+                soft('press ' + s.press + (s.why ? ' - ' + s.why : ''), true);
+            }
             continue;
         }
         if ('nearnpc' in s) {
@@ -695,7 +713,10 @@ export function play(m: Manifest, p: Player): Result[] {
                 const lt = LocType.get(LocType.getId(s.useLoc));
                 lw = lt.width;
                 ll = lt.length;
-                useOn(p, s.at[0], s.at[1], s.useLoc, s.obj);
+                // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
+                // player walks, so a panel that opens on arrival - a make-x panel, for one - was
+                // met with an empty pick list and the step blew up on its own menu.
+                lines = useOn(p, s.at[0], s.at[1], s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
             } catch (e) {
                 hard(what, false, String(e).replace('Error: ', ''));
                 continue;
@@ -704,7 +725,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
-            lines = run(('picks' in s ? s.picks : undefined) ?? []);
+            lines = lines.concat(run([]));
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
@@ -721,14 +742,29 @@ export function play(m: Manifest, p: Player): Result[] {
             // delivered click and never fired [opnpcu,...] at all - three beers handed to Drunken
             // Ali with nothing to show for it. a1lib.useOnNpc sets lastUseItem and the APNPCU
             // interaction, which is what the real client does.
-            try {
-                lines = useOnNpc(p, s.useNpc, s.obj, s.picks ?? []);
-            } catch (e) {
-                hard(what, false, String(e).replace('Error: ', ''));
+            // SOME USE-ONS MISS. Shearing a sheep fails one time in four by design, so the step is
+            // judged on the obj it is for rather than on one click of it.
+            const untilUse = 'until' in s ? s.until : undefined;
+            const triesUse = ('tries' in s ? s.tries : undefined) ?? 1;
+            let threw = '';
+            for (let a = 0; a < triesUse; a++) {
+                if (a > 0) H.tick(4);
+                try {
+                    lines = lines.concat(useOnNpc(p, s.useNpc, s.obj, s.picks ?? []));
+                } catch (e) {
+                    threw = String(e).replace('Error: ', '');
+                    break;
+                }
+                if (!untilUse || H.invCount(p, untilUse) > 0) break;
+            }
+            if (threw) {
+                hard(what, false, threw);
                 continue;
             }
             const joinedUse = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
-            if (s.want && !joinedUse.includes(s.want)) {
+            if (untilUse && H.invCount(p, untilUse) === 0) {
+                soft(what, false, 'after ' + triesUse + ' tries there is still no ' + untilUse);
+            } else if (s.want && !joinedUse.includes(s.want)) {
                 soft(what, false, 'nothing said "' + s.want + '"');
             } else {
                 hard(what, true);
