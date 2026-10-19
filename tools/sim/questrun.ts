@@ -54,7 +54,7 @@ function groundObj(p: Player, objName: string, radius: number): [number, number]
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
@@ -574,6 +574,11 @@ export function play(m: Manifest, p: Player): Result[] {
             }
         } else if ('loc' in s) {
             what = s.loc + ' at ' + s.at[0] + ',' + s.at[1] + (s.why ? ' - ' + s.why : '');
+            // where the step was sent FROM, so a retry can stand there again rather than wherever
+            // the last route left the player - Sir Vyvin's cupboard is refused from one tile and
+            // allowed from the next one over.
+            const fromX = p.x;
+            const fromZ = p.z;
             let sent = false;
             let locw = 1;
             let locl = 1;
@@ -595,6 +600,63 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             lines = run(('picks' in s ? s.picks : undefined) ?? []);
+            // SOME OPS ARE REFUSED FOR A REASON THAT PASSES. Sir Vyvin shouts at anybody who opens
+            // his cupboard while he is standing next to them, and he wanders, so the search is a
+            // coin toss rather than a bug - the wiki says to wait for him to walk out. `tries` is
+            // for exactly that: send it again, a few ticks later, until the thing it is for happens.
+            // `until` is an obj and `want` is a line of text; either will stop the retries, and the
+            // obj is the better test - drive() misses a one-shot mesbox often enough that a step
+            // which had worked kept trying.
+            const untilLoc = 'until' in s ? s.until : undefined;
+            const wantLoc = 'want' in s ? s.want : undefined;
+            const triesLoc = ('tries' in s ? s.tries : undefined) ?? 1;
+            const doneLoc = () =>
+                untilLoc
+                    ? H.invCount(p, untilLoc) > 0
+                    : !wantLoc || lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ').includes(wantLoc);
+            for (let a = 1; a < triesLoc && (untilLoc || wantLoc) && !doneLoc(); a++) {
+                // LEAVE AND COME BACK, which is what the wiki tells you to do about Sir Vyvin and
+                // what the player has to do about any npc standing in the way: an npc parks itself
+                // while somebody is next to it, so waiting on the spot waits for ever. Walking off
+                // and returning lets it wander again.
+                (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                for (let w = 0; w < 10 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                for (const [dx, dz] of [
+                    [0, 8],
+                    [0, -8],
+                    [8, 0],
+                    [-8, 0]
+                ]) {
+                    if (!travel(p, fromX + dx, fromZ + dz, p.level, 24, 0)) break;
+                }
+                H.tick(25);
+                travel(p, fromX, fromZ, p.level, 24, 0);
+                // `first` is the op this one needs before it: a cupboard shuts itself after a
+                // while, so a retry that only clicks the open one throws from then on and every
+                // later try is a no-op.
+                const firstLoc = 'first' in s ? s.first : undefined;
+                if (firstLoc) {
+                    try {
+                        if (H.opLoc(p, s.at[0], s.at[1], firstLoc, 1)) {
+                            arrive(p, s.at[0], s.at[1], locw, locl);
+                            run([]);
+                            H.tick(4);
+                        }
+                    } catch {
+                        // already in the state `loc` wants
+                    }
+                }
+                let sent2 = false;
+                try {
+                    sent2 = H.opLoc(p, s.at[0], s.at[1], s.loc, s.op ?? 1);
+                } catch {
+                    sent2 = false;
+                }
+                if (process.env.QUESTRUN_DEBUG) console.log('        retry ' + a + ': sent=' + sent2 + ' at ' + p.x + ',' + p.z);
+                if (!sent2) continue;
+                if (!arrive(p, s.at[0], s.at[1], locw, locl)) continue;
+                lines = lines.concat(run(('picks' in s ? s.picks : undefined) ?? []));
+            }
         } else if ('held' in s) {
             what = s.held + ' op' + (s.op ?? 1) + (s.why ? ' - ' + s.why : '');
             let heldok = false;
