@@ -31,7 +31,24 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
-import { findNpc, drive, useOn, useOnNpc, take } from './a1lib.js';
+import { findNpc, drive, useOn, useOnNpc } from './a1lib.js';
+import World from '#/engine/World.js';
+
+/** The nearest tile within `radius` holding this ground obj, or null. */
+function groundObj(p: Player, objName: string, radius: number): [number, number] | null {
+    const id = ObjType.getId(objName);
+    for (let r = 0; r <= radius; r++) {
+        for (let dx = -r; dx <= r; dx++) {
+            for (let dz = -r; dz <= r; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+                const x = p.x + dx;
+                const z = p.z + dz;
+                if (World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n)) return [x, z];
+            }
+        }
+    }
+    return null;
+}
 
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
@@ -239,11 +256,26 @@ export function play(m: Manifest, p: Player): Result[] {
             continue;
         }
         if ('take' in s) {
+            // A REAL CLICK, not a lift. a1lib's take() deletes the obj and hands the player the
+            // item, which is harmless for an egg on a coop floor and useless for the ghost's
+            // skull: [opobj3,ghostskull] IS that step of The Restless Ghost, setting the stage and
+            // spawning the skeleton, and the lift left the quest sitting at stage 3 while the
+            // inventory check passed. So walk to it and send op 3, which is the ground Take.
             n++;
-            const got = take(p, s.take, 4);
             const label2 = (x: string) => (x.length > W ? x.slice(0, W - 1) + '~' : x.padEnd(W));
             const what2 = 'pick up ' + s.take + (s.why ? ' - ' + s.why : '');
-            out.push({ n, what: what2, ok: got, detail: got ? '' : 'nothing on the floor nearby' });
+            const before = H.invCount(p, s.take);
+            const at = groundObj(p, s.take, 6);
+            let got = false;
+            let why = 'nothing on the floor nearby';
+            if (at) {
+                H.opObj(p, at[0], at[1], s.take, 3);
+                arrive(p, at[0], at[1]);
+                drive(p, []);
+                got = H.invCount(p, s.take) > before;
+                if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived';
+            }
+            out.push({ n, what: what2, ok: got, detail: got ? '' : why });
             console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (got ? ' ok' : ' FAIL'));
             if (!got) stopped = what2;
             continue;
@@ -331,6 +363,17 @@ export function play(m: Manifest, p: Player): Result[] {
 
         // --- the clicks, each one sent from wherever the player is standing
         const mesMark = H.mesgs.length;
+        // EVERY LINE SINCE THE CLICK, not only the ones drive() happened to see. drive() starts
+        // counting when it is called, and arrive() returns the moment a script pauses - which for a
+        // one-shot mesbox is the same tick its text was set, so the line is already behind drive's
+        // mark by the time it looks. The Restless Ghost's "There's a skeleton without a skull in
+        // here." came back as "nothing said" on a step that had worked perfectly.
+        const ifaceMark = H.ifaces.length;
+        const saidSince = (): string[] =>
+            H.ifaces
+                .slice(ifaceMark)
+                .filter(i => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+                .map(i => i.text as string);
         let lines: string[] = [];
         let unreached = '';
         const run = (picks: (number | string)[]) => {
@@ -529,7 +572,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, String(e).replace('Error: ', ''));
                 continue;
             }
-            const joinedUse = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+            const joinedUse = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
             if (s.want && !joinedUse.includes(s.want)) {
                 soft(what, false, 'nothing said "' + s.want + '"');
             } else {
@@ -538,7 +581,7 @@ export function play(m: Manifest, p: Player): Result[] {
             continue;
         }
 
-        const joined = lines.concat(H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+        const joined = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
         if (unreached && !('until' in s && s.until)) {
             soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: ' + joined.slice(0, 110));
             continue;
