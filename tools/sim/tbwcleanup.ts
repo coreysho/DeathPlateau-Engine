@@ -10,6 +10,7 @@ import World from '#/engine/World.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ObjType from '#/cache/config/ObjType.js';
+import InvType from '#/cache/config/InvType.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -383,6 +384,56 @@ const afterFirst = H.invCount(p, 'village_trade_sticks');
 said = talkTo(spawned('tbwcu_rionasta_multinpc')!);
 check('one tenth of a per cent is one stick, and the other nine have nothing to give',
     [afterFirst, favour(), H.invCount(p, 'village_trade_sticks')], [1, 0, 1]);
+
+// ------------------------------------------------------------------ the two counters
+console.log('');
+console.log("GABOOTY'S TWO SHELVES, WHICH WERE IN THE PACK WITH NOTHING POINTING AT THEM");
+const shopOf = (op: number): { inv: number; currency: string; title: string } => {
+    const npc = spawned('tbwcu_gabooty_multinpc')!;
+    for (let attempt = 0; attempt < 4; attempt++) {
+        p.closeModal();
+        H.tick(1);
+        const sides: [number, number][] = [[0, 1], [1, 0], [-1, 0], [0, -1]];
+        const [dx, dz] = sides[attempt];
+        p.teleport(npc.x + dx, npc.z + dz, npc.level);
+        H.tick(1);
+        p.clearPendingAction();
+        H.opNpc(p, npc, op);
+        settle(p);
+        if (H.getVar(p, 'shop') !== -1) break;
+    }
+    return {
+        inv: H.getVar(p, 'shop'),
+        currency: ObjType.get(H.getVar(p, 'shop_currency')).debugname ?? '?',
+        title: (() => {
+            const com = Component.getId('shop_template:com_76');
+            for (let i = H.ifaces.length - 1; i >= 0; i--) {
+                const f = H.ifaces[i];
+                if (f.kind === 'text' && f.com === com && f.text) return f.text;
+            }
+            return '';
+        })()
+    };
+};
+const coop = shopOf(3);
+check('Trade-Co-op opens the cooperative, and it takes trading sticks',
+    [coop.inv === InvType.getId('tai_bwo_wannai_cooperative'), coop.currency, coop.title],
+    [true, 'village_trade_sticks', "Gabooty's Tai Bwo Wannai Cooperative"]);
+    const priceOf = (name: string, stock: number): number =>
+    H.runProc(p, '[proc,adjusted_item_cost_buying]', [ObjType.getId(name), stock])[0];
+check('  with the published prices, read straight off the costs in the cache',
+    [priceOf('tbw_villager_hat_cream', 50), priceOf('tbw_villager_shirt_cream', 50), priceOf('machette_redtopaz', 50)],
+    [240, 360, 2400]);
+p.closeModal();
+H.tick(1);
+const drinks = shopOf(4);
+check('Trade-Drinks opens the Drinky Store, which no param could have named',
+    [drinks.inv === InvType.getId('tai_bwo_wannai_drinksies'), drinks.currency, drinks.title],
+    [true, 'village_trade_sticks', "Gabooty's Drinky Store"]);
+check('  and a cocktail is thirty sticks, which is its own cost and no multiplier at all',
+    priceOf('fruit_blast', 0), 30);
+p.closeModal();
+H.tick(1);
 
 // ------------------------------------------------------------------ the gem rock
 console.log('');
