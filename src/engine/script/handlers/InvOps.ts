@@ -561,7 +561,9 @@ const InvOps: CommandHandlers = {
             return;
         }
 
-        const overflow = count - player.invAdd(toInvType.id, objType.id, completed);
+        // custom (2026-10-19) - what invDel actually took, not what the script asked for: asking to move 1000
+        // with 10 held moved the 10 and dropped the other 990 - made from nothing - at the player's feet
+        const overflow = completed - player.invAdd(toInvType.id, objType.id, completed);
         if (overflow > 0) {
             if (!objType.stackable || overflow === 1) {
                 for (let i = 0; i < overflow; i++) {
@@ -601,7 +603,7 @@ const InvOps: CommandHandlers = {
         if (objType.certtemplate === -1 && objType.certlink >= 0) {
             finalObj = objType.certlink;
         }
-        const overflow = count - player.invAdd(toInvType.id, finalObj, completed);
+        const overflow = completed - player.invAdd(toInvType.id, finalObj, completed); // what was taken, not asked for (INV_MOVEITEM)
         if (overflow > 0) {
             // should be a stackable cert already!
             World.addObj(new Obj(player.level, player.x, player.z, EntityLifeCycle.DESPAWN, finalObj, overflow), player.hash64, 200);
@@ -639,7 +641,7 @@ const InvOps: CommandHandlers = {
         // somewhere. It used to go nowhere: the return of invAdd was dropped and the difference
         // simply stopped existing. INV_MOVEITEM and INV_MOVEITEM_CERT both drop their overflow at
         // the player's feet, so this does the same rather than inventing a third answer.
-        const overflow = count - player.invAdd(toInvType.id, finalObj, completed);
+        const overflow = completed - player.invAdd(toInvType.id, finalObj, completed); // what was taken, not asked for (INV_MOVEITEM)
         if (overflow > 0) {
             const finalType = ObjType.get(finalObj);
             if (!finalType.stackable || overflow === 1) {

@@ -342,6 +342,9 @@ export default class Player extends PathingEntity {
 
     requestLogout: boolean = false;
     requestIdleLogout: boolean = false;
+    // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
+    // -1 until the world first looks at it. World.processLogouts logs out on it (2026-10-19).
+    lastUserInput: number = -1;
     loggingOut: boolean = false;
     preventLogoutMessage: string | null = null;
     preventLogoutUntil: number = -1;
