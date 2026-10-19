@@ -105,6 +105,7 @@ const RARE = /godsword_shard|bandos_(chestplate|tassets|boots)|armadyl_(helmet|c
 /** Kill an npc `times` over and tally everything it leaves on the floor. */
 function loot(p: { username: string }, name: string, times: number) {
     const got = new Map<string, number>();
+    let killed = 0;
     for (let i = 0; i < times; i++) {
         const npc = H.addNpcAt(name, 2884, 5312, 2);
         // A REAL KILL, AND NOTHING SHORTER WORKS. Running the [ai_queue3] directly drops nothing at
@@ -115,7 +116,7 @@ function loot(p: { username: string }, name: string, times: number) {
         // One hitpoint is what keeps a real kill affordable.
         npc.levels[NpcStat.HITPOINTS] = 1;
         H.tick(1);
-        A.fight(p as never, npc, 60);
+        if (A.fight(p as never, npc, 60)) killed++;
         H.tick(2);
         for (let dx = -4; dx <= 4; dx++)
             for (let dz = -4; dz <= 4; dz++) {
@@ -131,7 +132,7 @@ function loot(p: { username: string }, name: string, times: number) {
         if (npc.isActive) World.removeNpc(npc, 0);
         H.tick(1);
     }
-    return got;
+    return { got, killed };
 }
 
 for (const [god, npcs, allowed] of TRIOS) {
@@ -143,8 +144,10 @@ for (const [god, npcs, allowed] of TRIOS) {
     // shorter weapon, which is Old School's own rule for them
     H.equip(p, { rhand: 'rune_halberd' });
     H.tick(1);
+    let kills = 0;
     for (const n of npcs) {
-        const got = loot(p, n, 45);
+        const { got, killed } = loot(p, n, 45);
+        kills += killed;
         for (const [k, v] of got) all.set(k, (all.get(k) ?? 0) + v);
     }
     H.despawn(p);
@@ -159,8 +162,11 @@ for (const [god, npcs, allowed] of TRIOS) {
     check('  coins come off it, which is two thirds of the table', (all.get('coins') ?? 0) > 0, true);
     // the 100% row, which is each table's own job rather than ~npc_death's - these four tables
     // forgot the line and left nothing but loot behind
+    // AS MANY AS THERE WERE KILLS, not as many as there were attempts. A fight that does not finish
+    // inside its tick budget drops nothing and should not: this counts what A.fight confirms died,
+    // which was 124 to 130 of 135 the first time it was asked.
     const hundred = god === 'Zamorak' ? 'ashes' : 'bones';
-    check(`  and the ${hundred} every one of them leaves, 135 of them`, all.get(hundred) ?? 0, 135);
+    check(`  and the ${hundred} every one of them leaves: one per kill, ${kills} kills`, all.get(hundred) ?? 0, kills);
     const regular = allowed.filter(k => !RARE.test(k));
     const seen = regular.filter(k => all.has(k));
     check(`  and most of the regular table with them: ${seen.length} of ${regular.length}`, seen.length >= Math.ceil(regular.length / 2), true);
