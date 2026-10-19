@@ -12,7 +12,7 @@
 import * as H from './harness.js';
 import * as A from './a1lib.js';
 import { check, R, player } from './a1lib.js';
-import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+import { PlayerStatMap } from '#/engine/entity/PlayerStat.js';
 
 await H.boot();
 H.loginOrder();
@@ -20,7 +20,9 @@ H.loginOrder();
 const GOD = { saradomin_max_cape: 'saradomin', guthix_max_cape: 'guthix', zamorak_max_cape: 'zamorak', imbued_saradomin_max_cape: 'saradomin', imbued_guthix_max_cape: 'guthix', imbued_zamorak_max_cape: 'zamorak' } as Record<string, string>;
 const VARIANTS = ['fire_max_cape', 'infernal_max_cape', 'undertaker_max_cape', 'accumulator_max_cape', 'saradomin_max_cape', 'guthix_max_cape', 'zamorak_max_cape', 'imbued_saradomin_max_cape', 'imbued_guthix_max_cape', 'imbued_zamorak_max_cape'];
 const HOODS = ['max_hood', 'fire_max_hood', 'saradomin_max_hood'];
-const NSTATS = Object.values(PlayerStat).filter(v => typeof v === 'number').length;
+// PlayerStatMap and not Object.values(PlayerStat): PlayerStat is a `const enum`, which has no
+// runtime object to enumerate - tsx strips the types and lets it through, and tsc does not.
+const NSTATS = PlayerStatMap.size;
 
 /** Click Wear on `cape` and say whether it left the inventory, plus anything the click said. */
 function wear(name: string, cape: string, maxed: boolean, hold?: string) {
