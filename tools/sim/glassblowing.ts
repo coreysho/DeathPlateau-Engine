@@ -204,5 +204,58 @@ console.log('\nAND THE PANEL PICTURES WHAT YOU GET: the empty lantern and the em
     }
 }
 
+console.log('\nAND AN EMPTY CANDLE LANTERN TAKES A CANDLE, which nothing would put in it');
+{
+    // The other half of "cant make candle lantern": the panel hands out empty ones and there was
+    // no way to finish one. Four candles, four lanterns, and the only thing that separates them is
+    // whether the candle is already burning - a lit one wants Firemaking 4.
+    const RECIPES: [string, string, number][] = [
+        ['unlit_candle', 'candle_lantern_unlit', 1],
+        ['unlit_black_candle', 'candle_lantern_black_unlit', 1],
+        ['lit_candle', 'candle_lantern_lit', 4],
+        ['lit_black_candle', 'candle_lantern_black_lit', 4]
+    ];
+    for (const [candle, want, lvl] of RECIPES) {
+        const p: any = player('cl_' + candle, 3200, 3200);
+        p.setLevel(PlayerStat.FIREMAKING, lvl);
+        H.clearInv(p);
+        H.give(p, 'candle_lantern_empty', 1);
+        H.give(p, candle, 1);
+        H.tick(1);
+        A.useHeld(p, candle, 'candle_lantern_empty');
+        H.tick(2);
+        check(`  ${candle.padEnd(18)} makes ${want}`, [H.invCount(p, want), H.invCount(p, 'candle_lantern_empty'), H.invCount(p, candle)], [1, 0, 0]);
+        H.despawn(p);
+
+        if (lvl > 1) {
+            const low: any = player('cll_' + candle, 3200, 3200);
+            low.setLevel(PlayerStat.FIREMAKING, lvl - 1);
+            H.clearInv(low);
+            H.give(low, 'candle_lantern_empty', 1);
+            H.give(low, candle, 1);
+            H.tick(1);
+            const m = A.mark();
+            A.useHeld(low, candle, 'candle_lantern_empty');
+            H.tick(2);
+            check(`    and is refused at ${lvl - 1}, keeping both`, [H.invCount(low, want), H.invCount(low, 'candle_lantern_empty'), A.mesSince(low, m).some(s => s.includes('Firemaking level of 4'))], [0, 1, true]);
+            H.despawn(low);
+        }
+    }
+
+    // ...and the finished lantern lights, which took no wiring at all: both unlit lanterns already
+    // carry category=light_source_unlit and param=product in the cache, so the tinderbox that
+    // lights every other light source lights these the moment one can exist.
+    const q: any = player('cl_light', 3200, 3200);
+    q.setLevel(PlayerStat.FIREMAKING, 99);
+    H.clearInv(q);
+    H.give(q, 'candle_lantern_unlit', 1);
+    H.give(q, 'tinderbox', 1);
+    H.tick(1);
+    A.useHeld(q, 'tinderbox', 'candle_lantern_unlit');
+    H.tick(2);
+    check('  a tinderbox lights the finished lantern', H.invCount(q, 'candle_lantern_lit'), 1);
+    H.despawn(q);
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
