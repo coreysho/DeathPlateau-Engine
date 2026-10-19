@@ -107,6 +107,11 @@ function loot(p: { username: string }, name: string, times: number) {
     const got = new Map<string, number>();
     let killed = 0;
     for (let i = 0; i < times; i++) {
+        // HEAL BETWEEN KILLS. A bodyguard hits hard and there are a hundred and thirty-five of
+        // them: left alone the player dies partway through, drops its halberd, respawns in
+        // Lumbridge and the rest of the run measures nothing. That is where the five "missing"
+        // bones came from - not a missing drop, a missing player.
+        H.maxOut(p as never);
         const npc = H.addNpcAt(name, 2884, 5312, 2);
         // A REAL KILL, AND NOTHING SHORTER WORKS. Running the [ai_queue3] directly drops nothing at
         // all: every table in the build opens with npc_findhero, and an npc has no hero until the
@@ -118,8 +123,11 @@ function loot(p: { username: string }, name: string, times: number) {
         H.tick(1);
         if (A.fight(p as never, npc, 60)) killed++;
         H.tick(2);
-        for (let dx = -4; dx <= 4; dx++)
-            for (let dz = -4; dz <= 4; dz++) {
+        // WIDE ENOUGH FOR AN NPC THAT WALKED. A bodyguard hunts the player before it dies, so the
+        // drop lands wherever it got to and not on its spawn tile - a four-tile box lost about one
+        // kill in twenty and read as a missing bones.
+        for (let dx = -14; dx <= 14; dx++)
+            for (let dz = -14; dz <= 14; dz++) {
                 const zone = World.gameMap.getZone(2884 + dx, 5312 + dz, 2);
                 for (const o of [...zone.getAllObjsUnsafe()]) {
                     if (!o || o.x !== 2884 + dx || o.z !== 5312 + dz) continue;
@@ -194,7 +202,7 @@ console.log('\nAND THE FOUR THAT ARE NOT SHARED BELONG TO THE RIGHT NPC');
         ['gwd_steelwill', 'beer', ['kebab', 'eye_patch']],
         ['gwd_grimspike', 'eye_patch', ['kebab', 'beer']]
     ] as [string, string, string[]][]) {
-        const got = loot(p, npc, 60);
+        const { got } = loot(p, npc, 60);
         check(`  ${npc.replace('gwd_', '').padEnd(12)} drops its own ${own}`, (got.get(own) ?? 0) > 0, true);
         check(
             '    ...and neither of the other two',
