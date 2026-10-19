@@ -101,21 +101,28 @@ const W = 66; // how wide a step line is before the verdict column
 // player standing next to the thing. A dialogue still counts on its own, because a chat interface
 // cannot open unless the content ran.
 function arrive(p: Player, tx: number, tz: number, tw = 1, tl = 1, ticks = 50): boolean {
+    const level0 = p.level;
     const near = () => {
         const dx = Math.max(tx - p.x, 0, p.x - (tx + tw - 1));
         const dz = Math.max(tz - p.z, 0, p.z - (tz + tl - 1));
         return Math.max(dx, dz) <= 1;
     };
+    // A STAIRCASE MOVES YOU, so standing next to it afterwards is the wrong question: Draynor
+    // Manor's crypt stairs leave the player at 3077,9771, six thousand tiles from the step they
+    // clicked, and the positional test called that a player who never got there. Changing level, or
+    // ending up further from the loc than any route to it could have taken you, can only be the op
+    // having run.
+    const jumped = () => p.level !== level0 || Math.max(Math.abs(p.x - tx), Math.abs(p.z - tz)) > 64;
     // ALREADY STANDING THERE IS NOT THE SAME AS THE OP HAVING RUN. Returning the moment the
     // player was adjacent made every repeat click on an npc they were already next to look
     // delivered when the engine had not processed it yet - forty hands of Rune-Draw that were
     // never dealt. Give the op a few ticks to run before proximity is allowed to count.
     for (let t = 0; t < ticks; t++) {
         if (p.activeScript) return true;
-        if (t >= 4 && near() && !p.hasWaypoints()) return true;
+        if (t >= 4 && (near() || jumped()) && !p.hasWaypoints()) return true;
         H.tick(1);
     }
-    return !!p.activeScript || near();
+    return !!p.activeScript || near() || jumped();
 }
 
 /** For a click with no target to walk to - an inventory op. Just let the script run. */
