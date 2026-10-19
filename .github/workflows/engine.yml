@@ -31,6 +31,13 @@ jobs:
     - name: Compile
       run: npx tsc --noEmit
 
+    # Every setting in Environment reads the variable it is named after. A wrong name compiles,
+    # lints, and holds a plausible value - the only symptom is that setting it in .env does
+    # nothing. Two had drifted, one of them reachable from a line .env.example invites you to
+    # uncomment.
+    - name: Environment names
+      run: npx tsx tools/envcheck.ts
+
     # The trading post's escrow rules against a real in-memory SQLite: every scenario adds up every
     # coin and item before and after, so a dupe or a void fails it whatever the code path.
     - name: Trading post
