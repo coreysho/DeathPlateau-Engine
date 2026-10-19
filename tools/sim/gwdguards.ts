@@ -21,12 +21,16 @@ import { NpcStat } from '#/engine/entity/NpcStat.js';
 await H.boot();
 H.loginOrder();
 
-// WHAT IS ALREADY LYING THERE. The arena is an ordinary piece of the world and the world has
-// ground spawns in it - a knife, a pot, a jug, a bowl and a mind rune, which respawn and so turn up
-// in every sweep. They are swept once here, before anything dies, and ignored afterwards; the check
-// below asserts that none of them is on any bodyguard's drop list, so ignoring them cannot hide a
-// real drop.
-function sweepArena() {
+// WHAT IS ALREADY LYING THERE. The arena is an ordinary piece of the world and the world has ground
+// spawns in it - a knife, a pot, a jug, a bowl, a mind rune and, on a slower timer, a feather. They
+// are learned here, before anything dies, and ignored afterwards; the check below asserts that none
+// of them is on any bodyguard's drop list, so ignoring them cannot hide a real drop.
+//
+// LEARNED OVER TIME, NOT IN ONE LOOK. A single sweep finds what is lying there at that instant and
+// misses anything mid-respawn: the feather turned up nine times across 135 kills and read as nine
+// drops that are not on the wiki's list. So this takes the floor away and keeps watching for a few
+// hundred ticks, which is what makes a respawn show itself.
+function sweepArena(clear: boolean) {
     const seen = new Set<string>();
     for (let dx = -14; dx <= 14; dx++)
         for (let dz = -14; dz <= 14; dz++) {
@@ -34,8 +38,18 @@ function sweepArena() {
             for (const o of [...zone.getAllObjsUnsafe()]) {
                 if (!o || o.x !== ARENA[0] + dx || o.z !== ARENA[1] + dz) continue;
                 seen.add(ObjType.get(o.type).debugname ?? `obj_${o.type}`);
+                if (clear) World.removeObj(o, 0);
             }
         }
+    return seen;
+}
+
+function learnArena() {
+    const seen = new Set<string>();
+    for (let t = 0; t < 40; t++) {
+        for (const n of sweepArena(true)) seen.add(n);
+        H.tick(10);
+    }
     return seen;
 }
 
@@ -167,7 +181,7 @@ function loot(p: { username: string }, name: string, times: number) {
     return { got, killed };
 }
 
-const AMBIENT = sweepArena();
+const AMBIENT = learnArena();
 console.log(`the arena's own ground spawns, ignored throughout: ${[...AMBIENT].sort().join(', ') || 'none'}`);
 check(
     "  and none of them is on any bodyguard's drop list",
