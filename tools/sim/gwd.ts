@@ -295,6 +295,61 @@ console.log('\nKILLCOUNT');
     H.despawn(p);
 }
 
+// ---------------------------------------------------------------- leaving a boss room
+console.log('\nAND THE DOOR LETS YOU BACK OUT, WHICH IT WOULD NOT');
+// Reported from the game: you could not leave a boss room without the killcount to enter it. Both
+// sides of the door ran the same handler, so standing in the room and clicking the door asked for
+// forty kills all over again - and if you HAD forty it was worse than a refusal, because it spent
+// them and put you back inside the room you were already in.
+//
+// ALL FOUR, because the four doors face four different ways: Armadyl's room is north of its door,
+// Bandos' east, Zamorak's south, Saradomin's west. A side test that happens to be right for one of
+// them is wrong for at least one other, so each one is walked out of here.
+{
+    // inside, outside and the door between them, straight off gwd.constant's own tiles
+    const DOORS: [string, string, number, [number, number], [number, number]][] = [
+        ['armadyl', 'gwd_door_armadyl', 2, [2839, 5296], [2839, 5294]],
+        ['bandos', 'gwd_door_bandos', 2, [2864, 5354], [2862, 5354]],
+        ['zamorak', 'gwd_door_zamorak', 2, [2925, 5331], [2925, 5333]],
+        ['saradomin', 'gwd_door_saradomin', 0, [2907, 5265], [2909, 5265]]
+    ];
+    for (const [god, locName, lvl, inside, outside] of DOORS) {
+        // the door tile itself: between the two, found rather than assumed, so a moved constant
+        // fails here by name instead of throwing out of opLoc
+        const id = LocType.getId(locName);
+        const mid: [number, number] = [Math.round((inside[0] + outside[0]) / 2), Math.round((inside[1] + outside[1]) / 2)];
+        const door = World.getLoc(mid[0], mid[1], lvl, id) ? mid : null;
+        check(`  ${god.padEnd(10)} door is where its two tiles say it is`, door !== null, true);
+        if (!door) continue;
+
+        // out with nothing banked, which is the report
+        const p = player('gwdout_' + god, inside[0], inside[1], lvl);
+        H.maxOut(p);
+        H.setVar(p, `gwd_kc_${god}`, 0);
+        p.teleport(inside[0], inside[1], lvl);
+        H.tick(1);
+        H.opLoc(p, door[0], door[1], locName, 1);
+        H.tick(20);
+        check('    out again with no killcount at all', [p.x, p.z, p.level], [outside[0], outside[1], lvl]);
+
+        // and out with forty banked, which must not spend them: you are not going in
+        H.setVar(p, `gwd_kc_${god}`, 40);
+        p.teleport(inside[0], inside[1], lvl);
+        H.tick(1);
+        H.opLoc(p, door[0], door[1], locName, 1);
+        H.tick(20);
+        check('    and leaving never costs a kill', [p.x, p.z, p.getVar(VarPlayerType.getByName(`gwd_kc_${god}`)!.id)], [outside[0], outside[1], 40]);
+
+        // ...while going IN still costs exactly forty
+        p.teleport(outside[0], outside[1], lvl);
+        H.tick(1);
+        H.opLoc(p, door[0], door[1], locName, 1);
+        H.tick(20);
+        check('    in from the corridor still spends them', [p.x, p.z, p.getVar(VarPlayerType.getByName(`gwd_kc_${god}`)!.id)], [inside[0], inside[1], 0]);
+        H.despawn(p);
+    }
+}
+
 // ---------------------------------------------------------------- getting in
 // Walked rather than asserted from the constants: the boulder on Trollheim, the rope down, and
 // back out again. Before this the dungeon could only be reached by teleport.

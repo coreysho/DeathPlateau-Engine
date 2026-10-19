@@ -164,6 +164,49 @@ several sims here depend on where a wandering npc happens to be standing, or on 
 be walked to, and they pass alone and fail in a sweep twenty minutes later. Run anything that matters
 twice before calling it fixed.
 
+## Failures you will see more than once
+
+Seven shapes account for nearly every sweep failure that is not a real game bug. All seven have
+been mistaken for content faults at least once, so the signature matters as much as the fix.
+
+- **A fixed offset from a wandering npc.** The sim reads the npc's tile, stands at `+1` or `+3` from
+  it, and clicks - and the npc has moved. `wanderrange` defaults to **5** and most npcs do not
+  override it, so this is a coin toss, not an edge case; it is worse inside a sealed cage or behind a
+  fence, where a refused op prints *nothing at all* and every check below it fails with it. The fix
+  is to re-read the tile per attempt and try several offsets, stopping on a signal that the content
+  really started - `audit0`'s `walkUpAndTalk` (Solus) and the Glough blocks in `mmpanel` and
+  `batch1012` are the pattern. Six sims in two days.
+- **The mark taken after the click.** `H.ifaces.length` or `H.mesgs.length` captured *after* the op
+  that drives the dialogue, so whatever that call drove before returning is already behind the slice.
+  It passes until the tick where it does not. Mark first, click second, read the slice after -
+  `fremtrials2` and the note at the top of `batch1012`.
+- **A refusal read out of the wrong log.** `mes` writes a chat line and `~mesbox`, `~objbox` and
+  `~doubleobjbox` write an *interface*, so a check that reads `A.mesSince` for "You need at least 28
+  Fishing to bait these fish." sees nothing and reports a content fault. Which one a refusal uses is
+  the content's choice and there is no pattern to it: the same script can `mes` a level gate and
+  `~mesbox` the next one. Read `H.ifaces` for the boxes (`newsources` and `eelspots` both carry a
+  local `shown()` for it) and the chat log for `mes`, and when a refusal check fails, print BOTH
+  before believing it. Five failures in one sim, all of them the sim's own fault.
+- **A random event in the middle of a long run.** The frog event teleports the player to the Land of
+  the Frogs and the next loc click throws "no such loc"; it reads as a missing loc and is not one.
+  `~macro_event_allowed` refuses to spawn one while `%macro_event` is already set, so
+  `H.setVar(p, 'macro_event', 1)` is the switch - `eaglespeak` and the three `quest_*_run` sims.
+- **A handler written against a multinpc variant.** `OpNpcHandler` resolves multivarp/multinpc only
+  to decide whether the option exists; `Player.getOpTrigger` then looks the trigger up on the npc's
+  OWN type. So `[opnpc1,<variant>]` never fires and the click does nothing. Handlers go on the shell
+  (`quest_swansong.rs2` says "Handler on the shell" for exactly this). `tools/silentnpcops.py` in the
+  content repo lists every npc the maps place with an option nothing answers.
+- **A stat id that is quietly `undefined`.** `PlayerStatMap` is keyed in CAPITALS, so
+  `get('crafting')` is `undefined`, a non-null assertion makes tsc accept it, and
+  `baseLevels[undefined] = 1` on a typed array is a silent no-op: the check then measures nothing and
+  passes for the wrong reason. Use the `PlayerStat` enum, where a name that does not exist is a
+  compile error (`lunar`).
+- **A budgeted loop that only reports "false".** `catchIt`, `drive`, any `for (let t = 0; t < max; ...)`
+  that gives up: on its own the failure says a thing did not happen and nothing about why. Print the
+  state it gave up in - whether the npc is still there, where both parties are, whether the player is
+  delayed or still targeting. `implings`' `catchIt` does this now, and the eagle's swipe in
+  `eaglespeak` carries the hitpoints into its failure detail for the same reason.
+
 ## Two things that will bite you
 
 - **Warm up past tick 8.** Half the combat guards in the content read

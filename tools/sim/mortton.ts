@@ -191,7 +191,27 @@ const mesSince = (p: Player, from: number) =>
         .map(m => m.text);
 
 /** Attack the nearest shadow of a kind and fight it to the death. Returns the npc and every type it was. */
+// ONE ATTEMPT IS NOT A KILL. The sweep found kills 3 and 4 of five coming back "rose, died:
+// [false,false]" - the shadow neither turned into a shade nor died - with kills 1, 2 and 5 fine, so
+// the tally stopped at three and Razmire offered his shops instead of moving the quest on (which is
+// then the multi3 that aborted the sim three checks later). The README's own "one fight per process"
+// note is the likely reason: %lastcombat and %aggressive_npc outlive a fight and the content's
+// singles rule refuses the next one until they clear. So this tries again rather than reporting a
+// kill that did not happen, and says what state it gave up in if all three tries miss.
 function killShade(p: Player, kind = 'shadeshadow_level1'): { npc: Npc; types: Set<string>; died: boolean } {
+    let last = killShadeOnce(p, kind);
+    for (let attempt = 1; attempt < 3 && !(last.died && last.types.size > 1); attempt++) {
+        console.log(
+            `    [killShade retry ${attempt}] ${kind}: died=${last.died} types=${[...last.types].join(',')}` + ` npc=${last.npc.x},${last.npc.z},active=${last.npc.isActive} player=${p.x},${p.z}` + ` target=${p.target !== null} delayed=${p.delayed}`
+        );
+        settle(p);
+        H.tick(20);
+        last = killShadeOnce(p, kind);
+    }
+    return last;
+}
+
+function killShadeOnce(p: Player, kind: string): { npc: Npc; types: Set<string>; died: boolean } {
     const npc = npcNear(kind, p.x, p.z);
     p.teleport(npc.x + 1, npc.z, 0);
     H.tick(1);

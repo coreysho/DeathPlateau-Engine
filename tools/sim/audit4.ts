@@ -493,6 +493,14 @@ console.log('IN AID OF THE MYREQUE');
 guard('myreque2', () => {
     const p = player('myreque2', 3484, 3246);
     check('Burgh de Rott is fenced in from the swamp road', connected(0, 3484, 3246, 3490, 3240), false);
+    // THE GATE WANTS FEEDING NOW. myreque2_village.rs2 bars it from the inside until Florin has had
+    // something to eat (%myreque_2_quest >= ^m2_fed, which is 12), and only lets you out the other
+    // way without it - so this used to walk straight in and now has to earn it. The feeding itself
+    // is myrequevillage.ts's; what this block is for is the map, so it sets the stage and asks the
+    // gate the same question. The refusal is worth a check of its own while we are here.
+    op(p, 3484, 3244, 'burgh_fencegate_r', 1);
+    check('the gate is barred until Florin is fed', p.z <= 3243, false);
+    sv(p, 'myreque_2_quest', 12); // ^m2_fed
     op(p, 3484, 3244, 'burgh_fencegate_r', 1);
     check('the gate lets you into the village', [p.z <= 3243, reachesNear(0, p.x, p.z, 3490, 3241), reachesNear(0, p.x, p.z, 3517, 3241)], [true, true, true]);
     const f = player('myreque2f', 3475, 3221);
@@ -518,11 +526,13 @@ guard('myreque2', () => {
     H.tick(1);
     for (let i = 0; i < 3; i++) op(p, 3527, 3209, 'burgh_furnace_multiloc', 1);
     check('the furnace: mended, loaded, lit', gv(p, 'burgh_furnace_fix'), 3);
-    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere.
-    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall']) sv(p, b, 1);
-    p.teleport(3517, 3239, 0);
-    H.tick(1);
-    talk(p, 'burgh_general_store_owner');
+    // The roof, walls and booth take planks - left to the plank/woodplank change in flight elsewhere -
+    // and STOCKING THE SHOP IS ITS OWN QUEST STEP NOW: once the roof and wall are done, Aurel asks
+    // for ten bronze axes, three tinderboxes and ten of whatever the swamp gave him that week, hands
+    // over a crate, and ~p_choice2 asks whether you will fetch it. A talk() with no pick walks into
+    // that menu and throws "unexpected menu: multi2", which is what it did. myrequecrate.ts is the
+    // sim for that step; here the var goes on with the other three.
+    for (const b of ['burgh_store_roof', 'burgh_store_wall', 'burgh_bank_booth_open', 'burgh_bank_wall', 'burgh_store_stocked']) sv(p, b, 1);
     check('the store is stocked', gv(p, 'burgh_store_stocked'), 1);
     p.teleport(3490, 3239, 0);
     H.tick(1);
@@ -560,11 +570,17 @@ guard('myreque2', () => {
     check('down into the cellar, beside the ladder, not in it', [at(p), walkable(0, p.x, p.z)], [[3490, 9631, 0], true]);
     check('the cellar reaches Veliaf and the chest', [reachesNear(0, p.x, p.z, 3494, 9628), reachesNear(0, p.x, p.z, 3493, 9632)], [true, true]);
     talk(p, 'burgh_rescue_veliaf_hurtz_talk');
-    check('Veliaf moves in and sends you to Paterdomus: stage 80', gv(p, 'myreque_2_quest'), 80);
+    // THE ESCORT GOES BETWEEN THESE TWO LINES NOW. Veliaf used to send you straight to Paterdomus
+    // (stage 80) and the library key used to sit in an invented chest in this cellar. Ivan Strom's
+    // walk is what reaches the temple since, and Drezel - the man who has been sitting on the key -
+    // hands it over at the end of it (areas/area_mausoleum/scripts/drezel.rs2, m2_drezel_takes_ivan),
+    // so stage 72 is "Veliaf has asked, and Ivan is in the cellar". tools/sim/myrequeescort.ts drives
+    // that step in full; this block takes the shortcut past it rather than driving it twice.
+    check('Veliaf moves in and hands Ivan over: stage 72', gv(p, 'myreque_2_quest'), 72);
+    sv(p, 'myreque_2_quest', 80); // ^m2_temple, which the escort reaches
+    H.give(p, 'burgh_key'); // and Drezel's key with it
     p.teleport(3492, 9631, 0);
     H.tick(1);
-    op(p, 3493, 9632, 'burgh_chest_closed', 1);
-    check('the cellar chest: the library key', H.invCount(p, 'burgh_key'), 1);
     op(p, 3490, 9632, 'burgh_inn_basement_ladderup', 1);
     check('the cellar ladder climbs back out into the inn beside the trapdoor', [at(p), walkable(0, p.x, p.z)], [[3491, 3232, 0], true]);
 
@@ -594,7 +610,17 @@ guard('myreque2', () => {
     H.tick(1);
     talk(p, 'route_veliaf_hurtz');
     H.tick(3);
-    check('Veliaf: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3], [110, true]);
+    // AND THE QUEST NO LONGER ENDS HERE. Opening the tomb used to be the last step; the Rod of
+    // Ivandis - the reward the quest guide names the quest for - is the ending since, and Veliaf
+    // reading the plaster fragment is where that recipe starts: 102, then the mould (104), the
+    // casting (106), the well (108), and 110 with the quest points. tools/sim/myrequerod.ts drives
+    // the chain, so again this takes the shortcut and then asks Veliaf for the ending itself.
+    check('Veliaf reads the fragment and the recipe starts: stage 102', gv(p, 'myreque_2_quest'), 102);
+    sv(p, 'myreque_2_quest', 108); // ^m2_charged, which the rod chain reaches
+    H.give(p, 'burgh_rod_command_final_10');
+    talk(p, 'route_veliaf_hurtz');
+    H.tick(3);
+    check('the charged rod, handed over and handed straight back: complete, 3 QP', [gv(p, 'myreque_2_quest'), gv(p, 'qp') >= 3, H.invCount(p, 'burgh_rod_command_final_10')], [110, true, 1]);
 });
 
 // =============================================================================== Regicide

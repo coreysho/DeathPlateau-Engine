@@ -77,6 +77,13 @@ function player(name: string, x: number, z: number, level = 0) {
     H.clearInv(p);
     H.setVar(p, 'viking', 10); // The Fremennik Trials
     H.setVar(p, 'heroquest', 15); // Heroes' Quest
+    // NO RANDOM EVENTS, which is shape three in tools/sim/README.md. This sim mines, chops, fishes
+    // and farms its way across Miscellania for a hundred and forty checks, which is exactly the
+    // kind of run an anti-macro event lands in the middle of: a sweep run had the pirate turn up
+    // between the coal and Magnus's own rock ("Right. Ye asked for this.") and the next loc click
+    // printed nothing, so a working message read as a missing one.
+    // ~macro_event_allowed refuses to spawn one while %macro_event is already set.
+    H.setVar(p, 'macro_event', 1);
     H.tick(1);
     return p;
 }
@@ -831,6 +838,7 @@ if (want('quest') || want('kingdom') || want('losses')) {
 if (want('migrate')) {
     console.log('OLD SAVES');
     const p = H.makePlayer('miscold', 2520, 3860, bucket++);
+    H.setVar(p, 'macro_event', 1);
     H.setVar(p, 'misc_quest', 7);
     H.setVarBit(p, 'misc_approval', 100);
     H.setVarBit(p, 'misc_points_wood', 4);
@@ -842,6 +850,7 @@ if (want('migrate')) {
     check('the old quest finished: complete, approval 100% on the 0-127 scale, trusted', [v(p, 'misc_quest'), vb(p, 'misc_approval'), vb(p, 'misc_court_stage')], [100, 127, 4]);
     check('  its fifteen workers idle (there are ten), its coffers kept', [vb(p, 'misc_points_wood') + vb(p, 'misc_points_herb') + vb(p, 'misc_points_fish') + vb(p, 'misc_points_mine'), vb(p, 'misc_coffers')], [0, 750000]);
     const q = H.makePlayer('miscold2', 2520, 3861, bucket++);
+    H.setVar(q, 'macro_event', 1);
     H.setVar(q, 'misc_quest', 4);
     H.setVarBit(q, 'misc_approval', 100);
     H.tick(3);

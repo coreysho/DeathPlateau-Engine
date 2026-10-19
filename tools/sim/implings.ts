@@ -476,6 +476,12 @@ function catchIt(p: any, npc: Npc, max = 80) {
         H.tick(1);
         if (!npc.isActive) return World.currentTick - t0;
     }
+    // WHY IT GAVE UP, because "took > 0 is false" on its own says nothing. The roll is not the
+    // likely answer: stat_random on the magpie's magic-net band (35..197) is about 55% a try at its
+    // own level of 65, and a try is a few ticks, so failing every one inside the budget is not a
+    // thing that happens. The state it ended in is what tells you - whether the impling was still
+    // there, where it had drifted to, and whether the player was stuck delayed or still targeting.
+    console.log(`    [catchIt gave up] ${NpcType.get(npc.type).debugname} after ${max} ticks: active=${npc.isActive}` + ` npc=${npc.x},${npc.z} player=${p.x},${p.z} delayed=${p.delayed} target=${p.target !== null}` + ` hunter=${p.levels[HUNT]}`);
     return -1;
 }
 // kept from blinking away by stopping their timer
@@ -529,7 +535,9 @@ for (let i = 0; i < KINDS.length; i++) {
     p.setLevel(HUNT, LEVEL[i]);
     imp = spawnImp(`impling_${k}`, 3223, 3219);
     const w0 = p.stats[HUNT];
-    const took2 = catchIt(p, imp);
+    // 300 rather than the default 80: this is the one call that has been seen to run out, and a
+    // budget that is not the thing under test may as well be generous.
+    const took2 = catchIt(p, imp, 300);
     const wg = p.stats[HUNT] - w0;
     check(`  Gielinor, magic net, no jar: looted on the spot for ${XP_WORLD[i]} xp`, [took2 > 0, mesOf(p).includes('You manage to catch the impling and acquire some loot.'), wg >= XP_WORLD[i] * 10 && wg < XP_WORLD[i] * 10 + 60], [true, true, true]);
     check('  the Check totals counters', [H.getVarBit(p, `impling_caught_${k}_puro`), H.getVarBit(p, `impling_caught_${k}_world`)], [2, 1]);

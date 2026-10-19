@@ -238,8 +238,13 @@ console.log('LONGHALL  the backstage door, the bouncer, the performance');
     for (let i = 0; i < 20 && (p.x !== 2624 + 36 || p.z !== 3648 + 36); i++) H.tick(1);
     check('  and walks from backstage onto the stage', at(p), [36, 36, 0]);
     H.clearLogs();
-    H.opheld(p, 'viking_enchanted_strung_lyre', 1);
+    // THE MARK GOES BEFORE THE CLICK. It was taken after, so any interface text the opheld itself
+    // drove - Olaf's "That was awesome!" among it, depending on how far the performance got inside
+    // that call - was already behind the slice and could not be seen. sweep5 caught it with the
+    // trial completed and the vote cast and the line "missing"; batch1012 has the same note at the
+    // top of itself for the same reason.
     const from = H.ifaces.length;
+    H.opheld(p, 'viking_enchanted_strung_lyre', 1);
     drain(p);
     const sung = H.says.filter(s => s.who === p.username).map(s => s.text);
     check('the performance: four sung lines, the default verse with the name', [sung.length, sung[0].endsWith(' is my name,'), sung[3]], [4, true, "I'll just go ahead and play."]);

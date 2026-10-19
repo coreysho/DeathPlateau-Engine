@@ -553,9 +553,7 @@ if (run('zogre')) {
     op(p, 2593, 3104, 'sithiks_cupboard', 1);
     standAt(p, 'sithiks_wardrobe', 2590, 3103, 1);
     op(p, 2590, 3103, 'sithiks_wardrobe', 1);
-    check('his own rooms: paper, charcoal, and two books he should not have',
-        [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal'), H.invCount(p, 'zogre_necrobook'), H.invCount(p, 'zogre_hambook')],
-        [1, 1, 1, 1]);
+    check('his own rooms: paper, charcoal, and two books he should not have', [H.invCount(p, 'papyrus'), H.invCount(p, 'charcoal'), H.invCount(p, 'zogre_necrobook'), H.invCount(p, 'zogre_hambook')], [1, 1, 1, 1]);
     standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
     useOn(p, 2591, 3103, 'zogre_sithik_bed_entity', 'zogre_necrobook');
     standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
@@ -574,8 +572,7 @@ if (run('zogre')) {
     const innkeeper = nearest('dragon_bartender', p);
     useOnNpc(p, 'zogre_dragon_tankard', innkeeper);
     useOnNpc(p, 'zogre_sithik_portrait_good', innkeeper);
-    check('the innkeeper knows the tankard and signs the portrait',
-        [gv(p, 'thzfe_innkeepermugshown'), H.invCount(p, 'zogre_sithik_portrait_signed')], [1, 1]);
+    check('the innkeeper knows the tankard and signs the portrait', [gv(p, 'thzfe_innkeepermugshown'), H.invCount(p, 'zogre_sithik_portrait_signed')], [1, 1]);
     p.teleport(2588, 3088, 0);
     H.tick(1);
     talk(p, 'zogre_human_zavistic_rarve');
@@ -585,8 +582,7 @@ if (run('zogre')) {
     standBy(p, 2597, 3107, 0);
     op(p, 2597, 3107, 'ladder', 1);
     // his door stays open behind you, so there is no loc_1530 to click a second time
-    const tea = World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), p.hash64)
-        ?? World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), -1n);
+    const tea = World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), p.hash64) ?? World.getObj(2592, 3103, 1, ObjType.getId('zogre_cup_of_tea_sithix'), -1n);
     check('the cup of tea is on his bedroom floor', tea !== null, true);
     if (tea) {
         p.teleport(2592, 3104, 1);
@@ -603,8 +599,7 @@ if (run('zogre')) {
     check('he drinks it when you are not watching', gv(p, 'thzfe_sithik_transformed'), 1);
     standAt(p, 'zogre_sithik_bed_entity', 2591, 3103, 1);
     op(p, 2591, 3103, 'zogre_sithik_bed_entity', 1);
-    check('Sithik confesses, and teaches the arrows and the balm: stage 10',
-        [stage(), gv(p, 'thzfe_makebrutalarrow'), gv(p, 'thzfe_makecuredisease')], [10, 1, 1]);
+    check('Sithik confesses, and teaches the arrows and the balm: stage 10', [stage(), gv(p, 'thzfe_makebrutalarrow'), gv(p, 'thzfe_makecuredisease')], [10, 1, 1]);
     // THE CEREMONIAL CHAMBER (2026-10-15). Grish hands over the ogre gate key once Sithik has
     // talked, and the stairs down to the chamber are what it opens - Slash Bash used to be woken
     // by ringing the Wizards' Guild bell in Yanille, which was a stand-in for this.
@@ -616,8 +611,7 @@ if (run('zogre')) {
     H.tick(1);
     standBy(p, 2443, 9417, 2);
     op(p, 2443, 9417, 'ogre_stairs_down', 1);
-    check('and it opens the way down into the chamber, with the stand in reach',
-        [p.level, walkable(p.x, p.z, p.level), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
+    check('and it opens the way down into the chamber, with the stand in reach', [p.level, walkable(p.x, p.z, p.level), reaches(0, p.x, p.z, 2483, 9445)], [0, true, true]);
     op(p, 2443, 9417, 'ogre_stairs', 1);
     check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
     standBy(p, 2446, 9417, 2);
@@ -633,9 +627,19 @@ if (run('zogre')) {
         const before = H.npcHitsFor('zogre_slash_bash').length;
         const died = kill(p, bash);
         check('killed, and it took more than one hit', [died, H.npcHitsFor('zogre_slash_bash').length - before > 1], [true, true]);
-        H.tick(3);
+        // THREE TICKS WAS NOT ENOUGH, which a sweep run showed by reporting a quest that works as
+        // broken: killed, took more than one hit, and then stage 10 with no artefact. The drop and
+        // the stage write live in [ai_queue3,zogre_slash_bash] (quests/quest_zogre/scripts/
+        // quest_zogre.rs2), an npc queue that runs some ticks AFTER the death, so the sim has to
+        // wait for it rather than count ticks. If it still does not come, the queue itself refused
+        // - it needs npc_findhero and then p_finduid - and that is worth seeing as a failure.
+        for (let t = 0; t < 20 && stage() < 14; t++) H.tick(1);
         check('the kill registers: stage 14', stage(), 14);
-        const art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        let art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        for (let t = 0; t < 10 && art === null; t++) {
+            H.tick(1);
+            art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        }
         check('the ogre artefact drops', art !== null, true);
     }
     H.give(p, 'zogre_artifacts');
