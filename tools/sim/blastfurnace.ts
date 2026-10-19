@@ -307,7 +307,7 @@ console.log('');
 console.log('HALF THE COAL, WHICH IS WHY ANYBODY WALKS DOWN HERE');
 p.setLevel(13, 99);
 H.tick(1);
-const coalFor = (oreName: string, barName: string, count: number): number => {
+const coalFor = (oreName: string, _barName: string, count: number): number => {
     for (const n of ['coal', 'iron_ore', 'mithril_ore', 'adamantite_ore', 'runite_ore']) H.setVarBit(p, `blast_furnace_${n}`, 0);
     for (const n of ['steel_bars', 'mithril_bars', 'adamantite_bars', 'runite_bars']) H.setVarBit(p, `blast_furnace_${n}`, 0);
     H.setVarBit(p, `blast_furnace_${oreName}`, count);

@@ -6,6 +6,7 @@
 //   npx tsx tools/sim/tbwcleanup.ts
 import * as H from './harness.js';
 import Player from '#/engine/entity/Player.js';
+import Npc from '#/engine/entity/Npc.js';
 import World from '#/engine/World.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -366,7 +367,7 @@ const sparsAtStart = H.invCount(p, 'thatching_spar_light');
 setFavour(0);
 xp = wood();
 let advances = 0;
-let before = locNameAt(FENCE2.x, FENCE2.z);
+const before = locNameAt(FENCE2.x, FENCE2.z);
 for (let i = 0; i < sparsAtStart && H.invCount(p, 'thatching_spar_light') > 0; i++) {
     const name = locNameAt(FENCE2.x, FENCE2.z);
     if (name === 'village_fence_fixedcomplete') break;
@@ -483,7 +484,11 @@ for (let round = 0; round < 40 && rockAt === null; round++) {
             break;
         }
         if (name !== 'tai_bwo_jungle_vegetation_easy_1') continue;
-        if (H.invCount(p, 'thatching_spar_light') > 20) (H.clearInv(p), H.give(p, 'machette_redtopaz', 1), H.give(p, 'rune_pickaxe', 1));
+        if (H.invCount(p, 'thatching_spar_light') > 20) {
+            H.clearInv(p);
+            H.give(p, 'machette_redtopaz', 1);
+            H.give(p, 'rune_pickaxe', 1);
+        }
         clickLoc(patch.x, patch.z, name, 4);
         H.tick(3);
         if (locNameAt(patch.x, patch.z).startsWith('village_gem_rock')) {
