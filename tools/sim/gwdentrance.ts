@@ -12,6 +12,9 @@ import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+import { World, LocType } from './a1lib.ts';
 
 await H.boot();
 
@@ -56,8 +59,7 @@ console.log('\nTHE KILLCOUNT GOES WHEN YOU LEAVE - AND ONLY THEN');
 {
     const kc = (p: any, g: string) => p.getVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id);
     const setkc = (p: any, n: number) => {
-        for (const g of ['armadyl', 'bandos', 'saradomin', 'zamorak'])
-            p.setVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id, n);
+        for (const g of ['armadyl', 'bandos', 'saradomin', 'zamorak']) p.setVar(VarPlayerType.getByName(`gwd_kc_${g}`)!.id, n);
     };
     const inside = coordOf('gwd_entrance_inside');
 
@@ -77,6 +79,52 @@ console.log('\nTHE KILLCOUNT GOES WHEN YOU LEAVE - AND ONLY THEN');
     check('  leaving the dungeon wipes all four', [kc(p, 'armadyl'), kc(p, 'bandos'), kc(p, 'saradomin'), kc(p, 'zamorak')], [0, 0, 0, 0]);
     check('  and says so', A.lastMes(p).includes('killcount with it'), true);
     H.despawn(p);
+}
+
+// ---------------------------------------------------------------- nothing else is up here
+console.log('\nAND THE MOUNTAIN CARRIES NOTHING BUT THE MOUNTAIN');
+// Reported from the game: "al kharid rooftop agility course showing up at gwd - clicking on an
+// obstacle takes you to al kharid". A whole stray copy of the Al Kharid rooftop course had been
+// grafted onto the God Wars surface - twenty-two placements, tightropes and zip lines and a
+// tropical tree on a snowy mountain - and eight of them were clickable, each one running the
+// course's own handler, which teleports you to Al Kharid because that is what it is for.
+//
+// A loc's ops belong to its TYPE, not to its placement, so the same type standing in two places
+// behaves the same in both: there is nothing a handler can do about it and nothing an op list can
+// say. The fix was deleting the placements, and this is what notices if a graft puts them back -
+// by name, because what makes this a bug is which script the click reaches.
+{
+    const want = [
+        ['gwd_boulder', 'Move=[oploc1,gwd_boulder]'],
+        ['gwd_crack', 'Crawl-through=[oploc1,gwd_crack]'],
+        ['gwd_hole_untied', 'Climb-down=[oploc1,gwd_hole_untied]'],
+        // the surface's own three dead clicks, which are a different and much smaller problem:
+        // two Rocky handholds and the Old fire pit, none of them answered by anything yet
+        ['osrsloc_26400', 'Climb=NOTHING'],
+        ['osrsloc_26402', 'Climb=NOTHING'],
+        ['osrsloc_33317', 'Build=NOTHING']
+    ];
+    const seen = new Map<string, string>();
+    for (let lvl = 0; lvl < 4; lvl++)
+        for (let x = 2890; x <= 2940; x++)
+            for (let z = 3700; z <= 3770; z++)
+                for (const loc of World.gameMap.getZone(x, z, lvl).getAllLocsUnsafe()) {
+                    if (loc.x !== x || loc.z !== z || loc.level !== lvl) continue;
+                    const t = LocType.get(loc.type);
+                    if (!(t.op ?? []).filter(Boolean).length) continue;
+                    const info: string[] = [];
+                    for (let op = 1; op <= 5; op++) {
+                        if (!t.op?.[op - 1]) continue;
+                        const sc = ScriptProvider.getByTrigger(ServerTriggerType.OPLOC1 + (op - 1), loc.type, t.category);
+                        info.push(`${t.op[op - 1]}=${sc ? sc.info.scriptName : 'NOTHING'}`);
+                    }
+                    const dbg = t.debugname ?? `loc_${loc.type}`;
+                    if (!seen.has(dbg)) seen.set(dbg, info.join('  '));
+                }
+    for (const [n, ops] of want) {
+        check(`  ${n.padEnd(18)} is up here, and this is what clicking it runs`, seen.get(n) ?? 'MISSING', ops);
+    }
+    check('  and nothing else on the mountain can be clicked at all', [...seen.keys()].filter(n => !want.some(w => w[0] === n)).sort(), []);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
