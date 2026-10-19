@@ -161,14 +161,16 @@ function loot(p: { username: string }, name: string, times: number) {
         H.tick(1);
         if (A.fight(p as never, npc, 60)) killed++;
         H.tick(2);
-        // WIDE ENOUGH FOR AN NPC THAT WALKED. A bodyguard hunts the player before it dies, so the
-        // drop lands wherever it got to and not on its spawn tile - a four-tile box lost about one
-        // kill in twenty and read as a missing bones.
-        for (let dx = -14; dx <= 14; dx++)
-            for (let dz = -14; dz <= 14; dz++) {
-                const zone = World.gameMap.getZone(ARENA[0] + dx, ARENA[1] + dz, 0);
+        // THE TILE IT DIED ON, AND ITS NEIGHBOURS, AND NOTHING WIDER. A drop lands where the npc
+        // died - which is not its spawn tile, because a bodyguard hunts the player first - so the
+        // sweep follows the body. A wide box instead catches the world's own ground spawns as they
+        // respawn: a feather on a slow timer turned up nine times in a 29-tile box and read as nine
+        // drops that are not on the wiki's list, in the one trio whose table has no feather on it.
+        for (let dx = -2; dx <= 2; dx++)
+            for (let dz = -2; dz <= 2; dz++) {
+                const zone = World.gameMap.getZone(npc.x + dx, npc.z + dz, 0);
                 for (const o of [...zone.getAllObjsUnsafe()]) {
-                    if (!o || o.x !== ARENA[0] + dx || o.z !== ARENA[1] + dz) continue;
+                    if (!o || o.x !== npc.x + dx || o.z !== npc.z + dz) continue;
                     const n = ObjType.get(o.type).debugname ?? `obj_${o.type}`;
                     got.set(n, (got.get(n) ?? 0) + o.count);
                     World.removeObj(o, 0);
