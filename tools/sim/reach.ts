@@ -38,9 +38,26 @@ while (q.length && n < 200000) {
     q = next;
 }
 
+// A START TILE THAT IS ITSELF BLOCKED prints one dot and tells you nothing, which is how three
+// goes at the Port Sarim docks were spent. So when the flood goes nowhere, print the tiles that
+// have at least one way out instead - that is a map of where a player could stand at all.
+const dead = seen.size <= 2;
+if (dead) {
+    console.log('(the start tile is walled in, so this is every tile with a way out, not a flood)');
+}
 for (let z = z2; z >= z1; z--) {
     let row = String(z) + ' ';
-    for (let x = x1; x <= x2; x++) row += (x === sx && z === sz) ? 'S' : (seen.has(key(x, z)) ? '.' : '#');
+    for (let x = x1; x <= x2; x++) {
+        if (x === sx && z === sz) {
+            row += 'S';
+            continue;
+        }
+        if (dead) {
+            row += dirs.some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL)) ? '.' : '#';
+        } else {
+            row += seen.has(key(x, z)) ? '.' : '#';
+        }
+    }
     console.log(row);
 }
 let head = '     ';

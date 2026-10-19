@@ -65,12 +65,12 @@ export type Step =
     | { level: number }
     | { varis: string; to: number }
     | { wait: number; why?: string }
-    | { take: string; why?: string }
+    | { take: string; why?: string; r?: number }
     | { setpos: [number, number, number]; why: string }
     | { has: string; n?: number }
     | { worn: string }
     | { hasnt: string }
-    | { fight: string }
+    | { fight: string; until?: string; why?: string }
     | { nearnpc: string; r?: number; why?: string }
     | { note: string };
 
@@ -274,7 +274,7 @@ export function play(m: Manifest, p: Player): Result[] {
             const label2 = (x: string) => (x.length > W ? x.slice(0, W - 1) + '~' : x.padEnd(W));
             const what2 = 'pick up ' + s.take + (s.why ? ' - ' + s.why : '');
             const before = H.invCount(p, s.take);
-            const at = groundObj(p, s.take, 6);
+            const at = groundObj(p, s.take, s.r ?? 6);
             let got = false;
             let why = 'nothing on the floor nearby';
             if (at) {
@@ -288,7 +288,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     // STAND ON IT FIRST. A ground obj is picked up from its own tile, and the
                     // interaction route only goes adjacent, so the walk is done here and exactly -
                     // the fish food on the manor's first floor was two tiles away and stayed there.
-                    const err = travel(p, at[0], at[1], p.level, 32, 0);
+                    const err = travel(p, at[0], at[1], p.level, 48, 0);
                     if (err) {
                         why = err;
                         continue;
@@ -398,26 +398,59 @@ export function play(m: Manifest, p: Player): Result[] {
             continue;
         }
         if ('fight' in s) {
-            let npc = null;
-            try {
-                npc = findNpc(s.fight, p);
-            } catch {
-                npc = null;
-            }
-            if (!npc) {
-                hard('kill ' + s.fight, false, 'it is not spawned anywhere near ' + p.x + ',' + p.z);
-                continue;
-            }
-            H.maxOut(p);
-            H.attackNpc(p, npc);
+            // KILL IT UNTIL IT DROPS THE THING, when the thing is what the step is for. Melzar the
+            // Mad and the zombies in his basement are the maze's keys, and both were reported dead
+            // with no key on the floor: isValid() flickers false for a respawn as well as a death,
+            // so a kill that never happened read as one. With `until` the step is judged on the
+            // drop, which is what the wiki means by "kill zombies until one drops it".
+            const want = 'until' in s ? s.until : undefined;
+            const label2 = (x: string) => (x.length > W ? x.slice(0, W - 1) + '~' : x.padEnd(W));
+            const what2 = 'kill ' + s.fight + (want ? ' until it drops ' + want : '') + (s.why ? ' - ' + s.why : '');
+            const got = () => (want ? !!groundObj(p, want, 14) || H.invCount(p, want) > 0 : false);
             let t = 0;
-            for (; t < 900 && npc.isValid(); t++) H.tick(1);
-            // A kill is not finished when the corpse goes away: the death hook runs on the NPC and
-            // then queues a script on the PLAYER - [ai_queue3,mm_demon] does npc_findhero and then
-            // queue(mm_demon_slain, 0, 0) - so the stage moves a tick or two later. Stopping the
-            // moment the npc stopped being valid read as a demon killed for no credit.
-            H.tick(15);
-            hard('kill ' + s.fight, !npc.isValid(), t + ' ticks');
+            let died = false;
+            let rounds = 0;
+            let missing = '';
+            while (rounds < (want ? 8 : 1)) {
+                rounds++;
+                let npc = null;
+                try {
+                    npc = findNpc(s.fight, p);
+                } catch {
+                    npc = null;
+                }
+                if (!npc) {
+                    missing = 'none of them is spawned anywhere near ' + p.x + ',' + p.z;
+                    break;
+                }
+                H.maxOut(p);
+                let d = false;
+                for (let k = 0; k < 900 && !d; k++, t++) {
+                    if (!npc.isValid()) {
+                        d = true;
+                        break;
+                    }
+                    // RE-CLICK WHEN THE PLAYER IS IDLE. One attack click at the start is not a
+                    // fight: a door or gate op leaves the player delayed and the engine throws the
+                    // click away without a word, which is how Elvarg survived 900 ticks of nothing
+                    // happening with a rune scimitar in hand.
+                    if (!p.target && !(p as unknown as { delayed: boolean }).delayed) {
+                        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                        H.attackNpc(p, npc);
+                    }
+                    H.tick(1);
+                }
+                H.tick(15);
+                died = died || d;
+                if (!want || got()) break;
+            }
+            const ok = want ? got() : died;
+            const detail = ok
+                ? t + ' ticks' + (rounds > 1 ? ', ' + rounds + ' of them' : '')
+                : missing || (want ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor' : t + ' ticks and it is still alive');
+            out.push({ n: ++n, what: what2, ok, detail });
+            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (ok ? '  ok  ' + detail : ' FAIL  ' + detail));
+            if (!ok) stopped = what2;
             continue;
         }
 
