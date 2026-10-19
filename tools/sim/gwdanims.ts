@@ -72,9 +72,20 @@ console.log('\nAND THEY PLAY: every npc is fought to the death, and what it play
 {
     // One check per npc rather than a tally - an npc whose attack never fires is named by the
     // check that fails, not buried in a count.
-    let noAttack = 0;
-    let noDefend = 0;
+    const noAttack: string[] = [];
+    const noDefend: string[] = [];
     const humanDeaths: string[] = [];
+    /**
+     * Every npc gets at least this many hitpoints before the fight starts.
+     *
+     * A ONE-IN-THREE FLAKE WITHOUT IT. A maxed player with a halberd kills most of this cast in a
+     * handful of rounds, and an npc that dies in three hits may never have had a turn to swing and
+     * may never have been hit while standing - so "every one of them played a block" was really
+     * "every one of them lived long enough to", and one unlucky rabble npc failed a check that
+     * counts all sixty-three. Buying the fight a few more rounds is not pretending: what plays the
+     * animations is the combat code either way, and the kill below is still a real kill.
+     */
+    const ROUNDS_WORTH = 150;
 
     for (const name of CAST) {
         const t: any = NpcType.get(NpcType.getId(name));
@@ -90,6 +101,7 @@ console.log('\nAND THEY PLAY: every npc is fought to the death, and what it play
         H.equip(p, { rhand: 'rune_halberd' });
         H.tick(2);
         const npc = H.addNpcAt(name, 3202, 3200, 0);
+        if (npc.levels[NpcStat.HITPOINTS] < ROUNDS_WORTH) npc.levels[NpcStat.HITPOINTS] = ROUNDS_WORTH;
         H.npcAnims.length = 0;
         // TWO PHASES, because the four generals and a maxed player with a halberd are an even
         // match for well over nine hundred ticks - Graardor was still on 61 hitpoints at the end
@@ -102,8 +114,9 @@ console.log('\nAND THEY PLAY: every npc is fought to the death, and what it play
         }
         H.tick(6);
         const seen = new Set(H.npcAnims.filter(a => a.who === name).map(a => a.seq));
-        if (want.attack === undefined || !seen.has(want.attack)) noAttack++;
-        if (want.defend === undefined || !seen.has(want.defend)) noDefend++;
+        // Named rather than counted: a tally says "one of sixty-three" and leaves you to find it.
+        if (want.attack === undefined || !seen.has(want.attack)) noAttack.push(name);
+        if (want.defend === undefined || !seen.has(want.defend)) noDefend.push(name);
         if (want.death === undefined) {
             // the param's default is human_death, so this is what a player sees
             if (seen.has(HUMAN_DEATH)) humanDeaths.push(name);
@@ -113,8 +126,8 @@ console.log('\nAND THEY PLAY: every npc is fought to the death, and what it play
         H.despawn(p);
     }
 
-    check('  every one of them swung at the player', noAttack, 0);
-    check('  and every one of them played a block', noDefend, 0);
+    check('  every one of them swung at the player', noAttack, []);
+    check('  and every one of them played a block', noDefend, []);
 
     // ...and the three that cannot. This is asserted rather than skipped, so the day a death
     // sequence is added for their rig this check goes red and says the list has changed.
