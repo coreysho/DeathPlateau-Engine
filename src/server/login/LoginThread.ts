@@ -19,6 +19,14 @@ parentPort.on('message', async msg => {
         await handleRequests(parentPort, msg);
     } catch (err) {
         console.error(err);
+
+        // custom (2026-10-19) - a login that throws (a database error, a race on a new account) used to get
+        // no reply at all, and the world held its socket waiting forever. Answer it: -1 is "login server
+        // offline", which the client shows as "try again".
+        if (msg?.type === 'player_login' && parentPort) {
+            const { socket, username, lowMemory, reconnecting } = msg;
+            parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: -1, save: null, account_id: -1, members: false });
+        }
     }
 });
 
@@ -95,15 +103,22 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 }
 
                 if (!account) {
-                    await db
-                        .insertInto('account')
-                        .values({
-                            username,
-                            password: bcrypt.hashSync(password.toLowerCase(), 10),
-                            registration_ip: remoteAddress,
-                            registration_date: toDbDate(new Date())
-                        })
-                        .executeTakeFirst();
+                    try {
+                        await db
+                            .insertInto('account')
+                            .values({
+                                username,
+                                password: bcrypt.hashSync(password.toLowerCase(), 10),
+                                registration_ip: remoteAddress,
+                                registration_date: toDbDate(new Date())
+                            })
+                            .executeTakeFirst();
+                    } catch (err) {
+                        // custom (2026-10-19) - two first logins for one new name at once: both found no account,
+                        // and the second insert breaks the unique username. That is not an error - the account
+                        // now exists - so read it back, and the password check below decides as for any login.
+                        console.error(`[Login]: registering ${username}: ${err instanceof Error ? err.message : err}`);
+                    }
                     account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
                 }
 

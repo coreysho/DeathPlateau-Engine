@@ -1,5 +1,6 @@
 // stdlib
 import fs from 'fs';
+import { randomInt } from 'crypto';
 import { isMainThread, Worker } from 'worker_threads';
 
 // deps
@@ -114,6 +115,10 @@ if (!fs.existsSync(Environment.LOGIN_RSA_KEY_PATH)) {
     throw new Error(`No login RSA key at ${Environment.LOGIN_RSA_KEY_PATH}. Run \`npm run rsa\` to make one, then put the modulus it prints into the client (Client.java LOGIN_RSAN / LOGIN_RSAE).`);
 }
 const priv = forge.pki.privateKeyFromPem(fs.readFileSync(Environment.LOGIN_RSA_KEY_PATH, 'ascii'));
+
+// The login thread's replies that are a refusal (World.onLoginMessage turns each into the client's
+// message); anything else let the player in.
+const LOGIN_FAILURE_REPLIES = new Set([-1, 1, 3, 5, 6, 7, 8, 9, 10, 11]);
 
 type LogoutRequest = {
     save: Uint8Array;
@@ -256,12 +261,13 @@ class World {
     }
 
     // A one-time code for /link. Unambiguous characters only - no 0/O, 1/I/L - because it is read off
-    // the game screen and typed into Discord.
+    // the game screen and typed into Discord. (2026-10-19) 8 characters from crypto.randomInt: it was 6
+    // from Math.random, the same generator the game's own randomness comes from.
     discordCode(player: Player): string {
         const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
         let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += alphabet[Math.floor(Math.random() * alphabet.length)];
+        for (let i = 0; i < 8; i++) {
+            code += alphabet[randomInt(alphabet.length)];
         }
         this.discordThread?.postMessage({ type: 'code', username: player.username, code });
         return code;
@@ -626,10 +632,22 @@ class World {
                 console.error(err.stack);
             }
 
+            // custom (2026-10-19) - save first, straight to disk. This used to call removePlayer, which
+            // only QUEUES a save for the login thread - and the process exits before that queue is ever
+            // posted, so every player went back to their last autosave (up to 15 minutes) and any crash
+            // was a dupe: hand an item over, the receiver logs out and is saved, crash the world, and the
+            // giver has it back. removePlayer also touches the map and zones, which a crash may be in the
+            // middle of breaking, so it runs after, and each player on their own.
+            this.writeSavesForCrash();
+
             printError('Removing all players...');
 
             for (const player of this.playerLoop.all()) {
-                this.removePlayer(player);
+                try {
+                    this.removePlayer(player);
+                } catch (removeErr) {
+                    console.error(removeErr);
+                }
             }
 
             // TODO inform Friends server that the world has gone offline
@@ -915,6 +933,25 @@ class World {
                 // connection lost for 30s: request idle logout
                 player.requestIdleLogout = true;
                 player.logoutReason = 'connection lost for 30s';
+            } else if (Environment.NODE_PRODUCTION && Environment.NODE_IDLE_LOGOUT_TICKS > 0 && !player.isBot && player.staffModLevel < 3) {
+                // custom (2026-10-19) - idle logout, decided here. The only one there was is the client's
+                // IDLE_TIMER, which a modified client never sends (and which NODE_DEBUG, on by default,
+                // ignores) - so anyone could stand AFK for ever. After NODE_IDLE_LOGOUT_TICKS with no real
+                // input it is the ordinary idle logout, which waits for combat to end; after three times that
+                // it does not wait, so standing in a spot where monsters never stop attacking is not a way
+                // to stay on. Administrators and up are left alone.
+                if (player.lastUserInput === -1) {
+                    player.lastUserInput = this.currentTick;
+                }
+                const idle = this.currentTick - player.lastUserInput;
+                if (idle >= Environment.NODE_IDLE_LOGOUT_TICKS * 3) {
+                    player.loggingOut = true;
+                    force = true;
+                    player.logoutReason = 'idle, in combat';
+                } else if (idle >= Environment.NODE_IDLE_LOGOUT_TICKS) {
+                    player.requestIdleLogout = true;
+                    player.logoutReason = 'idle';
+                }
             }
 
             if (player.requestLogout || player.requestIdleLogout) {
@@ -2106,6 +2143,13 @@ class World {
         }
     }
 
+    // custom (2026-10-19) - a socket that closes with its login still with the login thread. The request
+    // used to stay in loginRequests for good (only a reply removed it), holding the socket's ~95 KB of
+    // buffers - and a login that failed inside the thread never got a reply, so it could be repeated.
+    onClientClosed(client: ClientSocket) {
+        this.loginRequests.delete(client.uuid);
+    }
+
     rebuild() {
         if (this.devThread) {
             this.devThread.postMessage({
@@ -2118,6 +2162,12 @@ class World {
         if (isPlayerLoginResponse(msg)) {
             const { socket } = msg;
             if (!this.loginRequests.has(socket)) {
+                // custom (2026-10-19) - the socket closed while the login thread was working (onClientClosed).
+                // A login server has marked the account logged in to this world by now; nobody is going to
+                // play it, so hand it back, or it reads "already logged in" until the world restarts.
+                if (Environment.LOGIN_SERVER && !LOGIN_FAILURE_REPLIES.has(msg.reply)) {
+                    this.loginThread.postMessage({ type: 'player_force_logout', username: msg.username });
+                }
                 return;
             }
 
@@ -2716,6 +2766,44 @@ class World {
             timestamp: Date.now(),
             buf: Buffer.from(buf).toString('base64')
         });
+    }
+
+    // The crash path above. Every player still in the world, and every logout whose save the login
+    // thread has not confirmed, written synchronously before the process exits. data/players/<profile>/
+    // is where both the login thread (LOGIN_SERVER=false) and a login server on this machine keep them.
+    private writeSavesForCrash(): void {
+        const dir = `data/players/${Environment.NODE_PROFILE}`;
+        const saves = new Map<string, Uint8Array>();
+
+        for (const [username, request] of this.logoutRequests) {
+            saves.set(username, request.save);
+        }
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot) {
+                continue;
+            }
+            try {
+                saves.set(player.username, player.save());
+            } catch (err) {
+                printError(`Could not build a save for ${player.username}: ${err instanceof Error ? err.message : err}`);
+            }
+        }
+
+        let written = 0;
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+        } catch {
+            // exists, or the writes below say why
+        }
+        for (const [username, save] of saves) {
+            try {
+                fs.writeFileSync(`${dir}/${username}.sav`, save);
+                written++;
+            } catch (err) {
+                printError(`Could not write the save for ${username}: ${err instanceof Error ? err.message : err}`);
+            }
+        }
+        printError(`Saved ${written} of ${saves.size} players before closing.`);
     }
 
     flushPlayer(player: Player) {

@@ -79,6 +79,7 @@ export default class TcpServer {
             ConnectionLimiter.release(address);
             client.state = -1;
             OnDemand.onClientClosed(client);
+            World.onClientClosed(client);
 
             if (client.player) {
                 client.player.addSessionLog(LoggerEventType.ENGINE, 'TCP socket closed');

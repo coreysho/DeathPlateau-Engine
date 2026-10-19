@@ -241,12 +241,33 @@ async function button(i: ButtonInteraction) {
     }
 }
 
+// custom (2026-10-19) - wrong /link codes per Discord user: 5 in 10 minutes, then wait. A code is good
+// for 10 minutes, so guessing one is down to luck rather than speed.
+const LINK_TRIES = 5;
+const LINK_WINDOW_MS = 10 * 60 * 1000;
+const linkFailures: Map<string, number[]> = new Map();
+
+function linkLocked(discordId: string): boolean {
+    const recent = (linkFailures.get(discordId) ?? []).filter(t => t > Date.now() - LINK_WINDOW_MS);
+    if (recent.length > 0) {
+        linkFailures.set(discordId, recent);
+    } else {
+        linkFailures.delete(discordId);
+    }
+    return recent.length >= LINK_TRIES;
+}
+
 async function command(i: ChatInputCommandInteraction) {
     if (i.commandName === 'link') {
+        if (linkLocked(i.user.id)) {
+            await say(i, 'Too many wrong codes. Wait 10 minutes, then type ::discord in game for a new one.');
+            return;
+        }
         const code = i.options.getString('code', true).trim().toUpperCase();
         db.prepare('DELETE FROM code WHERE expires < ?').run(Date.now());
         const row = db.prepare('SELECT username FROM code WHERE code = ?').get(code) as { username: string } | undefined;
         if (!row) {
+            linkFailures.set(i.user.id, [...(linkFailures.get(i.user.id) ?? []), Date.now()]);
             await say(i, "That code isn't valid - it may have expired. Type ::discord in game for a new one.");
             return;
         }

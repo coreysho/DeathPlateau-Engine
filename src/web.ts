@@ -124,6 +124,7 @@ fastify.route({
             ConnectionLimiter.release(address);
             client.state = -1;
             OnDemand.onClientClosed(client);
+            World.onClientClosed(client);
 
             if (client.player) {
                 client.player.addSessionLog(LoggerEventType.ENGINE, 'WS socket closed');

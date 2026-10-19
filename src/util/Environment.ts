@@ -118,6 +118,10 @@ export default {
     // without it every player shares the proxy's, and one per-IP cap.
     NODE_MAX_SOCKETS: tryParseInt(process.env.NODE_MAX_SOCKETS, 2048),
     NODE_MAX_SOCKETS_PER_IP: tryParseInt(process.env.NODE_MAX_SOCKETS_PER_IP, 16),
+    // custom (2026-10-19) - ticks without real input (an action, chat, a click, a camera move) before a
+    // live world logs a player out; three times this and it does not wait for combat to end. 1000 = 10
+    // minutes. 0 = off. Production only; administrators (3+) are never logged out for it. World.processLogouts
+    NODE_IDLE_LOGOUT_TICKS: tryParseInt(process.env.NODE_IDLE_LOGOUT_TICKS, 1000),
     // custom (2026-09-27) - addresses (and IPv4 CIDRs), comma separated, of a proxy or tunnel in front of
     // the game and web ports that sends PROXY protocol, so players keep their own addresses. Empty = off.
     // Connections from these are read for the header (one with none keeps its own address - Tailscale in
