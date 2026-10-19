@@ -98,11 +98,13 @@ console.log('\nAND THE MOUNTAIN CARRIES NOTHING BUT THE MOUNTAIN');
         ['gwd_boulder', 'Move=[oploc1,gwd_boulder]'],
         ['gwd_crack', 'Crawl-through=[oploc1,gwd_crack]'],
         ['gwd_hole_untied', 'Climb-down=[oploc1,gwd_hole_untied]'],
-        // the surface's own three dead clicks, which are a different and much smaller problem:
-        // two Rocky handholds and the Old fire pit, none of them answered by anything yet
-        ['osrsloc_26400', 'Climb=NOTHING'],
-        ['osrsloc_26402', 'Climb=NOTHING'],
-        ['osrsloc_33317', 'Build=NOTHING']
+        // the surface's own three, which were dead when this check was written and are not any
+        // more: the two Rocky handholds are the 60 Agility climb onto the plateau and the Old fire
+        // pit says why you cannot light it (bosses/godwars/scripts/gwd_surface.rs2, and
+        // tools/sim/gwdsurface.ts is what checks what they do rather than that they exist)
+        ['osrsloc_26400', 'Climb=[oploc1,osrsloc_26400]'],
+        ['osrsloc_26402', 'Climb=[oploc1,osrsloc_26402]'],
+        ['osrsloc_33317', 'Build=[oploc1,osrsloc_33317]']
     ];
     const seen = new Map<string, string>();
     for (let lvl = 0; lvl < 4; lvl++)
