@@ -96,6 +96,9 @@ H.maxOut(p);
 H.clearInv(p);
 H.tick(2);
 p.closeModal();
+// Old School puts the cleanup behind Jungle Potion. The gate is tested below; everything else in
+// here is played as somebody who has finished it.
+const JUNGLE_POTION_DONE = 13;
 
 const heard = (fn: () => void): string => {
     const mark = H.mesgs.length;
@@ -186,13 +189,69 @@ check('gem rock 5, and the three broodoo victims 4, 3 and 2',
     [tally['gem rock'], tally['tbwcu_broodoo_combat_instant'], tally['tbwcu_broodoo_poison_instant'], tally['tbwcu_broodoo_disease_instant']],
     [5, 4, 3, 2]);
 
+// ------------------------------------------------------------------ the way in
+console.log('');
+console.log('THE VILLAGE, WHICH HAS BEEN STANDING EMPTY BECAUSE INDEX 0 DRAWS NOBODY');
+const CAST: [string, string][] = [
+    ['gabooty', 'chat_gabooty'], ['murcaily', 'chat_murc'], ['rionasta', 'chat_rion'],
+    ['sharimika', 'chat_sharimika'], ['layleen', 'chat_layleen'], ['karaday', 'chat_karaday'],
+    ['safta_doc', 'chat_safta'], ['fanellaman', 'chat_fanellaman'], ['jagbakoba', 'chat_jag'],
+    ['mamma_bufetta', 'chat_mamma']
+];
+const spawned = (name: string): Npc | null => {
+    const id = NpcType.getId(name);
+    for (const npc of World.npcs) if (npc && npc.type === id) return npc;
+    return null;
+};
+check('all ten villagers are placed, as multinpcs of three',
+    CAST.every(([who]) => spawned(`tbwcu_${who}_multinpc`) !== null), true);
+check('  and index 0 of every one of those draws nothing at all, which is why the village was empty',
+    CAST.every(([who]) => {
+        const t: any = NpcType.get(NpcType.getId(`tbwcu_${who}_multinpc`));
+        const kids: number[] = t.multiNpc ?? t.multinpc ?? [];
+        return kids[0] === -1 && kids[1] === NpcType.getId(`tbwcu_${who}`) && kids[2] === NpcType.getId(`tbwcu_${who}_nosticks`);
+    }), true);
+
+setFavour(0);
+H.setVarBit(p, 'villagers_visible', 0);
+H.tick(1);
+H.runProc(p, '[proc,tbwcu_login]', [], undefined, true);
+check('logging in puts the village on its feet, every one of them holding nothing yet',
+    [H.getVarBit(p, 'villagers_visible'), CAST.map(([, bit]) => H.getVarBit(p, bit))],
+    [1, [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]]);
+H.setVar(p, 'junglepotion', 0);
+H.tick(1);
+const murcaily = spawned('tbwcu_murcaily_multinpc')!;
+const talkTo = (npc: Npc, picks: number[] = [], side = 0): string =>
+    heard(() => {
+        const sides: [number, number][] = [[0, 1], [1, 0], [-1, 0], [0, -1]];
+        const [dx, dz] = sides[side % sides.length];
+        p.teleport(npc.x + dx, npc.z + dz, npc.level);
+        H.tick(1);
+        p.clearPendingAction();
+        H.opNpc(p, npc, 1);
+        settle(p, picks);
+    });
+let said2 = talkTo(murcaily);
+check('Murcaily turns away anybody who has not finished Jungle Potion', said2.includes('Trufitus'), true);
+H.setVar(p, 'junglepotion', JUNGLE_POTION_DONE);
+H.tick(1);
+said2 = talkTo(murcaily);
+check('and tells anybody who has what the cleanup is',
+    [said2.includes('thatching spars'), said2.includes('trading')], [true, true]);
+
 // ------------------------------------------------------------------ hacking
 console.log('');
 console.log('HACKING THE JUNGLE');
 setFavour(0);
 p.setLevel(8, 60);
+H.setVar(p, 'junglepotion', 0);
 H.tick(1);
 let said = clickLoc(JUNGLE.light.x, JUNGLE.light.z, 'tai_bwo_jungle_vegetation_easy_1', 4);
+check('the jungle will not be touched without Jungle Potion behind it', said.includes('Trufitus'), true);
+H.setVar(p, 'junglepotion', JUNGLE_POTION_DONE);
+H.tick(1);
+said = clickLoc(JUNGLE.light.x, JUNGLE.light.z, 'tai_bwo_jungle_vegetation_easy_1', 4);
 check('with no machete at all it says so', said.includes('need a machete'), true);
 p.setLevel(8, 9);
 H.tick(1);
@@ -287,6 +346,43 @@ check('a light spar is enough about one time in three',
     [advances > 0, spent >= advances * 2], [true, true]);
 check('  and every spar paid its 28.1 experience and 0.1% favour either way',
     [wood() - xp, favour()], [spent * 281, spent]);
+
+// ------------------------------------------------------------------ the payout
+console.log('');
+console.log('TEN VILLAGERS, A HUNDRED STICKS EACH, AND THAT IS THE WHOLE OF FULL FAVOUR');
+H.clearInv(p);
+setFavour(1000);
+H.runProc(p, '[proc,tbwcu_villagers_show]', [1], undefined, true);
+let sticks = 0;
+let claims = 0;
+for (const [who] of CAST) {
+    const before = H.invCount(p, 'village_trade_sticks');
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const npc = spawned(`tbwcu_${who}_multinpc`);
+        if (npc === null) break;
+        talkTo(npc, [], attempt);
+        if (H.invCount(p, 'village_trade_sticks') > before) break;
+        H.tick(2);
+    }
+    if (H.invCount(p, 'village_trade_sticks') > before) claims++;
+    sticks = H.invCount(p, 'village_trade_sticks');
+}
+check('a hundred full favour pays a hundred sticks from each of the ten of them',
+    [claims, sticks, favour()], [10, 1000, 0]);
+check('  and every one of them is a _nosticks villager afterwards',
+    CAST.map(([, bit]) => H.getVarBit(p, bit)), [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
+said = talkTo(spawned('tbwcu_gabooty_multinpc')!);
+check('asking again with nothing earned gets you nothing', [said.includes('nothing for you'), H.invCount(p, 'village_trade_sticks')], [true, 1000]);
+
+// a single tenth of favour is one stick, and it is gone after the first villager
+H.clearInv(p);
+setFavour(1);
+H.runProc(p, '[proc,tbwcu_villagers_show]', [1], undefined, true);
+talkTo(spawned('tbwcu_gabooty_multinpc')!);
+const afterFirst = H.invCount(p, 'village_trade_sticks');
+said = talkTo(spawned('tbwcu_rionasta_multinpc')!);
+check('one tenth of a per cent is one stick, and the other nine have nothing to give',
+    [afterFirst, favour(), H.invCount(p, 'village_trade_sticks')], [1, 0, 1]);
 
 // ------------------------------------------------------------------ the gem rock
 console.log('');
