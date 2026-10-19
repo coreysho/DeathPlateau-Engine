@@ -132,11 +132,18 @@ console.log('\nTHE MAIN CHAMBER IS POPULATED');
     for (const c of clashes.slice(0, 10)) console.log('    ' + c);
     check('  nobody shares a square or stands in a wall', clashes.length, 0);
 
-    // AND THE TILE YOU ARRIVE ON IS CLEAR. ^gwd_entrance_inside is where the hole drops you, and
-    // a follower standing on it would put a player inside an npc on the way in.
+    // AND NOTHING IS SPAWNED ON THE TILE YOU ARRIVE ON. ^gwd_entrance_inside is where the hole
+    // drops you, and a follower whose home square is that one puts a player inside an npc on the
+    // way in, every single time.
+    //
+    // startX/startZ, LIKE THE CHECK ABOVE IT. This read n.x and n.z, which is where the npc
+    // happens to be standing: everything in the main chamber has a wanderrange, so one drifting
+    // within a tile of the arrival square failed this - about one run in three, at random, with
+    // nothing wrong in the content. A wandering npc can always step onto a tile for a moment and
+    // that is the game working; where it is SPAWNED is the part the maps decide.
     const arrival = { x: 2880, z: 5310 };
-    const onTop = inChamber.filter(n => Math.abs(n.x - arrival.x) <= 1 && Math.abs(n.z - arrival.z) <= 1);
-    check('  and the tile the hole drops you on is empty', onTop.length, 0);
+    const onTop = inChamber.filter(n => Math.abs(n.startX - arrival.x) <= 1 && Math.abs(n.startZ - arrival.z) <= 1);
+    check('  and nothing is spawned on the tile the hole drops you on', onTop.length, 0);
 }
 
 // ---------------------------------------------------------------- a swing hurts the enemy
