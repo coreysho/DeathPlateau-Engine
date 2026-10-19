@@ -100,6 +100,12 @@ const TRIOS: [string, string[], string[]][] = [
     ]
 ];
 // the uniques and the one-offs, which 480 kills cannot say anything about either way
+// AWAY FROM THE DUNGEON, AND THAT IS NOT A CONVENIENCE. Spawned in the main chamber these die in
+// the middle of the four gods' own war: a Saradomin knight kills the Bandos sergeant, there is no
+// player hero, and the table correctly drops nothing - which read as a missing 100% row about one
+// kill in fifteen. gwdskirmish.ts asserts that an npc killed by another npc pays nothing, so this
+// is the game working; the drop table has to be tested somewhere nobody else is swinging.
+const ARENA: [number, number] = [3200, 3200];
 const RARE = /godsword_shard|bandos_(chestplate|tassets|boots)|armadyl_(helmet|chestplate|chainskirt)|saradomin_sword|zamorakian_spear|champions_challenge|^kebab$|^beer$|^eye_patch$/;
 
 /** Kill an npc `times` over and tally everything it leaves on the floor. */
@@ -112,7 +118,7 @@ function loot(p: { username: string }, name: string, times: number) {
         // Lumbridge and the rest of the run measures nothing. That is where the five "missing"
         // bones came from - not a missing drop, a missing player.
         H.maxOut(p as never);
-        const npc = H.addNpcAt(name, 2884, 5312, 2);
+        const npc = H.addNpcAt(name, ARENA[0], ARENA[1], 0);
         // A REAL KILL, AND NOTHING SHORTER WORKS. Running the [ai_queue3] directly drops nothing at
         // all: every table in the build opens with npc_findhero, and an npc has no hero until the
         // player has damaged it - setting its target, or landing one hit and then calling the
@@ -128,9 +134,9 @@ function loot(p: { username: string }, name: string, times: number) {
         // kill in twenty and read as a missing bones.
         for (let dx = -14; dx <= 14; dx++)
             for (let dz = -14; dz <= 14; dz++) {
-                const zone = World.gameMap.getZone(2884 + dx, 5312 + dz, 2);
+                const zone = World.gameMap.getZone(ARENA[0] + dx, ARENA[1] + dz, 0);
                 for (const o of [...zone.getAllObjsUnsafe()]) {
-                    if (!o || o.x !== 2884 + dx || o.z !== 5312 + dz) continue;
+                    if (!o || o.x !== ARENA[0] + dx || o.z !== ARENA[1] + dz) continue;
                     const n = ObjType.get(o.type).debugname ?? `obj_${o.type}`;
                     got.set(n, (got.get(n) ?? 0) + o.count);
                     World.removeObj(o, 0);
@@ -146,7 +152,7 @@ function loot(p: { username: string }, name: string, times: number) {
 for (const [god, npcs, allowed] of TRIOS) {
     console.log(`\n${god.toUpperCase()}: ${npcs.join(', ')}`);
     const all = new Map<string, number>();
-    const p: any = player('guard_' + god, 2880, 5310, 2);
+    const p: any = player('guard_' + god, ARENA[0] - 2, ARENA[1], 0);
     H.maxOut(p);
     // a halberd: the three Armadylean bodyguards carry min_attackrange=2 and cannot be hit with a
     // shorter weapon, which is Old School's own rule for them
@@ -193,7 +199,7 @@ console.log('\nAND THE FOUR THAT ARE NOT SHARED BELONG TO THE RIGHT NPC');
 // plenty; Zakl'n Gritch's champion scroll is 1 in 5000 and only its ABSENCE from the other two can
 // be asserted at any affordable sample, so that is what is asserted.
 {
-    const p: any = player('guard_extras', 2880, 5310, 2);
+    const p: any = player('guard_extras', ARENA[0] - 2, ARENA[1], 0);
     H.maxOut(p);
     H.equip(p, { rhand: 'rune_halberd' });
     H.tick(1);
