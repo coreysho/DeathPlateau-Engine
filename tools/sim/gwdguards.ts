@@ -21,6 +21,24 @@ import { NpcStat } from '#/engine/entity/NpcStat.js';
 await H.boot();
 H.loginOrder();
 
+// WHAT IS ALREADY LYING THERE. The arena is an ordinary piece of the world and the world has
+// ground spawns in it - a knife, a pot, a jug, a bowl and a mind rune, which respawn and so turn up
+// in every sweep. They are swept once here, before anything dies, and ignored afterwards; the check
+// below asserts that none of them is on any bodyguard's drop list, so ignoring them cannot hide a
+// real drop.
+function sweepArena() {
+    const seen = new Set<string>();
+    for (let dx = -14; dx <= 14; dx++)
+        for (let dz = -14; dz <= 14; dz++) {
+            const zone = World.gameMap.getZone(ARENA[0] + dx, ARENA[1] + dz, 0);
+            for (const o of [...zone.getAllObjsUnsafe()]) {
+                if (!o || o.x !== ARENA[0] + dx || o.z !== ARENA[1] + dz) continue;
+                seen.add(ObjType.get(o.type).debugname ?? `obj_${o.type}`);
+            }
+        }
+    return seen;
+}
+
 const TRIOS: [string, string[], string[]][] = [
     [
         'Bandos',
@@ -149,6 +167,14 @@ function loot(p: { username: string }, name: string, times: number) {
     return { got, killed };
 }
 
+const AMBIENT = sweepArena();
+console.log(`the arena's own ground spawns, ignored throughout: ${[...AMBIENT].sort().join(', ') || 'none'}`);
+check(
+    "  and none of them is on any bodyguard's drop list",
+    [...AMBIENT].filter(a => TRIOS.some(t => t[2].includes(a))),
+    []
+);
+
 for (const [god, npcs, allowed] of TRIOS) {
     console.log(`\n${god.toUpperCase()}: ${npcs.join(', ')}`);
     const all = new Map<string, number>();
@@ -168,7 +194,7 @@ for (const [god, npcs, allowed] of TRIOS) {
     // A HARD CLUE IS NOT ONE OBJECT. ~trail_hardcluedrop hands out one of the tier's many named
     // scrolls - trail_clue_hard_riddle011, _sextant009 and so on - so the clue is matched by shape
     // rather than listed, which is also how a new scroll being added does not fail this.
-    const unexpected = [...all.keys()].filter(k => !allowed.includes(k) && !k.startsWith('trail_clue_hard_')).sort();
+    const unexpected = [...all.keys()].filter(k => !allowed.includes(k) && !k.startsWith('trail_clue_hard_') && !AMBIENT.has(k)).sort();
     check("  nothing drops that is not on the wiki's list", unexpected, []);
     // 135 kills a trio cannot speak to a 2-in-127 item, let alone a 1-in-16256 one, so what is
     // asserted is what a sample this size really does settle: the table is reached, its common
