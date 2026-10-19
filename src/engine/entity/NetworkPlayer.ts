@@ -142,6 +142,12 @@ export class NetworkPlayer extends Player {
                 const message = decoder.decode(NetworkPlayer.inBuf, this.client.waiting);
                 const success: boolean = ClientGameProtRepository.getHandler(packetType)?.handle(message, this) ?? false;
 
+                // custom (2026-10-19) - someone is there: they did something, or moved the mouse or camera.
+                // NO_TIMEOUT and the rest of the keep-alives do not count. See World.processLogouts.
+                if (message.category === ClientGameProtCategory.USER_EVENT || packetType === ClientGameProt.EVENT_MOUSE_CLICK || packetType === ClientGameProt.EVENT_CAMERA_POSITION) {
+                    this.lastUserInput = World.currentTick;
+                }
+
                 // todo: move out of model
                 if (success && message.category === ClientGameProtCategory.USER_EVENT) {
                     this.userLimit++;
