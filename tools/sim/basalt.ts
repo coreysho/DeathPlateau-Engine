@@ -37,7 +37,13 @@ const CHAIN2: [string, number, number][] = [
     ['horror_jumping_spot10', 2514, 3619]
 ];
 const SHORE: [number, number] = [2523, 3594];
-const SAFE = new Set(['horror_jumping_spot3', 'horror_jumping_spot7', 'horror_jumping_spot8']);
+// Five of the ten cannot be failed: the centremost rock of each chain, plus BOTH ENDS, which are
+// not rocks at all - the south beach and the north shore, where the examine is "Safety!".
+const SAFE = new Set(['horror_jumping_spot1', 'horror_jumping_spot3', 'horror_jumping_spot7', 'horror_jumping_spot8', 'horror_jumping_spot10']);
+const SHORES: [string, number, number, string, string][] = [
+    ['horror_jumping_spot1', 2522, 3595, 'Beach', 'Safety!'],
+    ['horror_jumping_spot10', 2514, 3619, 'Rocky shore', 'It looks barren']
+];
 
 console.log('ALL TEN ROCKS ARE WHERE THE MAP PUTS THEM, ON LEVEL 0');
 // level 0 and not plane 1: the script's own comment said the causeway was on plane 1 and that
@@ -62,20 +68,32 @@ console.log('\nTHE CAUSEWAY CANNOT SIMPLY BE WALKED');
 
 console.log('\nA JUMP THAT SUCCEEDS LANDS ON THE ROCK');
 {
-    // agility 99 and only the unfailable rocks, so this measures the success path alone
-    const p: any = player('basaltok', SHORE[0], SHORE[1], 0);
-    H.maxOut(p);
-    p.setLevel(PlayerStat.AGILITY, 99);
-    H.tick(2);
-    for (const [name, x, z] of CHAIN1) {
-        for (let tries = 0; tries < 30 && !(p.x === x && p.z === z); tries++) {
+    // RESTART THE WHOLE CHAIN ON A SLIP, do not retry the rock. A slip sweeps the player back to
+    // the beach, and from there the next rock up the chain is further than the four-tile guard
+    // allows - so a loop that retries one rock from wherever it finds the player can never
+    // recover. Even at Agility 99 the roll is 201 of 256, so slips are expected: this takes the
+    // first clean run of the four and asserts that one happened.
+    let reached: string[] = [];
+    for (let attempt = 0; attempt < 25 && reached.length < CHAIN1.length; attempt++) {
+        const p: any = player('basaltok' + attempt, SHORE[0], SHORE[1], 0);
+        H.maxOut(p);
+        p.setLevel(PlayerStat.AGILITY, 99);
+        H.tick(2);
+        const got: string[] = [];
+        for (const [name, x, z] of CHAIN1) {
             H.opLoc(p, x, z, name, 1);
             for (let t = 0; t < 20; t++) H.tick(1);
-            if (p.x === SHORE[0] && p.z === SHORE[1]) continue; // slipped, swept back - try again
+            if (p.x !== x || p.z !== z) break; // slipped; this run is over
+            got.push(name);
         }
-        check(`  ${name.replace('horror_jumping_spot', 'rock ')} can be reached`, [p.x, p.z], [x, z]);
+        if (got.length > reached.length) reached = got;
+        H.despawn(p);
     }
-    H.despawn(p);
+    check(
+        '  the whole first chain can be crossed in one run',
+        reached.map(n => n.replace('horror_jumping_spot', 'rock ')),
+        CHAIN1.map(c => c[0].replace('horror_jumping_spot', 'rock '))
+    );
 }
 
 console.log('\nAND A JUMP THAT FAILS DOES NOT');
@@ -94,15 +112,17 @@ console.log('\nAND A JUMP THAT FAILS DOES NOT');
         H.tick(2);
         const hp0 = p.levels[PlayerStat.HITPOINTS];
         const m = A.mark();
-        H.opLoc(p, 2522, 3595, 'horror_jumping_spot1', 1);
+        // rock 2 and not rock 1: rock 1 is the beach, which is a safe landing and never slips.
+        // From the beach tile it is four tiles away, which is exactly what the guard allows.
+        H.opLoc(p, 2522, 3597, 'horror_jumping_spot2', 1);
         for (let t = 0; t < 25; t++) H.tick(1);
         const said = A.mesSince(p, m);
         if (said.some(s => /slip on the wet rock/.test(s))) {
             slipped++;
-            if (p.x === 2522 && p.z === 3595) onRockAfterSlip++;
+            if (p.x === 2522 && p.z === 3597) onRockAfterSlip++;
             if (p.levels[PlayerStat.HITPOINTS] >= hp0) unhurt++;
             if (!said.some(s => /sweeps you back to the shore/.test(s))) onRockAfterSlip++;
-        } else if (p.x === 2522 && p.z === 3595) {
+        } else if (p.x === 2522 && p.z === 3597) {
             landed++;
         }
         H.despawn(p);
@@ -133,6 +153,46 @@ console.log('\nTHE UNFAILABLE ROCKS REALLY ARE UNFAILABLE');
         }
         check(`  ${n.replace('horror_jumping_spot', 'rock ')} never slips, twelve tries at Agility 1`, slips, 0);
     }
+}
+
+console.log('\nAND THE TWO ENDS ARE NOT ROCKS, WHICH IS WHAT THE CLICK BOX COMPLAINT WAS');
+{
+    // Both ends sit on ground a player WALKS on - the sand you arrive at and the island itself -
+    // and both carried "Jump-across Basalt rock", so a rock's option was on top of a tile you
+    // wanted to walk onto. Old School has them as a Beach and a Rocky shore, Jump-to, with their
+    // own examines. They are the landing you jump TO off the last rock.
+    for (const [name, x, z, label, examine] of SHORES) {
+        const t = LocType.get(LocType.getId(name));
+        check(`  ${x},${z} is "${label}", not a basalt rock`, [t.name, t.desc, t.op?.[0]], [label, examine, 'Jump-to']);
+        // ...and it is ground: reachable on foot, unlike every rock between them.
+        const nb = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ].filter(([dx, dz]) => A.walkable(0, x + dx, z + dz)).length;
+        check('    with walkable ground around it', nb >= 2, true);
+    }
+    // the eight between them are still rocks, and still say so
+    for (const [name] of [...CHAIN1, ...CHAIN2].filter(r => !SHORES.some(s2 => s2[0] === r[0]))) {
+        const t = LocType.get(LocType.getId(name));
+        check(`  ${name.replace('horror_jumping_spot', 'rock ')} is still a Basalt rock`, [t.name, t.op?.[0]], ['Basalt rock', 'Jump-across']);
+    }
+    // ...and landing on one of the ends says you are off the causeway rather than on another rock
+    const p: any = player('basaltshore', 2522, 3593, 0);
+    H.maxOut(p);
+    p.setLevel(PlayerStat.AGILITY, 1);
+    H.tick(2);
+    const m = A.mark();
+    H.opLoc(p, 2522, 3595, 'horror_jumping_spot1', 1);
+    for (let t = 0; t < 20; t++) H.tick(1);
+    check(
+        '  jumping to the beach says solid ground',
+        A.mesSince(p, m).some(s => s.includes('solid ground')),
+        true
+    );
+    check('    and lands there', [p.x, p.z], [2522, 3595]);
+    H.despawn(p);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
