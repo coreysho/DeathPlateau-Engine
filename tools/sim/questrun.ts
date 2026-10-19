@@ -33,6 +33,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc } from './a1lib.js';
 import World from '#/engine/World.js';
+import NpcType from '#/cache/config/NpcType.js';
 
 /** The nearest tile within `radius` holding this ground obj, or null. */
 function groundObj(p: Player, objName: string, radius: number): [number, number] | null {
@@ -70,6 +71,7 @@ export type Step =
     | { worn: string }
     | { hasnt: string }
     | { fight: string }
+    | { nearnpc: string; r?: number; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -276,11 +278,31 @@ export function play(m: Manifest, p: Player): Result[] {
             let got = false;
             let why = 'nothing on the floor nearby';
             if (at) {
-                H.opObj(p, at[0], at[1], s.take, 3);
-                arrive(p, at[0], at[1]);
-                drive(p, []);
-                got = H.invCount(p, s.take) > before;
-                if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived';
+                // A LEFTOVER DELAY OR AN OPEN CHAT WINDOW EATS THE CLICK, and the engine drops it
+                // without a word - the same thing that ate forty hands of Rune-Draw. So clear both
+                // and allow a couple of goes, which is what a player does anyway.
+                for (let a = 0; a < 3 && !got; a++) {
+                    for (let w = 0; w < 10 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                    (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                    H.tick(1);
+                    // STAND ON IT FIRST. A ground obj is picked up from its own tile, and the
+                    // interaction route only goes adjacent, so the walk is done here and exactly -
+                    // the fish food on the manor's first floor was two tiles away and stayed there.
+                    const err = travel(p, at[0], at[1], p.level, 32, 0);
+                    if (err) {
+                        why = err;
+                        continue;
+                    }
+                    if (!H.opObj(p, at[0], at[1], s.take, 3)) {
+                        why = 'the player was delayed and the click was thrown away';
+                        H.tick(5);
+                        continue;
+                    }
+                    arrive(p, at[0], at[1]);
+                    drive(p, []);
+                    got = H.invCount(p, s.take) > before;
+                    if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z;
+                }
             }
             out.push({ n, what: what2, ok: got, detail: got ? '' : why });
             console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (got ? ' ok' : ' FAIL'));
@@ -337,6 +359,37 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
+        if ('nearnpc' in s) {
+            // DID THE CUTSCENE ACTUALLY PRODUCE THE NPC? Ernest the Chicken's whole ending is a
+            // chicken turning into a man in front of you, and it did not happen for years: the
+            // changetype looked for the multinpc's child where the map spawns the parent, so the
+            // quest completed, the rewards arrived, and the chicken simply stopped being drawn.
+            // Nothing a stage or an inventory check can see.
+            const want = NpcType.getId(s.nearnpc);
+            const r = s.r ?? 8;
+            let found = '';
+            // A changetype or a spawn lands on a tick of its own, so give it a few rather than
+            // asking in the same breath as the varp beside it.
+            for (let t = 0; t < 12 && !found; t++) {
+                for (const npc of World.npcs) {
+                    if (!npc || !npc.isActive || npc.type !== want) continue;
+                    if (npc.level !== p.level) continue;
+                    if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > r) continue;
+                    found = npc.x + ',' + npc.z;
+                    break;
+                }
+                if (!found) H.tick(1);
+            }
+            soft(s.nearnpc + ' is here' + (s.why ? ' - ' + s.why : ''), found !== '', found
+                    ? 'at ' + found
+                    : 'nothing of that type within ' + r + ' tiles of ' + p.x + ',' + p.z + ' L' + p.level + '; what is there: ' +
+                      [...World.npcs]
+                          .filter(n => n && n.isActive && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= r)
+                          .map(n => NpcType.get(n!.type).debugname + '@' + n!.x + ',' + n!.z)
+                          .join(' ')
+                          .slice(0, 160));
             continue;
         }
         if ('hasnt' in s) {
