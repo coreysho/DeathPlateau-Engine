@@ -765,6 +765,7 @@ export function play(m: Manifest, p: Player): Result[] {
             // legs earlier. Two ticks to let the zone wake up, and only look as far as `r`.
             H.tick(2);
             const rFight = ('r' in s ? s.r : undefined) ?? 32;
+            const picksFight: (string | number)[] | undefined = 'picks' in s ? (s.picks as (string | number)[]) : undefined;
             // SOME SPAWNS ARE PENNED IN. Four of the goblins south of Falador stand inside a
             // fenced pocket nothing can walk into, so "the nearest goblin" can be one no player
             // will ever hit. One that lands no hit goes on this list and the step moves to the
@@ -833,12 +834,27 @@ export function play(m: Manifest, p: Player): Result[] {
                         missing = 'no hit landed on ' + types.join('/') + ' at ' + npc.x + ',' + npc.z + ' in 150 ticks from ' + p.x + ',' + p.z + ' - it cannot be reached';
                         break;
                     }
+                    // SOME FIGHTS ARE MEANT TO BE INTERRUPTED. Sir Mordred is beaten down, not
+                    // killed: at low hitpoints his mother stops the fight, heals him to full and
+                    // starts talking - and the re-click below closed her dialogue and went back to
+                    // hitting him, so he healed over and over and the quest never moved. With
+                    // `picks` the step answers the conversation instead of swinging through it.
+                    if (picksFight && p.activeScript) {
+                        try {
+                            drive(p, [...picksFight]);
+                        } catch {
+                            // whatever she said, it was not the menu we had picks for
+                        }
+                        break;
+                    }
                     // RE-CLICK WHEN THE PLAYER IS IDLE. One attack click at the start is not a
                     // fight: a door or gate op leaves the player delayed and the engine throws the
                     // click away without a word, which is how Elvarg survived 900 ticks of nothing
                     // happening with a rune scimitar in hand.
                     if (!p.target && !(p as unknown as { delayed: boolean }).delayed) {
-                        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                        if (!picksFight) {
+                            (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                        }
                         H.attackNpc(p, npc);
                     }
                     H.tick(1);
