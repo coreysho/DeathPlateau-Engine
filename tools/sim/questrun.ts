@@ -34,6 +34,7 @@ import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
+import JavaRandom from '#/util/JavaRandom.js';
 import Npc from '#/engine/entity/Npc.js';
 
 /** The nearest tile within `radius` holding this ground obj, or null. */
@@ -78,6 +79,7 @@ export type Step =
     | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
     | { press: string; n?: number; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
+    | { rng: number | null; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -432,6 +434,24 @@ export function play(m: Manifest, p: Player): Result[] {
         if ('wait' in s) {
             H.tick(s.wait);
             console.log('      -- waited ' + s.wait + ' ticks' + (s.why ? '   (' + s.why + ')' : ''));
+            continue;
+        }
+        // A RANDOMISED STEP CANNOT BE ASSERTED. Curpile Fyod asks three of six questions at
+        // random, so a manifest that names the three answers is right one time in six - and a check
+        // that fails five times in six is not a check, it is noise. This pins the engine's own RNG
+        // to a fixed return for as long as the randomised step lasts, and `rng: null` puts the real
+        // one back, because pinning it through a FIGHT would make every hit roll zero.
+        if ('rng' in s) {
+            const rng: any = JavaRandom;
+            if (s.rng === null) {
+                if (rng.__realNextDouble) rng.nextDouble = rng.__realNextDouble;
+                console.log('      -- rng back to normal' + (s.why ? '   (' + s.why + ')' : ''));
+            } else {
+                if (!rng.__realNextDouble) rng.__realNextDouble = rng.nextDouble.bind(rng);
+                const v = s.rng;
+                rng.nextDouble = () => v;
+                console.log('      -- rng pinned to ' + v + (s.why ? '   (' + s.why + ')' : ''));
+            }
             continue;
         }
         if ('varis' in s) {
