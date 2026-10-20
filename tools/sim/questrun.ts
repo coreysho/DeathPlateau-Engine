@@ -74,7 +74,7 @@ export type Step =
     | { nearnpc: string; r?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
-    | { press: string; why?: string }
+    | { press: string; n?: number; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
     | { note: string };
 
@@ -626,17 +626,27 @@ export function play(m: Manifest, p: Player): Result[] {
             // A BUTTON ON AN INTERFACE, which drive() cannot reach: it only knows the multi1..5
             // option lists, and a make-x panel (skillmulti1..5) is a different interface with its
             // own buttons. Spinning wool opens one of those, so there is no way to spin without it.
-            let pressed = false;
-            try {
-                H.choose(p, s.press);
-                pressed = true;
-            } catch (e) {
-                soft('press ' + s.press + (s.why ? ' - ' + s.why : ''), false, String(e).replace('Error: ', ''));
-            }
-            if (pressed) {
+            //
+            // Two kinds of button end up here. A dialogue's resume button is answered by choose(),
+            // which the engine is waiting for; a plain [if_button,...] on an open interface is not
+            // waited for at all and has to be sent. Tribal Totem's combination lock is the second
+            // kind, and `n` is for it: the four dials only step one letter at a time, so the
+            // combination is sixty-six presses and nobody wants sixty-six lines of report.
+            const times = ('n' in s ? s.n : undefined) ?? 1;
+            const whatPress = 'press ' + s.press + (times > 1 ? ' x' + times : '') + (s.why ? ' - ' + s.why : '');
+            let pressed = 0;
+            let errPress = '';
+            for (let i = 0; i < times; i++) {
+                try {
+                    if (!H.choose(p, s.press)) H.ifButton(p, s.press);
+                    pressed++;
+                } catch (e) {
+                    errPress = String(e).replace('Error: ', '');
+                    break;
+                }
                 for (let t = 0; t < 20 && p.activeScript; t++) H.tick(1);
-                soft('press ' + s.press + (s.why ? ' - ' + s.why : ''), true);
             }
+            soft(whatPress, pressed === times, errPress || (pressed === times ? '' : pressed + ' of ' + times + ' went through'));
             continue;
         }
         if ('nearnpc' in s) {
