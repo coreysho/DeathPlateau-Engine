@@ -34,6 +34,7 @@ import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
+import Npc from '#/engine/entity/Npc.js';
 
 /** The nearest tile within `radius` holding this ground obj, or null. */
 function groundObj(p: Player, objName: string, radius: number): [number, number] | null {
@@ -70,7 +71,7 @@ export type Step =
     | { has: string; n?: number }
     | { worn: string }
     | { hasnt: string }
-    | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; why?: string }
+    | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; r?: number; why?: string }
     | { nearnpc: string; r?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
@@ -715,16 +716,52 @@ export function play(m: Manifest, p: Player): Result[] {
             let rounds = 0;
             let missing = '';
             const maxRounds = ('tries' in s ? s.tries : undefined) ?? (want || wantVar ? 8 : 1);
+            // A STATIC NPC IS NOT ACTIVE UNTIL SOMETHING IS NEAR IT, so a fight that starts in the
+            // same breath as a jump finds whatever happens to be awake instead - the unicorn leg of
+            // Rag and Bone Man picked one 140 tiles away, in a field the player had walked past two
+            // legs earlier. Two ticks to let the zone wake up, and only look as far as `r`.
+            H.tick(2);
+            const rFight = ('r' in s ? s.r : undefined) ?? 32;
+            // SOME SPAWNS ARE PENNED IN. Four of the goblins south of Falador stand inside a
+            // fenced pocket nothing can walk into, so "the nearest goblin" can be one no player
+            // will ever hit. One that lands no hit goes on this list and the step moves to the
+            // next one along rather than failing the whole leg.
+            const unreachable = new Set<number>();
+            const nearestOf = (names: string[]) => {
+                let best: Npc | null = null;
+                let bestD = Infinity;
+                const ids = names.map(nm => NpcType.getId(nm));
+                for (const npc of World.npcs) {
+                    if (!npc || !npc.isActive || npc.level !== p.level || !ids.includes(npc.type)) continue;
+                    if (unreachable.has(npc.nid)) continue;
+                    const d = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
+                    if (d <= rFight && d < bestD) {
+                        bestD = d;
+                        best = npc;
+                    }
+                }
+                return best;
+            };
             while (rounds < maxRounds) {
                 rounds++;
-                let npc = null;
-                for (const name of types) {
-                    try {
-                        npc = findNpc(name, p);
-                    } catch {
-                        npc = null;
+                // AND WAIT FOR THE RESPAWN. Two unicorns in that field and a one-in-four bone
+                // means the third round usually arrives before either of them is back, and
+                // grabbing "the nearest one anywhere" instead sent the player off to the Lumbridge
+                // swamp to punch at something 140 tiles away for 150 ticks.
+                let npc: Npc | null = nearestOf(types);
+                for (let w = 0; w < 10 && !npc; w++) {
+                    H.tick(20);
+                    npc = nearestOf(types);
+                }
+                if (!npc) {
+                    for (const name of types) {
+                        try {
+                            npc = findNpc(name, p);
+                        } catch {
+                            npc = null;
+                        }
+                        if (npc) break;
                     }
-                    if (npc) break;
                 }
                 if (!npc) {
                     missing = 'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z;
@@ -735,10 +772,22 @@ export function play(m: Manifest, p: Player): Result[] {
                 // CHANGES TYPE - npc_changetype(delrith_weakened) - so he stays a valid npc and the
                 // loop would have run its 900 ticks on a demon that had already been beaten.
                 const type0 = npc.type;
+                // CAN THE PLAYER EVEN GET TO IT? A fight that lands no hit in 150 ticks is not a
+                // long fight, it is a wall: the first Rag and Bone Man run picked a goblin in a
+                // sealed part of the Goblin Cave and spent 27,000 ticks - thirty rounds of 900 -
+                // clicking at something it could never reach, and reported only that no bone had
+                // dropped. Bail out and name the tile instead.
+                const hp0 = npc.levels[3];
                 let d = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
                     if (!npc.isValid() || npc.type !== type0) {
                         d = true;
+                        break;
+                    }
+                    const adjacent = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= 1;
+                    if (k > 150 && npc.levels[3] >= hp0 && !adjacent) {
+                        unreachable.add(npc.nid);
+                        missing = 'no hit landed on ' + types.join('/') + ' at ' + npc.x + ',' + npc.z + ' in 150 ticks from ' + p.x + ',' + p.z + ' - it cannot be reached';
                         break;
                     }
                     // RE-CLICK WHEN THE PLAYER IS IDLE. One attack click at the start is not a
@@ -753,6 +802,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
                 H.tick(15);
                 died = died || d;
+                if (missing) {
+                    // one penned npc is not the end of the leg; try the next one along, and only
+                    // report this if there is nothing else to try
+                    if (rounds < maxRounds && nearestOf(types)) {
+                        missing = '';
+                        continue;
+                    }
+                    break;
+                }
                 if (!(want || wantVar) || got()) break;
             }
             const ok = want || wantVar ? got() : died;
