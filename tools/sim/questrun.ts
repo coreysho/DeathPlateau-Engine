@@ -1193,6 +1193,17 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             lines = lines.concat(run([]));
+            // `want` WAS NEVER CHECKED HERE. Every useLoc step in every manifest reported ok on
+            // arrival alone, which is the silent false pass this runner's own comments are about:
+            // Rat Catchers' King rat passed its want three runs in a row while the handler was not
+            // running at all. The loc step has always done this; useLoc never did.
+            if ('want' in s && s.want) {
+                const saidUse = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' | ');
+                if (!saidUse.includes(s.want)) {
+                    soft(what, false, 'nothing said "' + s.want + '"' + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
+                    continue;
+                }
+            }
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
