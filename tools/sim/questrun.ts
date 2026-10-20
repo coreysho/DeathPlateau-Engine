@@ -372,10 +372,25 @@ export function play(m: Manifest, p: Player): Result[] {
                     // STAND ON IT FIRST. A ground obj is picked up from its own tile, and the
                     // interaction route only goes adjacent, so the walk is done here and exactly -
                     // the fish food on the manor's first floor was two tiles away and stayed there.
-                    const err = travel(p, at[0], at[1], p.level, 48, 0);
+                    let err = travel(p, at[0], at[1], p.level, 48, 0);
                     if (err) {
-                        why = err;
-                        continue;
+                        // UNLESS THE TILE IS UNDER THE FURNITURE. Monk's Friend leaves the child's
+                        // blanket on the thieves' table, which is a blocking loc, so there is no
+                        // route onto its tile at all - and the engine does not need one: reachedObj
+                        // accepts a click from a tile beside the obj. So fall back to a neighbour
+                        // and let the engine's own rule decide, rather than this runner's.
+                        let beside = false;
+                        for (const [dx, dz] of D4) {
+                            if (!travel(p, at[0] + dx, at[1] + dz, p.level, 48, 0)) {
+                                beside = true;
+                                break;
+                            }
+                        }
+                        if (!beside) {
+                            why = err;
+                            continue;
+                        }
+                        err = '';
                     }
                     if (!H.opObj(p, at[0], at[1], s.take, 3, false)) {
                         why = 'the player was delayed and the click was thrown away';
