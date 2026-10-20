@@ -58,7 +58,7 @@ export type Step =
     | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
-    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
+    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
     | { setvar: string; to: number; why?: string }
