@@ -70,8 +70,9 @@ export type Step =
     | { has: string; n?: number }
     | { worn: string }
     | { hasnt: string }
-    | { fight: string; until?: string; why?: string }
+    | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { nearnpc: string; r?: number; why?: string }
+    | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { press: string; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
     | { note: string };
@@ -316,6 +317,11 @@ export function play(m: Manifest, p: Player): Result[] {
             // sims teleport, so a jump in a manifest is only ever allowed for a stretch of WORLD
             // travel that is not the quest - and it prints a line of its own so nobody can mistake
             // a jumped leg for a walked one. Every use needs a reason in .
+            // CLEAR THE ROUTE FIRST. A jump with waypoints still queued is undone by the engine on
+            // the next tick - it carries on walking the old path from the new tile - which is how a
+            // jump to 3017,5201 ended up at 3030,5203.
+            p.clearPendingAction();
+            p.queueWaypoints([]);
             p.teleport(s.setpos[0], s.setpos[1], s.setpos[2]);
             H.tick(2);
             console.log('      -- JUMPED to ' + s.setpos[0] + ',' + s.setpos[1] + ' L' + s.setpos[2] + ': ' + s.why);
@@ -361,6 +367,68 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
+        if ('hunt' in s) {
+            // CLICK THESE UNTIL SOMETHING COMES OUT. A Soul's Bane's Fear room is six holes with
+            // one reaper hiding in a different one every time, and a loc step cannot tell the
+            // difference between "nothing in there" and a click the engine threw away - so the only
+            // honest test is to keep looking until the thing is out.
+            const want = NpcType.getId(s.untilnpc);
+            const near = () =>
+                [...World.npcs].some(
+                    n => n && n.isActive && n.type === want && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= 40
+                );
+            const triesHunt = ('tries' in s ? s.tries : undefined) ?? 3;
+            // With untilvar the step is the whole room, not one look: keep opening holes AND
+            // killing whatever comes out until the counter says it is done. Splitting the two in
+            // the manifest did not work - the reaper is aggressive, so the player kills it during
+            // the looking, and the next step then finds nothing and calls it a failure.
+            const huntVar = 'untilvar' in s ? s.untilvar : undefined;
+            const huntTo = 'to' in s ? s.to : undefined;
+            const done = () => (huntVar ? stageOf(p, huntVar) === huntTo : near());
+            const kill = () => {
+                let npc = null;
+                try {
+                    npc = findNpc(s.untilnpc, p);
+                } catch {
+                    npc = null;
+                }
+                if (!npc) return;
+                H.maxOut(p);
+                for (let k = 0; k < 300 && npc.isValid(); k++) {
+                    if (!p.target && !(p as unknown as { delayed: boolean }).delayed) {
+                        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                        H.attackNpc(p, npc);
+                    }
+                    H.tick(1);
+                }
+                H.tick(6);
+            };
+            let found = done();
+            for (let a = 0; a < triesHunt && !found; a++) {
+                for (const [name, x, z] of s.hunt) {
+                    if (found) break;
+                    const err = travel(p, x, z, p.level, 48, 2);
+                    if (err) continue;
+                    for (let w = 0; w < 10 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                    try {
+                        if (!H.opLoc(p, x, z, name, 1)) continue;
+                    } catch {
+                        continue;
+                    }
+                    arrive(p, x, z);
+                    drive(p, []);
+                    H.tick(2);
+                    if (huntVar) kill();
+                    found = done();
+                }
+            }
+            soft(
+                'look in ' + s.hunt.length + ' places for ' + s.untilnpc + (huntVar ? ' until ' + huntVar + ' is ' + huntTo : '') + (s.why ? ' - ' + s.why : ''),
+                found,
+                found ? 'done' : huntVar ? huntVar + ' got to ' + stageOf(p, huntVar) : 'nothing came out of any of them'
+            );
             continue;
         }
         if ('say' in s) {
@@ -441,23 +509,42 @@ export function play(m: Manifest, p: Player): Result[] {
             // so a kill that never happened read as one. With `until` the step is judged on the
             // drop, which is what the wiki means by "kill zombies until one drops it".
             const want = 'until' in s ? s.until : undefined;
+            // `untilvar` is the other way a fight ends: not a drop but a counter. A Soul's Bane's
+            // Anger room is "keep hitting them with the right weapon until the rage bar fills",
+            // and the bar is a varbit.
+            const wantVar = 'untilvar' in s ? s.untilvar : undefined;
+            const wantTo = 'to' in s ? s.to : undefined;
             const label2 = (x: string) => (x.length > W ? x.slice(0, W - 1) + '~' : x.padEnd(W));
-            const what2 = 'kill ' + s.fight + (want ? ' until it drops ' + want : '') + (s.why ? ' - ' + s.why : '');
-            const got = () => (want ? !!groundObj(p, want, 14) || H.invCount(p, want) > 0 : false);
+            // A LIST OF TYPES, for a thing that comes back as something else. A Soul's Bane's
+            // hopeless creatures have three forms and killing one spawns the next, so "kill the
+            // big ones, then the middle ones, then the small ones" is not a sequence - it is
+            // whichever of the three happens to be standing in front of you.
+            const types = Array.isArray(s.fight) ? s.fight : [s.fight];
+            const what2 =
+                'kill ' + types.join('/') +
+                (want ? ' until it drops ' + want : '') +
+                (wantVar ? ' until ' + wantVar + ' is ' + wantTo : '') +
+                (s.why ? ' - ' + s.why : '');
+            const got = () =>
+                wantVar ? stageOf(p, wantVar) === wantTo : want ? !!groundObj(p, want, 14) || H.invCount(p, want) > 0 : false;
             let t = 0;
             let died = false;
             let rounds = 0;
             let missing = '';
-            while (rounds < (want ? 8 : 1)) {
+            const maxRounds = ('tries' in s ? s.tries : undefined) ?? (want || wantVar ? 8 : 1);
+            while (rounds < maxRounds) {
                 rounds++;
                 let npc = null;
-                try {
-                    npc = findNpc(s.fight, p);
-                } catch {
-                    npc = null;
+                for (const name of types) {
+                    try {
+                        npc = findNpc(name, p);
+                    } catch {
+                        npc = null;
+                    }
+                    if (npc) break;
                 }
                 if (!npc) {
-                    missing = 'none of them is spawned anywhere near ' + p.x + ',' + p.z;
+                    missing = 'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z;
                     break;
                 }
                 H.maxOut(p);
@@ -483,12 +570,17 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
                 H.tick(15);
                 died = died || d;
-                if (!want || got()) break;
+                if (!(want || wantVar) || got()) break;
             }
-            const ok = want ? got() : died;
+            const ok = want || wantVar ? got() : died;
             const detail = ok
                 ? t + ' ticks' + (rounds > 1 ? ', ' + rounds + ' of them' : '')
-                : missing || (want ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor' : t + ' ticks and it is still alive');
+                : missing ||
+                  (wantVar
+                      ? 'killed ' + rounds + ' in ' + t + ' ticks and ' + wantVar + ' is ' + stageOf(p, wantVar)
+                      : want
+                        ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor'
+                        : t + ' ticks and it is still alive');
             out.push({ n: ++n, what: what2, ok, detail });
             console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (ok ? '  ok  ' + detail : ' FAIL  ' + detail));
             if (!ok) stopped = what2;
