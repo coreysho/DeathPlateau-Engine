@@ -73,6 +73,7 @@ export type Step =
     | { fight: string; until?: string; why?: string }
     | { nearnpc: string; r?: number; why?: string }
     | { press: string; why?: string }
+    | { say: (number | string)[]; want?: string; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -294,7 +295,7 @@ export function play(m: Manifest, p: Player): Result[] {
                         why = err;
                         continue;
                     }
-                    if (!H.opObj(p, at[0], at[1], s.take, 3)) {
+                    if (!H.opObj(p, at[0], at[1], s.take, 3, false)) {
                         why = 'the player was delayed and the click was thrown away';
                         H.tick(5);
                         continue;
@@ -302,7 +303,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     arrive(p, at[0], at[1]);
                     drive(p, []);
                     got = H.invCount(p, s.take) > before;
-                    if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z;
+                    if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z + ', the obj is ' + (groundObj(p, s.take, 1) ? 'still there' : 'gone') + ', target=' + !!p.target + ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?');
                 }
             }
             out.push({ n, what: what2, ok: got, detail: got ? '' : why });
@@ -360,6 +361,24 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
+        if ('say' in s) {
+            // ANSWER A DIALOGUE NOBODY CLICKED. Delrith's incantation is four options put to the
+            // player by a queue that the KILL started, not by talking to anyone, so there is no
+            // click to hang the picks on.
+            const mark = H.mesgs.length;
+            let said: string[] = [];
+            let blew = '';
+            try {
+                said = drive(p, s.say.slice());
+            } catch (e) {
+                blew = String(e).replace('Error: ', '');
+            }
+            const joinedSay = said.concat(H.mesgs.slice(mark).map(x => x.text)).join(' ');
+            if (blew) soft('answer ' + JSON.stringify(s.say) + (s.why ? ' - ' + s.why : ''), false, blew);
+            else if (s.want && !joinedSay.includes(s.want)) soft('answer ' + JSON.stringify(s.say) + (s.why ? ' - ' + s.why : ''), false, 'nothing said "' + s.want + '"');
+            else soft('answer ' + JSON.stringify(s.say) + (s.why ? ' - ' + s.why : ''), true);
             continue;
         }
         if ('press' in s) {
@@ -442,9 +461,13 @@ export function play(m: Manifest, p: Player): Result[] {
                     break;
                 }
                 H.maxOut(p);
+                // A FIGHT CAN END WITHOUT A CORPSE. Delrith is beaten down to nothing and then
+                // CHANGES TYPE - npc_changetype(delrith_weakened) - so he stays a valid npc and the
+                // loop would have run its 900 ticks on a demon that had already been beaten.
+                const type0 = npc.type;
                 let d = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
-                    if (!npc.isValid()) {
+                    if (!npc.isValid() || npc.type !== type0) {
                         d = true;
                         break;
                     }
