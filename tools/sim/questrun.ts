@@ -55,7 +55,7 @@ export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
     | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string }
-    | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string }
+    | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
@@ -976,19 +976,38 @@ export function play(m: Manifest, p: Player): Result[] {
             }
         } else if ('held' in s) {
             what = s.held + ' op' + (s.op ?? 1) + (s.why ? ' - ' + s.why : '');
+            // SOME ITEM OPS ROLL FOR IT. Rubbing Sea Slug's dry sticks together is a firemaking
+            // roll, so it fails some of the time at any level, and `until` names the obj that says
+            // it worked - the same shape as the loc step's retries, and for the same reason.
+            const triesHeld = ('tries' in s ? s.tries : undefined) ?? 1;
+            const untilHeld = 'until' in s ? s.until : undefined;
             let heldok = false;
-            try {
-                heldok = H.opheld(p, s.held, s.op ?? 1);
-            } catch (e) {
-                hard(what, false, String(e).replace('Error: ', ''));
+            let heldErr = '';
+            for (let a = 0; a < triesHeld; a++) {
+                if (a > 0) H.tick(4);
+                try {
+                    heldok = H.opheld(p, s.held, s.op ?? 1);
+                } catch (e) {
+                    heldErr = String(e).replace('Error: ', '');
+                    break;
+                }
+                if (!heldok) break;
+                quiet(p);
+                lines = lines.concat(run(('picks' in s ? s.picks : undefined) ?? []));
+                if (!untilHeld || H.invCount(p, untilHeld) > 0) break;
+            }
+            if (heldErr) {
+                hard(what, false, heldErr);
                 continue;
             }
             if (!heldok) {
                 hard(what, false, 'not carrying it, or that op does not exist');
                 continue;
             }
-            quiet(p);
-            lines = run(('picks' in s ? s.picks : undefined) ?? []);
+            if (untilHeld && H.invCount(p, untilHeld) === 0) {
+                hard(what, false, 'after ' + triesHeld + ' tries there is still no ' + untilHeld);
+                continue;
+            }
         } else if ('use' in s) {
             what = 'use ' + s.use[0] + ' on ' + s.use[1] + (s.why ? ' - ' + s.why : '');
             let useok = false;

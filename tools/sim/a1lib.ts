@@ -58,7 +58,13 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
     for (let guard = 0; guard < 600 && idle < guardTicks; guard++) {
         const s = p.activeScript;
         if (!s || s.execution !== ScriptState.PAUSEBUTTON) {
-            if (!s && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
+            // A WORLD_SUSPENDED SCRIPT IS NOT THE PLAYER'S BUSINESS. world_delay parks a script
+            // for later - lighting a fire parks one for the whole burn, a hundred ticks and more -
+            // and counting that as "still working" meant drive() ran its 600-tick guard out every
+            // time. Sea Slug lit a fire, warmed nothing over it and reported no fire there: it had
+            // burned out inside the step that lit it.
+            const parked = !!s && s.execution === ScriptState.WORLD_SUSPENDED;
+            if ((!s || parked) && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
             else idle = 0;
             H.tick(1);
             continue;
