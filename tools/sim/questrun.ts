@@ -73,6 +73,7 @@ export type Step =
     | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { nearnpc: string; r?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
+    | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
     | { press: string; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
     | { note: string };
@@ -220,6 +221,70 @@ export function travel(p: Player, tx: number, tz: number, level = p.level, radiu
         return 'stopped at ' + p.x + ',' + p.z + ', ' + done + ' tiles into a ' + path.length + '-tile route';
     }
     return '';
+}
+
+// PRODDING AN ANIMAL ACROSS A FIELD. Sheep Herder's cattleprod moves a sheep one tile directly
+// away from the player, and ~coord_direction only ever answers N/S/E/W, so the player has to stand
+// SQUARE behind it: a diagonal reads as east or west and sends the sheep sideways.
+//
+// That makes "where can this sheep be pushed" a different graph from "where can this sheep walk".
+// A tile with a wall behind it cannot be pushed away from that wall at all, because there is
+// nowhere for the player to stand, so the route has to be planned over moves that are legal for
+// BOTH of them. Planning it as a walk instead sends the sheep into a corner it cannot leave, which
+// is exactly where the first version of this got stuck, eight prods in a row with nothing moving.
+const D4: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+function stepOk(level: number, x: number, z: number, dx: number, dz: number): boolean {
+    return canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL);
+}
+
+/** Can anything stand here? True if some neighbour can walk onto the tile. */
+function standable(level: number, x: number, z: number): boolean {
+    for (const [dx, dz] of D4) if (stepOk(level, x - dx, z - dz, dx, dz)) return true;
+    return false;
+}
+
+/** The tiles to push an npc through to get it into the box, or null if it cannot be done. */
+export function prodPlan(
+    level: number,
+    sx: number,
+    sz: number,
+    box: [number, number, number, number]
+): [number, number][] | null {
+    const key = (a: number, b: number) => a * 20000 + b;
+    const inBox = (x: number, z: number) => x >= box[0] && x <= box[2] && z >= box[1] && z <= box[3];
+    const prev = new Map<number, number>();
+    const seen = new Set<number>([key(sx, sz)]);
+    let q: [number, number][] = [[sx, sz]];
+    let rounds = 0;
+    while (q.length && rounds < 400) {
+        rounds++;
+        const next: [number, number][] = [];
+        for (const [x, z] of q) {
+            if (inBox(x, z)) {
+                const out: [number, number][] = [];
+                let cur = key(x, z);
+                while (cur !== key(sx, sz)) {
+                    out.unshift([Math.floor(cur / 20000), cur % 20000]);
+                    cur = prev.get(cur)!;
+                }
+                return out;
+            }
+            for (const [dx, dz] of D4) {
+                const nx = x + dx;
+                const nz = z + dz;
+                if (Math.abs(nx - sx) > 80 || Math.abs(nz - sz) > 80) continue;
+                if (seen.has(key(nx, nz))) continue;
+                if (!stepOk(level, x, z, dx, dz)) continue;
+                if (!standable(level, x - dx, z - dz)) continue;
+                seen.add(key(nx, nz));
+                prev.set(key(nx, nz), key(x, z));
+                next.push([nx, nz]);
+            }
+        }
+        q = next;
+    }
+    return null;
 }
 
 export function stageOf(p: Player, name: string): number {
@@ -383,6 +448,83 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft('wearing ' + s.worn, on > 0, on > 0 ? 'on' : 'it is not on');
+            continue;
+        }
+        if ('herd' in s) {
+            // ONE SHEEP, ONE INSTANCE. There are three spawns of every plaguesheep type, so
+            // "nearest sheep of this type" changes under you the moment one of the others wanders
+            // closer - the first run of this herded four different sheep a few tiles each and
+            // reported that none of them would move. Lock on to the npc and follow it by identity.
+            const what0 = 'herd ' + s.herd + (s.why ? ' - ' + s.why : '');
+            const sheep = H.npcNear(s.herd, s.at[0], s.at[1], p.level);
+            if (!sheep) {
+                hard(what0, false, 'no ' + s.herd + ' anywhere near ' + s.at[0] + ',' + s.at[1]);
+                continue;
+            }
+            const done = () => (stageOf(p, s.untilvar) & (1 << s.bit)) !== 0;
+            const maxProds = s.tries ?? 400;
+            let prods = 0;
+            let stillness = 0;
+            let stranded = 0;
+            let why = '';
+            while (prods < maxProds && !done()) {
+                if (!sheep.isValid()) {
+                    why = 'the sheep vanished at ' + sheep.x + ',' + sheep.z + ' without the quest noticing';
+                    break;
+                }
+                const inGate =
+                    sheep.x >= s.gate[0] && sheep.x <= s.gate[2] && sheep.z >= s.gate[1] && sheep.z <= s.gate[3];
+                let dx = 0;
+                let dz = 0;
+                if (inGate) {
+                    // in the gateway: one more prod from any side and it jumps in
+                    for (const [ax, az] of D4) {
+                        if (standable(p.level, sheep.x - ax, sheep.z - az)) {
+                            dx = ax;
+                            dz = az;
+                            break;
+                        }
+                    }
+                } else {
+                    const plan = prodPlan(p.level, sheep.x, sheep.z, s.gate);
+                    if (!plan || !plan.length) {
+                        // THE JUMP TAKES A FEW TICKS. The prod that lands a sheep in the gateway
+                        // teleports it inside, waits two ticks and only then deletes it and sets
+                        // the quest bit, so for that window the npc is standing in a walled pen
+                        // with no route anywhere and nothing to say it has been herded. Give it a
+                        // moment before calling that a dead end.
+                        stranded++;
+                        if (stranded > 6) {
+                            why = 'no way to prod it from ' + sheep.x + ',' + sheep.z + ' to the pen';
+                            break;
+                        }
+                        H.tick(5);
+                        continue;
+                    }
+                    stranded = 0;
+                    dx = plan[0][0] - sheep.x;
+                    dz = plan[0][1] - sheep.z;
+                }
+                const err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                if (err) {
+                    why = 'could not get behind it: ' + err;
+                    break;
+                }
+                const before = sheep.x * 20000 + sheep.z;
+                H.opNpc(p, sheep, 1);
+                H.tick(6);
+                prods++;
+                stillness = sheep.x * 20000 + sheep.z === before ? stillness + 1 : 0;
+                if (stillness > 8) {
+                    why = 'eight prods in a row and it has not moved, at ' + sheep.x + ',' + sheep.z;
+                    break;
+                }
+            }
+            if (done()) {
+                hard(what0, true, prods + ' prods');
+            } else {
+                hard(what0, false, why || 'still loose after ' + prods + ' prods');
+            }
             continue;
         }
         if ('hunt' in s) {

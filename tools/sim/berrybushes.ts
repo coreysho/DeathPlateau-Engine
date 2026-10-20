@@ -48,10 +48,9 @@ for (const [name, x, z, berry] of bushes) {
     for (let t = 0; t < 12 && H.invCount(p, berry) === before; t++) H.tick(1);
     check('picking it gives ' + berry, H.invCount(p, berry) - before, 1);
     // and the bush goes with it, for two minutes
-    const still = World.gameMap
-        .getZone(x, z, 0)
-        .getAllLocsSafe()
-        .some(l => l.x === x && l.z === z && l.type === LocType.getId(name));
+    const still = [...World.gameMap.getZone(x, z, 0).getAllLocsSafe()].some(
+        l => l.x === x && l.z === z && l.type === LocType.getId(name)
+    );
     check('the bush is picked bare', still, false);
 }
 
