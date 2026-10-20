@@ -664,7 +664,18 @@ export function play(m: Manifest, p: Player): Result[] {
             let errPress = '';
             for (let i = 0; i < times; i++) {
                 try {
-                    if (!H.choose(p, s.press)) H.ifButton(p, s.press);
+                    // THREE KINDS OF BUTTON, not two. A dialogue's resume button is answered by
+                    // choose(); a plain [if_button,...] on an open interface has to be sent; and a
+                    // panel SLOT that looks like a button is an inv and its trigger is INV_BUTTON1,
+                    // which ifButton cannot reach - the silvthrill rod on the Silver Casting window
+                    // is one of those.
+                    if (!H.choose(p, s.press)) {
+                        try {
+                            H.ifButton(p, s.press);
+                        } catch (e1) {
+                            H.invButton(p, s.press);
+                        }
+                    }
                     pressed++;
                 } catch (e) {
                     errPress = String(e).replace('Error: ', '');
