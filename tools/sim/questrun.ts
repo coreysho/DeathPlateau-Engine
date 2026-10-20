@@ -66,13 +66,14 @@ export type Step =
     | { level: number }
     | { varis: string; to: number }
     | { wait: number; why?: string }
-    | { take: string; why?: string; r?: number }
+    | { take: string; why?: string; r?: number; soft?: boolean }
     | { setpos: [number, number, number]; why: string }
     | { has: string; n?: number }
     | { worn: string }
     | { hasnt: string }
     | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; r?: number; why?: string }
     | { nearnpc: string; r?: number; why?: string }
+    | { sneak: [number, number]; past: string; r?: number; tol?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
     | { press: string; n?: number; why?: string }
@@ -404,9 +405,13 @@ export function play(m: Manifest, p: Player): Result[] {
                     if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z + ', the obj is ' + (groundObj(p, s.take, 1) ? 'still there' : 'gone') + ', target=' + !!p.target + ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?');
                 }
             }
-            out.push({ n, what: what2, ok: got, detail: got ? '' : why });
-            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (got ? ' ok' : ' FAIL'));
-            if (!got) stopped = what2;
+            // A CLICK THAT IS MEANT TO FAIL. Witch's House spawns the shapeshifter the first time
+            // anybody reaches for the ball, and the ball stays where it is - so that click has to
+            // be sent and must not stop the run.
+            const softTake = 'soft' in s && s.soft === true;
+            out.push({ n, what: what2, ok: got || softTake, detail: got ? '' : why });
+            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (got ? ' ok' : softTake ? ' --' : ' FAIL') + (!got && softTake ? '  ' + why : ''));
+            if (!got && !softTake) stopped = what2;
             continue;
         }
         if ('setpos' in s) {
@@ -648,6 +653,44 @@ export function play(m: Manifest, p: Player): Result[] {
                 for (let t = 0; t < 20 && p.activeScript; t++) H.tick(1);
             }
             soft(whatPress, pressed === times, errPress || (pressed === times ? '' : pressed + ' of ' + times + ' went through'));
+            continue;
+        }
+        if ('sneak' in s) {
+            // WALKING PAST SOMETHING THAT MUST NOT SEE YOU. The witch patrols the middle of her
+            // garden and teleports anybody who comes within three tiles with a clear line - which
+            // is what the wiki means by "move around the edge, using the hedges as cover". A plain
+            // `go` walks the route at full speed and gets caught halfway round, so this one steps a
+            // tile at a time and waits whenever the next tile would be inside her range.
+            const whatSneak = 'sneak past ' + s.past + ' to ' + s.sneak[0] + ',' + s.sneak[1] + (s.why ? ' - ' + s.why : '');
+            const keepOut = ('r' in s ? s.r : undefined) ?? 4;
+            const path = route(p.level, p.x, p.z, s.sneak[0], s.sneak[1], 96, ('tol' in s ? s.tol : undefined) ?? 0);
+            if (!path.length) {
+                hard(whatSneak, false, 'NO WALKABLE ROUTE from ' + p.x + ',' + p.z + ' to ' + s.sneak[0] + ',' + s.sneak[1]);
+                continue;
+            }
+            let waited = 0;
+            let blocked = '';
+            for (const [sx, sz] of path) {
+                // hold while the step would take us inside its range
+                for (let w = 0; w < 60; w++) {
+                    const npc = H.npcNear(s.past, p.x, p.z, p.level);
+                    if (!npc) break;
+                    const d = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
+                    if (d > keepOut) break;
+                    H.tick(1);
+                    waited++;
+                }
+                for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
+                    H.walkTo(p, sx, sz);
+                    H.tick(1);
+                }
+                if (p.x !== sx || p.z !== sz) {
+                    blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;
+                    break;
+                }
+            }
+            const offSneak = Math.max(Math.abs(p.x - s.sneak[0]), Math.abs(p.z - s.sneak[1]));
+            hard(whatSneak, offSneak <= (('tol' in s ? s.tol : undefined) ?? 0), blocked || (offSneak > 0 ? 'ended up at ' + p.x + ',' + p.z : waited + ' ticks held back'));
             continue;
         }
         if ('nearnpc' in s) {
