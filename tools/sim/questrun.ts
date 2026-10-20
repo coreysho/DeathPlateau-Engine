@@ -180,6 +180,22 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
     return [];
 }
 
+
+/**
+ * A LOC YOU CAN WALK ON IS USED FROM ITS OWN TILE, not from beside it. The route an interaction
+ * sends goes adjacent, which is right for a door or a chest and wrong for a farming patch: rake in
+ * hand, standing one tile north of Unferth's patch, and nothing happens at all - in silence,
+ * because the handler's p_arrivedelay never completes.
+ */
+function standOnIfWalkable(p: Player, name: string, x: number, z: number): void {
+    try {
+        if (LocType.get(LocType.getId(name)).blockwalk) return;
+    } catch {
+        return;
+    }
+    travel(p, x, z, p.level, 48, 0);
+}
+
 /** Walk a route, one waypoint a tick, the way a client feeds them. Returns '' or why it failed. */
 export function travel(p: Player, tx: number, tz: number, level = p.level, radius = 96, tol = 2): string {
     if (p.level !== level) {
@@ -719,6 +735,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 const lt = LocType.get(LocType.getId(s.loc));
                 locw = lt.width;
                 locl = lt.length;
+                standOnIfWalkable(p, s.loc, s.at[0], s.at[1]);
                 sent = H.opLoc(p, s.at[0], s.at[1], s.loc, s.op ?? 1);
             } catch (_e) {
                 hard(what, false, 'no ' + s.loc + ' there on level ' + p.level + ' (player at ' + p.x + ',' + p.z + ')');
@@ -831,6 +848,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
                 // player walks, so a panel that opens on arrival - a make-x panel, for one - was
                 // met with an empty pick list and the step blew up on its own menu.
+                standOnIfWalkable(p, s.useLoc, s.at[0], s.at[1]);
                 lines = useOn(p, s.at[0], s.at[1], s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
             } catch (e) {
                 hard(what, false, String(e).replace('Error: ', ''));
