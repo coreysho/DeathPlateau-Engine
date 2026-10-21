@@ -56,10 +56,10 @@ function groundObj(p: Player, objName: string, radius: number): [number, number]
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string; brief?: number }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string; brief?: number; hop?: boolean }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
-    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
+    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
     | { setvar: string; to: number; why?: string }
@@ -1084,7 +1084,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'the player was delayed and the click was thrown away');
                 continue;
             }
-            if (!arrive(p, s.at[0], s.at[1], locw, locl)) {
+            // `hop` IS FOR AN OP THAT MOVES YOU A FEW TILES. arrive() passes as soon as the
+            // player has been next to the loc at any point, which covers everything you walk up
+            // to - but Mountain Daughter's lake crossings are approach ops on locs standing in
+            // the water, clicked from two or three tiles off and answered with a teleport to the
+            // far side. The player is never next to the clump of rocks and never can be, so the
+            // positional test asks a question with no right answer. With `hop` the step is judged
+            // on what the op said and on the exact walk that follows it, which is the stronger
+            // test anyway: the tile it lands you on cannot be reached on foot from this side.
+            if (!arrive(p, s.at[0], s.at[1], locw, locl) && !('hop' in s && s.hop)) {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
@@ -1224,7 +1232,9 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, String(e).replace('Error: ', ''));
                 continue;
             }
-            if (!arrive(p, s.at[0], s.at[1], lw, ll)) {
+            // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
+            // player has already done it by the time this runs and adjacency can never come back.
+            if (!arrive(p, s.at[0], s.at[1], lw, ll) && !('hop' in s && s.hop)) {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
