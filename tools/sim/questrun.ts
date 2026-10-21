@@ -56,7 +56,7 @@ function groundObj(p: Player, objName: string, radius: number): [number, number]
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string; brief?: number }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
@@ -349,7 +349,18 @@ export function play(m: Manifest, p: Player): Result[] {
             const z = s.go[1];
             const lvl = s.go.length > 2 ? (s.go[2] as number) : p.level;
             const err = travel(p, x, z, lvl, s.r ?? 96, s.exact ? 0 : 2);
-            hard('walk to ' + x + ',' + z + (s.why ? ' - ' + s.why : ''), !err, err);
+            // TWO TILES OF SLACK, REPORTED. travel() accepts landing within 2 of the target, which
+            // is right - a tile is often occupied by the time the route gets there - but it said
+            // nothing about having done so, and two tiles is enough to be on the other side of a
+            // wall. Elemental Workshop I walks into a house whose door is shut: "walk to 2715,3481
+            // ok" with the player standing outside, and the bookcase step then failed as though the
+            // bookcase were the problem. Where the player actually stopped is now part of the line.
+            const off = Math.max(Math.abs(p.x - x), Math.abs(p.z - z));
+            hard(
+                'walk to ' + x + ',' + z + (s.why ? ' - ' + s.why : ''),
+                !err,
+                err || (off ? 'stopped ' + off + ' short, at ' + p.x + ',' + p.z : '')
+            );
             continue;
         }
         if ('take' in s) {
@@ -1064,7 +1075,19 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }
-            lines = run(('picks' in s ? s.picks : undefined) ?? []);
+            // `brief` IS FOR A CLICK THAT SPAWNS SOMETHING AGGRESSIVE. drive() stops after three
+            // idle ticks, and a player with a combat target is never idle - so a click that puts an
+            // aggressive npc on top of a damage-immune sim player runs drive's whole 600-tick guard
+            // out, because neither side can finish the fight. Elemental Workshop I's elemental rock
+            // spawns its earth elemental with a 500-tick lifetime: by the time the step returned,
+            // the thing it had woken had already expired, three times running, and the step before
+            // reported ok each time. With `brief` the op gets that many ticks and no dialogue.
+            if ('brief' in s && s.brief) {
+                for (let t = 0; t < s.brief; t++) H.tick(1);
+                lines = [];
+            } else {
+                lines = run(('picks' in s ? s.picks : undefined) ?? []);
+            }
             // SOME OPS ARE REFUSED FOR A REASON THAT PASSES. Sir Vyvin shouts at anybody who opens
             // his cupboard while he is standing next to them, and he wanders, so the search is a
             // coin toss rather than a bug - the wiki says to wait for him to walk out. `tries` is
