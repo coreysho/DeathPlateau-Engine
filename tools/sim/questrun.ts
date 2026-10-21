@@ -850,7 +850,20 @@ export function play(m: Manifest, p: Player): Result[] {
                     }
                 }
                 if (!npc) {
-                    missing = 'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z;
+                    // AND SAY WHAT IS THERE INSTEAD, the way the nearnpc step does. "none of X is
+                    // spawned anywhere near" is the same sentence whether the thing was never
+                    // spawned, has already been killed, or is standing two tiles away on another
+                    // level - and Dream Mentor's arena spent four runs on the third of those.
+                    const seen: string[] = [];
+                    for (const other of World.npcs) {
+                        if (!other || !other.isActive) continue;
+                        if (Math.max(Math.abs(other.x - p.x), Math.abs(other.z - p.z)) > 30) continue;
+                        seen.push((NpcType.get(other.type).debugname ?? 'npc_' + other.type) + '@' + other.x + ',' + other.z + 'L' + other.level);
+                        if (seen.length >= 8) break;
+                    }
+                    missing =
+                        'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z + ' L' + p.level +
+                        (seen.length ? '; what is there: ' + seen.join(' ') : '; nothing at all is within 30 tiles');
                     break;
                 }
                 H.maxOut(p);
