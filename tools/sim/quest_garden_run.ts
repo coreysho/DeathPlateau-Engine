@@ -90,6 +90,7 @@ const m: Manifest = {
         { give: 'rake' },
         { give: 'bucket_compost', n: 7 },
         { give: 'plant_cure' },
+        { give: 'ring_of_charos' },
         { give: 'watering_can_8' },
         { give: 'watering_can_8' },
 
@@ -98,6 +99,13 @@ const m: Manifest = {
         { stage: 5 },
         { has: 'garden_list' },
         { held: 'garden_list', want: 'delphinium', why: 'the list names all nine' },
+
+        { note: 'wiki step 2: the Wise Old Man unlocks the Ring of Charos. Seven questions and six' },
+        { note: 'of them right, and the diplomatic answer is the conciliatory one every time. He was' },
+        { note: 'placed nowhere at all until now, which is why this half of the quest did not exist.' },
+        { setpos: [3089, 3251, 0], why: 'to Draynor' },
+        { talk: 'wise_old_man', picks: ['Why not have a range?', 'Take it and thank him.', 'I love every minute of it.', 'Go on then.', 'PKMaster0036, obviously.', 'Could I ask you something in return?', 'No, but I will keep an eye out.'], want: 'ring is unlocked', why: 'all seven right' },
+        { has: 'ring_of_charos_unlocked' },
 
         { note: 'wiki step 4: the five gardeners. Each wants a bucket of compost rather than the' },
         { note: "wiki's grow-this-for-me errand, which needs the twenty-minute farming clock." },
