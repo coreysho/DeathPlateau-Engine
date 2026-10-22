@@ -8,11 +8,12 @@
 // the right chest (forceapproach 14 leaves only its south side), both gates again, the trapped
 // lever searched and pulled, and the door it unbolts.
 //
-// It stops because the Fire Warrior ARRIVES and then is gone two ticks later: the nearnpc step finds
-// him at 2646,9868 and the fight step, which ticks twice before it looks, finds nothing. Nothing in
-// fire_warrior_of_leskarus.rs2 despawns him and npc_add gives him a thousand ticks, so this is
-// either something in the ai or something the harness does to a sim player, and telling which needs
-// a probe of its own. Everything after the fight in this file is written but unproven.
+// It stops on the Fire Warrior, and the CONTENT IS NOT AT FAULT: tools/sim/ikovwarrior.ts clicks the
+// same door at the same stage and he appears on the fourth tick at 2646,9866, active, 59 hp, and is
+// still standing there ten ticks later with 990 of his thousand left. In this manifest the fight
+// step cannot see him at all. So the summon works and something about how this run reaches the door
+// does not - which is the next thing to chase, with the probe as the known-good comparison.
+// Everything after the fight in this file is written but unproven.
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_ikov_run.ts
 import * as H from './harness.js';
@@ -164,7 +165,6 @@ const m: Manifest = {
         { go: [WARRIORDOOR[0] + 1, WARRIORDOOR[1]], exact: true, r: 90, why: "to the warrior's door" },
         { loc: 'ikov_firewarriordoor', at: WARRIORDOOR, soft: true, why: 'try it' },
         { wait: 10, why: 'he arrives in a puff of smoke and tells you to stop' },
-        { nearnpc: 'ikov_firewarrior', r: 12, why: 'and there he is' },
         { fight: 'ikov_firewarrior', untilvar: 'ikov', to: 40, tries: 4, r: 20, why: 'kill him' },
         { stage: 40 },
 
