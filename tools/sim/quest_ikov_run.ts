@@ -8,17 +8,22 @@
 // the right chest (forceapproach 14 leaves only its south side), both gates again, the trapped
 // lever searched and pulled, and the door it unbolts.
 //
-// It stops on the Fire Warrior, and NOT because of the content. Two things were in the way and the
-// first one is now fixed: he needs a few ticks to walk to his spot after the smoke, and the fight
-// step, which ticks twice and then looks, was reporting him missing. With a nearnpc and four ticks
-// he is found every time (tools/sim/ikovwarrior.ts clicks the same door and watches him arrive on
-// the fourth tick, 59 hp, still there ten ticks later).
+// It stops on the very last blow: 85 of 86. Everything else walks - the interview, the ladder, the
+// dark stairs, the web, the boots and the swap, the pendant, the gate of fear, the lava gap, the far
+// ledge's door, the lever, the bracket, the mended lever, the south gate, TWENTY ice arrows out of
+// the one loaded chest (one is not a fight - that was why the Fire Warrior could not be hurt), both
+// gates again, the trapped lever, the Fire Warrior dead in 77 ticks, Winelda's twenty limpwurt
+// roots, and the Guardians' pendant.
 //
-// What remains is that no hit lands on him in 150 ticks. That is the fight step rather than the
-// quest: he takes damage from ice arrows and nothing else, and the step drives to melee range and
-// swings. A ranged-only fight needs the runner to shoot from where it stands, which `fight` has no
-// way to say yet - so this manifest stops here on purpose, and everything after it is written but
-// unproven.
+// Two things the run found on the way:
+//   - the Guardians really do refuse to talk to a player wearing Lucien's pendant, which is the
+//     wiki's warning and is implemented. There is no harness call for unequipping, so the pendant
+//     comes off the way the engine takes it off: wear something else in the same slot.
+//   - Lucien dies FOUR times at the end and %ikov stays at 70. [ai_queue3,ikov_lucien2] only queues
+//     the completion when `npc_findhero = true & %ikov = ^ikov_helping_armadyl`; the stage is 70, so
+//     npc_findhero is coming back false and he falls through to an ordinary death instead. Whether
+//     that is the damage tracking, ~lucien_attack's map_members check in a free-to-play Edgeville,
+//     or the harness, is the one thing left on this quest.
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_ikov_run.ts
 import * as H from './harness.js';
@@ -141,7 +146,10 @@ const m: Manifest = {
         { go: [CHESTS[0][0], CHESTS[0][1] - 1], exact: true, r: 90, why: 'to the first chest' },
         { loc: 'ikov_chestclosed', at: CHESTS[0], why: 'open it' },
         { loc: 'ikov_chestopen', at: CHESTS[0], tries: 6, until: 'ice_arrow', why: 'and search it' },
-        { has: 'ice_arrow' },
+        { note: 'one arrow is not a fight: the wiki asks for about twenty with a bow, and with the' },
+        { note: 'rng pinned this chest stays the loaded one and gives one a search' },
+        ...Array.from({ length: 19 }, () => ({ loc: 'ikov_chestopen', at: CHESTS[0], soft: true, why: 'another' })),
+        { has: 'ice_arrow', n: 20 },
         { rng: null },
 
         { note: 'back out of the ice room and north through the gate of fear again - both gates' },
@@ -181,17 +189,25 @@ const m: Manifest = {
         { give: 'limpwurt_root', n: 20 },
         { setpos: WINELDA, why: 'to the witch by the lava' },
         { talk: 'ikov_winelda', picks: ['Yes I do!'], want: 'limpwurt', why: 'she wants roots' },
-        { talk: 'ikov_winelda', want: 'teleport', why: 'and takes all twenty' },
+        { talk: 'ikov_winelda', want: 'potion is nearly ready', why: 'and takes all twenty' },
         { hasnt: 'limpwurt_root' },
 
         { note: 'wiki step 8: the Guardians, and their side of what Lucien is' },
         { go: [BRICKWALL[0], BRICKWALL[1] - 1], exact: true, r: 60, why: 'to the brick wall' },
         { loc: 'secretdoor2', at: BRICKWALL, soft: true, why: 'push it' },
-        { held: 'ikov_pendantoflucien', op: 1, why: "take Lucien's pendant off first" },
+        { note: "wiki step 8: take Lucien's pendant off or the Guardians attack instead of" },
+        { note: 'talking - which they do, and the run proved it by trying. There is no harness call' },
+        { note: 'for unequipping, so the pendant comes off the way the engine itself takes it off:' },
+        { note: 'wear something else in the same slot and ~try_equip pops the old one into the pack.' },
+        { give: 'amulet_of_ghostspeak' },
+        { held: 'amulet_of_ghostspeak', op: 2, why: "which puts Lucien's pendant back in the pack" },
+        { has: 'ikov_pendantoflucien' },
         { setpos: GUARDIAN, why: 'to the Guardian of Armadyl' },
         {
-            talk: '_guardian_of_armadyl',
-            picks: ['Lucien will give me a grand reward for it!', 'Why not?!', 'Who are the Mahjarrat?', 'Did you say Lucien?', "Ok! I'll help!"],
+            // _guardian_of_armadyl is the CATEGORY the handler is on; the npcs are
+            // ikov_guardianmale and ikov_guardianfemale
+            talk: 'ikov_guardianmale',
+            picks: ['I seek the Staff of Armadyl.', 'Lucien will give me a grand reward for it!', "You're right, it's time for my yearly bath.", "Ok! I'll help!"],
             want: 'pendant',
             why: 'and they hand over their own pendant'
         },
