@@ -8,12 +8,17 @@
 // the right chest (forceapproach 14 leaves only its south side), both gates again, the trapped
 // lever searched and pulled, and the door it unbolts.
 //
-// It stops on the Fire Warrior, and the CONTENT IS NOT AT FAULT: tools/sim/ikovwarrior.ts clicks the
-// same door at the same stage and he appears on the fourth tick at 2646,9866, active, 59 hp, and is
-// still standing there ten ticks later with 990 of his thousand left. In this manifest the fight
-// step cannot see him at all. So the summon works and something about how this run reaches the door
-// does not - which is the next thing to chase, with the probe as the known-good comparison.
-// Everything after the fight in this file is written but unproven.
+// It stops on the Fire Warrior, and NOT because of the content. Two things were in the way and the
+// first one is now fixed: he needs a few ticks to walk to his spot after the smoke, and the fight
+// step, which ticks twice and then looks, was reporting him missing. With a nearnpc and four ticks
+// he is found every time (tools/sim/ikovwarrior.ts clicks the same door and watches him arrive on
+// the fourth tick, 59 hp, still there ten ticks later).
+//
+// What remains is that no hit lands on him in 150 ticks. That is the fight step rather than the
+// quest: he takes damage from ice arrows and nothing else, and the step drives to melee range and
+// swings. A ranged-only fight needs the runner to shoot from where it stands, which `fight` has no
+// way to say yet - so this manifest stops here on purpose, and everything after it is written but
+// unproven.
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_ikov_run.ts
 import * as H from './harness.js';
@@ -165,6 +170,10 @@ const m: Manifest = {
         { go: [WARRIORDOOR[0] + 1, WARRIORDOOR[1]], exact: true, r: 90, why: "to the warrior's door" },
         { loc: 'ikov_firewarriordoor', at: WARRIORDOOR, soft: true, why: 'try it' },
         { wait: 10, why: 'he arrives in a puff of smoke and tells you to stop' },
+        { note: 'he needs a few ticks to settle before the fight step looks, or it reports him' },
+        { note: 'missing - he is walking to his spot while the puff of smoke is still clearing' },
+        { nearnpc: 'ikov_firewarrior', r: 20, why: 'he is here' },
+        { wait: 4, why: 'and standing still' },
         { fight: 'ikov_firewarrior', untilvar: 'ikov', to: 40, tries: 4, r: 20, why: 'kill him' },
         { stage: 40 },
 
