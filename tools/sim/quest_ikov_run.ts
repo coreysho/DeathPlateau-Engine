@@ -1,20 +1,18 @@
 // TEMPLE OF IKOV, played through on foot, siding with the Guardians of Armadyl.
 //
-// WORK IN PROGRESS - 33 of 33 checks as far as the south gate, which is everything up to and
-// including the ice room's door: Lucien, the ladder, the dark stairs, the web, the boots and their
-// swap, the pendant, the gate of fear, the gap, the double door at the end of the far ledge, the
-// lever off the floor, the gate again southbound, the bracket, the mended lever and the south gate.
+// WORK IN PROGRESS - 52 of 53 checks, as far as the Fire Warrior of Lesarkus arriving. Everything
+// before him is proven: Lucien's interview, the temple ladder, the dark stairs, the web, the boots
+// and the swap that makes them weigh less than nothing, the pendant, the gate of fear, the lava gap,
+// the double door at the end of the far ledge, the lever off the floor, the bracket (a shape-7 wall
+// fitting - east or north of it, never west), the mended lever, the south gate, an ice arrow out of
+// the right chest (forceapproach 14 leaves only its south side), both gates again, the trapped
+// lever searched and pulled, and the door it unbolts.
 //
-// It stops on the walk to the first ice-arrow chest. The six chests ~randomize_ice_arrow_chest
-// picks between are at 2710-2747 x 9821-9850 in m42_153, and joinpocket says that area and the
-// room behind the south gate are two pockets that touch in two thousand places without joining -
-// which is the signature of a boundary rather than a wall, and wants looking at with fresh eyes.
-// Everything after it in this file is written but unproven.
-//
-// Quest 70 of the quest-by-quest pass. Two things were missing and both of them stopped the quest
-// dead: the boots of lightness never changed the player's weight, so the bridge over the lava could
-// not be crossed, and the trapdoor in the ground south of the Ranging Guild had no handler at all,
-// so the temple could be left by its ladder and never entered.
+// It stops because the Fire Warrior ARRIVES and then is gone two ticks later: the nearnpc step finds
+// him at 2646,9868 and the fight step, which ticks twice before it looks, finds nothing. Nothing in
+// fire_warrior_of_leskarus.rs2 despawns him and npc_add gives him a thousand ticks, so this is
+// either something in the ai or something the harness does to a sim player, and telling which needs
+// a probe of its own. Everything after the fight in this file is written but unproven.
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_ikov_run.ts
 import * as H from './harness.js';
@@ -133,14 +131,23 @@ const m: Manifest = {
         { go: [SOUTHGATE[0], SOUTHGATE[1] + 1], exact: true, r: 60, why: 'to the south gate' },
         { loc: 'ikov_mendedleverdoorl', at: SOUTHGATE, why: 'through it' },
         { rng: 0, why: 'the first chest is the loaded one' },
-        { go: [CHESTS[0][0] - 1, CHESTS[0][1]], exact: true, r: 90, why: 'to the first chest' },
+        { note: 'the chests carry forceapproach 14, which at this one angle leaves the south side' },
+        { go: [CHESTS[0][0], CHESTS[0][1] - 1], exact: true, r: 90, why: 'to the first chest' },
         { loc: 'ikov_chestclosed', at: CHESTS[0], why: 'open it' },
         { loc: 'ikov_chestopen', at: CHESTS[0], tries: 6, until: 'ice_arrow', why: 'and search it' },
         { has: 'ice_arrow' },
         { rng: null },
 
-        { note: 'wiki step 6: the lever in the alcove is trapped, and Thieving 42 finds the trap' },
-        { go: [TRAPLEVER[0] - 1, TRAPLEVER[1]], exact: true, r: 120, why: 'to the trapped lever' },
+        { note: 'back out of the ice room and north through the gate of fear again - both gates' },
+        { note: 'shut themselves behind you' },
+        { go: [SOUTHGATE[0], SOUTHGATE[1] - 1], exact: true, r: 120, why: 'back to the south gate' },
+        { loc: 'ikov_mendedleverdoorl', at: SOUTHGATE, soft: true, why: 'north through it' },
+        { go: [NORTHGATE[0], NORTHGATE[1] - 1], exact: true, r: 90, why: 'to the gate of fear' },
+        { loc: 'ikov_dooroffearl', at: NORTHGATE, soft: true, why: 'and through it' },
+
+        { note: 'wiki step 6: the lever in the alcove is trapped, and Thieving 42 finds the trap.' },
+        { note: 'It is a shape-4 wall fitting, so the tile to use it from is its own.' },
+        { go: TRAPLEVER, exact: true, r: 120, why: 'to the trapped lever' },
         { loc: 'ikov_traplever', at: TRAPLEVER, op: 2, want: 'disable the trap', why: 'search it first' },
         { stage: 20 },
         { loc: 'ikov_traplever', at: TRAPLEVER, why: 'then pull it' },
@@ -151,8 +158,13 @@ const m: Manifest = {
         { give: 'yew_longbow' },
         { held: 'yew_longbow', op: 2, why: 'the bow' },
         { held: 'ice_arrow', op: 2, why: 'and the arrows' },
-        { go: [WARRIORDOOR[0] + 1, WARRIORDOOR[1]], exact: true, r: 90, why: 'to his door' },
+        { note: 'the lever unbolts the door at the end of the passage, which is what stage 30 is for' },
+        { go: [2648, 9856], exact: true, r: 40, why: 'to the unbolted door' },
+        { loc: 'ikov_trapleverdoor', at: [2648, 9857], soft: true, why: 'open it' },
+        { go: [WARRIORDOOR[0] + 1, WARRIORDOOR[1]], exact: true, r: 90, why: "to the warrior's door" },
         { loc: 'ikov_firewarriordoor', at: WARRIORDOOR, soft: true, why: 'try it' },
+        { wait: 10, why: 'he arrives in a puff of smoke and tells you to stop' },
+        { nearnpc: 'ikov_firewarrior', r: 12, why: 'and there he is' },
         { fight: 'ikov_firewarrior', untilvar: 'ikov', to: 40, tries: 4, r: 20, why: 'kill him' },
         { stage: 40 },
 
