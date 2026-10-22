@@ -1,9 +1,15 @@
 // TEMPLE OF IKOV, played through on foot, siding with the Guardians of Armadyl.
 //
-// WORK IN PROGRESS - it runs as far as the far side of the lava gap (22 of 22 checks to there) and
-// stops at the lever, because the lever on the floor at 2637,9819 is NOT on the ledge the crossing
-// lands on: that ledge is eleven tiles and touches nothing. Finding what reaches the lever is the
-// next thing this manifest wants, and it is a joinpocket away.
+// WORK IN PROGRESS - 33 of 33 checks as far as the south gate, which is everything up to and
+// including the ice room's door: Lucien, the ladder, the dark stairs, the web, the boots and their
+// swap, the pendant, the gate of fear, the gap, the double door at the end of the far ledge, the
+// lever off the floor, the gate again southbound, the bracket, the mended lever and the south gate.
+//
+// It stops on the walk to the first ice-arrow chest. The six chests ~randomize_ice_arrow_chest
+// picks between are at 2710-2747 x 9821-9850 in m42_153, and joinpocket says that area and the
+// room behind the south gate are two pockets that touch in two thousand places without joining -
+// which is the signature of a boundary rather than a wall, and wants looking at with fresh eyes.
+// Everything after it in this file is written but unproven.
 //
 // Quest 70 of the quest-by-quest pass. Two things were missing and both of them stopped the quest
 // dead: the boots of lightness never changed the player's weight, so the bridge over the lava could
@@ -106,12 +112,19 @@ const m: Manifest = {
         { note: 'not, which is why the trigger had to move onto the lips.' },
         { go: [2651, 9828], exact: true, r: 60, why: 'to the east lip of the gap' },
         { setpos: [2647, 9828, 0], why: 'across to the west ledge (see above)' },
-        { go: [LEVER_OBJ[0] + 1, LEVER_OBJ[1] + 1], exact: true, r: 60, why: 'to the lever' },
-        { take: 'ikov_lever', r: 6, why: 'off the floor' },
+        { note: 'the ledge is eleven tiles and the only way off it is a double door at its west end' },
+        { go: [2646, 9828], exact: true, r: 10, why: 'to the door at the end of the ledge' },
+        { loc: 'loc_1516', at: [2645, 9828], soft: true, why: 'open it' },
+        { go: [2644, 9828], exact: true, r: 10, why: 'through the door' },
+        { take: 'ikov_lever', r: 14, why: 'the lever off the floor' },
         { setpos: [2651, 9828, 0], why: 'and back over' },
 
-        { note: 'wiki step 4: the bracket is on the wall by the entrance ladder' },
-        { go: [BRACKET[0] - 1, BRACKET[1]], exact: true, r: 90, why: 'back to the bracket' },
+        { note: 'wiki step 4: the bracket is on the wall by the entrance ladder, and the gate of' },
+        { note: 'fear shuts itself behind you every time' },
+        { go: [NORTHGATE[0], NORTHGATE[1] + 1], exact: true, r: 60, why: 'back to the north gate' },
+        { loc: 'ikov_dooroffearl', at: NORTHGATE, soft: true, why: 'and south through it' },
+        { note: 'the bracket is a wall fitting (shape 7): east or north of it, never west' },
+        { go: [BRACKET[0], BRACKET[1] + 1], exact: true, r: 90, why: 'to the bracket' },
         { useLoc: 'ikov_leverbracket', at: BRACKET, obj: 'ikov_lever', want: 'fit the lever', why: 'fit it' },
         { loc: 'ikov_mendedlever', at: BRACKET, want: 'hidden machinery', why: 'and pull it' },
 
