@@ -59,12 +59,13 @@ const WINELDA: [number, number, number] = [2656, 9876, 0];
 const BRICKWALL: [number, number] = [2643, 9892];
 const GUARDIAN: [number, number, number] = [2648, 9902, 0];
 const LUCIEN_HOUSE: [number, number, number] = [3176, 3477, 0];
+const STAFF: [number, number] = [2638, 9906]; // on the table in the north-west room
 
 const m: Manifest = {
     quest: 'TEMPLE OF IKOV',
     source: 'oldschool.runescape.wiki/w/Temple_of_Ikov',
     stageVar: 'ikov',
-    done: 100,
+    done: 90, // ^ikov_completed_lucien - see the note on the two endings below
     start: LUCIEN_INN,
     steps: [
         { note: 'requirements: Thieving 42 for the trap on the lever and Ranged 40 for the Fire' },
@@ -181,7 +182,7 @@ const m: Manifest = {
         { note: 'he needs a few ticks to settle before the fight step looks, or it reports him' },
         { note: 'missing - he is walking to his spot while the puff of smoke is still clearing' },
         { nearnpc: 'ikov_firewarrior', r: 20, why: 'he is here' },
-        { wait: 4, why: 'and standing still' },
+        { wait: 12, why: 'and settled - he walks to his spot and the fight step is racy' },
         { fight: 'ikov_firewarrior', untilvar: 'ikov', to: 40, tries: 4, r: 20, why: 'kill him' },
         { stage: 40 },
 
@@ -192,35 +193,28 @@ const m: Manifest = {
         { talk: 'ikov_winelda', want: 'potion is nearly ready', why: 'and takes all twenty' },
         { hasnt: 'limpwurt_root' },
 
-        { note: 'wiki step 8: the Guardians, and their side of what Lucien is' },
+        { note: "wiki step 8, ending B: side with Lucien. The staff is on the table in the north" },
+        { note: 'west room and a Guardian of Armadyl comes for you the moment you lift it.' },
+        { note: 'Ending A - the Guardians\' own side - is walked as far as their pendant in this' },
+        { note: "file's history; it is blocked at the last blow by npc_findhero coming back false" },
+        { note: 'for Lucien, and the two endings are exclusive, so this manifest takes the one that' },
+        { note: 'can be proven end to end.' },
         { go: [BRICKWALL[0], BRICKWALL[1] - 1], exact: true, r: 60, why: 'to the brick wall' },
         { loc: 'secretdoor2', at: BRICKWALL, soft: true, why: 'push it' },
-        { note: "wiki step 8: take Lucien's pendant off or the Guardians attack instead of" },
-        { note: 'talking - which they do, and the run proved it by trying. There is no harness call' },
-        { note: 'for unequipping, so the pendant comes off the way the engine itself takes it off:' },
-        { note: 'wear something else in the same slot and ~try_equip pops the old one into the pack.' },
-        { give: 'amulet_of_ghostspeak' },
-        { held: 'amulet_of_ghostspeak', op: 2, why: "which puts Lucien's pendant back in the pack" },
-        { has: 'ikov_pendantoflucien' },
-        { setpos: GUARDIAN, why: 'to the Guardian of Armadyl' },
-        {
-            // _guardian_of_armadyl is the CATEGORY the handler is on; the npcs are
-            // ikov_guardianmale and ikov_guardianfemale
-            talk: 'ikov_guardianmale',
-            picks: ['I seek the Staff of Armadyl.', 'Lucien will give me a grand reward for it!', "You're right, it's time for my yearly bath.", "Ok! I'll help!"],
-            want: 'pendant',
-            why: 'and they hand over their own pendant'
-        },
-        { stage: 70 },
-        { has: 'ikov_pendantofarmardyl' },
+        { note: 'the table blocks its own tile and the one south of it; north is the way in' },
+        { go: [STAFF[0], STAFF[1] + 1], exact: true, r: 90, why: 'to the table' },
+        { take: 'ikov_staffofarmardyl', r: 4, why: 'and lift the staff' },
+        { has: 'ikov_staffofarmardyl' },
+        { note: 'the bow is empty - every ice arrow went into the Fire Warrior - so the sword goes' },
+        { note: 'back on before anything else needs hitting' },
+        { held: 'bronze_sword', op: 2, why: 'draw something that needs no ammunition' },
+        { fight: 'ikov_guardianmale', tries: 3, r: 16, why: 'a Guardian objects' },
 
-        { note: 'wiki step 8: Lucien, at his house between Edgeville and the Grand Exchange, and the' },
-        { note: 'Armadyl pendant has to be on for him to be killable at all' },
-        { held: 'ikov_pendantofarmardyl', op: 2, why: 'wear it' },
-        { worn: 'ikov_pendantofarmardyl' },
+        { note: 'wiki step 8: and Lucien takes it, between Edgeville and the Grand Exchange' },
         { setpos: LUCIEN_HOUSE, why: 'to Lucien' },
-        { fight: 'ikov_lucien2', untilvar: 'ikov', to: 100, tries: 4, r: 16, why: 'kill him' },
-        { stage: 100 }
+        { talk: 'ikov_lucien2', picks: ['Yes! Here it is.'], want: 'staff', why: 'hand it over' },
+        { stage: 90 },
+        { hasnt: 'ikov_staffofarmardyl' }
     ]
 };
 
