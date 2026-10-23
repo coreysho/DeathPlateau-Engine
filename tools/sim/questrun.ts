@@ -1121,7 +1121,11 @@ export function play(m: Manifest, p: Player): Result[] {
                     continue;
                 }
                 reached = true;
-                lines = run(('picks' in s ? s.picks : undefined) ?? []);
+                // A COPY OF THE PICKS, EVERY ATTEMPT. drive() shifts the options off the array it
+                // is handed, so passing s.picks itself emptied it on the first try and every
+                // retry then met the same menu with nothing to answer it - "an unexpected menu:
+                // multi2: Draw. | Not now.", forty times, which is exactly what ate Rune-Draw.
+                lines = run([...(('picks' in s ? s.picks : undefined) ?? [])]);
                 dbg('said ' + JSON.stringify(lines.slice(0, 2)) + ' unreached=' + JSON.stringify(unreached));
                 // With until, the item arriving is the signal and a leftover pick is not a
                 // fault: Robin deals one hand per click, so most clicks consume one menu and

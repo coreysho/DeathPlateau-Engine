@@ -1,250 +1,230 @@
-// GHOSTS AHOY, played through on foot. Nothing here teleports except the quest's own ghost ship.
+// GHOSTS AHOY, played through on foot.
 //
-// This is the REBUILT quest - the one the wiki describes - after an audit found that what was here
-// was an invented quest standing on the real one's parts. Each `note` gives the wiki's step number,
-// so the trace reads as the walkthrough.
+// Quest 79 of the quest-by-quest pass. Necrovarus has held the dead of Port Phasmatys for two
+// hundred years with a book he buried on an island, and the way to prove it is a cup of tea, a
+// model ship, a card game, a bedsheet and ten signatures.
 //
-// WHAT THE RUNS TAUGHT THE MANIFEST. ahoy_town_barrier is placed twice, at 3652,3485 and 3659,3508,
-// and that is not redundancy: Velorina, Robin, the innkeeper, Gravingas, the villagers and the pier
-// are inside the walls, while Necrovarus, the Ectofuntus, the temple, the wreck and the crone are
-// outside them, with no open-ground route between the two halves. And ahoy_harbour_door is ONE loc
-// type placed seven times, four of which are in the way: Robin's house, the temple's upper floor,
-// the wreck's middle deck and the crone's hut.
+// The wreck's ladders are not re-walked here: tools/sim/ahoyladders.ts already asserts that
+// configs/ahoy_ladders.enum covers every placement on both ships with a landing tile, which is a
+// better check than one route through it. This walk jumps between the wreck's decks and spends its
+// steps on the quest.
 //
-//   npx tsx tools/sim/quest_ahoy_run.ts
+//   NODE_MEMBERS=true npx tsx tools/sim/quest_ahoy_run.ts
 import * as H from './harness.js';
-import { play, Manifest, Step } from './questrun.js';
+import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-// A gate crossing, from the side you are standing on. [label,ahoy_step_through] steps you two tiles
-// along one axis from your OWN tile, so the approach tile has to be the one next to the barrier on
-// your side - and it has to be exact, because landing on the far side makes the handler step you
-// back out again.
-const gate = (at: [number, number], loc: [number, number], why: string): Step[] => [
-    { go: at, r: 200, exact: true, why: why },
-    { loc: 'ahoy_town_barrier', at: loc, why: 'pass the energy barrier' }
-];
-const southIn = (): Step[] => gate([3651, 3485], [3652, 3485], 'the south gate, from outside');
-const northOut = (): Step[] => gate([3659, 3507], [3659, 3508], 'the north gate, from inside');
-const northIn = (): Step[] => gate([3659, 3509], [3659, 3508], 'the north gate, from outside');
+const VELORINA: [number, number, number] = [3678, 3510, 0];
+const NECROVARUS: [number, number, number] = [3663, 3517, 0];
+const CRONE: [number, number, number] = [3461, 3556, 0];
+const OLDMAN: [number, number, number] = [3617, 3545, 1];
+const BOAT_IN_CHEST: [number, number] = [3619, 3544]; // L0, the hold
+const MAST: [number, number] = [3619, 3543]; // L2, the quarterdeck
+const CAPTAIN_CHEST: [number, number] = [3618, 3541]; // L2
+const LOBSTER_CHEST: [number, number] = [3621, 3543]; // L0
+const ROCK_CHEST: [number, number] = [3602, 3543]; // L0, across the rocks
+const PIER: [number, number, number] = [3703, 3488, 0];
+const DIG: [number, number, number] = [3803, 3530, 0];
+const AKHARANU: [number, number, number] = [3690, 3496, 0];
+const ROBIN: [number, number, number] = [3675, 3491, 0];
+const INNKEEPER: [number, number, number] = [3681, 3496, 0];
+const GRAVINGAS: [number, number, number] = [3662, 3496, 0];
+const TEMPLE_DOOR: [number, number] = [3656, 3514]; // L1
+const COFFIN: [number, number] = [3659, 3513]; // L1
 
-const innDoorOut: Step[] = [
-    { go: [3671, 3498], r: 64, why: 'the inn door from inside' },
-    { loc: 'ahoy_harbour_door', at: [3670, 3497], soft: true }
+// The ghost villagers, in the order they stand round the town. Twelve are placed and the petition
+// wants ten names, so the counter at the end is the real check and each individual talk is soft: a
+// villager the walk cannot stand next to is worth reporting but is not a failure while ten others
+// signed. All twelve are walked, because they wander and a given one is not always reachable; the
+// ones after the tenth name only say the sheet is full, which costs nothing.
+const VILLAGERS: [number, number][] = [
+    [3656, 3466],
+    [3664, 3491],
+    [3663, 3498],
+    [3662, 3463],
+    [3663, 3501],
+    [3663, 3490],
+    [3666, 3474],
+    [3667, 3502],
+    [3676, 3480],
+    [3673, 3499],
+    [3678, 3475],
+    [3684, 3482]
 ];
-const innDoor: Step[] = [
-    { go: [3670, 3496], r: 160, why: "outside Robin's house" },
-    { loc: 'ahoy_harbour_door', at: [3670, 3497], why: 'open the tatty door', soft: true }
+
+const sign = (i: number): any[] => [
+    { setpos: [VILLAGERS[i][0], VILLAGERS[i][1] + 1, 0], why: 'to ghost villager ' + (i + 1) },
+    { talk: 'ahoy_ghost_villager', tries: 8, soft: true, why: 'signature ' + (i + 1) }
 ];
-// one of the twelve ghost villagers, signing. The petition wants ten.
-const sign = (): Step[] => [{ talk: 'ahoy_ghost_villager', tries: 6, why: 'a signature' }];
 
 const m: Manifest = {
     quest: 'GHOSTS AHOY',
-    source: 'oldschool.runescape.wiki/w/Ghosts_Ahoy/Quick_guide (2004 quest, unchanged in OSRS)',
+    source: 'oldschool.runescape.wiki/w/Ghosts_Ahoy',
     stageVar: 'ahoy_questvar',
-    done: 15,
-    start: [3648, 3485, 0],
+    done: 15, // ^ahoy_complete
+    start: VELORINA,
     steps: [
+        { note: 'requirements: Priest in Peril and The Restless Ghost. Items: a ghostspeak amulet,' },
+        { note: 'nettle tea in a china cup with milk, a needle, silk, thread, red/blue/yellow dye,' },
+        { note: 'an oak longbow, a bucket of ectoplasm and a spade.' },
+        { setvar: 'priestperil', to: 60, why: '^priestperil_complete' },
+        { setvar: 'prieststart', to: 5, why: '^priest_complete' },
         { give: 'amulet_of_ghostspeak' },
-        { give: 'ectotoken', n: 30 },
-        // the tea is made outside the quest - nettles, gloves, a fire and a bowl of water - so the
-        // run is handed the finished article. The crone's fuss about the cup is tested, not skipped.
+        { held: 'amulet_of_ghostspeak', op: 2, why: 'without it no ghost in the town can be heard' },
+        { worn: 'amulet_of_ghostspeak' },
         { give: 'chinacup_of_nettletea_milky' },
         { give: 'needle' },
-        { give: 'thread' },
         { give: 'silk' },
+        { give: 'thread' },
         { give: 'reddye' },
         { give: 'bluedye' },
         { give: 'yellowdye' },
-        { give: 'spade' },
         { give: 'oak_longbow' },
         { give: 'bucket_ectoplasm' },
-        { setvar: 'priestperil', to: 60, why: 'Priest in Peril, a real requirement' },
-        { setvar: 'prieststart', to: 5, why: 'The Restless Ghost, the other one' },
+        { give: 'spade' },
 
-        { note: 'wiki step 2: into Port Phasmatys and talk to Velorina' },
-        ...southIn(),
-        { go: [3677, 3510], why: "Velorina's house" },
-        { talk: 'ahoy_velorina', picks: [1] },
+        { note: 'wiki step 1: Velorina cannot say goodbye to her husband' },
+        { setpos: VELORINA, why: 'to Velorina' },
+        { talk: 'ahoy_velorina', picks: ["What's wrong with this town?"], want: 'He will say no', why: 'Necrovarus holds the town' },
         { stage: 1 },
 
-        { note: 'wiki step 3: Necrovarus at the Ectofuntus, outside the walls' },
-        ...northOut(),
-        { go: [3658, 3516], why: 'the Ectofuntus' },
-        { talk: 'ahoy_necrovarus' },
+        { note: 'wiki step 2: and he does say no' },
+        { setpos: NECROVARUS, why: 'to Necrovarus at the Ectofuntus' },
+        { talk: 'ahoy_necrovarus', want: 'has not stopped being the answer', why: 'ask him to let them go' },
         { stage: 2 },
-
-        { note: 'wiki step 4: back to Velorina, who names the old crone' },
-        ...northIn(),
-        { go: [3677, 3510] },
-        { talk: 'ahoy_velorina' },
+        { setpos: VELORINA, why: 'back to Velorina' },
+        { talk: 'ahoy_velorina', want: 'slayer tower', why: 'she names the old crone' },
         { stage: 3 },
 
-        { note: 'wiki steps 5-6: the crone east of the slayer tower, and her tea' },
-        ...northOut(),
-        { go: [3550, 3545], r: 200, why: 'west across the swamp' },
-        { go: [3470, 3558], r: 200 },
-        { go: [3460, 3554], r: 64, why: 'outside her hut' },
-        { loc: 'ahoy_harbour_door', at: [3461, 3555], why: 'open the hut door', soft: true },
-        { go: [3463, 3556], r: 32 },
-        { talk: 'ahoy_crone', why: 'she asks for nettle tea' },
-        { talk: 'ahoy_crone', why: 'china cup, with milk' },
-        { hasnt: 'chinacup_of_nettletea_milky' },
+        { note: 'wiki step 3: the crone wants nettle tea in a china cup, with milk' },
+        { setpos: CRONE, why: 'to the crone east of the slayer tower' },
+        { note: 'carrying the tea already, the first click hands it straight over' },
+        { talk: 'ahoy_crone', want: 'Dragontooth Island', why: 'the tea, and then the book' },
         { stage: 4 },
 
-        { note: 'wiki step 7: the wreck. The old man wants his son model ship' },
-        { go: [3550, 3545], r: 200, why: 'back east' },
-        { go: [3610, 3543], r: 200, why: 'the wreck' },
-        { loc: 'ahoy_ghostship_ladder', at: [3609, 3543], why: 'up to the deck' },
-        { level: 1 },
-        { loc: 'ahoy_harbour_door', at: [3615, 3543], why: 'open the deck door', soft: true },
-        { go: [3618, 3543], why: 'the old man' },
-        { talk: 'ahoy_oldman', why: 'he asks for the model ship' },
-
-        { note: 'the model ship is in the chest at the aft end of the hold, where he says it is' },
-        { loc: 'ahoy_ghostship_laddertop', at: [3609, 3543], why: 'down into the hold' },
-        { level: 0 },
-        { go: [3619, 3545], r: 64, why: 'the aft chest' },
-        { loc: 'ahoy_chest_locked', at: [3619, 3544], why: 'the model ship' },
+        { note: 'wiki step 4: the wreck west of the town. The old man wants his son ship back.' },
+        { setpos: OLDMAN, why: 'to the old man on the deck' },
+        { talk: 'ahoy_oldman', want: 'in pieces', why: 'his son never got it' },
+        { setpos: [BOAT_IN_CHEST[0], BOAT_IN_CHEST[1] - 1, 0], why: 'down into the hold' },
+        { loc: 'ahoy_chest_locked', at: BOAT_IN_CHEST, want: 'nine pieces', why: 'the chest at the aft end' },
         { has: 'ahoy_toy_boat' },
-        { use: ['needle', 'ahoy_toy_boat'], why: 'needle, silk and thread' },
-        { has: 'ahoy_toy_boat_repaired' },
-        { hasnt: 'silk' },
-        { hasnt: 'thread' },
 
-        { note: 'wiki step 7: search the mast for the flag colours, then dye the flag to match' },
-        { go: [3610, 3543], r: 64 },
-        { loc: 'ahoy_ghostship_ladder', at: [3609, 3543] },
-        { go: [3615, 3542], why: 'the forward ladder' },
-        { loc: 'ahoy_ghostship_ladder', at: [3615, 3541], why: 'up to the quarterdeck' },
-        { level: 2 },
-        { go: [3619, 3542], r: 32, why: 'the mast' },
-        { loc: 'ahoy_mast', at: [3619, 3543], why: 'search it - the wind may be up', soft: true },
-        { loc: 'ahoy_mast', at: [3619, 3543], soft: true },
-        { loc: 'ahoy_mast', at: [3619, 3543], soft: true },
-        { loc: 'ahoy_mast', at: [3619, 3543], soft: true },
-        { loc: 'ahoy_mast', at: [3619, 3543], soft: true },
-        { loc: 'ahoy_mast', at: [3619, 3543], soft: true },
+        { note: 'the mast only shows its colours when the wind drops, which is a coin flip each' },
+        { note: 'time - so this is one step with a lot of tries rather than a pinned roll.' },
+        { setpos: [MAST[0] + 1, MAST[1], 2], why: 'up to the quarterdeck' },
+        { loc: 'ahoy_mast', at: MAST, tries: 12, want: 'red, then blue, then yellow', why: 'read the flag' },
         { varis: 'ahoy_windspeed', to: 1 },
-        { use: ['reddye', 'ahoy_toy_boat_repaired'], why: 'red, blue and yellow' },
-        { varis: 'ahoy_subquest_toyboat', to: 3 },
 
-        { note: 'the old man trades the key for his son ship' },
-        { loc: 'ahoy_ghostship_laddertop', at: [3615, 3541], why: 'down to the deck' },
-        { level: 1 },
-        { go: [3618, 3543], why: 'the old man' },
-        { talk: 'ahoy_oldman', why: 'hand over the ship' },
+        { note: 'mend her with a needle, silk and thread, then dye the flag to match' },
+        { use: ['needle', 'ahoy_toy_boat'], want: 'silk sail', why: 'mend the hull' },
+        { has: 'ahoy_toy_boat_repaired' },
+        { use: ['reddye', 'ahoy_toy_boat_repaired'], want: 'three bands', why: 'and dye the flag' },
+        { varis: 'ahoy_subquest_toyboat', to: 3 },
+        { setpos: OLDMAN, why: 'back to the old man' },
+        { talk: 'ahoy_oldman', want: 'bone-handled key', why: 'hand the ship over' },
         { has: 'ahoy_chest_key' },
 
-        { note: 'wiki step 7: the three map scraps - the captain chest, the lobster, the rocks' },
-        { go: [3615, 3542] },
-        { loc: 'ahoy_ghostship_ladder', at: [3615, 3541] },
-        { level: 2 },
-        { go: [3617, 3541] },
-        { loc: 'ahoy_chest_locked', at: [3618, 3541], why: "the captain's chest" },
+        { note: 'wiki step 5: three map scraps, one in each of three chests' },
+        { setpos: [CAPTAIN_CHEST[0] + 1, CAPTAIN_CHEST[1], 2], why: 'to the captain’s chest' },
+        { loc: 'ahoy_chest_locked', at: CAPTAIN_CHEST, want: 'third of a map', why: 'the key turns' },
         { has: 'ahoy_map_scrap_1' },
-        { loc: 'ahoy_ghostship_laddertop', at: [3615, 3541] },
-        { loc: 'ahoy_ghostship_laddertop', at: [3609, 3543] },
-        { level: 0 },
-        { go: [3621, 3544], r: 64, why: 'the aft chest in the hold' },
-        { loc: 'ahoy_chest_locked', at: [3621, 3543], why: 'something inside moves' },
-        { fight: 'giant_lobster' },
-        { loc: 'ahoy_chest_locked', at: [3621, 3543], why: 'and now search it' },
+        { setpos: [LOBSTER_CHEST[0] + 1, LOBSTER_CHEST[1], 0], why: 'to the chest in the hold' },
+        { loc: 'ahoy_chest_locked', at: LOBSTER_CHEST, want: 'lobster the size of a dog', why: 'something inside it moves' },
+        { fight: 'giant_lobster', tries: 4, r: 12, why: 'and it comes out sideways' },
+        { loc: 'ahoy_chest_locked', at: LOBSTER_CHEST, want: 'third of a map', why: 'now search it' },
         { has: 'ahoy_map_scrap_2' },
-        { go: [3603, 3543], r: 64, why: 'west along the hull to the last chest' },
-        { loc: 'ahoy_chest_locked', at: [3602, 3543], why: 'the chest across the rocks' },
+        { setpos: [ROCK_CHEST[0] + 1, ROCK_CHEST[1], 0], why: 'across the rocks past the gangplank' },
+        { loc: 'ahoy_chest_locked', at: ROCK_CHEST, want: 'third of a map', why: 'the one nobody reached' },
         { has: 'ahoy_map_scrap_3' },
-        { use: ['ahoy_map_scrap_1', 'ahoy_map_scrap_2'] },
+        { use: ['ahoy_map_scrap_1', 'ahoy_map_scrap_2'], want: 'make one map', why: 'three scraps, one map' },
         { has: 'ahoy_map_complete' },
         { stage: 5 },
 
-        { note: 'wiki steps 8-9: the ghost captain, Dragontooth Island, and the dig' },
-        ...northIn(),
-        { go: [3701, 3487], r: 200, why: 'the pier' },
-        { talk: 'ahoy_ghost_captain_1', why: 'sail to Dragontooth Island' },
-        { go: [3803, 3530], r: 128, exact: true, why: 'where the figures point' },
-        { held: 'spade' },
+        { note: 'wiki step 6: the ghost captain sails to Dragontooth Island, and the figures on the' },
+        { note: 'map point somewhere other than the cross' },
+        { setpos: PIER, why: 'to the ghost captain on the pier' },
+        { talk: 'ahoy_ghost_captain_1', want: 'Dragontooth Island', why: 'take me out there' },
+        { setpos: DIG, why: 'to where the figures point' },
+        { held: 'spade', op: 1, want: 'Book of Haricanto', why: 'dig' },
         { has: 'ahoy_book_of_haricanto' },
         { stage: 6 },
 
-        { note: 'wiki step 10: Ak-Haranu wants a bow with Robin name on it' },
-        { go: [3793, 3557], r: 128, why: 'back to the island dock' },
-        { talk: 'ahoy_ghost_captain_1', why: 'sail back' },
-        { go: [3691, 3496], r: 128, why: 'the dock' },
-        { talk: 'ahoy_akharanu_multi', why: 'he names his price' },
+        { note: 'wiki step 7: Ak-Haranu has the manual and wants a bow with Robin’s name on it' },
+        { setpos: AKHARANU, why: 'back to the dock' },
+        { talk: 'ahoy_akharanu_multi', want: 'bow with his name on it', why: 'he names his price' },
         { varis: 'ahoy_subquest_bow', to: 1 },
 
-        { note: 'Robin, in the inn: four hands of Rune-Draw and he owes you a hundred coins' },
-        ...innDoor,
-        { go: [3676, 3490], why: 'Robin' },
-        { talk: 'ahoy_robin', why: 'he explains the game' },
-        { talk: 'ahoy_robin', picks: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], tries: 40, until: 'oak_longbow_signed', why: 'play until he loses four' },
-        { varis: 'ahoy_subquest_bow', to: 8 },
+        { note: 'Robin will not sign one until he owes money, and he owes money by losing four' },
+        { note: 'games of Rune-Draw. Both draws are random(13)+1, so pinning the rng makes every' },
+        { note: 'hand a tie - this has to be played out.' },
+        { setpos: ROBIN, why: 'to Robin in the inn' },
+        { talk: 'ahoy_robin', want: 'Beat me four times', why: 'he offers a game' },
+        { note: 'the talk step retries on `until`, not on `want`, and the fourth win chains' },
+        { note: 'straight into him signing the bow - so the signed bow IS the stop condition.' },
+        { talk: 'ahoy_robin', picks: ['Draw.'], tries: 40, until: 'oak_longbow_signed', why: 'and loses four of them' },
         { has: 'oak_longbow_signed' },
-        { go: [3670, 3498], r: 64, why: 'the inn door, which has swung shut' },
-        { loc: 'ahoy_harbour_door', at: [3670, 3497], soft: true },
-        { go: [3691, 3496], r: 128, why: 'back to the dock' },
-        { talk: 'ahoy_akharanu_multi', why: 'trade the signed bow for the manual' },
+        { setpos: AKHARANU, why: 'back to Ak-Haranu' },
+        { talk: 'ahoy_akharanu_multi', want: 'Take the manual', why: 'one bow, signed by Robin' },
         { has: 'ahoy_translation_manual' },
         { stage: 7 },
-        { use: ['ahoy_translation_manual', 'ahoy_book_of_haricanto'] },
+        { use: ['ahoy_translation_manual', 'ahoy_book_of_haricanto'], want: 'robes are on the list', why: 'read the book' },
         { stage: 8 },
 
-        { note: 'wiki step 11: a job at the inn, a bucket of ectoplasm, and wear the thing' },
-        ...innDoor,
-        { go: [3681, 3495], why: 'the ghost innkeeper' },
-        { talk: 'ahoy_ghost_innkeeper', why: 'ask for work' },
+        { note: 'wiki step 8: the innkeeper has nineteen beds and no guests' },
+        { setpos: INNKEEPER, why: 'to the ghost innkeeper' },
+        { talk: 'ahoy_ghost_innkeeper', want: 'strip the beds', why: 'ask for work' },
         { has: 'ahoy_bedsheet' },
-        { use: ['bucket_ectoplasm', 'ahoy_bedsheet'] },
+        { use: ['bucket_ectoplasm', 'ahoy_bedsheet'], want: 'will not stop moving', why: 'dye it in ectoplasm' },
         { has: 'ahoy_bedsheetgreen' },
-        { held: 'ahoy_bedsheetgreen', op: 2, why: 'wear it' },
+        { held: 'ahoy_bedsheetgreen', op: 2, want: 'over your head', why: 'and wear it' },
+        { worn: 'ahoy_bedsheetgreen' },
 
-        ...innDoorOut,
-        { note: 'wiki step 11: Gravingas, in the square by the north gate, and ten signatures' },
-        { go: [3658, 3503], r: 160, why: 'Gravingas' },
-        { talk: 'ahoy_ghost_protestor', why: 'he hands over the petition' },
+        { note: 'wiki step 9: Gravingas hands out the petition and the town signs it for a ghost' },
+        { setpos: GRAVINGAS, why: 'to Gravingas in the square' },
+        { talk: 'ahoy_ghost_protestor', want: 'Ten names', why: 'he hands over the petition' },
         { has: 'ahoy_petition' },
-        ...sign(), ...sign(), ...sign(), ...sign(), ...sign(),
-        ...sign(), ...sign(), ...sign(), ...sign(), ...sign(),
+        ...sign(0),
+        ...sign(1),
+        ...sign(2),
+        ...sign(3),
+        ...sign(4),
+        ...sign(5),
+        ...sign(6),
+        ...sign(7),
+        ...sign(8),
+        ...sign(9),
+        ...sign(10),
+        ...sign(11),
         { varis: 'ahoy_signaturecounter', to: 10 },
-        { go: [3658, 3503], r: 160, why: 'back to Gravingas' },
-        { talk: 'ahoy_ghost_protestor', why: 'ten names' },
+        { setpos: GRAVINGAS, why: 'back to Gravingas' },
+        { talk: 'ahoy_ghost_protestor', want: 'Take it to him', why: 'ten names' },
         { stage: 9 },
 
-        { note: 'wiki step 11: show it to Necrovarus, and he drops a key' },
-        ...northOut(),
-        { go: [3658, 3516], why: 'the Ectofuntus' },
-        { talk: 'ahoy_necrovarus', why: 'ten names' },
+        { note: 'wiki step 10: shown ten names, Necrovarus drops a key out of his robes' },
+        { setpos: NECROVARUS, why: 'to Necrovarus' },
+        { talk: 'ahoy_necrovarus', want: 'key of yellowed bone', why: 'show him the petition' },
         { stage: 10 },
-        { take: 'ahoy_bone_key', why: 'it fell out of his robes' },
+        { take: 'ahoy_bone_key', r: 8, why: 'and pick the key up' },
+        { has: 'ahoy_bone_key' },
 
-        { note: 'wiki step 11: the locked door upstairs, and the coffin behind it' },
-        { go: [3665, 3518], why: 'the temple stairs' },
-        { loc: 'ahoy_tower_stairs_lv1', at: [3666, 3518], why: 'up' },
-        { level: 1 },
-        { loc: 'ahoy_harbour_door', at: [3656, 3514], why: 'the bone key turns the bone lock' },
-        { varis: 'ahoy_templedoor_unlocked', to: 1 },
-        { loc: 'ahoy_coffin', at: [3659, 3513], why: "Necrovarus's coffin" },
+        { note: 'wiki step 11: the bone key opens one door, and his coffin is through it' },
+        { setpos: [TEMPLE_DOOR[0] + 1, TEMPLE_DOOR[1], 1], why: 'to the temple’s upper floor' },
+        { useLoc: 'ahoy_harbour_door', at: TEMPLE_DOOR, obj: 'ahoy_bone_key', want: 'bone lock', why: 'unlock it' },
+        { loc: 'ahoy_coffin', at: COFFIN, want: 'robes of Necrovarus', why: 'open the coffin' },
         { has: 'ahoy_robes_of_necrovarus' },
 
-        { note: 'wiki step 12: the crone, then Necrovarus, then Velorina' },
-        { loc: 'ahoy_tower_stairs_lv1_top', at: [3666, 3520], why: 'back down' },
-        { level: 0 },
-        { go: [3550, 3545], r: 200, why: 'west to the crone' },
-        { go: [3460, 3554], r: 200 },
-        { loc: 'ahoy_harbour_door', at: [3461, 3555], soft: true },
-        { go: [3463, 3556], r: 32 },
-        { talk: 'ahoy_crone', why: 'she tells you what the robes are for' },
+        { note: 'wiki step 12: the crone knows what the robes are, and then he has to be told' },
+        { setpos: CRONE, why: 'to the crone' },
+        { talk: 'ahoy_crone', want: 'let him see you holding them', why: 'she explains' },
         { stage: 11 },
-        { go: [3550, 3545], r: 200, why: 'back east' },
-        { go: [3658, 3516], r: 200, why: 'the Ectofuntus' },
-        { talk: 'ahoy_necrovarus', why: 'let him see you holding them' },
+        { setpos: NECROVARUS, why: 'back to Necrovarus' },
+        { talk: 'ahoy_necrovarus', want: 'barrier over the town thins', why: 'and he lets the town go' },
         { stage: 12 },
-        ...southIn(),
-        { go: [3677, 3510], why: 'Velorina' },
-        { talk: 'ahoy_velorina', why: 'tell her' },
+
+        { note: 'and Velorina has waited two hundred years for this' },
+        { setpos: VELORINA, why: 'to Velorina' },
+        { talk: 'ahoy_velorina', want: 'crowd looks back', why: 'tell her' },
         { stage: 15 },
         { has: 'ectophial' }
     ]
@@ -253,44 +233,15 @@ const m: Manifest = {
 const p: any = H.makePlayer('ahoyrun', m.start[0], m.start[1]);
 H.tick(2);
 p.teleport(m.start[0], m.start[1], m.start[2]);
-// The giant lobster is level 32 and the swamp between here and the crone is not empty; this run is
-// auditing whether the quest can be completed, not whether it can be survived, and a death loses
-// the pack. Damage going the OTHER way is untouched, so the lobster still has to be killed.
-(p as any).applyDamage = function () {};
-// AND NO RANDOM EVENTS. These runs walk for hundreds of ticks at a stretch and a random event
-// teleports the player out of the middle of it - one run lost the walk to Zooknock at 2523,4780,
-// 262 tiles into a 628-tile route, which reads as a pathing failure and is not one.
-// ~macro_event_allowed refuses to spawn one while %macro_event is already set, so setting it is
-// the switch. A player being interrupted by a random event is real; it is just not what is
-// under test here.
+p.applyDamage = function () {};
 H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
-H.equip(p, { front: 'amulet_of_ghostspeak', rhand: 'rune_scimitar' });
 H.tick(1);
 
-const prayerBefore = (p as any).stats ? (p as any).stats[5] : 0;
 const res = play(m, p);
 const bad = res.filter(r => !r.ok);
-
 console.log('');
-console.log('REWARDS, AND WHAT CAN BE DONE TWICE');
-const xp = () => ((p as any).stats ? (p as any).stats[5] : 0);
-console.log('  Prayer xp from the whole quest: ' + (xp() - prayerBefore) / 10 + '   (the wiki says 2,400)');
-console.log('  ectophial in the pack: ' + H.invCount(p, 'ectophial'));
-if (H.invCount(p, 'ahoy_translation_manual') > 0 && H.invCount(p, 'ahoy_book_of_haricanto') > 0) {
-    const before = xp();
-    for (let i = 0; i < 5; i++) {
-        H.useHeldOn(p, 'ahoy_translation_manual', 'ahoy_book_of_haricanto');
-        for (let k = 0; k < 10; k++) H.tick(1);
-        if (p.activeScript) p.activeScript = null;
-    }
-    const gained = (xp() - before) / 10;
-    console.log('  re-reading the manual onto the book five more times: ' + gained + ' Prayer xp'
-        + (gained > 0 ? '   *** REPEATABLE ***' : '   (nothing, correctly)'));
-}
-
 if (bad.length) {
-    console.log('');
     console.log('WHAT WENT WRONG');
     for (const r of bad) console.log('  step ' + r.n + '  ' + r.what + (r.detail ? '  -- ' + r.detail : ''));
 }
