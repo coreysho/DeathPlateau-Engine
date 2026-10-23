@@ -80,6 +80,7 @@ export type Step =
     | { press: string; n?: number; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
     | { rng: number | null; why?: string }
+    | { close: true; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -445,6 +446,18 @@ export function play(m: Manifest, p: Player): Result[] {
         if ('wait' in s) {
             H.tick(s.wait);
             console.log('      -- waited ' + s.wait + ' ticks' + (s.why ? '   (' + s.why + ')' : ''));
+            continue;
+        }
+        // CLOSE A MAIN INTERFACE SO THE QUEUE CAN RUN. An open modal makes busy() true, and
+        // canAccess() gates processQueue on it - so a queue the player's own click started will sit
+        // there for ever until the interface is shut. The Observatory telescope does exactly that:
+        // if_openmain(telescope) and then queue(constellation_dialogue, 0, ...), which is why the
+        // constellation dialogue only arrives after the player closes the view. Nothing else in the
+        // runner shuts a main interface, so the manifest has to say when the player clicks the X.
+        if ('close' in s) {
+            (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+            for (let w = 0; w < 6; w++) H.tick(1);
+            console.log('      -- closed the interface' + (s.why ? '   (' + s.why + ')' : ''));
             continue;
         }
         // A RANDOMISED STEP CANNOT BE ASSERTED. Curpile Fyod asks three of six questions at
