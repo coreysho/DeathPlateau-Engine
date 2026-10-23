@@ -31,7 +31,7 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
-import { findNpc, drive, useOn, useOnNpc } from './a1lib.js';
+import { findNpc, drive, useOn, useOnNpc, useOnObj } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import JavaRandom from '#/util/JavaRandom.js';
@@ -60,6 +60,7 @@ export type Step =
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
     | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean }
+    | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
     | { setvar: string; to: number; why?: string }
@@ -497,6 +498,25 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
             }
             soft(whatCast, hit, hit ? '' : whyNot);
+            continue;
+        }
+        // USE A HELD ITEM ON A GROUND OBJ. Nothing else reaches OPOBJU: the loc version walks to a
+        // tile beside the thing, and a ground obj is reached from its own tile. Zogre Flesh Eaters
+        // puts a cup of tea on Sithik's drawers and the potion has to go into the cup.
+        if ('useObj' in s) {
+            const whatUO = 'use ' + s.obj + ' on the ' + s.useObj + ' at ' + s.at[0] + ',' + s.at[1] + (s.why ? ' - ' + s.why : '');
+            const markUO = H.mesgs.length;
+            let linesUO: string[] = [];
+            let blewUO = '';
+            try {
+                linesUO = useOnObj(p, s.at[0], s.at[1], s.useObj, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
+            } catch (e) {
+                blewUO = String(e).replace('Error: ', '');
+            }
+            const saidUO = linesUO.concat(H.mesgs.slice(markUO).map(x => x.text)).join(' ');
+            const okUO = !blewUO && (!s.want || saidUO.includes(s.want));
+            const report = 'soft' in s && s.soft ? soft : hard;
+            report(whatUO, okUO, blewUO || (okUO ? '' : 'nothing said "' + s.want + '"; got: ' + saidUO.slice(0, 160)));
             continue;
         }
         if ('close' in s) {

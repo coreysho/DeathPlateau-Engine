@@ -170,6 +170,26 @@ export function useOn(p: Player, x: number, z: number, locName: string, objName:
     (p as unknown as { opcalled: boolean }).opcalled = true;
     return drive(p, picks);
 }
+/**
+ * "Use" an inventory item on a ground obj: OpObjUHandler. The route goes to the obj's own TILE,
+ * not beside it, because that is where a ground obj is reached from - the same reason
+ * harness.opObj takes a walk flag. Zogre Flesh Eaters' cup of tea is the only thing in the pass
+ * that needs it: the potion goes into a cup standing on Sithik's drawers, not into Sithik.
+ */
+export function useOnObj(p: Player, x: number, z: number, objName: string, useName: string, picks: (number | string)[] = []) {
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const ground = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
+    if (!ground) throw new Error(`no ${objName} on the ground at ${x},${z},${p.level}`);
+    const { obj, slot } = slotOf(p, useName);
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, x, z, p.width, 1, 1));
+    p.lastUseItem = obj;
+    p.lastUseSlot = slot;
+    p.setInteraction(Interaction.ENGINE, ground, ServerTriggerType.APOBJU);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return drive(p, picks);
+}
 /** "Use" an inventory item on an npc: OpNpcUHandler. */
 export function useOnNpc(p: Player, npcName: string, objName: string, picks: (number | string)[] = []) {
     const npc = findNpc(npcName, p);
