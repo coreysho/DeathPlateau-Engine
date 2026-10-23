@@ -77,10 +77,11 @@ export type Step =
     | { sneak: [number, number]; past: string; r?: number; tol?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
     | { herd: string; at: [number, number]; gate: [number, number, number, number]; untilvar: string; bit: number; tries?: number; why?: string }
-    | { press: string; n?: number; why?: string }
+    | { press: string; n?: number; slot?: number; why?: string }
     | { say: (number | string)[]; want?: string; why?: string }
     | { rng: number | null; why?: string }
     | { close: true; why?: string }
+    | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -454,6 +455,50 @@ export function play(m: Manifest, p: Player): Result[] {
         // if_openmain(telescope) and then queue(constellation_dialogue, 0, ...), which is why the
         // constellation dialogue only arrives after the player closes the view. Nothing else in the
         // runner shuts a main interface, so the manifest has to say when the player clicks the X.
+        // A SPELL AT A NAMED NPC, which no other step can send. Chronozon has to be hit once by
+        // each of the four Blast spells before he can be killed at all, and "hit" means a hit, not
+        // a cast - a splash does not count. So this waits for the hit to land and reports whether
+        // the spell actually connected rather than whether the click went out.
+        if ('cast' in s) {
+            const whatCast = 'cast ' + s.cast + ' at ' + s.on + (s.why ? ' - ' + s.why : '');
+            const rCast = ('r' in s ? s.r : undefined) ?? 16;
+            const triesCast = ('tries' in s ? s.tries : undefined) ?? 6;
+            const ids = NpcType.getId(s.on);
+            let hit = false;
+            let whyNot = 'no ' + s.on + ' within ' + rCast;
+            const mesMarkCast = H.mesgs.length;
+            for (let a = 0; a < triesCast && !hit; a++) {
+                let target: Npc | null = null;
+                for (const npc of World.npcs) {
+                    if (!npc || !npc.isActive || npc.level !== p.level || npc.type !== ids) continue;
+                    if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= rCast) {
+                        target = npc;
+                        break;
+                    }
+                }
+                if (!target) {
+                    H.tick(4);
+                    continue;
+                }
+                whyNot = 'the spell never landed';
+                try {
+                    H.castOnNpc(p, target, s.cast);
+                } catch (e) {
+                    whyNot = String(e).replace('Error: ', '');
+                    break;
+                }
+                for (let t = 0; t < 20; t++) {
+                    H.tick(1);
+                    const said = H.mesgs.slice(mesMarkCast).map(x => x.text).join(' ');
+                    if (s.want ? said.includes(s.want) : (target.levels[3] ?? 0) < (target.baseLevels[3] ?? 0)) {
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+            soft(whatCast, hit, hit ? '' : whyNot);
+            continue;
+        }
         if ('close' in s) {
             (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
             for (let w = 0; w < 6; w++) H.tick(1);
@@ -697,7 +742,11 @@ export function play(m: Manifest, p: Player): Result[] {
                         try {
                             H.ifButton(p, s.press);
                         } catch (e1) {
-                            H.invButton(p, s.press);
+                            // A PANEL SLOT, not a component. The crafting jewellery window's
+                            // rows are one inv each and the trigger is INV_BUTTON1 on the row with
+                            // last_slot set - so "the ruby ring" is rings_inv slot 3, and without
+                            // the slot every row makes a sapphire one.
+                            H.invButton(p, s.press, 1, ('slot' in s ? s.slot : undefined) ?? 0);
                         }
                     }
                     pressed++;
