@@ -68,3 +68,7 @@ for (const [nm, where] of [...found].sort()) {
     console.log(`  ${nm}`);
     console.log(`      ${where.join('  ')}`);
 }
+
+// A booted world keeps timers alive, so a probe that just falls off the end never exits and looks
+// like a hang. Say so explicitly.
+process.exit(0);

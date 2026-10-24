@@ -35,6 +35,7 @@ import { findNpc, drive, useOn, useOnNpc, useOnObj } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import JavaRandom from '#/util/JavaRandom.js';
+import ScriptState from '#/engine/script/ScriptState.js';
 import Npc from '#/engine/entity/Npc.js';
 
 /** The nearest tile within `radius` holding this ground obj, or null. */
@@ -82,6 +83,8 @@ export type Step =
     | { say: (number | string)[]; want?: string; why?: string }
     | { rng: number | null; why?: string }
     | { close: true; why?: string }
+    | { count: number; why?: string }
+    | { zone: true; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { note: string };
 
@@ -517,6 +520,43 @@ export function play(m: Manifest, p: Player): Result[] {
             const okUO = !blewUO && (!s.want || saidUO.includes(s.want));
             const report = 'soft' in s && s.soft ? soft : hard;
             report(whatUO, okUO, blewUO || (okUO ? '' : 'nothing said "' + s.want + '"; got: ' + saidUO.slice(0, 160)));
+            continue;
+        }
+        if ('zone' in s) {
+            // A [zone,...] TRIGGER, which a sim never gets on its own: Player.triggerZone is only
+            // called from NetworkPlayer.processMovement, so a harness player can walk into a zone
+            // all day and nothing fires. Death Plateau's scouting step is one of these - walking
+            // far enough up the secret path is what tells Denulth the trolls have not found it.
+            // This fires the trigger for the tile the player is standing on, which is exactly what
+            // the client's own arrival does, so the CONTENT is still what is being tested.
+            const whatZone = 'zone trigger at ' + p.x + ',' + p.z + (s.why ? ' - ' + s.why : '');
+            (p as any).triggerZone(p.level, (p.x >> 3) << 3, (p.z >> 3) << 3);
+            for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+            for (let t = 0; t < 20 && p.activeScript; t++) H.tick(1);
+            soft(whatZone, true, '');
+            continue;
+        }
+        if ('count' in s) {
+            // A p_countdialog: the "enter an amount" box, which is not a button and not a menu, so
+            // neither choose() nor ifButton() can answer it. Death Plateau's dice is the first
+            // thing in the pass to ask for one - Harold wants a stake typed in before he will roll.
+            const whatCount = 'enter ' + s.count + (s.why ? ' - ' + s.why : '');
+            let answered = false;
+            for (let t = 0; t < 10 && !answered; t++) {
+                const sc: any = (p as any).activeScript;
+                if (sc && sc.execution === ScriptState.COUNTDIALOG) {
+                    sc.lastInt = s.count;
+                    (p as any).executeScript(sc, true, true);
+                    answered = true;
+                    break;
+                }
+                H.tick(1);
+            }
+            // and then click through whatever the script says next: Harold answers a stake with
+            // "Right...er...here goes..." and waits on continue before he will roll, so a count
+            // step that only types the number leaves the hand half-played.
+            if (answered) drive(p, []);
+            soft(whatCount, answered, answered ? '' : 'nothing was waiting for a number');
             continue;
         }
         if ('close' in s) {

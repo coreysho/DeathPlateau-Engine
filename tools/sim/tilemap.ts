@@ -44,3 +44,7 @@ for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).va
         console.log(`  ${loc.x},${loc.z} s${loc.shape}a${loc.angle}  ${t.debugname ?? 'loc_' + loc.type}${ops ? '  [' + ops + ']' : ''}`);
     }
 }
+
+// A booted world keeps timers alive, so a probe that just falls off the end never exits and looks
+// like a hang. Say so explicitly.
+process.exit(0);
