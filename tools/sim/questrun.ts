@@ -87,6 +87,7 @@ export type Step =
     | { count: number; why?: string }
     | { zone: true; why?: string }
     | { mapexit: [number, number]; why?: string }
+    | { strip: string[]; why?: string }
     | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { note: string };
@@ -585,6 +586,31 @@ export function play(m: Manifest, p: Player): Result[] {
             soft(wantHunt, doneWake(), doneWake() ? '' : 'the hunt never found anything in ' + ticksWake + ' ticks');
             continue;
         }
+        if ('strip' in s) {
+            // TAKE EVERYTHING ELSE OFF. Some content counts what is worn rather than looking for a
+            // particular thing: Underground Pass's temple doors want
+            // inv_freespace(worn) = inv_size(worn) - 2, which is "the two Zamorak robes and nothing
+            // else", so a player in full rune with a bow is refused however right the robes are.
+            // There is no unequip trigger to drive, so this moves each unwanted worn item back into
+            // the pack the way the client's own Remove does, and says what it took off.
+            const keep = new Set(s.strip.map(n => ObjType.getId(n)));
+            const worn = p.getInventory(InvType.WORN);
+            const took: string[] = [];
+            if (worn) {
+                for (let slot = 0; slot < worn.capacity; slot++) {
+                    const obj = worn.get(slot);
+                    if (!obj || keep.has(obj.id)) continue;
+                    took.push(ObjType.get(obj.id).debugname ?? String(obj.id));
+                    worn.delete(slot);
+                    p.invAdd(InvType.INV, obj.id, obj.count, false);
+                }
+            }
+            (p as unknown as { buildAppearance: (inv: number) => void }).buildAppearance?.(InvType.WORN);
+            H.tick(2);
+            const whatStrip = 'take off everything but ' + s.strip.join(', ') + (s.why ? ' - ' + s.why : '');
+            soft(whatStrip, true, took.length ? 'removed ' + took.join(', ') : 'nothing to remove');
+            continue;
+        }
         if ('mapexit' in s) {
             // LEAVING A MAP SQUARE IS A TRIGGER TOO, and the same NetworkPlayer-only hole as the
             // `zone` step covers: [mapzone,...] and [mapzoneexit,...] are fired from
@@ -1078,13 +1104,20 @@ export function play(m: Manifest, p: Player): Result[] {
                 // dropped. Bail out and name the tile instead.
                 const hp0 = npc.levels[3];
                 let d = false;
+                // WAS THE PLAYER EVER TOE-TO-TOE? The unreachable test below is for a fight that
+                // never starts - Rag and Bone Man's penned goblins - but Underground Pass's three
+                // paladins wander, have op2=Attack and no huntmode, and take the better part of a
+                // hundred ticks to take their first hit. A fight that has had the player beside it
+                // is not a wall, however long it takes.
+                let everAdjacent = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
                     if (!npc.isValid() || npc.type !== type0) {
                         d = true;
                         break;
                     }
                     const adjacent = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= 1;
-                    if (k > 150 && npc.levels[3] >= hp0 && !adjacent) {
+                    if (adjacent) everAdjacent = true;
+                    if (k > 150 && npc.levels[3] >= hp0 && !adjacent && !everAdjacent) {
                         unreachable.add(npc.nid);
                         missing = 'no hit landed on ' + types.join('/') + ' at ' + npc.x + ',' + npc.z + ' in 150 ticks from ' + p.x + ',' + p.z + ' - it cannot be reached';
                         break;
@@ -1102,11 +1135,26 @@ export function play(m: Manifest, p: Player): Result[] {
                         }
                         break;
                     }
+                    // AND RE-CLICK WHEN IT IS WALKING AWAY. A passive npc never comes to you, and
+                    // one click's worth of waypoints goes stale the moment it wanders - Underground
+                    // Pass's three paladins have op2=Attack and no huntmode, and the player chased
+                    // Sir Jerro east across the room two tiles behind him for 150 ticks without
+                    // ever closing. Re-issuing the click re-queues the route from where he is now.
+                    const chasing =
+                        k > 0 &&
+                        k % 15 === 0 &&
+                        npc.levels[3] >= hp0 &&
+                        Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > 1;
+                    // and WALK, rather than trusting the click to route: re-issuing the op queues
+                    // waypoints that setInteraction then replaces, so a player who is not already
+                    // beside a passive npc never takes a step. travel() is the same BFS the `go`
+                    // step uses, and it stops one tile short on purpose.
+                    if (chasing) travel(p, npc.x, npc.z, p.level, 32, 1);
                     // RE-CLICK WHEN THE PLAYER IS IDLE. One attack click at the start is not a
                     // fight: a door or gate op leaves the player delayed and the engine throws the
                     // click away without a word, which is how Elvarg survived 900 ticks of nothing
                     // happening with a rune scimitar in hand.
-                    if (!p.target && !(p as unknown as { delayed: boolean }).delayed) {
+                    if ((chasing || !p.target) && !(p as unknown as { delayed: boolean }).delayed) {
                         if (!picksFight) {
                             (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
                         }
