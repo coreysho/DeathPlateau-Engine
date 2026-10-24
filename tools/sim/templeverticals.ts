@@ -176,7 +176,18 @@ const DOORS: [string, string, number][] = [
     ['mourning_door_1_13_east', 'floor 1 room 13, cyan - a chest behind it', 4],
     ['mourning_door_2_16_north', 'floor 2 room 16, blue - a chest behind it', 5],
     ['mourning_door_2_4_west', 'floor 2 room 4, magenta - a chest behind it', 6],
-    ['mourning_door_1_c', 'the black door to the Death Altar', 7]
+    ['mourning_door_1_c', 'the black door to the Death Altar', 7],
+    // AND THE REST OF THEM. Five of the fourteen doorways were left out of this list, and one of
+    // them is the one that matters most: mourning_door_1_b is the only way a player on foot can
+    // get from the bottom of the west circle staircase into the 175-tile west corridor, and the
+    // west corridor is the only way to mourning_door_1_c, Thorgel and the Death Altar
+    // (tools/sim/templewalk.ts walks that route). A chest nobody can open is a loss; this one
+    // would be half a quest.
+    ['mourning_door_1_b', 'the cyan door into the west corridor - the ONLY way to the Death Altar', 4],
+    ['mourning_door_1_13_north', 'floor 1 room 13 from the north, cyan', 4],
+    ['mourning_door_1_1_east', 'floor 1 room 1 from the east, yellow', 2],
+    ['mourning_door_1_16_west', 'floor 1 room 16 from the west, magenta', 6],
+    ['mourning_door_2_16_west', 'floor 2 room 16 from the west, blue', 5]
 ];
 for (const [door, what, colour] of DOORS) {
     let opened = false;

@@ -306,6 +306,14 @@ if (run('golem')) {
 if (run('agrith')) {
     console.log('Shadow of the Storm');
     const p = player('agrithq', 3272, 3158);
+    // THE TWO QUESTS FATHER REEN ASKS FOR. The audit's player() hands out no quest history, so
+    // ~agrith_requirements refused this section outright - "you have never been near a demon or a
+    // clay man" - and the whole file stopped here, which took Mourning's End Part II and everything
+    // after it down with it. The Golem is driven for real by the section above; Demon Slayer is
+    // not in this file, so it is set.
+    H.setVar(p, 'demonstart', 30);
+    H.setVarBit(p, 'golem_a', 10);
+    H.tick(1);
     const e0 = errors.length;
     const Q = () => v(p, 'agrith_quest');
     talkNear(p, 'agrith_reen_alkharid', 3271, 3158, [1]);
@@ -340,7 +348,8 @@ if (run('agrith')) {
     held(p, 'agrith_sigil', 1, [1, 3, 4, 2, 5]); // Tar Naar Rekt Agrith Secare
     check("the chant in the tome's order: Darklight (stage darklight)", [H.invCount(p, 'darklight'), Q()], [1, 120]);
     p.levels[3] = 99;
-    talkNear(p, 'agrith_reen_uzer', 3483, 3093);
+    // the reward is a choice of four skills to put the xp in; the audit takes Melee.
+    talkNear(p, 'agrith_reen_uzer', 3483, 3093, [1, 1]);
     check('Father Reen at the ruins: complete', Q(), 125);
     check('  no script errors', errorsSince(e0), []);
 
@@ -646,6 +655,12 @@ if (run('mourning2')) {
     place(p, ...T(1, 31), 0);
     opLoc(p, ...T(0, 30), 'mourning_temple_light_wall_with_hole');
     check('out through the hole in the west wall, back at the tunnel', [p.x, p.z, p.level, standing(p)], [2311, 9793, 0, true]);
+    // AND THE PLAYER CAN WALK TO ALL OF IT. The west end of the bottom floor - Thorgel, the ruins,
+    // the altar, the hole the light leaves by - is its own 55-tile region reached by going UP to
+    // floor 3 and back down the west circle staircase twice, then through two doors of light.
+    // tools/sim/templewalk.ts is the probe that found that route and tools/sim/quest_mourning2_run.ts
+    // walks the whole quest along it, four times, because the hole is the only way out of the
+    // building.
     // THE LIGHT IS NO LONGER THE END OF THE QUEST. What it opens is the black door at the west end
     // of the bottom floor, and behind that are Thorgel, the Death Altar and the crystal that goes
     // back into the black one on the top floor. tools/sim/templealtar.ts drives that half.
