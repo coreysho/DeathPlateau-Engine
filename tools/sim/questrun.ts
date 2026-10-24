@@ -34,6 +34,7 @@ import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc, useOnObj } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
+import HuntType from '#/cache/config/HuntType.js';
 import JavaRandom from '#/util/JavaRandom.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import Npc from '#/engine/entity/Npc.js';
@@ -74,7 +75,7 @@ export type Step =
     | { has: string; n?: number }
     | { worn: string }
     | { hasnt: string }
-    | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; r?: number; why?: string }
+    | { fight: string | string[]; until?: string; untilvar?: string; to?: number; tries?: number; r?: number; op?: number; why?: string }
     | { nearnpc: string; r?: number; why?: string }
     | { sneak: [number, number]; past: string; r?: number; tol?: number; why?: string }
     | { hunt: [string, number, number][]; untilnpc: string; untilvar?: string; to?: number; tries?: number; why?: string }
@@ -85,6 +86,7 @@ export type Step =
     | { close: true; why?: string }
     | { count: number; why?: string }
     | { zone: true; why?: string }
+    | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { note: string };
 
@@ -520,6 +522,46 @@ export function play(m: Manifest, p: Player): Result[] {
             const okUO = !blewUO && (!s.want || saidUO.includes(s.want));
             const report = 'soft' in s && s.soft ? soft : hard;
             report(whatUO, okUO, blewUO || (okUO ? '' : 'nothing said "' + s.want + '"; got: ' + saidUO.slice(0, 160)));
+            continue;
+        }
+        if ('wakehunt' in s) {
+            // A HUNT NOBODY IS WATCHING NEVER RUNS. Npc.processNpc only calls huntAll() when the
+            // hunt's nobodynear is not PAUSEHUNT - the default - or when rsbuf.getNpcObservers()
+            // says a client is looking at the npc, and a harness player is not a NetworkPlayer, so
+            // it observes nothing and no npc in a sim ever hunts anything. Big Chompy Bird Hunting
+            // is the first quest in the pass that turns on one: the chompy bird is called by the
+            // bait and then has to HUNT the bloated toad to eat it, and eating it is what moves the
+            // quest on. Same shape as the `zone` step: the engine's own call is made by hand, with
+            // the huntClock ticked so the hunt's own rate still applies, and consumeHuntTarget is
+            // left to the engine - processNpc calls it outside the gate.
+            const wantHunt = 'wake the hunt on ' + s.wakehunt + (s.why ? ' - ' + s.why : '');
+            const idHunt = NpcType.getId(s.wakehunt);
+            const rWake = ('r' in s ? s.r : undefined) ?? 20;
+            let hunter: Npc | null = null;
+            for (const npc of World.npcs) {
+                if (!npc || !npc.isActive || npc.type !== idHunt || npc.level !== p.level) continue;
+                if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > rWake) continue;
+                hunter = npc;
+                break;
+            }
+            const doneWake = () => ('untilvar' in s && s.untilvar ? stageOf(p, s.untilvar) === s.to : !!hunter && !hunter.isValid());
+            if (!hunter) {
+                soft(wantHunt, false, 'nothing of that type is within ' + rWake + ' tiles of ' + p.x + ',' + p.z);
+                continue;
+            }
+            const ticksWake = ('tries' in s ? s.tries : undefined) ?? 60;
+            for (let t = 0; t < ticksWake && !doneWake(); t++) {
+                const h: any = hunter;
+                if (h.huntMode !== -1 && h.isValid()) {
+                    const hunt = HuntType.get(h.huntMode);
+                    if (hunt) {
+                        h.huntAll(hunt);
+                        h.huntClock++;
+                    }
+                }
+                H.tick(1);
+            }
+            soft(wantHunt, doneWake(), doneWake() ? '' : 'the hunt never found anything in ' + ticksWake + ' ticks');
             continue;
         }
         if ('zone' in s) {
@@ -1032,7 +1074,15 @@ export function play(m: Manifest, p: Player): Result[] {
                         if (!picksFight) {
                             (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
                         }
-                        H.attackNpc(p, npc);
+                        // SOME THINGS ARE SHOT, NOT ATTACKED. attackNpc sends APNPC2, which is what every
+                        // ordinary Attack op is - but the Chompy Bird's Attack is op5 ([apnpc5,chompy_bird]),
+                        // and an op2 on it does nothing at all. `op` sends that op instead, through the same
+                        // routed click a client would make.
+                        if ('op' in s && s.op) {
+                            H.opNpc(p, npc, s.op);
+                        } else {
+                            H.attackNpc(p, npc);
+                        }
                     }
                     H.tick(1);
                 }
