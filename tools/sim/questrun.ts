@@ -58,10 +58,10 @@ function groundObj(p: Player, objName: string, radius: number): [number, number]
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string; brief?: number; hop?: boolean }
+    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number; brief?: number; hop?: boolean }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
-    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean }
+    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number }
     | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
@@ -86,6 +86,7 @@ export type Step =
     | { close: true; why?: string }
     | { count: number; why?: string }
     | { zone: true; why?: string }
+    | { mapexit: [number, number]; why?: string }
     | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { note: string };
@@ -315,6 +316,26 @@ export function play(m: Manifest, p: Player): Result[] {
     console.log('  step list from ' + m.source);
     console.log('  progress read off ' + m.stageVar + ', complete at ' + m.done);
 
+
+    // THE OPS A STEP NEEDS BEFORE IT, in order, and with as few ticks between them as possible.
+    // Shilo Village's carved doors are the case this exists for: the palm trees over them have to
+    // be SEARCHED to reveal them, they hide themselves again fifty ticks later, and getting inside
+    // takes two more clicks after that - so the whole chain has to fit in one window, and going
+    // through arrive() for each link spent the window on its own.
+    const runFirsts = (spec: string | [string, number, number, number][], at: [number, number], atOp: number) => {
+        const chain: [string, number, number, number][] = typeof spec === 'string' ? [[spec, at[0], at[1], atOp]] : spec;
+        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+        for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+        for (const [name, fx, fz, fop] of chain) {
+            try {
+                if (H.opLoc(p, fx, fz, name, fop)) {
+                    for (let t = 0; t < 4; t++) H.tick(1);
+                }
+            } catch {
+                // already in the state the step wants
+            }
+        }
+    };
     for (const s of m.steps) {
         if (stopped) break;
 
@@ -562,6 +583,21 @@ export function play(m: Manifest, p: Player): Result[] {
                 H.tick(1);
             }
             soft(wantHunt, doneWake(), doneWake() ? '' : 'the hunt never found anything in ' + ticksWake + ' ticks');
+            continue;
+        }
+        if ('mapexit' in s) {
+            // LEAVING A MAP SQUARE IS A TRIGGER TOO, and the same NetworkPlayer-only hole as the
+            // `zone` step covers: [mapzone,...] and [mapzoneexit,...] are fired from
+            // processMovement, so a harness player can walk out of a map square and nothing runs.
+            // Shilo Village is the first quest in the pass that needs one - leaving Ah Za Rhoon is
+            // what sets ^zombiequeen_left_ah_za_rhoon, and the tomb of Bervirius will not let you
+            // in without it. The coordinate is the square being LEFT, not the one arrived in.
+            const [mx, mz] = s.mapexit;
+            const whatExit = 'leave the map square at ' + mx + ',' + mz + (s.why ? ' - ' + s.why : '');
+            (p as any).triggerMapzoneExit(mx, mz);
+            for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+            for (let t = 0; t < 20 && p.activeScript; t++) H.tick(1);
+            soft(whatExit, true, '');
             continue;
         }
         if ('zone' in s) {
@@ -1246,6 +1282,12 @@ export function play(m: Manifest, p: Player): Result[] {
             let sent = false;
             let locw = 1;
             let locl = 1;
+            // `first` BEFORE THE FIRST ATTEMPT, not only on a retry: Shilo Village's carved doors
+            // do not exist at all until a palm tree two tiles away has been searched, so looking
+            // them up first threw "no hillsideclosedl there" and the retry loop was never reached.
+            if ('first' in s && s.first) {
+                runFirsts(s.first, ('firstAt' in s ? s.firstAt : undefined) ?? s.at, ('firstOp' in s ? s.firstOp : undefined) ?? 1);
+            }
             try {
                 const lt = LocType.get(LocType.getId(s.loc));
                 locw = lt.width;
@@ -1321,15 +1363,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 // later try is a no-op.
                 const firstLoc = 'first' in s ? s.first : undefined;
                 if (firstLoc) {
-                    try {
-                        if (H.opLoc(p, s.at[0], s.at[1], firstLoc, 1)) {
-                            arrive(p, s.at[0], s.at[1], locw, locl);
-                            run([]);
-                            H.tick(4);
-                        }
-                    } catch {
-                        // already in the state `loc` wants
-                    }
+                    runFirsts(firstLoc, ('firstAt' in s ? s.firstAt : undefined) ?? s.at, ('firstOp' in s ? s.firstOp : undefined) ?? 1);
                 }
                 let sent2 = false;
                 try {
@@ -1395,6 +1429,13 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'use ' + s.obj + ' on ' + s.useLoc + (s.why ? ' - ' + s.why : '');
             let lw = 1;
             let ll = 1;
+            // `first` here for the same reason as on the loc step: Shilo Village's carved doors do
+            // not exist until the palm trees over them have been searched, and they hide themselves
+            // again fifty ticks later - so the bone key has to be used in the same window the
+            // search opens. As few ticks as possible between the two.
+            if ('first' in s && s.first) {
+                runFirsts(s.first, ('firstAt' in s ? s.firstAt : undefined) ?? s.at, ('firstOp' in s ? s.firstOp : undefined) ?? 1);
+            }
             try {
                 const lt = LocType.get(LocType.getId(s.useLoc));
                 lw = lt.width;
