@@ -61,7 +61,7 @@ export type Step =
     | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number; brief?: number; hop?: boolean }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
-    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number }
+    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean; near?: number; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number }
     | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
@@ -70,7 +70,7 @@ export type Step =
     | { level: number }
     | { varis: string; to: number }
     | { wait: number; why?: string }
-    | { take: string; why?: string; r?: number; soft?: boolean }
+    | { take: string; why?: string; r?: number; soft?: boolean; tries?: number; brief?: number }
     | { setpos: [number, number, number]; why: string }
     | { has: string; n?: number }
     | { worn: string }
@@ -89,8 +89,10 @@ export type Step =
     | { zone: true; why?: string }
     | { mapexit: [number, number]; why?: string }
     | { strip: string[]; why?: string }
+    | { drop: string[]; why?: string }
     | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
+    | { castLoc: string; at: [number, number]; spell: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number }
     | { note: string };
 
 export type Manifest = {
@@ -411,7 +413,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 // A LEFTOVER DELAY OR AN OPEN CHAT WINDOW EATS THE CLICK, and the engine drops it
                 // without a word - the same thing that ate forty hands of Rune-Draw. So clear both
                 // and allow a couple of goes, which is what a player does anyway.
-                for (let a = 0; a < 3 && !got; a++) {
+                // `tries` AND `brief`, FOR A CLICK THAT WAKES SOMETHING. Reaching for Viyeldi's
+                // hat animates the clothes beside it and starts his speech, which ends in npc_del
+                // - so arrive()'s fifty ticks and drive()'s clicks spend the whole 100-tick life of
+                // the npc the click just woke, and the dagger has nothing left to be used on. With
+                // `brief` the click gets that many ticks and no dialogue, and `tries: 1` stops the
+                // retry sending a second Take that only gets "your hand passes through the hat".
+                const triesTake = ('tries' in s ? s.tries : undefined) ?? 3;
+                const briefTake = 'brief' in s ? s.brief : undefined;
+                for (let a = 0; a < triesTake && !got; a++) {
                     for (let w = 0; w < 10 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
                     (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
                     H.tick(1);
@@ -443,8 +453,12 @@ export function play(m: Manifest, p: Player): Result[] {
                         H.tick(5);
                         continue;
                     }
-                    arrive(p, at[0], at[1]);
-                    drive(p, []);
+                    if (briefTake) {
+                        for (let t = 0; t < briefTake; t++) H.tick(1);
+                    } else {
+                        arrive(p, at[0], at[1]);
+                        drive(p, []);
+                    }
                     got = H.invCount(p, s.take) > before;
                     if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z + ', the obj is ' + (groundObj(p, s.take, 1) ? 'still there' : 'gone') + ', target=' + !!p.target + ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?');
                 }
@@ -543,6 +557,68 @@ export function play(m: Manifest, p: Player): Result[] {
             soft(whatCast, hit, hit ? '' : whyNot);
             continue;
         }
+        // CAST A SPELL ON A LOC, which is the only thing some locs answer to. Legends' Quest's
+        // magic trial gate is fused into the rock and cannot be opened from the south at all: the
+        // way through is to charge an orb against it, which the gate intercepts in
+        // ~magic_spell_charge_orb before it ever checks whether the loc is the right obelisk.
+        if ('castLoc' in s) {
+            const whatCL = 'cast ' + s.spell + ' at ' + s.castLoc + ' ' + s.at[0] + ',' + s.at[1] + (s.why ? ' - ' + s.why : '');
+            const markCL = H.mesgs.length;
+            let sentCL = false;
+            let blewCL = '';
+            let linesCL: string[] = [];
+            // AND A CAST AT A WALL IS NOT ALWAYS DELIVERED. The route to a wall loc can leave the
+            // player on a tile the interaction is never satisfied from, and the click is dropped
+            // without a word - so `tries` sends it again, which is what a player does.
+            const triesCL = ('tries' in s ? s.tries : undefined) ?? 1;
+            for (let a = 0; a < triesCL; a++) {
+                if (a > 0) H.tick(4);
+                // AND CLEAR WHAT IS IN THE WAY FIRST. A spell on a loc is an interaction, and the
+                // engine processes none of them while canAccess() is false - so an objbox still
+                // open from the step before (the bravery potion's "you bravely swig down the
+                // entire contents") swallows the cast with no message at all, which looks exactly
+                // like a spell that fizzled. Same clearing the take step does.
+                for (let w = 0; w < 10 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                H.tick(1);
+                try {
+                    sentCL = H.castOnLoc(p, s.at[0], s.at[1], s.castLoc, s.spell);
+                } catch (e) {
+                    blewCL = String(e).replace('Error: ', '');
+                    break;
+                }
+                if (!sentCL) continue;
+                // LONG ENOUGH FOR WHAT THE SPELL SETS OFF. Charging an orb against the magic trial
+                // gate forcewalks you to the tile in front of it and then blows you clean through
+                // into the next cave, which is an exactmove of some thirty ticks - and reading the
+                // player's position before it finishes finds them half way, mid-flight, on a tile
+                // with no walkable route to anywhere.
+                for (let t = 0; t < 40; t++) H.tick(1);
+                try {
+                    linesCL = linesCL.concat(drive(p, ('picks' in s ? s.picks : undefined) ?? []));
+                } catch {
+                    // a menu this step has no answer for is the next step's business
+                }
+                if (!s.want || linesCL.concat(H.mesgs.slice(markCL).map(x => x.text)).join(' ').includes(s.want)) break;
+            }
+            const saidCL = linesCL.concat(H.mesgs.slice(markCL).map(x => x.text)).join(' ');
+            if (blewCL) hard(whatCL, false, blewCL);
+            else if (!sentCL) hard(whatCL, false, 'the player was delayed and the click was thrown away');
+            else if (s.want && !saidCL.includes(s.want))
+                soft(
+                    whatCL,
+                    false,
+                    'nothing said "' + s.want + '"' +
+                        '; at ' + p.x + ',' + p.z +
+                        ', protect=' + (p as unknown as { protect: boolean }).protect +
+                        ', delayed=' + (p as unknown as { delayed: boolean }).delayed +
+                        ', busy=' + (p as unknown as { busy: () => boolean }).busy() +
+                        ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?') +
+                        '; got: ' + saidCL.replace(/Total XP:[^|]*/g, '').slice(0, 200)
+                );
+            else hard(whatCL, true);
+            continue;
+        }
         // USE A HELD ITEM ON A GROUND OBJ. Nothing else reaches OPOBJU: the loc version walks to a
         // tile beside the thing, and a ground obj is reached from its own tile. Zogre Flesh Eaters
         // puts a cup of tea on Sithik's drawers and the potion has to go into the cup.
@@ -625,6 +701,35 @@ export function play(m: Manifest, p: Player): Result[] {
             H.tick(2);
             const whatStrip = 'take off everything but ' + s.strip.join(', ') + (s.why ? ' - ' + s.why : '');
             soft(whatStrip, true, took.length ? 'removed ' + took.join(', ') : 'nothing to remove');
+            continue;
+        }
+        // DROP WHAT THE WALK HAS FINISHED WITH. Twenty-eight slots is a real constraint on a long
+        // quest, and a quest script that hands you something with `// no space check` above it
+        // loses the item outright when the pack is full: Legends' Quest's three dead heroes each
+        // inv_add a chunk of the heart crystal that way, so the second and third kills were
+        // rewarding nothing at all. A player would bank or drop the spent trial kit; this does the
+        // same, and prints what is left so the next step list can be written against it.
+        if ('drop' in s) {
+            const whatDrop = 'drop what is spent' + (s.why ? ' - ' + s.why : '');
+            const gone: string[] = [];
+            for (const name of s.drop) {
+                const id = ObjType.getId(name);
+                if (id === -1) continue;
+                const n = H.invCount(p, name);
+                if (n <= 0) continue;
+                p.invDel(InvType.INV, id, n);
+                gone.push(name + (n > 1 ? ' x' + n : ''));
+            }
+            H.tick(1);
+            const inv = p.getInventory(InvType.INV);
+            const left: string[] = [];
+            if (inv) {
+                for (let i = 0; i < inv.capacity; i++) {
+                    const o = inv.get(i);
+                    if (o) left.push((ObjType.get(o.id).debugname ?? String(o.id)) + (o.count > 1 ? ' x' + o.count : ''));
+                }
+            }
+            soft(whatDrop, true, (gone.length ? 'dropped ' + gone.join(', ') + '; ' : '') + left.length + ' slots used: ' + left.join(', '));
             continue;
         }
         if ('mapexit' in s) {
@@ -1070,6 +1175,15 @@ export function play(m: Manifest, p: Player): Result[] {
             // Rag and Bone Man picked one 140 tiles away, in a field the player had walked past two
             // legs earlier. Two ticks to let the zone wake up, and only look as far as `r`.
             H.tick(2);
+            // AND IT MAY ALREADY BE DONE. A summoned boss has a lifetime - Legends' Quest's second
+            // Nezikchened is npc_add-ed for 500 ticks - so a walk that has to allow for the summon
+            // not landing wants to send the summon again and fight again, and the second attempt
+            // must not fail for finding nothing when the first one already finished the job.
+            if ((want || wantVar) && got()) {
+                out.push({ n: ++n, what: what2, ok: true, detail: 'already done' });
+                console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + ' ok  already done');
+                continue;
+            }
             const rFight = ('r' in s ? s.r : undefined) ?? 32;
             const picksFight: (string | number)[] | undefined = 'picks' in s ? (s.picks as (string | number)[]) : undefined;
             // SOME SPAWNS ARE PENNED IN. Four of the goblins south of Falador stand inside a
@@ -1230,9 +1344,13 @@ export function play(m: Manifest, p: Player): Result[] {
                       : want
                         ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor'
                         : t + ' ticks and it is still alive');
-            out.push({ n: ++n, what: what2, ok, detail });
-            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (ok ? '  ok  ' + detail : ' FAIL  ' + detail));
-            if (!ok) stopped = what2;
+            // AND `soft` COUNTS HERE TOO. A fight that is only insurance - "kill whatever is left
+            // after shoving the thing again" - has nothing to do when the first attempt finished
+            // the job, and finding nothing to hit is the expected outcome rather than a failure.
+            const softFight = 'soft' in s && s.soft === true;
+            out.push({ n: ++n, what: what2, ok: ok || softFight, detail });
+            console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + (ok ? '  ok  ' + detail : softFight ? '  --  ' + detail : ' FAIL  ' + detail));
+            if (!ok && !softFight) stopped = what2;
             continue;
         }
 
@@ -1522,6 +1640,30 @@ export function play(m: Manifest, p: Player): Result[] {
             if ('first' in s && s.first) {
                 runFirsts(s.first, ('firstAt' in s ? s.firstAt : undefined) ?? s.at, ('firstOp' in s ? s.firstOp : undefined) ?? 1);
             }
+            // `near` IS FOR A LOC THAT IS PUT WHERE SOMETHING ELSE HAPPENS TO BE STANDING.
+            // Legends' Quest's spring is loc_added onto the boulder NPC's own tile the moment it
+            // is shoved clear, and the boulder drifts a tile or two from its spawn over the course
+            // of a run - so the pool is not reliably where the manifest says. `near` searches that
+            // many tiles around the coord for the named loc and uses whichever tile it is actually
+            // on. Everything else still wants the exact coord, because being wrong about which
+            // door you clicked is a real failure.
+            let atX = s.at[0];
+            let atZ = s.at[1];
+            const nearUL = ('near' in s ? s.near : undefined) ?? 0;
+            if (nearUL > 0) {
+                const wantId = LocType.getId(s.useLoc);
+                let best = Infinity;
+                for (let dx = -nearUL; dx <= nearUL; dx++)
+                    for (let dz = -nearUL; dz <= nearUL; dz++) {
+                        if (!World.getLoc(s.at[0] + dx, s.at[1] + dz, p.level, wantId)) continue;
+                        const d = Math.abs(dx) + Math.abs(dz);
+                        if (d < best) {
+                            best = d;
+                            atX = s.at[0] + dx;
+                            atZ = s.at[1] + dz;
+                        }
+                    }
+            }
             try {
                 const lt = LocType.get(LocType.getId(s.useLoc));
                 lw = lt.width;
@@ -1529,15 +1671,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
                 // player walks, so a panel that opens on arrival - a make-x panel, for one - was
                 // met with an empty pick list and the step blew up on its own menu.
-                standOnIfWalkable(p, s.useLoc, s.at[0], s.at[1]);
-                lines = useOn(p, s.at[0], s.at[1], s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
+                standOnIfWalkable(p, s.useLoc, atX, atZ);
+                lines = useOn(p, atX, atZ, s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
             } catch (e) {
                 hard(what, false, String(e).replace('Error: ', ''));
                 continue;
             }
             // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
             // player has already done it by the time this runs and adjacency can never come back.
-            if (!arrive(p, s.at[0], s.at[1], lw, ll) && !('hop' in s && s.hop)) {
+            if (!arrive(p, atX, atZ, lw, ll) && !('hop' in s && s.hop)) {
                 hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
                 continue;
             }

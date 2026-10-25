@@ -61,6 +61,46 @@ const BOULDERS: [number, number][] = [
 const STRENGTH_GATE: [number, number] = [2810, 9314]; // lgstrengthtrialgatel - 50 Strength
 const CRUMBLED_WALL: [number, number] = [2790, 9296]; // jumped from 2790,9295 - 50 Agility
 const MARKED_WALL: [number, number] = [2779, 9305]; // lgancientwalldoor, the five depressions
+const GEM_ROOM_IN: [number, number] = [2774, 9301]; // where the marked wall drops you
+const MAGIC_GATE: [number, number] = [2762, 9313]; // lgmagictrialgateclosed, fused into the rock
+const WINCH: [number, number] = [2759, 9329]; // lg_winchdown_norope, over the hole
+
+// --- the Viyeldi caves, at the bottom of the hole. The rope drops you on an eleven-tile ledge and
+//     the cave proper is 1458 tiles away across six climbs, every one of them a teleport: walkgraph
+//     finds 1032 regions down here and six edges, none of which are these.
+const VIYELDI_IN: [number, number] = [2377, 4712]; // where the rope lands you
+const CLIMBS: [string, [number, number], [number, number], string][] = [
+    ['rocky_ledge', [2377, 4717], [2378, 4717], 'nothing more exciting'],
+    ['rocky_ledge1', [2377, 4728], [2377, 4727], 'nothing more exciting'],
+    ['rocky_ledge2', [2382, 4729], [2382, 4728], 'nothing more exciting'],
+    ['viycaves_climbrock1', [2387, 4728], [2386, 4728], 'climb over the rocks'],
+    ['viycaves_climbrock2', [2390, 4724], [2390, 4725], 'climb over the rocks'],
+    ['viycaves_climbrock3', [2390, 4718], [2390, 4719], 'climb over the rocks']
+];
+// and the same six the other way. Each climb has a quick branch from one side and the dialogue on
+// the other, so coming back is not the same list read backwards.
+// - and every one of them is the QUICK branch from this side, so there is no menu to answer. That
+// is the whole asymmetry: the descent asks "are you sure?" at each of the six, the climb back does
+// not ask at all.
+const CLIMBS_BACK: [string, [number, number], [number, number]][] = [
+    ['viycaves_climbrock3', [2390, 4718], [2390, 4717]],
+    ['viycaves_climbrock2', [2390, 4724], [2390, 4723]],
+    ['viycaves_climbrock1', [2387, 4728], [2388, 4728]],
+    ['rocky_ledge2', [2382, 4729], [2382, 4728]],
+    ['rocky_ledge1', [2377, 4728], [2378, 4728]],
+    ['rocky_ledge', [2377, 4717], [2376, 4717]]
+];
+const VIYELDI_HAT: [number, number] = [2379, 4712]; // the only viyeldihat on the map
+const FURNACE: [number, number] = [2426, 4726]; // furnace_legendsquest
+const DRAGONS_EYE: [number, number] = [2410, 4715]; // dragons_eye_rock
+const HEART_RECESS: [number, number] = [2422, 4691]; // heart_recess_empty
+const BARRIER: [number, number] = [2420, 4690]; // legendsquest_force_barrier
+const BOULDER: [number, number] = [2386, 4689]; // a boulder_legends NPC, not a loc
+const BOULDER_EAST: [number, number] = [2390, 4689]; // and the push only works from the east
+const BARRIER_S: [number, number] = [2421, 4690]; // the other half, clicked from inside the cavern
+
+// --- back in the jungle, for the tree and the pole
+const FERTILE: [number, number] = [2778, 2916]; // ^yommi_spot1, the nearest patch to the totem pole
 // the seven stalagmites of the gem room - each takes one gem and no other
 const GEM_ROCKS: [string, [number, number]][] = [
     ['opal', [2764, 9309]],
@@ -76,7 +116,8 @@ const m: Manifest = {
     quest: "LEGENDS' QUEST",
     source: "oldschool.runescape.wiki/w/Legends'_Quest/Quick_guide",
     stageVar: 'legendsquest',
-    done: 100, // ^legends_complete
+    done: 75, // ^legends_complete - which is 75, not 100: the stage counter runs out at the four
+    // training sessions (55, 60, 65, 70) and completion is the next step on from the last of them
     start: GUARD,
     steps: [
         { note: 'requirements: 107 quest points and five quests - Family Crest, Heroes’ Quest,' },
@@ -352,8 +393,327 @@ const m: Manifest = {
         { useLoc: 'lqfirewall_straight', at: FIREWALL_CROSS, obj: 'goldbowlbless_pure', want: 'splash some pure water', hop: true, why: 'douse the flames again' },
         { useNpc: 'ungadulu_good', obj: 'book_of_binding', want: 'outline of a huge demon', why: 'read the binding over him' },
         { stage: 11 },
-        { fight: 'nezikchened', untilvar: 'legendsquest', to: 12, tries: 400, why: 'Nezikchened, the first time' },
-        { stage: 12 }
+        { note: 'EVERY ONE OF THE THREE SUMMONS CAN MISS. The demon is npc_add-ed onto a' },
+        { note: 'map_findsquare, and when that comes back with nowhere to put him the stage is' },
+        { note: 'already written and nothing is standing there - inside the flaming octagram, which' },
+        { note: 'is sixty-eight tiles with a shaman in it, that happens about one run in four. The' },
+        { note: 'book can be opened over him again at stage 11, so the walk does what a player' },
+        { note: 'does: reads it again and fights what turns up.' },
+        { fight: 'nezikchened', untilvar: 'legendsquest', to: 12, tries: 400, r: 24, soft: true, why: 'Nezikchened, the first time' },
+        { useNpc: 'ungadulu_good', obj: 'book_of_binding', soft: true, why: 'open the book again if he did not land' },
+        { fight: 'nezikchened', untilvar: 'legendsquest', to: 12, tries: 400, r: 24, why: 'and finish him' },
+        { stage: 12 },
+
+        { note: 'wiki step 26: Ungadulu, himself again, hands over three Yommi tree seeds' },
+        { talk: 'ungadulu_good', tries: 3, picks: ['collect some Yommi tree seeds', 'Ok, thanks...'], want: 'three largish green seeds', why: 'the seeds' },
+        { has: 'yommiseeds', n: 3 },
+
+        { note: 'wiki step 27: germinated in the bowl of pure sacred water, which empties it' },
+        { use: ['yommiseeds', 'goldbowlbless_pure'], want: 'germinated now', why: 'germinate the seeds' },
+        { has: 'yommiseeds_germ', n: 3 },
+        { stage: 13 },
+
+        { note: 'wiki step 28: and the pool the water came from has gone. The reed is spent, so' },
+        { note: 'this takes another one off the plants by the waterside.' },
+        { setpos: [REEDS[0] + 1, REEDS[1], 0], why: 'back to the water pool' },
+        { useLoc: 'tall_reeds', at: REEDS, obj: 'machette', want: 'cut down a reed', why: 'cut another reed' },
+        { useLoc: 'sacred_water', at: POOL, obj: 'reed_hollow', want: 'this pool has dried up', why: 'try to fill the bowl' },
+        { stage: 14 },
+
+        { note: 'wiki step 29: Gujuo again - the source of the spring, and the recipe for the' },
+        { note: 'bravery potion. @gujuo_helpme is what writes stage 15.' },
+        { setpos: [TOTEM[0] + 1, TOTEM[1], 0], why: 'to a totem pole in the jungle' },
+        { rng: 0.3, why: 'random(6) = 1: no animal, and the summon lands' },
+        { held: 'bullroarer', op: 1, soft: true, why: 'swing it again' },
+        { rng: null },
+        {
+            talk: 'gujuo',
+            tries: 3,
+            picks: ['water pool has dried up', 'Where is the source of the spring', 'could you help me', 'Ok thanks for your help'],
+            want: 'bravery of the Kharazi lion',
+            why: 'ask about the source'
+        },
+        { stage: 15 },
+
+        { note: 'wiki step 30: Snake weed and Ardrigal in a vial of water. Both grow in the' },
+        { note: 'jungle - the gathering is ordinary Herblore, so the halves are handed over here,' },
+        { note: 'and the mixture is the one that carries the trigger.' },
+        { give: 'snakeweed_sol' },
+        { give: 'ardrigal' },
+        { use: ['ardrigal', 'snakeweed_sol'], want: 'heady brew', why: 'mix the bravery potion' },
+        { has: 'bravery_pot' },
+        { held: 'bravery_pot', op: 1, picks: ['bravely drink'], want: 'feel quite okay', why: 'drink it' },
+
+        { note: 'AND THE PACK HAS TO HAVE A SLOT FREE BEFORE THE GATE. Charging an orb against it' },
+        { note: 'does nothing at all on a full inventory - no refusal, no message, nothing - which' },
+        { note: 'reads exactly like a cast the engine never delivered. Twenty-eight slots is a' },
+        { note: 'real constraint on a quest this long, and the trials above are finished with.' },
+        {
+            drop: [
+                'papyrus',
+                'charcoal',
+                'rune_axe',
+                'lockpick',
+                'rune_pickaxe',
+                'soulrune',
+                'mindrune',
+                'lawrune',
+                'thkaramjamap',
+                'swamprocks1',
+                'bodyrune',
+                'waterrune',
+                'vial_empty',
+                'scrawled_note1',
+                'scrawled_note2',
+                'scrawled_note3'
+            ],
+            why: 'the spent trial kit'
+        },
+
+        { note: 'wiki step 31: the magic trial gate, back in the catacombs. It is fused into the' },
+        { note: 'rock and will not open from the south at all - the way through is to charge an orb' },
+        { note: 'against it, which ~magic_spell_charge_orb intercepts before it ever asks whether' },
+        { note: 'the loc is the right obelisk. The gem room itself has no walking route from here:' },
+        { note: 'the five trials above are the only way back in, and they are already walked.' },
+        { setpos: [GEM_ROOM_IN[0], GEM_ROOM_IN[1], 0], why: 'back into the gem room' },
+        { give: 'stafforb', n: 3 },
+        { give: 'airrune', n: 100 },
+        { give: 'cosmicrune', n: 100 },
+        { note: 'and the tile matters, because there is exactly ONE of them: the gate is a solid' },
+        { note: 'centrepiece at 2762,9313 with rock on three sides - 2761,9313, 2763,9313 and' },
+        { note: '2762,9314 are all blocked - so 2762,9312 is the only tile the click can come' },
+        { note: 'from. Walked to within two, the router settles on 2763,9312, which is diagonal,' },
+        { note: 'and the cast is dropped without a word.' },
+        { go: [MAGIC_GATE[0], MAGIC_GATE[1] - 1], r: 192, exact: true, why: 'to the one tile the gate can be reached from' },
+        { castLoc: 'lgmagictrialgateclosed', at: MAGIC_GATE, spell: 'magic:air_orb', tries: 3, want: 'large gaping hole', why: 'charge an orb against the gate' },
+        { level: 0 },
+
+        { note: 'wiki step 32: a rope on the winch over the hole, the bravery potion inside you,' },
+        { note: 'and down into the Viyeldi caves' },
+        { give: 'rope' },
+        { go: [WINCH[0], WINCH[1] + 1], r: 192, why: 'to the winch over the hole' },
+        { useLoc: 'lg_winchdown_norope', at: WINCH, obj: 'rope', want: 'throw a rope around the winch', why: 'tie the rope' },
+        { rng: 0, why: 'stat_random true: down the rope without slipping' },
+        { loc: 'lg_winchdown_rope', at: WINCH, picks: ['shimmy down the rope'], want: 'top of a tall ledge', hop: true, why: 'climb down' },
+        { rng: null },
+        { stage: 16 },
+        { level: 0 },
+
+        { note: 'wiki step 33: six climbs between the rope and the cave floor. Each one is its own' },
+        { note: 'loc with its own wording and its own idea of which side you came from, and each' },
+        { note: 'is a teleport rather than a walk, so the ledges between them are tiny pockets.' },
+        { rng: 0, why: 'stat_random true: no slips on the ledges' },
+        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [
+            { go: from, r: 64, why: 'to ' + loc },
+            { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' },
+            { level: 0 }
+        ]) as Step[]),
+        { rng: null },
+
+        { note: 'and the pack has to have room before the heroes: each of the three inv_adds a' },
+        { note: 'chunk with "// no space check" over it, so a full pack loses the chunk and the' },
+        { note: 'kill rewards nothing. The trials above are done with - this is what a player' },
+        { note: 'would have banked on the way through.' },
+        { drop: ['stafforb', 'cosmicrune', 'airrune', 'rope', 'bravery_pot'], why: 'what the descent is done with' },
+
+        { note: 'wiki step 34: three long-dead heroes, one chunk of the heart crystal each. They' },
+        { note: 'are spread across the cave floor and there are several of each - the nearest will' },
+        { note: 'do, which is what `fight` finds.' },
+        { fight: 'san_tojalon', until: 'heartcrystal_sectiona', tries: 20, r: 32, why: 'San Tojalon' },
+        { fight: 'irvig_senay', until: 'heartcrystal_sectionb', tries: 20, r: 32, why: 'Irvig Senay' },
+        { fight: 'ranalph_devere', until: 'heartcrystal_sectionc', tries: 20, r: 32, why: 'Ranalph Devere' },
+        { has: 'heartcrystal_sectiona' },
+        { has: 'heartcrystal_sectionb' },
+        { has: 'heartcrystal_sectionc' },
+
+        { note: 'wiki step 35: the three chunks fused in the ancient furnace - 50 Crafting. Each' },
+        { note: 'use leaves an objbox open and the rest of the script - the inv_del, the bit, the' },
+        { note: 'count - waiting behind it, so without a resume between them the second click is' },
+        { note: 'thrown away and only the first chunk ever goes in.' },
+        { go: [FURNACE[0] - 1, FURNACE[1]], r: 192, why: 'to the lava furnace' },
+        { note: 'The three uses say nothing drive can read back - every word is inside an objbox' },
+        { note: 'that the use’s own click closes - so what each one is judged on is the obj it' },
+        { note: 'leaves behind, which is the stronger test anyway.' },
+        { useLoc: 'furnace_legendsquest', at: FURNACE, obj: 'heartcrystal_sectiona', why: 'the first chunk' },
+        { hasnt: 'heartcrystal_sectiona' },
+        { useLoc: 'furnace_legendsquest', at: FURNACE, obj: 'heartcrystal_sectionb', why: 'the second' },
+        { hasnt: 'heartcrystal_sectionb' },
+        { useLoc: 'furnace_legendsquest', at: FURNACE, obj: 'heartcrystal_sectionc', why: 'the third, and the fusing' },
+        { has: 'heartcrystal' },
+        { stage: 17 },
+
+        { note: 'wiki step 36: "bring life to the dragons eye" - the crystal on the humming rocks' },
+        { go: [DRAGONS_EYE[0], DRAGONS_EYE[1] - 1], r: 192, why: 'to the dragon’s eye' },
+        { useLoc: 'dragons_eye_rock', at: DRAGONS_EYE, obj: 'heartcrystal', why: 'charge the crystal' },
+        { has: 'heartcrystal_glow' },
+
+        { note: 'wiki step 37: and the glowing heart into the recess by the dragon’s teeth' },
+        { go: [HEART_RECESS[0] - 1, HEART_RECESS[1]], r: 192, why: 'to the heart-shaped recess' },
+        { useLoc: 'heart_recess_empty', at: HEART_RECESS, obj: 'heartcrystal_glow', want: 'glows even brighter', why: 'open the way on' },
+        { stage: 18 },
+
+        { note: 'wiki step 38: and the barrier by the dragon’s teeth lets you through at last' },
+        { go: [BARRIER[0], BARRIER[1] + 1], r: 192, why: 'to the invisible barrier' },
+        { loc: 'legendsquest_force_barrier', at: BARRIER, want: 'into the darkness of the cavern', hop: true, why: 'walk through it' },
+        { level: 0 },
+
+        { note: 'wiki step 39: a boulder stoppers the stream, and pushing it brings Echned Zekin' },
+        { note: 'out of the water. He wants Viyeldi dead and hands over a dagger of pure obsidian.' },
+        { note: 'The boulders are NPCs, not locs - [opnpc1,boulder_legends].' },
+        { go: BOULDER_EAST, r: 192, why: 'to the boulder in the stream' },
+        {
+            talk: 'boulder_legends',
+            tries: 3,
+            picks: ['Er... me?', 'need it for my quest', 'What can I do about that', 'what I must to get the water', "Ok, I'll do it"],
+            want: 'dark black dagger',
+            why: 'push it, and hear the spirit out'
+        },
+        { has: 'deathdagger' },
+        { stage: 20 },
+
+        { note: 'wiki step 40: Viyeldi’s clothes lie on the ledge the rope landed you on, so the six' },
+        { note: 'climbs have to be walked back - and the barrier first: the inner cavern is 767' },
+        { note: 'tiles with no other way out of it' },
+        { go: [BARRIER_S[0], BARRIER_S[1] - 1], r: 192, why: 'back to the barrier' },
+        { loc: 'legendsquest_force_barrier', at: BARRIER_S, hop: true, soft: true, why: 'back out through it' },
+        { note: 'Each climb has its quick branch on the side the' },
+        { note: 'descent used the dialogue on, so this is not the same list reversed.' },
+        { rng: 0, why: 'stat_random true: no slips on the way back either' },
+        ...(CLIMBS_BACK.flatMap(([loc, at, from]) => [
+            { go: from, r: 64, why: 'back to ' + loc },
+            { loc, at, hop: true, soft: true, why: 'climb it' }
+        ]) as Step[]),
+        { level: 0 },
+
+        { note: 'and the hat is a ground obj whose TAKE animates the clothes instead of picking them' },
+        { note: 'up, which is why the take itself cannot succeed. His speech ends in npc_del, so it' },
+        { note: 'must NOT be clicked through: the dagger goes into him while he is still talking,' },
+        { note: 'which is why the take is brief and the chat is closed rather than driven.' },
+        { take: 'viyeldihat', r: 16, soft: true, tries: 1, brief: 4, why: 'reach for the hat' },
+        { close: true, why: 'stop his speech before it slumps the clothes again' },
+        { useNpc: 'viyeldi', obj: 'deathdagger', want: 'dagger glows brightly', why: 'the dagger, as agreed' },
+        { has: 'deathdaggerdone' },
+
+        { note: 'wiki step 41: back down to the stream, and the dagger handed over. Echned Zekin' },
+        { note: 'takes the spirit out of it and is Nezikchened all along.' },
+        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [
+            { go: from, r: 64, why: 'to ' + loc },
+            { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' }
+        ]) as Step[]),
+        { rng: null },
+        { go: [BARRIER[0], BARRIER[1] + 1], r: 192, why: 'to the barrier' },
+        { loc: 'legendsquest_force_barrier', at: BARRIER, hop: true, soft: true, why: 'through it' },
+        { go: BOULDER_EAST, r: 192, why: 'back to the boulder' },
+        { talk: 'boulder_legends', tries: 3, want: 'Now I am revealed to you', why: 'push it again, and hand the dagger over' },
+        { note: 'and this demon is npc_add-ed for FIVE HUNDRED TICKS, which is not much more than' },
+        { note: 'the fight takes - so the summon can be gone before the fight starts, or expire' },
+        { note: 'part way through it. The push is repeatable (with the dagger already handed over' },
+        { note: 'it goes straight back to @summon_nezi_dagger, and says "the rock is motionless"' },
+        { note: 'while he is still standing there), so the walk shoves again and fights again.' },
+        { fight: 'nezikchened', untilvar: 'legendsquest', to: 22, tries: 400, r: 48, soft: true, why: 'Nezikchened, the second time' },
+        { talk: 'boulder_legends', tries: 2, soft: true, why: 'shove it again if he slipped away' },
+        { fight: 'nezikchened', untilvar: 'legendsquest', to: 22, tries: 400, r: 48, why: 'and finish him' },
+        { stage: 22 },
+
+        { note: 'wiki step 42: with the spirit gone the boulder moves, and the source is a pool of' },
+        { note: 'sacred water. The push only works from the east - two tiles clear of the rock.' },
+        { note: 'AND THE SPRING IS OPEN FOR THIRTY TICKS. loc_add puts lgwaterpool on the' },
+        { note: 'boulder’s own tile for 30, and the boulder rolls back into place on a queue of' },
+        { note: 'the same length - so the fill has to land inside that window, and missing it is' },
+        { note: 'not fatal: once the rock is home again the shove works a second time.' },
+        { go: [BOULDER[0] + 2, BOULDER[1]], r: 64, exact: true, why: 'two tiles east of the boulder - the only angle it moves from' },
+        { talk: 'boulder_legends', tries: 3, want: 'push the boulder out of the way', soft: true, why: 'push it clear' },
+        { useLoc: 'lgwaterpool', at: BOULDER, near: 3, obj: 'goldbowlbless_empty', soft: true, why: 'fill the bowl from the source' },
+        { wait: 36, why: 'the boulder rolling back into place' },
+        { talk: 'boulder_legends', tries: 3, soft: true, why: 'shove it clear again' },
+        { useLoc: 'lgwaterpool', at: BOULDER, near: 3, obj: 'goldbowlbless_empty', soft: true, why: 'and fill it' },
+        { has: 'goldbowlbless_pure' },
+        { stage: 25 },
+
+        { note: 'wiki step 43: and now the tree. Six steps on one patch of fertile soil, and every' },
+        { note: 'one of them has fifty-one ticks before the stage it just reached rots - plant,' },
+        { note: 'water, fell, trim, carve, carry. 45 Herblore, 50 Woodcutting and a rune axe.' },
+        { setpos: [FERTILE[0] + 1, FERTILE[1], 0], why: 'back up to the jungle, at a patch of fertile soil' },
+        { give: 'rune_axe' },
+        { rng: 0, why: 'stat_random true: the seed takes' },
+        { useLoc: 'fertilesoil', at: FERTILE, obj: 'yommiseeds_germ', want: 'plant the Yommi tree seed', why: 'plant a germinated seed' },
+        { rng: null },
+        { useLoc: 'yommitree_sapling', at: FERTILE, obj: 'goldbowlbless_pure', want: 'remarkable rate', why: 'water it from the bowl' },
+        { useLoc: 'yommitree_adult', at: FERTILE, obj: 'rune_axe', want: 'chop the Yommi tree down', why: 'fell it' },
+        { useLoc: 'yommitree_felled', at: FERTILE, obj: 'rune_axe', want: 'trim the branches', why: 'trim it' },
+        { useLoc: 'yommitree_trimmed', at: FERTILE, obj: 'rune_axe', want: 'carve a wonderful totem pole', why: 'carve it' },
+        { loc: 'yommitree_totem', at: FERTILE, want: 'very heavy', why: 'pick the totem pole up' },
+        { has: 'thtotempole' },
+        { stage: 30 },
+
+        { note: 'wiki step 44: the carved pole used on the tribe’s corrupted one. Nezikchened comes' },
+        { note: 'out of it a third time - and because Viyeldi is dead and collecting the totem' },
+        { note: 'cleared the three defeated bits, he throws the dead heroes at you first and' },
+        { note: 'vanishes between each one. One `fight` over all four types is exactly that.' },
+        { setpos: [TOTEM[0] + 1, TOTEM[1], 0], why: 'to the tribe’s totem pole' },
+        { useLoc: 'lg_ord_totem_pole', at: TOTEM, obj: 'thtotempole', want: 'dread demon Nezikchened', why: 'replace the evil pole' },
+        { stage: 32 },
+        {
+            fight: ['san_tojalon', 'irvig_senay', 'ranalph_devere', 'nezikchened'],
+            untilvar: 'legendsquest',
+            to: 35,
+            tries: 400,
+            r: 24,
+            soft: true,
+            why: 'the three heroes, then the demon'
+        },
+        { note: 'and the same five-hundred-tick summon, four fights deep this time - so the pole is' },
+        { note: 'offered again whatever happened. At stage 32 that brings the next one of them' },
+        { note: 'back; at 35 it IS the replacement, which is the step after this anyway, so the' },
+        { note: 'same click covers both and the stage at the end says which it was.' },
+        { useLoc: 'lg_ord_totem_pole', at: TOTEM, obj: 'thtotempole', soft: true, why: 'offer the pole again' },
+        {
+            fight: ['san_tojalon', 'irvig_senay', 'ranalph_devere', 'nezikchened'],
+            untilvar: 'legendsquest',
+            to: 35,
+            tries: 400,
+            r: 24,
+            soft: true,
+            why: 'and finish whichever is left'
+        },
+        { note: 'and with the demon gone the pole can actually be replaced' },
+        { useLoc: 'lg_ord_totem_pole', at: TOTEM, obj: 'thtotempole', soft: true, why: 'replace it for good' },
+        { hasnt: 'thtotempole' },
+
+        { note: 'wiki step 45: and Gujuo comes out of the trees on his own this time - the' },
+        { note: 'replacement npc_add-s him with npc_setmode(opplayer2), so he walks over and starts' },
+        { note: 'the conversation himself. It is usually finished, gilded totem pole and all,' },
+        { note: 'before the step after the replacement has stopped waiting - so stage 40 is a' },
+        { note: 'value this walk rarely gets to see, and the talk here is only for the run where' },
+        { note: 'he has not arrived yet.' },
+        { talk: 'gujuo', tries: 3, soft: true, why: 'the tribe’s gift, if he has not handed it over already' },
+        { has: 'thtotempolegift' },
+        { stage: 45 },
+
+        { note: 'wiki step 46: Radimus, in the study, takes the gilded pole AND the completed map' },
+        { setpos: [2725, 3367, 0], why: 'back to the Legends’ Guild study' },
+        { talk: 'radimus_erkle', tries: 3, want: 'welcome to the Legends Guild', why: 'hand both in' },
+        { stage: 50 },
+
+        { note: 'wiki step 47: and the other Radimus, in the main hall, gives the four lots of' },
+        { note: '7,650 XP. Each one loops straight back to the menu, so they go in one conversation,' },
+        { note: 'and the fourth drops through to the completion queue.' },
+        { note: 'The hall is through the guild’s own doors and the hand-in leaves you shut in the' },
+        { note: 'study behind loc_1533, so getting there is two doors of ordinary building' },
+        { note: 'furniture rather than anything the quest asks for - jumped, like every other' },
+        { note: 'stretch of travel in this walk.' },
+        { setpos: [MAIN_HALL[0], MAIN_HALL[1] - 1, 0], why: 'into the Legends’ Guild main hall' },
+        { note: 'all four go in one conversation: @radimus_train loops straight back into' },
+        { note: '@radimus_training, which counts down the areas left and shows the menu again, and' },
+        { note: 'the fourth drops through to the completion queue.' },
+        {
+            talk: 'radimus_erkle',
+            tries: 3,
+            picks: ["Yes, I'll train now", '* Attack *', '* Attack *', '* Attack *', '* Attack *'],
+            want: 'all the training I can offer',
+            why: 'train four times'
+        },
+        { stage: 75 }
     ]
 };
 
