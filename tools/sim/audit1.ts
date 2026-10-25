@@ -54,131 +54,25 @@ function journalStagesBit(p: Player, varbit: string, com: string, stages: number
 const qp = (p: Player) => H.runProc(p, '[proc,count_questpoints]')[0];
 
 // ============================================================================ Creature of Fenkenstrain
+// CREATURE OF FENKENSTRAIN IS WALKED, AND THIS SECTION WAS THE OLD QUEST.
+//
+// It tested a shape the rebuild deleted. Three things it asserted do not exist any more:
+// fenk_mausoleum_key (handed over at hire - the quest has no such obj in it at all now), a marble
+// amulet lying in the shed behind a key the extended brush hooked off a ledge (the quest's own
+// comment admitted that was impossible, since the brush is made inside the shed - the half now
+// comes out of "The Joy of Grave Digging" in the library), and a lost brain being replaced at
+// stage 2 (the only [opheldu,fenk_brain] left puts it in the head). The three plot graves moved
+// too, so "three digs: arms, legs, torso" was digging one grave three times for nothing.
+//
+// tools/sim/quest_fenkenstrain_run.ts plays the whole thing on foot instead, 75/75 to stage 8,
+// and it covers everything this did bar the journal: the castle doors walked through rather than
+// merely connected, both amulet halves, the cupboard, the brush and its three canes, the chimney,
+// the conductor, the clock, the creature and the pickpocket. Two copies of the same quest is what
+// let this one rot while the walk stayed green, so there is one now - except the journal sweep,
+// which the walk does not do and which still passes.
 if (run('fenk')) {
     console.log('CREATURE OF FENKENSTRAIN');
     const p = player('fenk1', 3548, 3531);
-    // the castle's own doors
-    check('castle shut before any door is opened', connected(0, 3548, 3531, 3552, 3549), false);
-    op(p, 3548, 3535, 'fenk_door', 1);
-    op(p, 3548, 3543, 'fenk_door', 1);
-    check('south doors open and the hall is reachable on foot', connected(0, 3548, 3531, 3552, 3549), true);
-    op(p, 3548, 3551, 'fenk_door', 1);
-    op(p, 3549, 3558, 'fenk_door', 1);
-    check('on through the north doors to the courtyard (cupboard, canes, shed, ghost)', connected(0, 3548, 3531, 3551, 3563), true);
-
-    const start = qp(p);
-    talk(p, 'fenk_fenkenstrain', [1, 1]);
-    check('Fenkenstrain hires you: stage 1 and the cavern key', [H.getVar(p, 'fenk_quest'), H.invCount(p, 'fenk_mausoleum_key')], [1, 1]);
-
-    H.give(p, 'spade');
-    p.teleport(3572, 3525, 0);
-    H.tick(2);
-    for (let i = 0; i < 3; i++) op(p, 3572, 3527, 'fenk_grave', 2);
-    check(
-        'three digs: arms, legs, torso',
-        ['fenk_arms', 'fenk_legs', 'fenk_torso'].map(o => H.invCount(p, o)),
-        [1, 1, 1]
-    );
-
-    H.equip(p, { front: 'amulet_of_ghostspeak' });
-    talk(p, 'fenk_gardener_multi_2');
-    check('gardener ghost gives the obsidian amulet and the shed key', [H.invCount(p, 'fenk_obsidian_amulet'), H.invCount(p, 'fenk_shed_key')], [1, 1]);
-
-    p.teleport(3549, 3565, 0);
-    H.tick(2);
-    op(p, 3546, 3563, 'fenk_broomcupboard', 1);
-    check('the cupboard is inside the shed (not reachable from the courtyard)', lastMes(p), "I can't reach that!");
-    for (const o of ['fenk_shed_key', 'fenk_obsidian_amulet', 'fenk_arms', 'fenk_legs', 'fenk_torso', 'spade']) H.give(p, o);
-    H.fillInv(p);
-    op(p, 3548, 3565, 'fenk_shed_door', 1);
-    check('unlocked with a full pack: in, but no amulet yet', [H.getVarBit(p, 'fenk_unlocked_shed'), H.invCount(p, 'fenk_marble_amulet'), p.x], [1, 0, 3547]);
-    H.clearInv(p);
-    for (const o of ['fenk_obsidian_amulet', 'fenk_arms', 'fenk_legs', 'fenk_torso', 'spade']) H.give(p, o);
-    op(p, 3548, 3565, 'fenk_shed_door', 1);
-    check('out again, and the amulet is picked up on the way', [H.invCount(p, 'fenk_marble_amulet'), p.x], [1, 3548]);
-    op(p, 3548, 3565, 'fenk_shed_door', 1);
-    check('back into the shed', p.x, 3547);
-    op(p, 3546, 3563, 'fenk_broomcupboard', 1);
-    op(p, 3546, 3563, 'fenk_broomcupboard_open', 2);
-    check('Search the open cupboard: the garden brush', H.invCount(p, 'fenk_brush0'), 1);
-    op(p, 3546, 3563, 'fenk_broomcupboard_open', 3);
-    check('Shut closes it', World.getLoc(3546, 3563, 0, LocType.getId('fenk_broomcupboard')) !== null, true);
-    op(p, 3548, 3565, 'fenk_shed_door', 1);
-    for (let i = 0; i < 3; i++) op(p, 3551, 3564, 'fenk_canepile', 1);
-    for (let i = 0; i < 3; i++) useHeld(p, 'fenk_cane', H.invCount(p, 'fenk_brush0') ? 'fenk_brush0' : H.invCount(p, 'fenk_brush1') ? 'fenk_brush1' : 'fenk_brush2');
-    check('brush plus three canes', H.invCount(p, 'fenk_brush3'), 1);
-    useHeld(p, 'fenk_marble_amulet', 'fenk_obsidian_amulet');
-    check('the halves make the star', H.invCount(p, 'fenk_star_amulet'), 1);
-
-    p.teleport(3574, 3524, 0);
-    H.tick(2);
-    op(p, 3574, 3526, 'fenk_coffin', 1);
-    op(p, 3574, 3526, 'fenk_coffin', 2);
-    check('memorial pushed and searched: the head', H.invCount(p, 'fenk_head_empty'), 1);
-
-    talk(p, 'fenk_fenkenstrain');
-    check('all four parts: stage 2 and a brain', [H.getVar(p, 'fenk_quest'), H.invCount(p, 'fenk_brain')], [2, 1]);
-    // lose the brain and ask again
-    H.clearInv(p);
-    for (const o of ['fenk_arms', 'fenk_legs', 'fenk_torso', 'fenk_head_empty']) H.give(p, o);
-    talk(p, 'fenk_fenkenstrain');
-    check('a lost brain is replaced at stage 2', H.invCount(p, 'fenk_brain'), 1);
-    useHeld(p, 'fenk_brain', 'fenk_head_empty');
-    H.give(p, 'needle');
-    H.give(p, 'thread', 5);
-    useHeld(p, 'needle', 'fenk_torso');
-    check('sewn on the slab: stage 3', H.getVar(p, 'fenk_quest'), 3);
-
-    talk(p, 'fenk_fenkenstrain');
-    check('the mould', H.invCount(p, 'fenk_lightning_mould'), 1);
-    H.give(p, 'silver_bar');
-    useHeld(p, 'silver_bar', 'fenk_lightning_mould');
-    check('a conductor cast', H.invCount(p, 'fenk_conductor'), 1);
-
-    // up to the roof on foot: west stairs, the upstairs door, the south tower ladder
-    p.teleport(3538, 3549, 0);
-    H.tick(2);
-    op(p, 3537, 3551, 'fenk_stairs_lv1', 1);
-    check('west stairs up', p.level, 1);
-    op(p, 3548, 3543, 'fenk_door_mirror', 1);
-    op(p, 3548, 3539, 'ladder', 1);
-    check('through the upstairs door and up the south tower ladder', p.level, 2);
-    op(p, 3548, 3536, 'fenk_conductor_broken', 1);
-    check('conductor fitted: stage 4', H.getVar(p, 'fenk_quest'), 4);
-
-    talk(p, 'fenk_fenkenstrain');
-    check('the storm: stage 5', H.getVar(p, 'fenk_quest'), 5);
-
-    // the creature is on the tower top, behind the bolted door
-    p.teleport(3538, 3549, 1);
-    H.tick(2);
-    op(p, 3548, 3551, 'fenk_tower_door', 1);
-    check('tower door bolted before the clock', p.z < 3552, true);
-    // the clock room is its own: up the ladder in the ground floor's west wing
-    p.teleport(3541, 3547, 0);
-    H.tick(2);
-    op(p, 3539, 3543, 'ladder', 1);
-    check('the west-wing ladder up to the clock room', p.level, 1);
-    op(p, 3540, 3545, 'fenk_clock', 1);
-    check('clock can be wound once the creature is alive', H.getVarBit(p, 'fenk_wound_clock'), 1);
-    op(p, 3539, 3543, 'laddertop', 1);
-    p.teleport(3538, 3549, 0);
-    H.tick(2);
-    op(p, 3537, 3551, 'fenk_stairs_lv1', 1);
-    op(p, 3548, 3551, 'fenk_tower_door', 1);
-    check('through the tower door', [p.z >= 3552, p.level], [true, 1]);
-    op(p, 3548, 3554, 'ladder', 1);
-    check('up the tower ladder', p.level, 2);
-    talk(p, 'fenk_creature', [], 1, false);
-    check('the creature speaks: stage 6', H.getVar(p, 'fenk_quest'), 6);
-
-    p.teleport(3541, 3553, 0);
-    H.tick(2);
-    op(p, 3541, 3551, 'fenk_bookcase', 1);
-    check('the journal: stage 7', [H.getVar(p, 'fenk_quest'), H.invCount(p, 'fenk_journal')], [7, 1]);
-    talk(p, 'fenk_fenkenstrain');
-    H.tick(3);
-    check('accused: complete, 2 quest points', [H.getVar(p, 'fenk_quest'), qp(p) - start], [8, 2]);
     journalStages(p, 'fenk_quest', 'questlist:creatureoffenkenstrain', [0, 1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
