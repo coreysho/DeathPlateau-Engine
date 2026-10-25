@@ -84,6 +84,7 @@ export type Step =
     | { say: (number | string)[]; want?: string; why?: string }
     | { rng: number | null; why?: string }
     | { close: true; why?: string }
+    | { resume: true; picks?: (number | string)[]; want?: string; why?: string }
     | { count: number; why?: string }
     | { zone: true; why?: string }
     | { mapexit: [number, number]; why?: string }
@@ -667,6 +668,21 @@ export function play(m: Manifest, p: Player): Result[] {
             (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
             for (let w = 0; w < 6; w++) H.tick(1);
             console.log('      -- closed the interface' + (s.why ? '   (' + s.why + ')' : ''));
+            continue;
+        }
+        // CLICK CONTINUE ON SOMETHING NOBODY CLICKED. `close` dismisses a modal, which ABORTS the
+        // script behind it; `wait` only ticks, and a script paused on a continue is not waiting for
+        // ticks. A queue that mesboxes before it does the work therefore never does the work - The
+        // Fremennik Trials' [queue,viking_koschei_felled] says "He falls, and the dark folds over
+        // him" and THEN summons the next form of Koschei, so a fight step followed by a wait found
+        // an empty arena every time. This drives whatever is paused, the way a player would.
+        if ('resume' in s) {
+            const mesBefore = H.mesgs.length;
+            const lines = drive(p, (s.picks ?? []).slice());
+            const saidResume = (Array.isArray(lines) ? lines : []).concat(H.mesgs.slice(mesBefore).map(x => x.text)).join(' | ');
+            const whatResume = 'click through what is waiting' + (s.why ? ' - ' + s.why : '');
+            const saidIt = !s.want || saidResume.toLowerCase().includes(s.want.toLowerCase());
+            soft(whatResume, saidIt, saidIt ? '' : 'nothing said "' + s.want + '"; got: ' + saidResume.slice(0, 160));
             continue;
         }
         // A RANDOMISED STEP CANNOT BE ASSERTED. Curpile Fyod asks three of six questions at
