@@ -403,8 +403,14 @@ if (run('eadgar')) {
     const stage = () => gv(p, 'eadgar_quest');
     talk(p, 'sanfew', [1]);
     check('no Troll Stronghold or Druidic Ritual: Sanfew will not start it', stage(), 0);
+    // ALL FOUR REQUIREMENTS, not two. ~eadgar_sanfew_offer asks for Druidic Ritual, Troll
+    // Stronghold, DEATH PLATEAU and 31 Herblore - the plateau is what gets anybody onto the
+    // mountain at all - and this set only two of them, with troll_quest at 50 where
+    // ^troll_complete is 80. So he gave the come-back-when-you-do speech, the quest never
+    // started, and the talk after it met a menu nobody had queued an answer for.
     sv(p, 'druidquest', 4);
-    sv(p, 'troll_quest', 50);
+    sv(p, 'troll_quest', 80);
+    sv(p, 'death_equiproom', 80);
     // TWO PICKS, NOT ONE, and the second is why this file used to die here. Starting the quest
     // walks through two separate menus: Sanfew's own multi2 ("Have you any more work for me")
     // and then the p_choice2 inside ~eadgar_sanfew_offer ("What's goutweed?"). With a single pick
@@ -535,10 +541,17 @@ if (run('zogre')) {
     op(p, 2443, 9417, 'ogre_stairs_down', 1);
     // the ceremonial chamber is behind the ogre gate now, and the key is three conversations away
     check('the way down to the chamber is barred this early', [p.level, saw(p, 'ogre gate')], [2, true]);
+    // 2442,9433 IS NOT THE WAY OUT, which is what this used to assert. It is the first of two sets
+    // of ogre stone doors leading deeper, towards the chamber stairs - the way out of the tomb is
+    // the ogre_stairs at 2478,9437, checked above. Walk the pair instead and stay underground.
     p.teleport(landing[0], landing[1], 2);
     H.tick(1);
+    standBy(p, 2442, 9434, 2);
     op(p, 2442, 9433, 'ogre_cavedoorl', 1);
-    check('out through the tomb door, walkable', [p.level, p.z < 4000, walkable(p.x, p.z, p.level)], [0, true, true]);
+    check('the first set of stone doors opens, and the second is reachable behind it', [p.level, reaches(2, p.x, p.z, 2441, 9427)], [2, true]);
+    standBy(p, 2441, 9427, 2);
+    op(p, 2441, 9426, 'ogre_cavedoorl', 1);
+    check('  and the second, with the chamber stairs behind it', [p.level, reaches(2, p.x, p.z, 2443, 9418)], [2, true]);
     // INCRIMINATING SITHIK (2026-10-15). Rarve used to hand over the potion for a prism and a
     // backpack; he now wants the case the cache kept seven bits for. tools/sim/zogreyanille.ts
     // goes through it a line at a time - this is the walkthrough getting past it.
@@ -616,12 +629,18 @@ if (run('zogre')) {
     check('  and back up, walkable', [p.level, walkable(p.x, p.z, 2)], [2, true]);
     standBy(p, 2446, 9417, 2);
     op(p, 2443, 9417, 'ogre_stairs_down', 1);
-    const bash = H.npcNear('zogre_slash_bash', 2440, 9458, 2);
-    check('which is where Slash Bash stops pretending to be dead', [bash !== null, bash ? walkable(bash.x, bash.z, 2) : false], [true, true]);
+    // SLASH BASH IS IN THE CHAMBER, NOT THE TOMB. This looked for him at 2440,9458 on plane 2,
+    // which is where ringing the Wizards' Guild bell used to wake him; [label,zogre_wake_bash]
+    // (quests/quest_zogre/scripts/zogre_jiggig.rs2) npc_adds him at ^zogre_bash_spawn, which is
+    // 0_38_147_48_36 - 2480,9444 on plane 0 - and telejumps the player to ^zogre_chamber_landing,
+    // 2442,9417 on plane 0. Looking on the wrong plane reported him missing and then took the
+    // stats, the kill, the artefact and Grish down with it.
+    const bash = H.npcNear('zogre_slash_bash', 2480, 9444, 0);
+    check('which is where Slash Bash stops pretending to be dead', [bash !== null, bash ? walkable(bash.x, bash.z, 0) : false], [true, true]);
     if (bash) {
         const t = NpcType.get(bash.type);
         check('Slash Bash has real stats now (100 hp, not 1)', [bash.levels[3], t.stats?.[0] ?? bash.baseLevels[0]], [100, 100]);
-        p.teleport(landing[0], landing[1], 2);
+        p.teleport(2442, 9417, 0); // ^zogre_chamber_landing
         H.tick(1);
         wear(p, { rhand: 'dragon_scimitar' });
         const before = H.npcHitsFor('zogre_slash_bash').length;
@@ -635,10 +654,10 @@ if (run('zogre')) {
         // - it needs npc_findhero and then p_finduid - and that is worth seeing as a failure.
         for (let t = 0; t < 20 && stage() < 14; t++) H.tick(1);
         check('the kill registers: stage 14', stage(), 14);
-        let art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+        let art = World.getObj(bash.x, bash.z, 0, ObjType.getId('zogre_artifacts'), p.hash64);
         for (let t = 0; t < 10 && art === null; t++) {
             H.tick(1);
-            art = World.getObj(bash.x, bash.z, 2, ObjType.getId('zogre_artifacts'), p.hash64);
+            art = World.getObj(bash.x, bash.z, 0, ObjType.getId('zogre_artifacts'), p.hash64);
         }
         check('the ogre artefact drops', art !== null, true);
     }
@@ -656,9 +675,17 @@ if (run('fever')) {
     const p = player('fever1', 3679, 3493);
     wear(p, { front: 'amulet_of_ghostspeak' });
     const stage = () => gv(p, 'fever_quest');
+    // TWO STALE PREREQUISITES, AND THE SECOND ONE IS THE SHAPE OF THIS WHOLE PASS. Teach now also
+    // wants Pirate's Treasure - "Ye've never even dug up a dead pirate's chest", no menu - and
+    // ^deal_complete is 9, where this was setting deal_quest to 6. Six used to finish Rum Deal; the
+    // scale grew when the quest was rebuilt, so the gate was reading a half-finished Rum Deal and
+    // refusing, which threw 'menus not reached: 2' and took the rest of the section with it. The
+    // four levels (Agility 42, Crafting 45, Smithing 50, Ranged 40) are gated at the start too, and
+    // maxOut covers those.
+    sv(p, 'hunt', 4); // ^hunt_complete
     talk(p, 'fever_teach');
     check('no Rum Deal: Teach will not take you on', stage(), 0);
-    sv(p, 'deal_quest', 6);
+    sv(p, 'deal_quest', 9); // ^deal_complete
     talk(p, 'fever_teach', [2]);
     check('Rum Deal done: stage 1, the book', [stage(), H.invCount(p, 'fever_piracy_book')], [1, 1]);
     held(p, 'fever_piracy_book', 1);
