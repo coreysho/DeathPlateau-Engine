@@ -419,92 +419,22 @@ if (run('feud')) {
 }
 
 // =============================================================================================
-if (run('ratcatch')) {
-    console.log('Rat Catchers');
-    const p = player('ratq', 2563, 3320);
-    const e0 = errors.length;
-    const Q = () => v(p, 'ratcatch_var');
-    // RAT CATCHERS HAS REQUIREMENTS NOW, and that is why Jimmy refused and the Gertrude call
-    // below it threw. ~ratcatch_requirements wants Gertrude's Cat and Icthlarin's Little Helper
-    // completed - the wiki's own pair - and this player had done neither, so he turned the job
-    // down ("You have never taken a rat off a floor in your life") and Gertrude opened her own
-    // quest's menu instead of handing over the weed pot.
-    set(p, 'fluffs', QUEST.fluffs_complete);
-    set(p, 'ics_little_var', QUEST.icslittle_complete);
-    H.tick(1);
-    talkNear(p, 'vc_jimmy_dazzler', 2562, 3320, [1]);
-    check('Jimmy Dazzler hires the player', [Q(), H.invCount(p, 'vc_rat_pole')], [10, 1]);
-    talkNear(p, 'gertrude', 3151, 3410);
-    check('Gertrude: weed pot and music (stage equipped)', [Q(), H.invCount(p, 'ratcatchers_weedpot')], [20, 1]);
-    H.give(p, 'tinderbox');
-    useOnHeld(p, 'tinderbox', 'ratcatchers_weedpot');
-    place(p, 3268, 3378);
-    opLoc(p, 3268, 3379, 'vc_ladder');
-    check('up the ladder in the rat house (it had no trigger)', [p.level, standing(p)], [1, true]);
-    for (const [n, x, z] of [
-        ['ratcatchers_rathole1', 3264, 3378],
-        ['ratcatchers_rathole2', 3273, 3377],
-        ['ratcatchers_rathole3', 3274, 3381],
-        ['ratcatchers_rathole4', 3271, 3384]
-    ] as [string, number, number][]) {
-        const m0 = H.mesgs.length;
-        useOnLoc(p, 'ratcatchers_smokey_weedpot', x, z, n);
-        if (process.env.A2DEBUG)
-            console.log(
-                '   ',
-                n,
-                at(p),
-                H.mesgs
-                    .slice(m0)
-                    .filter(m => m.who === p.username)
-                    .map(m => m.text)
-            );
-    }
-    check('four holes smoked out on foot from the ladder: stage trained', Q(), 30);
-    opLoc(p, 3268, 3379, 'vc_laddertop');
-    check('  and back down', [p.level, standing(p)], [0, true]);
-    talkNear(p, 'vc_jimmy_dazzler', 2562, 3320, [1]);
-    check('Jimmy takes the player to the party, inside the gates', [p.level, standing(p), p.x - 2816, p.z - 5056], [0, true, 31, 10]);
-    // the rats, walked to - trellis up, rats 3 and 2, the doors to rat 1, ladder down, 5 and 6, the door to 4
-    const rats: Record<number, [number, number, number]> = { 1: [2832, 5098, 1], 2: [2861, 5093, 1], 3: [2858, 5087, 1], 4: [2863, 5101, 0], 5: [2857, 5091, 0], 6: [2863, 5086, 0] };
-    const pole = (i: number) => {
-        const [x, z, l] = rats[i];
-        const npc = findNpc(`vc_partyrat_multi${i}`, x, z, l);
-        for (let t = 0; t < 40 && v(p, `vc_raton_off${i}`) === 0; t++) {
-            const polename = ['vc_rat_pole', 'vc_rat_pole_1', 'vc_rat_pole_2', 'vc_rat_pole_3', 'vc_rat_pole_4', 'vc_rat_pole_5'].find(n => H.invCount(p, n) > 0)!;
-            useOnNpc(p, polename, npc);
-        }
-        return v(p, `vc_raton_off${i}`);
-    };
-    opLoc(p, 2844, 5105, 'vc_trellis_base');
-    check('up the trellis onto the upper floor', [p.level, standing(p)], [1, true]);
-    check('rat 3 poled (walked to)', pole(3), 1);
-    check('rat 2 poled', pole(2), 1);
-    opLoc(p, 2838, 5099, 'vc_elfdoor');
-    check('through the upstairs west door', standing(p), true);
-    check('rat 1 poled', pole(1), 1);
-    opLoc(p, 2838, 5099, 'vc_elfdoor');
-    opLoc(p, 2862, 5092, 'laddertop');
-    check('down the mansion ladder', [p.level, standing(p)], [0, true]);
-    check('rat 5 poled', pole(5), 1);
-    check('rat 6 poled', pole(6), 1);
-    opLoc(p, 2860, 5093, 'vc_elfdoor');
-    check('rat 4 poled (through the east door)', pole(4), 1);
-    check('six on the pole: stage poled', [Q(), H.invCount(p, 'vc_rat_pole_6')], [50, 1]);
-    held(p, 'vc_rat_pole_6', 1);
-    check('Remove-rat puts one back at the party (and the stage back to party)', [H.invCount(p, 'vc_rat_pole_5'), Q(), [1, 2, 3, 4, 5, 6].filter(i => v(p, `vc_raton_off${i}`) === 0).length], [1, 40, 1]);
-    const back = [1, 2, 3, 4, 5, 6].find(i => v(p, `vc_raton_off${i}`) === 0)!;
-    const [bx, bz, bl] = rats[back];
-    place(p, bx + 1, bz, bl);
-    check('  and it can be caught again', pole(back), 1);
-    place(p, 2847, 5065);
-    opLoc(p, 2847, 5064, 'vc_ornaterailing');
-    check('out of the front gate, back to Ardougne', [p.level, standing(p), Math.abs(p.x - 2562) < 4 && Math.abs(p.z - 3320) < 4], [0, true, true]);
-    talkNear(p, 'vc_jimmy_dazzler', 2562, 3320);
-    check('Jimmy counts six: Rat Catchers complete', Q(), 60);
-    check('  no script errors', errorsSince(e0), []);
-    H.despawn(p);
-}
+// RAT CATCHERS IS WALKED, AND THIS SECTION WAS THE OLD QUEST.
+//
+// It tested the three-chapter shape - Jimmy hires you, four holes in a Varrock warehouse, six rats
+// at a party - against stages 10/20/30/40/50/60. The quest has since been rebuilt to the whole
+// ten-chapter walkthrough across five cities, and the stage scale with it (4 sewers, 6 sniffed,
+// 8 eight rats, 10 hired, 15 party, 20 poled, 25 poison, 30 cheesed, 35 Pox, 40 King rat, 45
+// smoked, 50 the Face, 55 the tune, 58 piped, 60 complete). Jimmy will not even offer the job
+// until ^ratcatch_hired, which Gertrude and the two men in the sewers set between them - so this
+// section's first call found "I am between engagements and so, by the look of you, are you." and
+// no menu, threw 'menus not reached: 1', and took every section below it down with it. Both of the
+// two that follow had been unreachable for as long as that was true.
+//
+// tools/sim/quest_ratcatch_run.ts plays the whole thing on foot instead, 73/73 to
+// ^ratcatch_complete, and it covers everything this did: the party, the trellis, the six rats on
+// one pole, and Remove-rat putting one back. Two copies of the same quest is what let this one rot
+// while the walk stayed green, so there is one now.
 
 // =============================================================================================
 if (run('mourning2')) {
