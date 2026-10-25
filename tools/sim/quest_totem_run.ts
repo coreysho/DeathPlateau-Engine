@@ -47,7 +47,7 @@ const m: Manifest = {
         { loc: 'horncrate', at: [2650, 3273], op: 2, want: 'Handelmort Mansion', why: 'peel the label off' },
         { has: 'tribal_totem_label' },
         { go: [2649, 3271], why: 'round to the other crate' },
-        { useLoc: 'teleportcrate', at: [2650, 3271], obj: 'tribal_totem_label', want: 'covering it completely', why: 'stick it on the teleport block' },
+        { useLoc: 'teleportcrate', at: [2650, 3271], obj: 'tribal_totem_label', want: 'carefully place the delivery label', why: 'stick it on the teleport block' },
         { stage: 2 },
         { hasnt: 'tribal_totem_label' },
 

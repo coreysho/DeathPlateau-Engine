@@ -876,8 +876,15 @@ export function play(m: Manifest, p: Player): Result[] {
             let prods = 0;
             let stillness = 0;
             let stranded = 0;
+            // `behind` counts the times the tile the prod has to come from could not be reached,
+            // and unlike `stranded` nothing resets it - the plan branch clears `stranded` on every
+            // pass, so sharing it let the loop alternate between a good plan and an unreachable
+            // tile for ever without spending a prod. That hung a run for half an hour.
+            let behind = 0;
+            let rounds = 0;
             let why = '';
-            while (prods < maxProds && !done()) {
+            while (prods < maxProds && rounds < maxProds * 4 && !done()) {
+                rounds++;
                 if (!sheep.isValid()) {
                     why = 'the sheep vanished at ' + sheep.x + ',' + sheep.z + ' without the quest noticing';
                     break;
@@ -915,10 +922,30 @@ export function play(m: Manifest, p: Player): Result[] {
                     dx = plan[0][0] - sheep.x;
                     dz = plan[0][1] - sheep.z;
                 }
-                const err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                // AND THE TILE BEHIND IT IS NOT ALWAYS REACHABLE WHILE IT IS STANDING THERE. A
+                // sheep against a fence can leave its own back tile with no route to it, and the
+                // sheep wanders - so this is a moment to wait out rather than a dead end, the same
+                // way `stranded` above is. Giving up on the first one lost Sheep Herder about one
+                // run in twenty on "NO WALKABLE ROUTE from 2623,3367 to 2624,3365".
+                let err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                for (let b = 0; b < 6 && err; b++) {
+                    H.tick(5);
+                    if (!sheep.isValid()) break;
+                    err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                }
+                // AND IF IT STAYS UNREACHABLE, RE-PLAN RATHER THAN PROD FROM ANYWHERE. Pushing
+                // from whichever side happens to be reachable sounds helpful and is not: a sheep
+                // moves away from the player, so an arbitrary side moves it the wrong way, and
+                // trying that spent four hundred prods shoving sheep two round its pen. Waiting
+                // and re-planning works, because the sheep wanders out of the corner on its own.
                 if (err) {
-                    why = 'could not get behind it: ' + err;
-                    break;
+                    behind++;
+                    if (behind > 12) {
+                        why = 'could not get behind it: ' + err;
+                        break;
+                    }
+                    H.tick(5);
+                    continue;
                 }
                 const before = sheep.x * 20000 + sheep.z;
                 H.opNpc(p, sheep, 1);
