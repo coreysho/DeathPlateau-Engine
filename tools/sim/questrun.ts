@@ -940,12 +940,46 @@ export function play(m: Manifest, p: Player): Result[] {
                 // and re-planning works, because the sheep wanders out of the corner on its own.
                 if (err) {
                     behind++;
-                    if (behind > 12) {
-                        why = 'could not get behind it: ' + err;
+                    // STAND WHEREVER PUSHES IT THE RIGHT WAY, not only directly behind it. The
+                    // exact opposite tile is often unreachable because the sheep itself is in the
+                    // way of it, and a sheep runs away from the player - so any neighbour on the
+                    // same side as the planned push moves it where it should go. Scoring the four
+                    // by how well they agree with the plan and taking the best reachable one is
+                    // what finally made Sheep Herder repeat: prodding from ANY side (including the
+                    // wrong ones) spent four hundred prods going nowhere, and waiting alone left
+                    // it failing about half the time.
+                    const sides = D4.map(([ax, az]) => ({ ax, az, score: ax * dx + az * dz })).filter(c => c.score > 0);
+                    sides.sort((a, b) => b.score - a.score);
+                    let moved = false;
+                    for (const c of sides) {
+                        if (!standable(p.level, sheep.x + c.ax, sheep.z + c.az)) continue;
+                        if (travel(p, sheep.x - c.ax, sheep.z - c.az, p.level, 32, 0)) continue;
+                        moved = true;
                         break;
                     }
-                    H.tick(5);
-                    continue;
+                    // A TRUE LAST RESORT - any reachable side at all, wrong direction included -
+                    // was tried and measured WORSE: a prod from the wrong side undoes progress
+                    // faster than the re-plan recovers it. Four variants were measured on Sheep
+                    // Herder's second sheep over nine runs: giving up at once failed every time,
+                    // waiting alone and the agreeing-sides scoring here both land around half,
+                    // and any-side was worse than both. So this is an improvement and not a cure.
+                    //
+                    // The reason it cannot be cured here: a sim npc barely wanders
+                    // ([[sims-never-hunt]]), so a sheep whose approach is blocked by the OTHER
+                    // sheep stays blocked however long the step waits - and the block is npc flags
+                    // the flood cannot see, which is why the tile reads walkable while the router
+                    // refuses it. The real fix is for prodPlan to route the sheep around the other
+                    // sheep rather than through them, which is a bigger change than this.
+                    if (moved) {
+                        err = '';
+                    } else {
+                        if (behind > 40) {
+                            why = 'could not get behind it: ' + err;
+                            break;
+                        }
+                        H.tick(5);
+                        continue;
+                    }
                 }
                 const before = sheep.x * 20000 + sheep.z;
                 H.opNpc(p, sheep, 1);
