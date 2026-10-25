@@ -36,7 +36,27 @@ const ANVIL: [number, number, number] = [2613, 3078, 0]; // Falador - see the no
 
 // --- Pirates' Cove and the crossing
 const COVE: [number, number, number] = [2202, 3806, 0];
-const BENTLEY: [number, number, number] = [2206, 3806, 0];
+// Bentley has moved aboard, onto the main deck beside the gangplank.
+const BENTLEY: [number, number, number] = [2224, 3800, 2];
+// --- the Lady Zay: two ladders and a gangplank to get aboard, then her own stairs
+const SHORE_LADDER: [number, number] = [2212, 3809]; // L0, the shore
+const PIER_LADDER: [number, number] = [2214, 3801]; // L1, the pier walkway
+const WSTAIR_UP: [number, number] = [2222, 3792]; // L1 -> L2, the west stairs
+const WSTAIR_DOWN: [number, number] = [2221, 3792]; // L2 -> L1
+const HOLD_UP: [number, number] = [2225, 3808]; // L0 -> L1, out of the hold
+const HOLD_DOWN: [number, number] = [2225, 3807]; // L1 -> L0
+const SHULTZ: [number, number] = [2224, 3811]; // L2, the bow
+const LEE: [number, number] = [2226, 3787]; // L2, aft
+const DAVEY: [number, number] = [2223, 3789]; // L2, the aft room - 2222,3787 is the head of the
+// wooden table, hemmed in by three chairs, and beside.ts says a player can stand NOWHERE beside it
+const BOY: [number, number] = [2222, 3788]; // L1, the gun deck
+const JACK: [number, number] = [2225, 3790]; // L1, by the stairs
+const BURNS: [number, number] = [2224, 3792]; // L0, the hold
+const SYM_CANNON: [number, number] = [2224, 3802]; // L1
+const SYM_WALLCHART: [number, number] = [2222, 3790]; // L2
+const SYM_CHEST: [number, number] = [2223, 3811]; // L0 - the one at 3813 is walled in by cargo
+const SYM_SUPPORT: [number, number] = [2224, 3793]; // L0
+const SYM_CRATE: [number, number] = [2226, 3790]; // L0
 
 // --- Lunar Isle
 const ISLE_PIER: [number, number, number] = [2113, 3892, 0];
@@ -117,30 +137,98 @@ const m: Manifest = {
         { talk: 'lokar_searunner', picks: ['Take me to Pirates'], why: 'sail west' },
         { level: 0 },
 
-        { note: 'NOT BUILT, AND WORTH RECORDING HERE: the Lady Zay is jinxed in the real quest and' },
-        { note: 'is not here. Between the seal and the island the wiki has you sail and come back' },
-        { note: 'in a circle, hear from Birds-Eye Jack that the ship is jinxed, question five crew' },
-        { note: 'in order, get the emerald lens off the cabin boy when he confesses, fit it to a' },
-        { note: 'bullseye lantern, light it and rub out five symbols around the ship. Every part of' },
-        { note: 'that is designed and none of it is written: ^lunar_sailed_circle(30),' },
-        { note: '^lunar_jinxed(40), ^lunar_questioning(50), ^lunar_confessed(60) and' },
-        { note: '^lunar_symbols_gone(70) have no writer anywhere, %lunar_bits 0-9 (five symbols,' },
-        { note: 'five crew) are never touched, lunar_emerald_lens/_lantern/_lantern_lit are objs' },
-        { note: 'nothing makes, eagleeye_shultz, cabin_boy, beefy_burns, first_mate_daveyboy and' },
-        { note: 'lecherous_lee are placed nowhere, and Birds-Eye Jack is only on the island. The' },
-        { note: 'ship itself IS on the map - and THERE ARE TWO OF THEM in m34_59, which the first' },
-        { note: 'version of this note did not say: one at z 3798-3813 (the Cove copy, three decks -' },
-        { note: 'hold on plane 0, middle deck on 1, main deck on 2, all x 2219-2229) and a second' },
-        { note: 'at z 3785-3796. The five targets listed here before took the cannon off the first' },
-        { note: 'and the wallchart, chest, support and crate off the SECOND, so four of the five' },
-        { note: 'were on the wrong ship; every one of those loc types has several placements, so a' },
-        { note: 'handler has to switch on loc_coord and the five have to be picked on one copy.' },
-        { note: 'AND NOTHING IS WIRED TO GET ABOARD: walkgraph reports NO ROUTE from the Cove dock' },
-        { note: 'at 2202,3806 to any deck, and the two inter-deck ladder types - loc474_16945 and' },
-        { note: 'loc474_16947, both "Climb" - have no trigger on any placement. The L2 doors' },
-        { note: '(loc474_16902) do work, off a generic door category. Bentley sails straight' },
-        { note: 'through instead: 20 goes to 80.' },
-        { setpos: BENTLEY, why: 'to Captain Bentley on the dock' },
+        { note: 'wiki step 4: the Lady Zay is jinxed. Two ladders and a gangplank to get aboard,' },
+        { note: 'then Bentley sails a circle, Jack names the jinx, five crew are questioned IN' },
+        { note: 'ORDER, the cabin boy confesses and hands over the lens, and five marks come off' },
+        { note: 'the ship. Built 25 Oct in quests/quest_lunar/scripts/lunar_ladyzay.rs2 - before' },
+        { note: 'that, stages 30 to 70 had no writer and Bentley sailed straight from 20 to 80.' },
+        { loc: 'loc474_16959', at: SHORE_LADDER, hop: true, why: 'up the shore ladder' },
+        { level: 1 },
+        { loc: 'loc474_16959', at: PIER_LADDER, hop: true, why: 'up the pier ladder' },
+        { level: 2 },
+        { go: [BENTLEY[0], BENTLEY[1]], r: 48, why: 'over the gangplank to Captain Bentley' },
+        { talk: 'captain_bentley', picks: ['Can we sail to Lunar Isle'], want: 'sailed a circle', why: 'ask him to sail' },
+        { stage: 30 },
+        { talk: 'captain_bentley', want: 'Ask my navigator', why: 'and ask what happened' },
+
+        { note: 'down the south stairs to the gun deck, which is where the navigator is' },
+        { loc: 'loc474_16902', at: [2224, 3793], soft: true, why: 'through the door if it is shut' },
+        { loc: 'loc474_16947', at: WSTAIR_DOWN, hop: true, why: 'down the west stairs' },
+        { level: 1 },
+        { go: JACK, r: 32, why: 'to the navigator' },
+        { talk: 'birdseye_jack', want: 'jinxed', why: 'he names the jinx' },
+        { stage: 40 },
+
+        { loc: 'loc474_16945', at: WSTAIR_UP, hop: true, why: 'back up to the main deck' },
+        { level: 2 },
+        { go: [BENTLEY[0], BENTLEY[1]], r: 32, why: 'back to Bentley' },
+        { talk: 'captain_bentley', picks: ['He says the ship is jinxed'], want: 'close ranks', why: 'tell him, and he sets you to the crew' },
+        { stage: 50 },
+
+        { note: 'the five in order: Shultz, the boy, Burns, Lee, Davey-boy. Out of turn counts' },
+        { note: 'for nothing, which is the rule Old School has for this bit.' },
+        { note: 'the main deck is three rooms behind bulkhead doors - walkgraph named all three' },
+        { loc: 'loc474_16902', at: [2224, 3807], why: 'through the forward bulkhead door' },
+        { go: SHULTZ, r: 32, why: 'to the lookout at the bow' },
+        { talk: 'eagleeye_shultz', want: 'Only the boy', why: 'one' },
+        { varis: 'lunar_crew_asked', to: 1 },
+        { loc: 'loc474_16947', at: WSTAIR_DOWN, hop: true, why: 'down to the gun deck' },
+        { level: 1 },
+        { go: BOY, r: 32, why: 'to the cabin boy' },
+        { talk: 'cabin_boy', want: 'work to do', why: 'two' },
+        { varis: 'lunar_crew_asked', to: 2 },
+        { loc: 'loc474_16947', at: HOLD_DOWN, hop: true, why: 'down into the hold' },
+        { level: 0 },
+        { go: BURNS, r: 32, why: 'to the one shifting barrels' },
+        { talk: 'beefy_burns', want: 'hands black', why: 'three' },
+        { varis: 'lunar_crew_asked', to: 3 },
+        { loc: 'loc474_16945', at: HOLD_UP, hop: true, why: 'up out of the hold' },
+        { level: 1 },
+        { loc: 'loc474_16945', at: WSTAIR_UP, hop: true, why: 'and up to the main deck' },
+        { level: 2 },
+        { loc: 'loc474_16902', at: [2224, 3793], soft: true, why: 'aft through the first door' },
+        { loc: 'loc474_16902', at: [2224, 3790], soft: true, why: 'and the second, into the aft room' },
+        { go: LEE, r: 32, why: 'to Lee, aft' },
+        { talk: 'lecherous_lee', want: 'letter home', why: 'four' },
+        { varis: 'lunar_crew_asked', to: 4 },
+        { go: DAVEY, r: 32, why: 'to the first mate' },
+        { talk: 'first_mate_daveyboy', want: 'sick twice', why: 'five' },
+        { varis: 'lunar_crew_asked', to: 5 },
+
+        { note: 'and back to the boy, who breaks. Two free spaces for the lens and the lantern.' },
+        { loc: 'loc474_16947', at: WSTAIR_DOWN, hop: true, why: 'down to the gun deck' },
+        { level: 1 },
+        { go: BOY, r: 32, why: 'back to the cabin boy' },
+        { talk: 'cabin_boy', want: 'not tell the captain', why: 'he confesses' },
+        { stage: 60 },
+        { has: 'lunar_emerald_lens' },
+        { has: 'bullseye_lantern_nolens' },
+
+        { use: ['lunar_emerald_lens', 'bullseye_lantern_nolens'], want: 'fit the emerald lens', why: 'the lens into the lantern' },
+        { has: 'lunar_emerald_lantern' },
+        { give: 'tinderbox' },
+        { use: ['tinderbox', 'lunar_emerald_lantern'], want: 'light the emerald lantern', why: 'and light it' },
+        { has: 'lunar_emerald_lantern_lit' },
+
+        { note: 'five marks, none of which can be seen without the lit lantern' },
+        { useLoc: 'loc474_16939', at: SYM_CANNON, obj: 'lunar_emerald_lantern_lit', want: 'rub it away', why: 'the cannon' },
+        { loc: 'loc474_16947', at: HOLD_DOWN, hop: true, why: 'down into the hold' },
+        { level: 0 },
+        { go: [SYM_CHEST[0], SYM_CHEST[1] - 1], r: 48, why: 'to the northern chest' },
+        { useLoc: 'loc474_16891', at: SYM_CHEST, obj: 'lunar_emerald_lantern_lit', want: 'rub it away', why: 'the chest' },
+        { useLoc: 'loc474_16951', at: SYM_SUPPORT, obj: 'lunar_emerald_lantern_lit', want: 'rub it away', why: 'the support' },
+        { useLoc: 'loc474_16862', at: SYM_CRATE, obj: 'lunar_emerald_lantern_lit', want: 'rub it away', why: 'the crate by the range' },
+        { loc: 'loc474_16945', at: HOLD_UP, hop: true, why: 'up out of the hold' },
+        { level: 1 },
+        { loc: 'loc474_16945', at: WSTAIR_UP, hop: true, why: 'up to the main deck' },
+        { level: 2 },
+        { loc: 'loc474_16902', at: [2224, 3793], soft: true, why: 'aft again for the wallchart' },
+        { loc: 'loc474_16902', at: [2224, 3790], soft: true, why: 'and the second door' },
+        { go: [SYM_WALLCHART[0], SYM_WALLCHART[1] - 1], r: 48, why: 'to the chart in the aft room' },
+        { useLoc: 'loc474_16975', at: SYM_WALLCHART, obj: 'lunar_emerald_lantern_lit', want: 'last of the five', why: 'the wallchart, and the last of them' },
+        { stage: 70 },
+
+        { go: [BENTLEY[0], BENTLEY[1]], r: 32, why: 'back to Bentley with a clean ship' },
         { talk: 'captain_bentley', picks: ['Can we sail to Lunar Isle'], want: 'Lunar Isle', why: 'sail north' },
         { stage: 80 },
 
