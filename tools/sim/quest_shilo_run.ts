@@ -40,6 +40,8 @@ const RASH_DOORS: [number, number] = [2917, 3090]; // hillsideclosedl, revealed 
 const TOMB_ARRIVE: [number, number, number] = [2929, 9525, 0];
 const GATE: [number, number] = [2929, 9516]; // zombiequeengateclosedr
 const TOMB_DOOR: [number, number] = [2892, 9480]; // thzq_tombrooml1
+const DOLMEN: [number, number] = [2892, 9487]; // zqrashdolmen, in Rashiliyia's tomb
+const CAIRN_DOLMEN: [number, number] = [2766, 9364]; // zqdolmen, under Cairn Isle
 const RASH_DOLMEN: [number, number] = [2892, 9487]; // zqrashdolmen
 
 const m: Manifest = {
@@ -145,8 +147,11 @@ const m: Manifest = {
         { setpos: [CLIMB_ROCKS[0] + 1, CLIMB_ROCKS[1], 0], why: 'to the rocks east of Cairn Isle' },
         { loc: 'zqclimbingrocks', at: CLIMB_ROCKS, soft: true, why: 'climb them' },
         { setpos: [WELL_ROCKS[0], WELL_ROCKS[1] - 1, 0], why: 'to the well-stacked rocks' },
-        { note: 'the squeeze is an Agility roll - stat_random(agility, 125, 250) - so it is a' },
-        { note: 'retry even at 99: one run in fifty gets stuck and has to wrench itself free.' },
+        { note: 'the squeeze is an Agility roll - stat_random(agility, 125, 250) - and stat_random' },
+        { note: 'reads the CURRENT level array, which maxOut does not fill, so in a sim it is a' },
+        { note: 'coin toss rather than the 98% a real 99 Agility would give. Five tries left it' },
+        { note: 'failing about one run in thirty; the pin makes it the certainty it should be.' },
+        { rng: 0, why: 'stat_random true: through the crevice first time' },
         {
             loc: 'zqrocks',
             at: WELL_ROCKS,
@@ -157,6 +162,7 @@ const m: Manifest = {
             soft: true,
             why: 'crawl into the crevice'
         },
+        { rng: null },
         { stage: 9 },
 
         { note: 'wiki steps 13-15: the dolmen gives the sword pommel, the locating crystal and a' },
@@ -234,26 +240,33 @@ const m: Manifest = {
         { useLoc: 'thzq_tombrooml3', at: TOMB_DOOR, obj: 'bones', want: 'push the huge doors open', why: 'and the third' },
         { stage: 12 },
 
-        { note: 'WHERE THIS WALK STOPS, and why. Everything above is green; the showdown is not.' },
-        { note: 'Touching the dolmen produces its mesbox ("You touch the dolmen, and the ground' },
-        { note: 'starts to shake"), and then nothing is ever summoned: no zq_mainzombie1 appears' },
-        { note: 'within 200 ticks, so the script never reaches [label,summon_nazastarool].' },
-        { note: 'Ruled out so far: the player IS inside m45_148 (2892,9486); the corpse is not' },
-        { note: 'already held; %zq_map_mechanisms bit 9 is clear, because set_zqtombdoorstate writes' },
-        { note: 'bits 7-8 only; no zq_mainzombie is within the five tiles the "dolmen remains silent"' },
-        { note: 'guard looks at; it is not a `close` step aborting the delayed script, because' },
-        { note: 'removing it changes nothing; and it is not the mesbox going unanswered, because' },
-        { note: 'answering it with a `say` step changes nothing either.' },
-        { note: 'AND IT IS PROBABLY NOT A CONTENT BUG. A probe that stands a player at 2892,9486' },
-        { note: 'with %zombiequeen 12 and the door bits set, clicks zqrashdolmen op2, drives the box' },
-        { note: 'and ticks forty, put Nazastarool at 2891,9487. A second probe with ^zq_found_door' },
-        { note: 'also set summoned nothing and printed [queue,defeat_nazastarool3]’s own lines' },
-        { note: 'instead, which that mask cannot reach - so the probes disagree with each other and' },
-        { note: 'the state the showdown reads is not only the player varp. %npc_attacking_uid is an' },
-        { note: 'npc var and the guard reads it off whatever npc_huntall finds; that is where to' },
-        { note: 'look next, in a world with nothing else spawned in it.' },
-        { note: 'The rest of the quest after the three forms: search the dolmen for the remains,' },
-        { note: 'then use them on the Cairn Isle dolmen (zqdolmen at 2766,9364) to finish.' }
+        { note: 'wiki step 22: the dolmen in the tomb, and Nazastarool three times over - zombie,' },
+        { note: 'skeleton, ghost, each one summoned by the MESBOX of the one before.' },
+        { note: 'AND THE WHOLE SHOWDOWN HAPPENS INSIDE THIS ONE CLICK. That is what stopped this' },
+        { note: 'walk for two sessions: the fight step after it reported "none of zq_mainzombie1' },
+        { note: 'is spawned anywhere near", which reads as a summon that never fired, and the' },
+        { note: 'conclusion written down was that the content was broken. It is not. drive() runs' },
+        { note: 'up to six hundred ticks and keeps clicking, and each form is summoned by a mesbox' },
+        { note: 'and killed by the player’s own retaliation - so a maxed player with a dragon' },
+        { note: 'scimitar fights all three, takes the last mesbox and has the corpse waiting on' },
+        { note: 'the dolmen before the loc step has returned. The bits are the proof: 4084 is' },
+        { note: '0b111111110100, and the top three of those are zq_defeated_nazastarool1, 2 and 3.' },
+        { setpos: [DOLMEN[0], DOLMEN[1] - 1, 0], why: 'to the dolmen chamber' },
+        { loc: 'zqrashdolmen', at: DOLMEN, op: 2, want: 'ground starts to shake', why: 'touch the dolmen' },
+        { note: 'and for the run where the drive window does not cover all three' },
+        { fight: ['zq_mainzombie1', 'zq_mainzombie2', 'zq_mainzombie3'], r: 12, tries: 20, soft: true, why: 'whichever form is still standing' },
+        { varis: 'zq_map_mechanisms', to: 4084 },
+        { loc: 'zqrashdolmen', at: DOLMEN, op: 2, want: 'mumified remains', why: 'search the dolmen' },
+        { has: 'zqcorpse' },
+        { stage: 14 },
+
+        { note: 'wiki step 23: her remains on the dolmen under Cairn Isle, where she was looking' },
+        { note: 'for her son. She thanks you and the quest finishes on a queue.' },
+        { setpos: [CAIRN_DOLMEN[0], CAIRN_DOLMEN[1] - 1, 0], why: 'to the dolmen under Cairn Isle' },
+        { useLoc: 'zqdolmen', at: CAIRN_DOLMEN, obj: 'zqcorpse', want: 'gratitude for releasing my spirit', why: 'lay the remains down' },
+        { hasnt: 'zqcorpse' },
+        { wait: 8, why: 'the completion queue' },
+        { stage: 15 }
     ]
 };
 
@@ -264,6 +277,11 @@ p.applyDamage = function () {};
 H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
 H.equip(p, { rhand: 'dragon_scimitar', torso: 'rune_platebody', legs: 'rune_platelegs', hat: 'rune_full_helm' });
+// AND THE COMBAT VARPS AFTER THE EQUIP, not before. maxOut writes the levels straight onto the
+// player and equip writes the worn inventory, so [changestat,_] never fires for either and
+// %com_slashattack is still what login worked out for a level-1 player in nothing - which is the
+// difference between killing Nazastarool inside the dolmen click and never scratching him.
+H.runProc(p, '[proc,player_combat_stat]');
 H.tick(1);
 
 const res = play(m, p);
