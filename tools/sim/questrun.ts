@@ -524,6 +524,21 @@ export function play(m: Manifest, p: Player): Result[] {
                         break;
                     }
                 }
+                // A SPELL CAN ANSWER IN DIALOGUE RATHER THAN IN THE CHATBOX. Confuse cast on
+                // Ungadulu inside his octagram frees him for long enough to say where the Book of
+                // Binding is, and every word of it is a ~chatnpc waiting on a click - none of it
+                // reaches H.mesgs, so a `want` taken from what he says could never match and the
+                // step reported "the spell never landed" over a spell that had landed. Drive what
+                // is waiting and judge the step on those lines too.
+                if (!hit && s.want) {
+                    let spoke: string[] = [];
+                    try {
+                        spoke = drive(p, []);
+                    } catch {
+                        // a menu this step has no answer for is the next step's business
+                    }
+                    if (H.mesgs.slice(mesMarkCast).map(x => x.text).concat(spoke).join(' ').includes(s.want)) hit = true;
+                }
             }
             soft(whatCast, hit, hit ? '' : whyNot);
             continue;

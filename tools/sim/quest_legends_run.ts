@@ -34,9 +34,43 @@ const SHAMAN_ROCKS: [number, number] = [2781, 2936]; // lgshamancaverock1, the m
 // --- Ungadulu's cave, under the jungle
 const UNGADULU: [number, number, number] = [2791, 9328, 0];
 const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the west face of the octagram
+// and the plain west wall two tiles north of it, which is the one to cross. ~legends_fire_wall_walk
+// reads the player's own coord against the loc's to decide which side to put you on, and for a
+// STRAIGHT wall angled east it only looks at x - so any tile west of it lands you at 2789,9331,
+// inside the ring. The diagonal next door compares x AND z, and a router that stops a tile off in
+// z throws you out onto the ring instead, where the shaman is out of spell range.
+const FIREWALL_CROSS: [number, number] = [2788, 9331]; // lqfirewall_straight, angle east
+const FIREWALL_CROSS_OUT: [number, number] = [2787, 9331]; // stand here to cross in
+const FIREWALL_CROSS_IN: [number, number] = [2789, 9331]; // and here to cross back
 const CAVE_EXIT: [number, number] = [2772, 9342]; // shaman_entrance_cavel
 const REEDS: [number, number] = [2836, 2916];
 const POOL: [number, number] = [2837, 2915]; // sacred_water
+
+// --- the catacombs, reached through the crevice behind the shaman's bookcase. Every room in this
+//     cave is its own pocket: walkgraph finds 262 regions and seventeen edges in the region, and
+//     the only joins it can see are the two ancient gates, the crumbled wall and the magic trial
+//     gate. The bookcase, the boulders and the marked wall all move the player by script.
+const BOOKCASE: [number, number] = [2795, 9339]; // shaman_bookcase, clicked from 2795,9338
+const CATACOMB_IN: [number, number] = [2809, 9333]; // where the crevice puts you, north of the gates
+const LOCKPICK_GATE: [number, number] = [2810, 9332]; // lglockpickgatebottoml - 50 Thieving
+const BOULDERS: [number, number][] = [
+    [2809, 9327],
+    [2809, 9323],
+    [2809, 9319]
+]; // mine_test_boulder1/2/3 - 52 Mining
+const STRENGTH_GATE: [number, number] = [2810, 9314]; // lgstrengthtrialgatel - 50 Strength
+const CRUMBLED_WALL: [number, number] = [2790, 9296]; // jumped from 2790,9295 - 50 Agility
+const MARKED_WALL: [number, number] = [2779, 9305]; // lgancientwalldoor, the five depressions
+// the seven stalagmites of the gem room - each takes one gem and no other
+const GEM_ROCKS: [string, [number, number]][] = [
+    ['opal', [2764, 9309]],
+    ['jade', [2771, 9303]],
+    ['red_topaz', [2772, 9295]],
+    ['sapphire', [2781, 9291]],
+    ['diamond', [2774, 9287]],
+    ['ruby', [2767, 9289]],
+    ['emerald', [2757, 9297]]
+];
 
 const m: Manifest = {
     quest: "LEGENDS' QUEST",
@@ -185,8 +219,11 @@ const m: Manifest = {
         { note: 'to be high, the opposite way round from every other roll in this walk' },
         { rng: 0.99, why: 'stat_random false: the trance holds first time' },
         { note: 'and once the bowl is blessed gujuo_start no longer sees a plain golden bowl, so the' },
-        { note: 'same conversation runs straight on into the how-goes-Ungadulu menu behind it' },
-        { resume: true, picks: ['like you to bless my gold bowl', 'Ok thanks for your help'], want: 'bowl is blessed', why: 'have the bowl blessed' },
+        { note: 'same conversation runs straight on into the how-goes-Ungadulu menu behind it.' },
+        { note: 'A plain talk rather than a resume of the bullroarer queue: [opnpc1,gujuo] goes to' },
+        { note: 'the same @gujuo_start, and a resume depends on the queue having fired inside the' },
+        { note: 'swing step - which it does not always manage.' },
+        { talk: 'gujuo', tries: 3, picks: ['like you to bless my gold bowl', 'Ok thanks for your help'], want: 'bowl is blessed', why: 'have the bowl blessed' },
         { rng: null },
         { has: 'goldbowlbless_empty' },
 
@@ -197,7 +234,126 @@ const m: Manifest = {
         { has: 'reed_hollow' },
         { useLoc: 'sacred_water', at: POOL, obj: 'reed_hollow', want: 'syphon', why: 'fill the bowl' },
         { has: 'goldbowlbless_pure' },
-        { stage: 10 }
+        { stage: 10 },
+
+        { note: 'wiki step 15: back down into the cave, and the pure water on the flames. The bowl' },
+        { note: 'is good for ten douses before it empties, which is what the uses counter in' },
+        { note: '%legends_bits is for - the quest needs several of them.' },
+        { setpos: [SHAMAN_ROCKS[0], SHAMAN_ROCKS[1] + 1, 0], why: 'to the mossy rocks in the north-west' },
+        { rng: 0, why: 'stat_random true: the crawl works first time' },
+        { loc: 'lgshamancaverock1', at: SHAMAN_ROCKS, picks: ["I'll crawl through"], hop: true, soft: true, why: 'crawl back in' },
+        { rng: null },
+        { level: 0 },
+        { note: 'and WHICH WALL YOU DOUSE DECIDES WHERE IT PUTS YOU - see FIREWALL_CROSS above' },
+        { go: FIREWALL_CROSS_OUT, r: 192, why: 'to the west wall of the octagram' },
+        { useLoc: 'lqfirewall_straight', at: FIREWALL_CROSS, obj: 'goldbowlbless_pure', want: 'splash some pure water', hop: true, why: 'douse the flames and step inside' },
+        { has: 'goldbowlbless_pure' },
+        { level: 0 },
+
+        { note: 'wiki step 16: Ungadulu, face to face. The first thing he does is tell you to run,' },
+        { note: 'and the demon surfaces for a moment before he comes back to himself - which is' },
+        { note: 'what sets the ungadulu_curse timer, for 40 ticks.' },
+        { talk: 'ungadulu_good', want: 'Run like the leopard', why: 'he begs you to run' },
+        { note: 'a combat spell cast on him INSIDE the ring while that timer is up frees him for' },
+        { note: 'long enough to say where the Book of Binding is: [apnpct,magic:confuse] on' },
+        { note: 'ungadulu_good goes to ~legends_spell_usage instead of the ordinary spell, and the' },
+        { note: 'spell fizzles anywhere outside legends_fire_wall_correct.' },
+        { note: 'and the cast has to LAND, first time: ~player_npc_hit_roll is' },
+        { note: 'randominc(attack) > randominc(defence), so a high pin makes a maxed player’s magic' },
+        { note: 'roll beat the shaman’s defence outright. The curse timer only runs for 40 ticks,' },
+        { note: 'and a second attempt after it expires gets "the shaman somehow resists" instead.' },
+        { note: 'and Confuse costs 2 earth, 3 water and 1 body - a miss makes him retaliate, and' },
+        { note: 'his retaliation is the spell that throws you out of the octagram' },
+        { give: 'earthrune', n: 100 },
+        { give: 'waterrune', n: 100 },
+        { give: 'bodyrune', n: 100 },
+        { rng: 0.99, why: 'the hit roll, not a stat_random: high means hit' },
+        { note: 'and what he says is all ~chatnpc, so the line to look for is one drive() reads' },
+        { note: 'rather than the first page, which the click that opens the conversation eats' },
+        { cast: 'magic:confuse', on: 'ungadulu_good', tries: 3, want: 'many trials you must pass', why: 'free him for a moment' },
+        { rng: null },
+        { level: 0 },
+
+        { note: 'wiki step 17: and out again, which is the leap. Investigating the flames from' },
+        { note: 'inside is the only way back out before the demon is dead - see the leap-out gate' },
+        { note: 'in quest_legends.rs2, which was testing for a DIFFERENT player being inside.' },
+        { rng: 0, why: 'stat_random true: over the top rather than through' },
+        { loc: 'lqfirewall_straight', at: FIREWALL_CROSS, op: 2, picks: ['Leap out'], want: 'over the top of the flame wall', hop: true, why: 'leap out of the octagram' },
+        { level: 0 },
+        { rng: null },
+
+        { note: 'wiki step 18: the crevice behind the shaman bookcase is the way into the' },
+        { note: 'catacombs - it crawls you through and drops you north of the ancient gates' },
+        { go: [BOOKCASE[0], BOOKCASE[1] - 1], r: 192, why: 'to the bookcase' },
+        { rng: 0, why: 'stat_random true: you fit through the crevice' },
+        { loc: 'shaman_bookcase', at: BOOKCASE, op: 2, picks: ['Yes please'], want: 'squeeze through the crevice', hop: true, why: 'into the catacombs' },
+        { rng: null },
+
+        { note: 'wiki step 19: the first trial is the lock - a lockpick and 50 Thieving, on SEARCH' },
+        { note: 'rather than open, and stat_random(thieving, 0, 255) = false is the failure' },
+        { give: 'lockpick' },
+        { go: CATACOMB_IN, r: 96, why: 'to the ancient gates' },
+        { rng: 0, why: 'stat_random true: the lock tumbles' },
+        { loc: 'lglockpickgatebottoml', at: LOCKPICK_GATE, op: 2, want: 'CLICK!', why: 'pick the lock' },
+        { rng: null },
+        { go: [LOCKPICK_GATE[0] - 1, LOCKPICK_GATE[1] - 1], r: 32, why: 'through the gates' },
+
+        { note: 'wiki step 20: three boulders and 52 Mining. Each one teleports you past itself and' },
+        { note: 'drops another behind, so the corridor between them is three separate pockets.' },
+        { give: 'rune_pickaxe' },
+        { rng: 0, why: 'stat_random true: the rock gives on the first swing' },
+        { loc: 'mine_test_boulder1', at: BOULDERS[0], want: 'smash the rock to bits', hop: true, why: 'mine through the first boulder' },
+        { loc: 'mine_test_boulder2', at: BOULDERS[1], want: 'smash the rock to bits', hop: true, why: 'the second' },
+        { loc: 'mine_test_boulder3', at: BOULDERS[2], want: 'smash the rock to bits', hop: true, why: 'the third' },
+
+        { note: 'wiki step 21: the second gate is brute strength - 50 Strength, and here' },
+        { note: 'stat_random(strength, 0, 255) = true is the one that opens it' },
+        { go: [STRENGTH_GATE[0] - 1, STRENGTH_GATE[1]], r: 48, why: 'to the metal doors' },
+        { loc: 'lgstrengthtrialgatel', at: STRENGTH_GATE, picks: ['force them open'], want: 'force the doors open slightly', why: 'force the doors' },
+        { go: [STRENGTH_GATE[0] - 1, STRENGTH_GATE[1] - 2], r: 32, why: 'through them' },
+
+        { note: 'wiki step 22: the crumbled wall, jumped NORTH from 2790,9295 - the exactmove hard-' },
+        { note: 'codes that tile as its start, so the side you stand on decides the direction' },
+        { go: [CRUMBLED_WALL[0], CRUMBLED_WALL[1] - 1], r: 192, exact: true, why: 'to the south side of the crumbled wall' },
+        { loc: 'crumbled_wall', at: CRUMBLED_WALL, op: 2, want: 'sail majestically over the wall', hop: true, why: 'jump it' },
+        { rng: null },
+
+        { note: 'wiki step 23: the marked wall and its five depressions. SMELL - Soul, Mind, Earth,' },
+        { note: 'Law, Law - and a rune out of order burns your hand and drops on the floor.' },
+        { give: 'soulrune' },
+        { give: 'mindrune' },
+        { give: 'earthrune' },
+        { give: 'lawrune', n: 2 },
+        { go: [MARKED_WALL[0] - 1, MARKED_WALL[1]], r: 192, why: 'to the marked wall' },
+        { loc: 'lgancientwalldoor', at: MARKED_WALL, op: 2, picks: ["I'll read it"], want: 'five slightly round depressions', why: 'read the riddle' },
+        { useLoc: 'lgancientwalldoor', at: MARKED_WALL, obj: 'soulrune', want: "letter 'S' appears", why: 'first: the spirit of man or beast' },
+        { useLoc: 'lgancientwalldoor', at: MARKED_WALL, obj: 'mindrune', want: "letter 'M' appears", why: 'second: the place where thoughts are born' },
+        { useLoc: 'lgancientwalldoor', at: MARKED_WALL, obj: 'earthrune', want: "letter 'E' appears", why: 'third: the soil from which good things grow' },
+        { useLoc: 'lgancientwalldoor', at: MARKED_WALL, obj: 'lawrune', want: 'fourth depression', why: 'fourth: the rules all men should know' },
+        { note: 'and the fifth opens the door, which is the way into the gem room' },
+        { useLoc: 'lgancientwalldoor', at: MARKED_WALL, obj: 'lawrune', picks: ["I'll go through"], want: 'pools of water', hop: true, why: 'fifth, and through' },
+
+        { note: 'wiki step 24: seven stalagmites and seven gems. Each rock takes one gem and no' },
+        { note: 'other - "But nothing happens" is the wrong rock, not the wrong order.' },
+        ...(GEM_ROCKS.flatMap(([gem, at]) => [
+            { give: gem },
+            { useLoc: 'lg_gemplacerock', at, obj: gem, want: 'glows and starts spinning', why: 'the ' + gem.split('_').join(' ') + ' rock' }
+        ]) as Step[]),
+        { note: 'and the seventh blows you into the middle of the room, where the book lands - but' },
+        { note: 'not at once: ~check_gem_puzzle_complete is thirteen world_delays of shooting stars' },
+        { note: 'from the seven rocks before the obj_add, on top of the exactmove that carries you' },
+        { wait: 40, why: 'the stars, and the book landing' },
+        { take: 'book_of_binding', r: 16, why: 'the Book of Binding' },
+        { has: 'book_of_binding' },
+
+        { note: 'wiki step 25: the book held open in front of Ungadulu, and the demon comes out of' },
+        { note: 'him. Back through the flames first - the bowl still has pure water in it.' },
+        { setpos: [FIREWALL_CROSS_OUT[0], FIREWALL_CROSS_OUT[1], 0], why: 'back to the west wall of the octagram' },
+        { useLoc: 'lqfirewall_straight', at: FIREWALL_CROSS, obj: 'goldbowlbless_pure', want: 'splash some pure water', hop: true, why: 'douse the flames again' },
+        { useNpc: 'ungadulu_good', obj: 'book_of_binding', want: 'outline of a huge demon', why: 'read the binding over him' },
+        { stage: 11 },
+        { fight: 'nezikchened', untilvar: 'legendsquest', to: 12, tries: 400, why: 'Nezikchened, the first time' },
+        { stage: 12 }
     ]
 };
 
@@ -207,6 +363,11 @@ p.teleport(m.start[0], m.start[1], m.start[2]);
 p.applyDamage = function () {};
 H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
+// AND THE COMBAT VARPS HAVE TO BE RECOMPUTED. maxOut sets the levels straight onto the player, so
+// [changestat,_] never fires and %com_magicattack is still whatever login worked out for a level-1
+// mage. Confuse on Ungadulu is decided by randominc(%com_magicattack) > randominc(his defence
+// roll), and with the attack roll left at its starting value no pin of the rng can make it land.
+H.runProc(p, '[proc,player_combat_stat]');
 H.tick(1);
 
 const res = play(m, p);
