@@ -1175,11 +1175,18 @@ export function play(m: Manifest, p: Player): Result[] {
             // Rag and Bone Man picked one 140 tiles away, in a field the player had walked past two
             // legs earlier. Two ticks to let the zone wake up, and only look as far as `r`.
             H.tick(2);
-            // AND IT MAY ALREADY BE DONE. A summoned boss has a lifetime - Legends' Quest's second
-            // Nezikchened is npc_add-ed for 500 ticks - so a walk that has to allow for the summon
-            // not landing wants to send the summon again and fight again, and the second attempt
-            // must not fail for finding nothing when the first one already finished the job.
-            if ((want || wantVar) && got()) {
+            // AND IT MAY ALREADY BE DONE - BUT ONLY A `untilvar` CAN SAY SO. A summoned boss has a
+            // lifetime - Legends' Quest's second Nezikchened is npc_add-ed for 500 ticks - so a
+            // walk that has to allow for the summon not landing wants to send the summon again and
+            // fight again, and the second attempt must not fail for finding nothing when the first
+            // one already finished the job. A stage is the right thing to read that off.
+            //
+            // AN `until` OBJ IS NOT, and reading it here broke Lunar Diplomacy. That walk kills
+            // four Suqah for four hides, one fight-and-take pair each, and a hide from the first
+            // kill is still in the pack when the second pair starts - so "already done" passed a
+            // fight that killed nothing and the take under it found nothing on the floor. The
+            // whole quest stopped at ^lunar_staff_done over it.
+            if (wantVar && got()) {
                 out.push({ n: ++n, what: what2, ok: true, detail: 'already done' });
                 console.log('  ' + String(n).padStart(2) + '. ' + label2(what2) + ' ok  already done');
                 continue;
