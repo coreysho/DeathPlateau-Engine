@@ -918,7 +918,14 @@ export function play(m: Manifest, p: Player): Result[] {
                     // panel SLOT that looks like a button is an inv and its trigger is INV_BUTTON1,
                     // which ifButton cannot reach - the silvthrill rod on the Silver Casting window
                     // is one of those.
-                    if (!H.choose(p, s.press)) {
+                    // choose() ONLY WHEN SOMETHING IS WAITING FOR AN ANSWER. It used to be tried
+                    // first on every press, and it reports success for a component that is merely
+                    // IN the player's resume list - so an emote button pressed while a finished
+                    // conversation was still on screen counted as "pressed" and the emote never
+                    // ran. Throne of Miscellania is three emotes, and all three were silently
+                    // doing nothing.
+                    const paused = (p as unknown as { activeScript: { execution: number } | null }).activeScript?.execution === ScriptState.PAUSEBUTTON;
+                    if (!paused || !H.choose(p, s.press)) {
                         try {
                             H.ifButton(p, s.press);
                         } catch (e1) {
