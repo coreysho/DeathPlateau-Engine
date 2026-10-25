@@ -1585,7 +1585,15 @@ export function play(m: Manifest, p: Player): Result[] {
         }
 
         const joined = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
-        if (unreached && !('until' in s && s.until)) {
+        // A STEP THAT ASKED FOR NOTHING CANNOT HAVE FAILED TO GET IT. Some clicks open a
+        // conversation through a QUEUE - swinging the bullroarer in Legends' Quest runs
+        // [queue,bullroarer_use] a tick later, which walks Gujuo over and opens his menu - so the
+        // menu turns up inside the SWING's drive window and the answers belong to the step after
+        // it. Charging the swing with "the dialogue never offered the option(s)" is a harness
+        // artifact: it declared no picks, so it claimed nothing. A step that did declare picks and
+        // then met a menu it had no answer for is still a real failure.
+        const claimedPicks = 'picks' in s && ((s.picks as unknown[] | undefined)?.length ?? 0) > 0;
+        if (unreached && claimedPicks && !('until' in s && s.until)) {
             soft(what, false, 'the dialogue never offered the option(s) ' + unreached + '; it said: ' + joined.slice(0, 110));
             continue;
         }

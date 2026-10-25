@@ -33,6 +33,10 @@ const SHAMAN_ROCKS: [number, number] = [2781, 2936]; // lgshamancaverock1, the m
 
 // --- Ungadulu's cave, under the jungle
 const UNGADULU: [number, number, number] = [2791, 9328, 0];
+const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the west face of the octagram
+const CAVE_EXIT: [number, number] = [2772, 9342]; // shaman_entrance_cavel
+const REEDS: [number, number] = [2836, 2916];
+const POOL: [number, number] = [2837, 2915]; // sacred_water
 
 const m: Manifest = {
     quest: "LEGENDS' QUEST",
@@ -140,39 +144,60 @@ const m: Manifest = {
         { stage: 6 },
         { level: 0 },
 
-        { note: 'WHERE THIS WALK STOPS, AND WHY. Inside the cave is a 387-tile room, and every way' },
-        { note: 'on from it is a barrier with its own key: the wall of fire round Ungadulu, the' },
-        { note: 'bookcase and the crevice behind it, a gate that wants a lockpick, three boulders' },
-        { note: 'that want 52 Mining, a gate that wants 50 Strength, and the magic gate with its' },
-        { note: 'five runes and seven gems. tools/sim/walkgraph.ts cannot map it the way it mapped' },
-        { note: 'the Miscellania castle, because its bare player has neither the quest stage nor the' },
-        { note: 'items, so none of those barriers opens for it - the probe reports NO ROUTE to all' },
-        { note: 'six targets and is right to.' },
-        { note: '' },
-        { note: 'What remains, in order, with where each one lives:' },
-        { note: '  the fire wall and Ungadulu        quest_legends.rs2 [oploc1/u,lqfirewall_*]' },
-        { note: '  Gujuo on holy water (stage 8)      gujuo.rs2:490' },
-        { note: '  the golden bowl, blessed, filled   quest_legends.rs2:1004 (stage 10)' },
-        { note: '  the reeds and the pool             [oploc1/u,tall_reeds], [oploc1,sacred_water]' },
-        { note: '  the bookcase and the crevice       [oploc1/2,shaman_bookcase], shaman_cave_crevice' },
-        { note: '  the lockpick gate, three rocks     lglockpickgatebottoml/r, lgshamancaverock1-3' },
-        { note: '  the strength gate, the jagged walls lgstrengthtrialgatel/r, crumbled_wall' },
-        { note: '  the marked wall, five runes        lgmagictrialgateclosed (soul, mind, earth, law, law)' },
-        { note: '  the seven gems on seven rocks      lg_gemplacerock, coords in quest_legends.constant' },
-        { note: '  the binding book, Nezikchened I    book_of_binding.rs2, nezikchened.rs2:179 (stage 12)' },
-        { note: '  the seeds, the pool drying up      quest_legends.rs2:1390 (13), :992 (14)' },
-        { note: '  the winch and the lower dungeon    :1590 (16)' },
-        { note: '  three skeletons, the furnace       :1895 (17)' },
-        { note: '  the heart crystal and the recess   :1955 (18)' },
-        { note: '  Echned Zekin and the boulder       echned_zekin.rs2:45 (19), :139 (20)' },
-        { note: '  Nezikchened II, the sacred water   nezikchened.rs2:200 (22), legends_boulder.rs2:50 (25)' },
-        { note: '  the Yommi tree, grown and carved   :1269 (30)' },
-        { note: '  Nezikchened III at the totem pole  nezikchened.rs2:215 (35), :2044 (40)' },
-        { note: '  Gujuo and the gilded totem         gujuo.rs2:91 (45)' },
-        { note: '  Radimus, the hand-in and the four  radimus_erkle.rs2 (50-70, then 100)' },
-        { note: '  training menus' },
-        { go: [2790, 9340], r: 128, why: 'as far into the cave as the first room goes' },
-        { level: 0 }
+        { note: 'wiki step 10: Ungadulu is inside a flaming octagram and the only way to speak to' },
+        { note: 'him is to INVESTIGATE the fire wall (op2) from within ten tiles of him - there is' },
+        { note: 'no zone trigger and no way to reach him, and a plain click on him only gets "run' },
+        { note: 'for your life" and a curse.' },
+        { go: [FIREWALL_W[0] + 1, FIREWALL_W[1]], r: 192, why: 'to the west face of the octagram' },
+        { note: 'and "Who are you?" is the answer that matters: it sets BOTH asked_ungadulu_where' },
+        { note: 'and asked_ungadulu_who, and Gujuo will not talk about pure water without the' },
+        { note: 'second one. Then "Where do I get pure water from?" sets called_vacu, which is what' },
+        { note: 'puts the pure-water line on his menu at all.' },
+        { loc: 'lqfirewall_diagonal', at: FIREWALL_W, op: 2, picks: ['Who are you', 'Where do I get pure water'], want: 'heat kills me', why: 'investigate the flames' },
+        { stage: 7 },
+
+        { note: 'wiki step 11: out of the cave and swing the bullroarer again' },
+        { go: [CAVE_EXIT[0] + 1, CAVE_EXIT[1]], r: 192, why: 'back to the cave mouth' },
+        { loc: 'shaman_entrance_cavel', at: CAVE_EXIT, hop: true, soft: true, why: 'out' },
+        { setpos: [TOTEM[0] + 1, TOTEM[1], 0], why: 'to a totem pole in the jungle' },
+        { rng: 0.3, why: 'random(6) = 1 again: no animal, and the summon lands' },
+        { held: 'bullroarer', op: 1, soft: true, why: 'swing it' },
+        { rng: null },
+        { talk: 'gujuo', tries: 3, picks: ['pure water to douse', 'Ok, thanks'], want: 'metal of the sun', why: 'ask about pure water' },
+        { stage: 8 },
+
+        { note: 'wiki step 12: two gold bars and a hammer make the golden bowl on any ordinary' },
+        { note: 'anvil. That is the generic Smithing panel rather than quest logic, so the bowl is' },
+        { note: 'handed over here the way the papyrus and the axe were.' },
+        { give: 'goldbowl_empty' },
+
+        { note: 'wiki step 13: and Gujuo blesses it - 42 Prayer, and he asks before he does it.' },
+        { note: 'He is npc_add-ed with a 500-tick life and wanders off, so every conversation with' },
+        { note: 'him after the first needs the bullroarer again.' },
+        { has: 'goldbowl_empty' },
+        { note: 'and with a bowl in the pack his conversation OPENS with the blessing offer, before' },
+        { note: 'any menu - so the answer goes on a resume of what the bullroarer queue opened, not' },
+        { note: 'on a talk after it' },
+        { rng: 0.3, why: 'the summon' },
+        { held: 'bullroarer', op: 1, soft: true, why: 'swing it again' },
+        { note: 'and the blessing itself is a stat_random(prayer, 80, 250) whose TRUE branch is the' },
+        { note: 'failure - "you were not able to go into a deep enough trance" - so the pin here has' },
+        { note: 'to be high, the opposite way round from every other roll in this walk' },
+        { rng: 0.99, why: 'stat_random false: the trance holds first time' },
+        { note: 'and once the bowl is blessed gujuo_start no longer sees a plain golden bowl, so the' },
+        { note: 'same conversation runs straight on into the how-goes-Ungadulu menu behind it' },
+        { resume: true, picks: ['like you to bless my gold bowl', 'Ok thanks for your help'], want: 'bowl is blessed', why: 'have the bowl blessed' },
+        { rng: null },
+        { has: 'goldbowlbless_empty' },
+
+        { note: 'wiki step 14: a reed cut with the machete, and the reed used on the pool to syphon' },
+        { note: 'the water out - the gap in the rocks is too narrow for the bowl itself' },
+        { setpos: [REEDS[0] + 1, REEDS[1], 0], why: 'to the water pool' },
+        { useLoc: 'tall_reeds', at: REEDS, obj: 'machette', want: 'cut down a reed', why: 'cut a reed' },
+        { has: 'reed_hollow' },
+        { useLoc: 'sacred_water', at: POOL, obj: 'reed_hollow', want: 'syphon', why: 'fill the bowl' },
+        { has: 'goldbowlbless_pure' },
+        { stage: 10 }
     ]
 };
 
