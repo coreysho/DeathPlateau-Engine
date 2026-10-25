@@ -73,10 +73,14 @@ const m: Manifest = {
 
         { note: 'and the hatch in the aviary wall, because the two parrots sit in a cage nobody can' },
         { note: 'walk into - the birds themselves are a two-tile pocket' },
-        { note: 'the hatch is a shape-0 wall on the west edge of its own tile, so its own tile is' },
-        { note: 'where you stand to put anything through it' },
-        { setpos: [2611, 3287, 0], why: 'round to the feeding hatch' },
-        { useLoc: 'eadgar_aviary_wall_hatch', at: HATCH, obj: 'eadgar_alco_chunks', want: 'falls off its perch', why: 'feed the parrots' },
+        { note: 'the hatch is a shape-0 wall on the WEST edge of 2611,3287, and that tile is inside' },
+        { note: 'the aviary wall - a jump onto it puts the player inside the masonry, where the use' },
+        { note: 'resolves against nothing and the step reports no message at all. 2610,3287 is the' },
+        { note: 'tile outside it, and the one the hatch takes a click from.' },
+        { setpos: [2610, 3287, 0], why: 'round to the feeding hatch' },
+        { note: 'and the want has to sit inside one line of the box: "falls off its perch" straddles' },
+        { note: 'the split and never matches, even when the parrot is in the pack' },
+        { useLoc: 'eadgar_aviary_wall_hatch', at: HATCH, obj: 'eadgar_alco_chunks', want: 'through the chunks like gulls', why: 'feed the parrots' },
         { has: 'eadgar_drunk_parrot' },
 
         { note: 'wiki step 6: the robe and the parrot make something that will fool a troll' },
