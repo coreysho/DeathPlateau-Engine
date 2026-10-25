@@ -1074,31 +1074,48 @@ export function play(m: Manifest, p: Player): Result[] {
             // tile at a time and waits whenever the next tile would be inside her range.
             const whatSneak = 'sneak past ' + s.past + ' to ' + s.sneak[0] + ',' + s.sneak[1] + (s.why ? ' - ' + s.why : '');
             const keepOut = ('r' in s ? s.r : undefined) ?? 4;
-            const path = route(p.level, p.x, p.z, s.sneak[0], s.sneak[1], 96, ('tol' in s ? s.tol : undefined) ?? 0);
-            if (!path.length) {
+            if (!route(p.level, p.x, p.z, s.sneak[0], s.sneak[1], 96, ('tol' in s ? s.tol : undefined) ?? 0).length) {
                 hard(whatSneak, false, 'NO WALKABLE ROUTE from ' + p.x + ',' + p.z + ' to ' + s.sneak[0] + ',' + s.sneak[1]);
                 continue;
             }
             let waited = 0;
             let blocked = '';
-            for (const [sx, sz] of path) {
-                // hold while the step would take us inside its range
-                for (let w = 0; w < 60; w++) {
-                    const npc = H.npcNear(s.past, p.x, p.z, p.level);
-                    if (!npc) break;
-                    const d = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
-                    if (d > keepOut) break;
-                    H.tick(1);
-                    waited++;
+            // AND BEING CAUGHT IS A THING THAT HAPPENS. Nora T. Hagg hunts three tiles with line
+            // of sight and teleports whoever she sees out of the garden entirely - so a sneak that
+            // walks its path once and reports where it stopped was reporting the catch, not a
+            // blockage, and Witch's House lost its last two stages to it every run. Being thrown
+            // out is recoverable the way it is for a player: go back to the start of the leg and
+            // walk it again, further out of her way. Three goes, re-routing from wherever the
+            // throw-out left the player.
+            const sneakTo = (tx: number, tz: number): boolean => {
+                for (const [sx, sz] of route(p.level, p.x, p.z, tx, tz, 96, 0)) {
+                    // hold while the npc is within range of the tile being left OR the one being
+                    // stepped onto - checking only the next tile let her walk into the player
+                    for (let w = 0; w < 60; w++) {
+                        const npc = H.npcNear(s.past, p.x, p.z, p.level);
+                        if (!npc) break;
+                        const dNext = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
+                        const dHere = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
+                        if (dNext > keepOut && dHere > keepOut) break;
+                        H.tick(1);
+                        waited++;
+                    }
+                    for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
+                        H.walkTo(p, sx, sz);
+                        H.tick(1);
+                    }
+                    if (p.x !== sx || p.z !== sz) {
+                        blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;
+                        return false;
+                    }
                 }
-                for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
-                    H.walkTo(p, sx, sz);
-                    H.tick(1);
-                }
-                if (p.x !== sx || p.z !== sz) {
-                    blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;
-                    break;
-                }
+                blocked = '';
+                return true;
+            };
+            for (let a = 0; a < 3; a++) {
+                if (sneakTo(s.sneak[0], s.sneak[1])) break;
+                H.tick(10);
+                waited += 10;
             }
             const offSneak = Math.max(Math.abs(p.x - s.sneak[0]), Math.abs(p.z - s.sneak[1]));
             hard(whatSneak, offSneak <= (('tol' in s ? s.tol : undefined) ?? 0), blocked || (offSneak > 0 ? 'ended up at ' + p.x + ',' + p.z : waited + ' ticks held back'));
