@@ -77,6 +77,10 @@ const useLocObj = (x: number, z: number, locName: string, objName: string): bool
 };
 
 const legOf = () => H.getVarBit(p, 'trek_leg');
+// A coord is one packed int in RuneScript and runProc only takes ints, so a proc that takes a
+// coord has to be handed it this way - passing nothing left ~in_templetrek reading zero and
+// reporting that a trek room is not a trek room.
+const packCoord = () => (p.level << 28) | (p.x << 14) | p.z;
 
 let bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
@@ -215,7 +219,9 @@ for (let leg = 1; leg <= legs; leg++) {
     console.log(`\n  --- leg ${leg} of ${legs}: room ${room} (${ev})`);
     const r = ROOMS.find(q => q[0] === room)!;
     check('the player is standing in that room', [p.x, p.z], [r[1][0], r[1][1]]);
-    check('the escort came too', H.npcNear('templetrek_retired_man_easy', p.x, p.z, 0) !== null, true);
+    // p.level, not 0: the boat deck is on plane 2, and looking for the escort on the ground floor
+    // reported route 3's last leg as having arrived without them.
+    check('the escort came too', H.npcNear('templetrek_retired_man_easy', p.x, p.z, p.level) !== null, true);
 
     if (['snakes', 'ghasts', 'snails', 'vampyres', 'shades'].includes(ev)) {
         const spawned = H.getVarBit(p, 'trek_spawned');
@@ -364,6 +370,23 @@ for (let i = 1; i <= 3; i++) {
 }
 check('and paid something out', got > 0, true);
 
+// NOTHING LEFT BEHIND BY A NATURAL TREK. Checked here rather than at the end of the run, because
+// everything below this point forces rooms and routes directly and is allowed to strand a villager
+// doing it - a leg transition is not. This is the check that caught the real leak: the teardown used
+// to run AFTER the teleport, so every leg left its escort standing three hundred tiles away.
+let strays = 0;
+for (const nm of ['templetrek_retired_man_easy', 'templetrek_retired_soldier_easy', 'templetrek_man_med',
+                  'templetrek_woman_med', 'templetrek_oldman_hard', 'templetrek_child_hard']) {
+    const id = NpcType.getId(nm);
+    for (const npc of World.npcs) {
+        if (npc && npc.isActive && npc.type === id) {
+            strays++;
+            console.log(`        stray ${nm} at ${npc.x},${npc.z} L${npc.level}`);
+        }
+    }
+}
+check('\nNO VILLAGER LEFT IN THE SWAMP: strays', strays, 0);
+
 // ---------------------------------------------------------------------------- escaping and evading
 // Two things a player will do far more often than finishing: give up, and slip past. Both are run
 // from a fresh trek, because the one above is over by now.
@@ -444,11 +467,98 @@ p.closeModal();
 // the player has to have GOT to the Path for the refusal to mean anything
 const atPath = Math.max(Math.abs(p.x - r[4]![0]), Math.abs(p.z - r[4]![1])) <= 2;
 check('route 3 refuses, and the leg does not advance', [H.getVarBit(p, 'trek_leg'), atPath, refused], [legBefore3, true, true]);
+// this test forced a room too, so the escort of the room it was forced out of goes now
+H.runProc(p, '[proc,trek_clear_escort]', [], undefined, true);
 // leave no trek running
 H.setVarBit(p, 'trek_route', 0);
 H.setVarBit(p, 'trek_escort', 0);
 H.setVarBit(p, 'trek_room', 0);
 H.setVarBit(p, 'trek_leg', 0);
+
+// --------------------------------------------------------------------------- the escort can die
+// The stake of the whole minigame, and the thing it was missing: Old School says a trek fails if
+// you or the follower die. There is no npc-against-npc combat in this build, so the mauling is a
+// queue - and this is where it is proved that leaving your charge among the monsters kills them.
+console.log('\nTHE ESCORT');
+check('an easy escort has hitpoints to lose', NpcType.get(NpcType.getId('templetrek_retired_man_easy')).stats[3], 70);
+check('a hard one has fewer', NpcType.get(NpcType.getId('templetrek_child_hard')).stats[3], 30);
+check('a medium one is in between', NpcType.get(NpcType.getId('templetrek_man_med')).stats[3], 50);
+
+// A fresh trek, forced into room 1 - snakes. Hunting for a combat room by starting treks and
+// abandoning them until one came up was flaky and left state behind; the room is set directly, the
+// same way the route 3 evade refusal is tested.
+// Tear down whatever the evade test left running FIRST. Forcing a room on top of a live trek puts
+// a second escort down and strands the first - which is what the stray villager in this probe's own
+// output turned out to be, not a leak in the teardown.
+idle(40);
+p.closeModal();
+H.runProc(p, '[proc,trek_player_died]', [], undefined, true);
+freshTrek(1);
+idle(40);
+p.closeModal();
+// the natural room's escort goes before the forced room's is placed
+H.runProc(p, '[proc,trek_clear_escort]', [], undefined, true);
+let eroom = 1;
+const er = ROOMS.find(q => q[0] === eroom)!;
+H.setVarBit(p, 'trek_room', eroom);
+H.setVarBit(p, 'trek_event_done', 0);
+p.clearPendingAction();
+p.queueWaypoints([]);
+p.teleport(er[1][0], er[1][1], 0);
+H.tick(3);
+// the event has to be live for the watch to bite, so start it by hand
+H.runProc(p, '[proc,trek_place_escort]', [], undefined, true);
+H.runProc(p, '[proc,trek_spawn_monsters]', [NpcType.getId('templetrek_snake_1'), 0], undefined, true);
+H.tick(3);
+console.log(`  (room ${eroom}, snakes, forced)`);
+const charge = H.npcNear('templetrek_retired_man_easy', p.x, p.z, 0);
+check('the escort is here with full hitpoints', charge ? charge.levels[3] : 0, 70);
+
+// Put them next to one of the monsters and KEEP them there. The escort is on playerfollow, so it
+// walks straight back to the player the tick after it is moved - which is why the first version of
+// this test saw exactly one bite and concluded the mauling did not work.
+const pin = [p.x + 5, p.z + 4];
+console.log(`        watch queued: ${H.queued(p, '[queue,trek_escort_watch]').length}`);
+const hpBefore = charge ? charge.levels[3] : 0;
+for (let i = 0; i < 40; i++) {
+    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    H.tick(1);
+}
+const hpAfter = charge ? charge.levels[3] : 0;
+check('left among the monsters, they are mauled', hpAfter < hpBefore, true);
+console.log(`        ${hpBefore} -> ${hpAfter} hitpoints over 40 ticks`);
+
+// and when it runs out the trek is over
+if (charge) charge.levels[3] = 2;
+for (let i = 0; i < 120 && H.getVarBit(p, 'trek_route') !== 0; i++) {
+    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    H.tick(1);
+}
+for (let i = 0; i < 20 && p.x !== 3480; i++) H.tick(1);
+p.closeModal();
+check('when they go down the trek fails and you are back in Burgh de Rott',
+      [p.x, p.z, H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort'), H.getVarBit(p, 'templetrek_npc_point_value')],
+      [3480, 3243, 0, 0, 0]);
+// Counted around THIS test's escort rather than across the whole map. The forced-state tests above
+// strand villagers in other rooms by design, and the map-wide count belongs where it is - after a
+// natural trek, where nothing is allowed to be left behind.
+let escorts = 0;
+const eid = NpcType.getId('templetrek_retired_man_easy');
+for (const npc of World.npcs) {
+    if (npc && npc.isActive && npc.type === eid &&
+        Math.max(Math.abs(npc.x - pin[0]), Math.abs(npc.z - pin[1])) <= 30) escorts++;
+}
+check('and the escort is gone', escorts, 0);
+
+// the player dying in the swamp tears the trek down too, or they are on one for ever
+console.log('\nDYING IN THE SWAMP');
+eroom = freshTrek(2);
+check('in a trek room, the death hook knows where you are', H.runProc(p, '[proc,in_templetrek]', [packCoord()], undefined, true)[0], 1);
+H.runProc(p, '[proc,trek_player_died]', [], undefined, true);
+check('the trek is torn down', [H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort')], [0, 0]);
+p.teleport(3480, 3243, 0);
+H.tick(2);
+check('and Burgh de Rott is not a trek room', H.runProc(p, '[proc,in_templetrek]', [packCoord()], undefined, true)[0], 0);
 
 // ---------------------------------------------------------------- every room's way out, one by one
 // A trek draws its rooms at random, so one run proves five of the fourteen. This asks about all of
