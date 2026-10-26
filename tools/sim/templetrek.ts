@@ -1,0 +1,429 @@
+// TEMPLE TREKKING, start to finish. Picks an escort in Burgh de Rott, takes a route, and plays
+// every leg: the room it lands in, whether the escort came with it, whether the event put out what
+// it should have, and whether the way out works. Then it checks the token and what the token pays.
+//
+// The questions worth being certain about are structural, because the trek is fourteen rooms of
+// map that nothing had ever stood in: is every entry tile floor, does every room have its three
+// Paths, and does a Continue-trek actually land you in the next room rather than in the water.
+//
+//   npx tsx tools/sim/templetrek.ts [route]
+import * as H from './harness.js';
+import World from '#/engine/World.js';
+import LocType from '#/cache/config/LocType.js';
+import NpcType from '#/cache/config/NpcType.js';
+import Component from '#/cache/config/Component.js';
+import ScriptState from '#/engine/script/ScriptState.js';
+import { isMapBlocked, isZoneAllocated, findPathToLoc, canTravel } from '#/engine/GameMap.js';
+import { CollisionType } from '#/engine/routefinder/index.js';
+import ObjType from '#/cache/config/ObjType.js';
+import { Interaction } from '#/engine/entity/Interaction.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+
+await H.boot();
+
+const ROUTE = Number(process.argv[2] ?? 1);
+const M2_COMPLETE = 110;
+
+// the fourteen rooms, read out of configs/templetrek.constant
+const ROOMS: [number, [number, number], [number, number], [number, number], [number, number] | null][] = [
+    [1, [1999, 5030], [1999, 5051], [1999, 5028], [1989, 5042]],
+    [2, [2028, 5030], [2040, 5048], [2028, 5028], [2021, 5049]],
+    [3, [2191, 5030], [2191, 5051], [2191, 5028], [2181, 5042]],
+    [4, [2220, 5030], [2232, 5048], [2220, 5028], [2213, 5049]],
+    [5, [2255, 5030], [2255, 5051], [2255, 5028], [2245, 5042]],
+    [6, [2284, 5030], [2296, 5048], [2284, 5028], [2275, 5049]],
+    [7, [2319, 5029], [2319, 5051], [2319, 5027], [2308, 5042]],
+    [8, [2348, 5031], [2360, 5048], [2348, 5027], [2340, 5050]],
+    [9, [2383, 5027], [2383, 5052], [2383, 5025], [2373, 5042]],
+    [10, [2412, 5028], [2424, 5050], [2412, 5026], [2401, 5048]],
+    [11, [2143, 5001], [2134, 5032], [2143, 4999], [2126, 5016]],
+    [12, [2082, 5041], [2103, 5037], [2080, 5041], null],
+    [13, [2092, 5004], [2090, 5024], [2092, 5002], null],
+    [14, [2269, 5006], [2269, 5021], [2269, 5004], null]
+];
+const EVENT_OF: Record<number, string> = {
+    1: 'snakes', 5: 'snakes', 9: 'snakes',
+    2: 'ghasts', 6: 'ghasts', 10: 'ghasts',
+    3: 'snails', 7: 'snails',
+    4: 'vampyres', 8: 'vampyres',
+    11: 'shades', 12: 'bridge', 13: 'vines', 14: 'samaritan'
+};
+
+// Use an item on a loc. The harness has no helper for this and three of Temple Trekking's events
+// need it, because the locs they hang off - the vine tree, the branch - carry no option of their
+// own. Same shape as the audits' own useOnLoc.
+const slotOf = (obj: string): number => {
+    const id = ObjType.getId(obj);
+    const inv = p.invs.get(93)!;
+    for (let i = 0; i < inv.capacity; i++) {
+        if (inv.get(i)?.id === id) return i;
+    }
+    return -1;
+};
+const useLocObj = (x: number, z: number, locName: string, objName: string): boolean => {
+    const loc = World.getLoc(x, z, p.level, LocType.getId(locName));
+    if (!loc) return false;
+    const lt = LocType.get(loc.type) as unknown as { forceapproach: number };
+    p.clearPendingAction();
+    p.lastUseItem = ObjType.getId(objName);
+    p.lastUseSlot = slotOf(objName);
+    p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, lt.forceapproach));
+    p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+};
+
+let bad = 0;
+const check = (what: string, got: unknown, want: unknown) => {
+    const ok = JSON.stringify(got) === JSON.stringify(want);
+    if (!ok) bad++;
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${ok ? '' : '   (want ' + JSON.stringify(want) + ')'}`);
+};
+
+const p: any = H.makePlayer('trekrun', 3480, 3243);
+H.tick(2);
+H.maxOut(p);
+H.runProc(p, '[proc,player_combat_stat]');
+
+// ------------------------------------------------------------------ the map, before anything runs
+// Teleport into each room first so its zone is allocated - isZoneAllocated is false until something
+// has been there, and asking before visiting reports every tile blocked.
+console.log('THE FOURTEEN ROOMS: every entry tile floor, and every Path in place');
+for (const [n, entry, success, fail, evade] of ROOMS) {
+    p.teleport(entry[0], entry[1], 0);
+    H.tick(2);
+    const floor = isZoneAllocated(0, entry[0], entry[1]) && !isMapBlocked(entry[0], entry[1], 0);
+    const sp = World.getLoc(success[0], success[1], 0, LocType.getId('templetrek_swamp_success_path')) !== null;
+    const fp = World.getLoc(fail[0], fail[1], 0, LocType.getId('templetrek_swamp_fail_path')) !== null;
+    const ep = evade === null ? true : World.getLoc(evade[0], evade[1], 0, LocType.getId('templetrek_swamp_evade_path')) !== null;
+    check(`room ${n} (${EVENT_OF[n]}) entry ${entry[0]},${entry[1]}`, [floor, sp, fp, ep], [true, true, true, true]);
+}
+
+// ---------------------------------------------------------------------------- the escorts appear
+console.log('\nTHE SIX IN BURGH DE ROTT');
+p.teleport(3480, 3243, 0);
+H.tick(2);
+H.setVarBit(p, 'myreque_2_quest', 0); // a varbit on myreque_2_main_var
+H.setVarBit(p, 'templetrek_npcs_visible', 0);
+check('hidden before In Aid of the Myreque', H.getVarBit(p, 'templetrek_npcs_visible'), 0);
+H.setVarBit(p, 'myreque_2_quest', M2_COMPLETE);
+// protect: true, because templetrek_main_var is transmitted and a transmitted varp needs
+// protected access to write - the same thing a real opnpc or the login script already has.
+H.runProc(p, '[proc,trek_unlock]', [], undefined, true);
+check('visible once the quest is done', H.getVarBit(p, 'templetrek_npcs_visible'), 1);
+// The six placed npcs are the MULTI forms - multinpc only changes what a client draws - so that is
+// what is standing there and what the op arrives on.
+for (const nm of ['templetrek_multi_retired_man_easy', 'templetrek_multi_retired_soldier_easy', 'templetrek_multi_man_med',
+                  'templetrek_multi_woman_med', 'templetrek_multi_oldman_hard', 'templetrek_multi_child_hard']) {
+    check(`${nm.replace('templetrek_multi_', '')} is in Burgh de Rott`, H.npcNear(nm, 3478, 3238, 0) !== null, true);
+}
+
+// ------------------------------------------------------------------------------- driving dialogue
+const drive = (picks: number[] = []): string[] => {
+    const from = H.ifaces.length;
+    let idle = 0;
+    for (let guard = 0; guard < 600 && idle < 3; guard++) {
+        const sc = p.activeScript;
+        if (!sc || sc.execution !== ScriptState.PAUSEBUTTON) {
+            if (!sc && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
+            else idle = 0;
+            H.tick(1);
+            continue;
+        }
+        idle = 0;
+        const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
+        const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
+        const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
+        if (multi) {
+            const pick = picks.shift();
+            if (pick === undefined) break;
+            H.choose(p, `${multi.split(':')[0]}:com_${pick}`);
+        } else {
+            p.executeScript(sc, true, true);
+        }
+    }
+    return H.ifaces.slice(from).filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map((i: any) => i.text!);
+};
+
+// -------------------------------------------------------------------------------------- the trek
+console.log(`\nA TREK ON ROUTE ${ROUTE}`);
+const escort = H.npcNear('templetrek_multi_retired_man_easy', 3481, 3241, 0);
+if (!escort) {
+    check('Dalcian Fang can be talked to', false, true);
+    process.exit(1);
+}
+H.opNpc(p, escort, 1);
+const said = drive([ROUTE]);
+console.log(`        said: ${said.join(' | ').slice(0, 150)}`);
+check('route and escort are set, and you are in the vestibule', [H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort'), p.x, p.z], [ROUTE, 1, 2052, 5044]);
+
+const legs = ROUTE === 1 ? 5 : ROUTE === 2 ? 4 : 3;
+const roomOf = (x: number, z: number) => ROOMS.find(r => Math.abs(r[1][0] - x) <= 3 && Math.abs(r[1][1] - z) <= 3)?.[0] ?? 0;
+
+// A ROOM CHANGE IS NOT DONE WHEN THE VARBIT CHANGES. trek_next_room writes trek_room, then
+// mes/p_delay(2)/p_teleport, then places the escort and starts the event - so a probe that stops
+// ticking as soon as the varbit moves measures the room before the player is in it, and reads an
+// event that has not run. Wait for the player to actually be standing on the entry tile.
+const settle = (): number => {
+    for (let i = 0; i < 60; i++) {
+        H.tick(1);
+        const room = H.getVarBit(p, 'trek_room');
+        if (room !== 0) {
+            const r = ROOMS.find(q => q[0] === room)!;
+            if (p.x === r[1][0] && p.z === r[1][1] && !p.delayed) return room;
+        }
+    }
+    p.closeModal();
+    return H.getVarBit(p, 'trek_room');
+};
+
+// Walk to a Path and take it. Two things to get right. The rooms are twenty tiles long, so the op
+// needs time to route there - and an op sent while the player is still inside a p_delay from the
+// previous step is dropped, which is what made the bridge room look like a dead end: the
+// Walk-across ends in a delay and the Continue-trek click landed in the middle of it.
+const idle = (n = 25): void => {
+    for (let i = 0; i < n; i++) {
+        if (!p.delayed && !p.activeScript) return;
+        H.tick(1);
+    }
+};
+const takePath = (at: [number, number], loc: string): void => {
+    const legBefore = H.getVarBit(p, 'trek_leg');
+    for (let go = 0; go < 2; go++) {
+        idle();
+        p.closeModal();
+        H.opLoc(p, at[0], at[1], loc, 2);
+        for (let i = 0; i < 90; i++) {
+            H.tick(1);
+            if (H.getVarBit(p, 'trek_leg') !== legBefore) return;
+        }
+    }
+};
+
+// out of the vestibule and into leg 1
+H.opLoc(p, 2051, 5047, 'templetrek_swamp_continue_1', 2);
+settle();
+
+for (let leg = 1; leg <= legs; leg++) {
+    const room = H.getVarBit(p, 'trek_room');
+    const ev = EVENT_OF[room];
+    console.log(`\n  --- leg ${leg} of ${legs}: room ${room} (${ev})`);
+    const r = ROOMS.find(q => q[0] === room)!;
+    check('the player is standing in that room', [p.x, p.z], [r[1][0], r[1][1]]);
+    check('the escort came too', H.npcNear('templetrek_retired_man_easy', p.x, p.z, 0) !== null, true);
+
+    if (['snakes', 'ghasts', 'snails', 'vampyres', 'shades'].includes(ev)) {
+        const spawned = H.getVarBit(p, 'trek_spawned');
+        check('it put three monsters out and the way on is shut', [spawned, H.getVarBit(p, 'trek_event_done')], [3, 0]);
+        // resolved the blunt way: this probe is about the trek machine, not the fighting
+        H.setVarBit(p, 'trek_kills', spawned);
+        H.setVarBit(p, 'trek_event_done', 1);
+    } else if (ev === 'bridge') {
+        check('the way on is shut', H.getVarBit(p, 'trek_event_done'), 0);
+        H.give(p, 'plank', 5);
+        H.give(p, 'hammer');
+        // three stages, one piece of wood each, and the loc changes under you every time
+        for (const [from, to] of [['templetrek_bridge_broken', 1], ['templetrek_bridge_fixed_1', 2], ['templetrek_bridge_fixed_2', 3]] as [string, number][]) {
+            H.opLoc(p, 2090, 5039, from, 1);
+            for (let i = 0; i < 40 && H.getVarBit(p, 'trek_bridge_fixed') < to; i++) H.tick(1);
+            p.closeModal();
+            check(`stage ${to}: ${from.replace('templetrek_bridge_', '')} mended`, H.getVarBit(p, 'trek_bridge_fixed'), to);
+        }
+        check('three pieces of wood finish it', [H.getVarBit(p, 'trek_bridge_fixed'), H.getVarBit(p, 'trek_event_done'), H.invCount(p, 'plank')], [3, 1, 2]);
+        // and the ditch is crossed by clicking the bridge, not by walking: Walk-across is the only
+        // op on the finished one, and the Continue-trek path is on the far bank
+        H.opLoc(p, 2090, 5039, 'templetrek_bridge_fixed_3', 2);
+        for (let i = 0; i < 40 && p.x < 2091; i++) H.tick(1);
+        p.closeModal();
+        check('Walk-across puts you on the east bank', [p.x, p.z], [2091, 5039]);
+    } else if (ev === 'samaritan') {
+        check('Abidor Crank is here and the room is already clear', [H.npcNear('templetrek_good_samaritan', p.x, p.z, 0) !== null, H.getVarBit(p, 'trek_event_done')], [true, 1]);
+    } else if (ev === 'vines') {
+        check('the way on is shut', H.getVarBit(p, 'trek_event_done'), 0);
+        H.give(p, 'knife');
+        // two cuts off the vine tree, both with the knife used ON the loc - it has no option of
+        // its own, which is the whole reason this is an oplocu
+        for (let cut = 1; cut <= 2; cut++) {
+            useLocObj(2095, 5010, 'templetrek_swamptree_small_vines', 'knife');
+            for (let i = 0; i < 30 && H.invCount(p, 'templetrek_short_vine') < cut; i++) H.tick(1);
+            p.closeModal();
+        }
+        check('two lengths of vine cut', H.invCount(p, 'templetrek_short_vine'), 2);
+        H.useHeldOn(p, 'templetrek_short_vine', 'templetrek_short_vine');
+        for (let i = 0; i < 30 && H.invCount(p, 'templetrek_long_vine') === 0; i++) H.tick(1);
+        p.closeModal();
+        check('twisted into a rope', [H.invCount(p, 'templetrek_long_vine'), H.getVarBit(p, 'trek_vine_state')], [1, 2]);
+        useLocObj(2093, 5014, 'templetrek_swamptree_branch', 'templetrek_long_vine');
+        for (let i = 0; i < 40 && H.getVarBit(p, 'trek_event_done') === 0; i++) H.tick(1);
+        p.closeModal();
+        check('the rope goes over the branch and the way opens', H.getVarBit(p, 'trek_event_done'), 1);
+        // and the gully is crossed by swinging, because z 5014 and 5015 are solid
+        H.opLoc(p, 2093, 5014, 'templetrek_swamptree_branch_vine', 2);
+        for (let i = 0; i < 40 && p.z < 5016; i++) H.tick(1);
+        p.closeModal();
+        check('Swing-on puts you on the north island', [p.x, p.z], [2093, 5016]);
+    }
+
+    const legBefore = H.getVarBit(p, 'trek_leg');
+    takePath(r[2], 'templetrek_swamp_success_path');
+    if (leg < legs) {
+        const now = settle();
+        check('Continue-trek took you to the next room', [H.getVarBit(p, 'trek_leg'), now !== 0, now !== room || legs === 1], [legBefore + 1, true, true]);
+    } else {
+        for (let i = 0; i < 40 && H.getVarBit(p, 'trek_route') !== 0; i++) H.tick(1);
+        p.closeModal();
+        check('the last leg lands at Paterdomus and clears the trek', [p.x, p.z, H.getVarBit(p, 'trek_route')], [3417, 3486, 0]);
+    }
+}
+
+// ------------------------------------------------------------------------------------ the reward
+console.log('\nTHE TOKEN');
+const token = ROUTE === 1 ? 'templetrek_blue_token' : ROUTE === 2 ? 'templetrek_yellow_token' : 'templetrek_red_token';
+check(`the escort handed over a ${token.replace('templetrek_', '').replace('_', ' ')}`, H.invCount(p, token), 1);
+// a clean pack: the legs above leave planks, a knife and whatever the trek handed out, and claiming
+// wants two free spaces
+H.clearInv(p);
+H.give(p, token);
+H.setVarBit(p, 'templetrek_npc_point_value', 4500);
+const invBefore = H.invCount(p, token);
+H.opheld(p, token, 1);
+for (let i = 0; i < 20; i++) H.tick(1);
+p.closeModal();
+check('clicking it spends the token and the points', [H.invCount(p, token), H.getVarBit(p, 'templetrek_npc_point_value')], [invBefore - 1, 0]);
+let got = 0;
+for (const nm of ['blankrune', 'bow_string', 'silver_bar', 'unidentified_harralander', 'coal', 'iron_ore', 'watermelon_seed', 'raw_lobster']) got += H.invCount(p, nm);
+for (let i = 1; i <= 3; i++) {
+    for (const sk of ['agility', 'firemaking', 'fishing', 'mining', 'slayer', 'thieving', 'woodcutting']) {
+        got += H.invCount(p, `templetrek_tome_${sk}_level_${i}`);
+    }
+}
+check('and paid something out', got > 0, true);
+
+// ---------------------------------------------------------------------------- escaping and evading
+// Two things a player will do far more often than finishing: give up, and slip past. Both are run
+// from a fresh trek, because the one above is over by now.
+const freshTrek = (route: number): number => {
+    H.clearInv(p);
+    p.teleport(3480, 3243, 0);
+    H.tick(2);
+    const e = H.npcNear('templetrek_multi_retired_man_easy', 3481, 3241, 0)!;
+    H.opNpc(p, e, 1);
+    drive([route]);
+    p.closeModal();
+    H.opLoc(p, 2051, 5047, 'templetrek_swamp_continue_1', 2);
+    return settle();
+};
+
+console.log('\nESCAPE: the Path you came in by abandons the trek');
+let room = freshTrek(1);
+let r = ROOMS.find(q => q[0] === room)!;
+idle();
+p.closeModal();
+H.opLoc(p, r[3][0], r[3][1], 'templetrek_swamp_fail_path', 2);
+for (let i = 0; i < 90 && H.getVarBit(p, 'trek_route') !== 0; i++) H.tick(1);
+p.closeModal();
+check('escaping puts you back in Burgh de Rott with no trek', [p.x, p.z, H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort')], [3480, 3243, 0, 0]);
+
+console.log('\nEVADE: route 1 can slip past anything, route 3 can never');
+room = freshTrek(1);
+r = ROOMS.find(q => q[0] === room)!;
+while (r[4] === null) {
+    // a puzzle room has no Evade Path placed, so draw again by escaping and starting over
+    idle();
+    p.closeModal();
+    H.opLoc(p, r[3][0], r[3][1], 'templetrek_swamp_fail_path', 2);
+    for (let i = 0; i < 90 && H.getVarBit(p, 'trek_route') !== 0; i++) H.tick(1);
+    p.closeModal();
+    room = freshTrek(1);
+    r = ROOMS.find(q => q[0] === room)!;
+}
+const legBefore = H.getVarBit(p, 'trek_leg');
+check('the event is live and nothing is dead yet', [H.getVarBit(p, 'trek_event_done'), H.getVarBit(p, 'trek_kills')], [0, 0]);
+idle();
+p.closeModal();
+H.opLoc(p, r[4]![0], r[4]![1], 'templetrek_swamp_evade_path', 2);
+for (let i = 0; i < 90 && H.getVarBit(p, 'trek_leg') === legBefore; i++) H.tick(1);
+p.closeModal();
+check('route 1 evades without a single kill', H.getVarBit(p, 'trek_leg'), legBefore + 1);
+
+// AND ROUTE 3 REFUSES. Done by setting the route on the trek already running rather than by
+// starting a fresh one: the gate reads %trek_route and nothing else, and ~trek_talk turns away
+// anybody who is already escorting somebody - so a second freshTrek() quietly did nothing and the
+// refusal "failed" on a route-1 trek that was still going.
+// Room 1 every time rather than whatever was drawn: its Evade Path is ten tiles from its entry and
+// the sweep below proves both are in one region, so if no refusal comes back it is the gate that is
+// wrong and not the walk. Taking the drawn room meant a puzzle room (no Evade Path at all) or a
+// twenty-five tile hike could pass the check for the wrong reason.
+// ...and the previous evade is let finish first. It advanced a leg, which means trek_next_room is
+// mid-p_delay with a teleport still to come - force the room before that lands and the script puts
+// the player back in whatever it drew, twenty rooms from the Evade Path about to be clicked.
+idle(40);
+p.closeModal();
+H.setVarBit(p, 'trek_route', 3);
+r = ROOMS.find(q => q[0] === 1)!;
+H.setVarBit(p, 'trek_room', 1);
+H.setVarBit(p, 'trek_event_done', 0);
+p.clearPendingAction();
+p.queueWaypoints([]);
+p.teleport(r[1][0], r[1][1], 0);
+H.tick(3);
+const legBefore3 = H.getVarBit(p, 'trek_leg');
+const ifaceMark3 = H.ifaces.length;
+idle();
+p.closeModal();
+H.opLoc(p, r[4]![0], r[4]![1], 'templetrek_swamp_evade_path', 2);
+for (let i = 0; i < 60; i++) H.tick(1);
+// a ~mesbox is interface text, not a chat message, so it lands in ifaces and not mesgs
+const refused = H.ifaces.slice(ifaceMark3).some((i: any) => (i.text ?? '').includes('no slipping past'));
+p.closeModal();
+// the player has to have GOT to the Path for the refusal to mean anything
+const atPath = Math.max(Math.abs(p.x - r[4]![0]), Math.abs(p.z - r[4]![1])) <= 2;
+check('route 3 refuses, and the leg does not advance', [H.getVarBit(p, 'trek_leg'), atPath, refused], [legBefore3, true, true]);
+// leave no trek running
+H.setVarBit(p, 'trek_route', 0);
+H.setVarBit(p, 'trek_escort', 0);
+H.setVarBit(p, 'trek_room', 0);
+H.setVarBit(p, 'trek_leg', 0);
+
+// ---------------------------------------------------------------- every room's way out, one by one
+// A trek draws its rooms at random, so one run proves five of the fourteen. This asks about all of
+// them, and asks by FLOODING rather than by walking: stand nothing on the tile, just take the
+// engine's own canTravel and see whether the Continue-trek path is in the same region as the entry.
+//
+// Driving a player there instead was the first attempt and it was no good - rooms are twenty-five
+// tiles long, a walk that far is at the mercy of the tick budget, and it reported rooms as broken
+// that a real leg had already walked. The question is reachability, so ask reachability.
+console.log("\nEVERY ROOM: the way north is in the same region as the entry tile");
+const region = (sx: number, sz: number): Set<string> => {
+    const seen = new Set<string>([`${sx},${sz}`]);
+    const st: [number, number][] = [[sx, sz]];
+    while (st.length) {
+        const [cx, cz] = st.pop()!;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = cx + dx, nz = cz + dz;
+            const k = `${nx},${nz}`;
+            if (seen.has(k)) continue;
+            if (Math.abs(nx - sx) > 45 || Math.abs(nz - sz) > 45) continue;
+            if (!canTravel(0, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
+            seen.add(k);
+            st.push([nx, nz]);
+        }
+    }
+    return seen;
+};
+// The two puzzle rooms are the exception and are MEANT to be two regions: the bridge room's banks
+// have no walking route between them and the vine crossing is a two-tile gap of solid ground. Those
+// two are proven by the legs above instead, which cross them the way a player does.
+const PUZZLE = new Set([12, 13]);
+for (const [n, entry, success, fail, evade] of ROOMS) {
+    p.teleport(entry[0], entry[1], 0);
+    H.tick(3);
+    const reg = region(entry[0], entry[1]);
+    const near = (t: [number, number]) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => reg.has(`${t[0] + dx},${t[1] + dz}`));
+    const want = !PUZZLE.has(n);
+    check(`room ${n} (${EVENT_OF[n]}): entry region ${reg.size} tiles, Continue-trek in it`, near(success), want);
+    check(`room ${n}: Escape and Evade in it too`, [near(fail), evade === null ? true : near(evade)], [true, true]);
+}
+
+console.log(bad === 0 ? '\nall checks passed' : `\n${bad} FAILED`);
+process.exit(bad === 0 ? 0 : 1);
