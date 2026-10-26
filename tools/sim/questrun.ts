@@ -26,8 +26,10 @@ import * as H from './harness.js';
 import Player from '#/engine/entity/Player.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
+import World from '#/engine/World.js';
 import { canTravel } from '#/engine/GameMap.js';
-import { CollisionType } from '#/engine/routefinder/index.js';
+import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
+import { BlockWalk } from '#/engine/entity/BlockWalk.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
@@ -159,7 +161,66 @@ function quiet(p: Player, ticks = 10): void {
 export type Result = { n: number; what: string; ok: boolean; detail: string };
 
 /** A walkable route between two tiles, by the engine's own canTravel. [] means there is none. */
-export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96, tol = 0): number[][] {
+/**
+ * THE TILES OTHER BODIES ARE STANDING ON, which a terrain flood cannot see.
+ *
+ * An npc writes BLOCK_NPC_AND_PLAYERS and NPC_OCC onto its own square as it moves, and a player's
+ * own block flag is BLOCK_NPC_AND_PLAYERS - so a tile with a sheep on it is solid to the player
+ * while reading perfectly walkable to canTravel with an extraFlag of 0. That is the whole of Sheep
+ * Herder's flakiness: the route is planned over ground, and walked by an engine that disagrees.
+ *
+ * Collected as a set of tiles rather than asked of the collision map, because the animal being
+ * pushed has to be left OUT - its own square is occupied by definition, and a planner that
+ * respected that would refuse to move it anywhere.
+ */
+export function occupied(level: number, ignore?: unknown): Set<number> {
+    const key = (a: number, b: number) => a * 20000 + b;
+    const out = new Set<number>();
+    for (const npc of World.npcs) {
+        if (!npc || npc === ignore) continue;
+        if (npc.level !== level) continue;
+        if (npc.blockWalk === BlockWalk.NONE) continue; // walks through others, and they through it
+        for (let dx = 0; dx < npc.width; dx++) {
+            for (let dz = 0; dz < npc.length; dz++) out.add(key(npc.x + dx, npc.z + dz));
+        }
+    }
+    return out;
+}
+
+/**
+ * EVERY TILE THE PLAYER CAN ACTUALLY WALK TO from where they stand, out to `radius`.
+ *
+ * A prod needs the tile BEHIND the animal, and that tile can be on the other side of a fence. The
+ * pen in Sheep Herder is the case: a sheep standing against its north wall has a back tile inside
+ * the pen, which is reachable only through the gate - so the plan is legal, the push is legal, and
+ * the player cannot get there. Asking "is it standable" answers yes, and the step then spends
+ * forty rounds waiting for a sheep that is not going to move.
+ */
+export function reachable(level: number, x: number, z: number, radius = 48, blocked?: Set<number>, extraFlag = 0): Set<number> {
+    const key = (a: number, b: number) => a * 20000 + b;
+    const seen = new Set<number>([key(x, z)]);
+    let q: [number, number][] = [[x, z]];
+    while (q.length) {
+        const next: [number, number][] = [];
+        for (const [cx, cz] of q) {
+            for (const [dx, dz] of D4) {
+                const nx = cx + dx;
+                const nz = cz + dz;
+                const k = key(nx, nz);
+                if (seen.has(k)) continue;
+                if (Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
+                if (!canTravel(level, cx, cz, dx, dz, 1, extraFlag, CollisionType.NORMAL)) continue;
+                if (blocked && blocked.has(k)) continue;
+                seen.add(k);
+                next.push([nx, nz]);
+            }
+        }
+        q = next;
+    }
+    return seen;
+}
+
+export function route(level: number, x: number, z: number, tx: number, tz: number, radius = 96, tol = 0, blocked?: Set<number>): number[][] {
     const key = (a: number, b: number) => a * 20000 + b;
     const prev = new Map<number, number>();
     const seen = new Set<number>([key(x, z)]);
@@ -188,6 +249,7 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
                 if (seen.has(k)) continue;
                 if (Math.abs(nx - x) > radius || Math.abs(nz - z) > radius) continue;
                 if (!canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
+                if (blocked && blocked.has(k)) continue;
                 seen.add(k);
                 prev.set(k, key(cx, cz));
                 next.push([nx, nz]);
@@ -195,6 +257,11 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
         }
         q = next;
     }
+    // AND IF AVOIDING THEM LEAVES NO ROUTE AT ALL, take the one through them. Standing where a body
+    // stands is not possible, but a route that merely passes a tile something will have wandered
+    // off by the time the player reaches it is worth walking - and a hard refusal here would turn
+    // every crowded doorway in the directory into a failed step.
+    if (blocked) return route(level, x, z, tx, tz, radius, tol);
     return [];
 }
 
@@ -215,12 +282,14 @@ function standOnIfWalkable(p: Player, name: string, x: number, z: number): void 
 }
 
 /** Walk a route, one waypoint a tick, the way a client feeds them. Returns '' or why it failed. */
-export function travel(p: Player, tx: number, tz: number, level = p.level, radius = 96, tol = 2): string {
+const D4: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+export function travel(p: Player, tx: number, tz: number, level = p.level, radius = 96, tol = 2, blocked?: Set<number>): string {
     if (p.level !== level) {
         return 'on level ' + p.level + ', not ' + level + ' - no step so far changed your floor';
     }
     if (Math.max(Math.abs(p.x - tx), Math.abs(p.z - tz)) <= tol) return '';
-    const path = route(level, p.x, p.z, tx, tz, radius, tol);
+    const path = route(level, p.x, p.z, tx, tz, radius, tol, blocked);
     if (!path.length) {
         return 'NO WALKABLE ROUTE from ' + p.x + ',' + p.z + ' to ' + tx + ',' + tz;
     }
@@ -249,10 +318,22 @@ export function travel(p: Player, tx: number, tz: number, level = p.level, radiu
 // nowhere for the player to stand, so the route has to be planned over moves that are legal for
 // BOTH of them. Planning it as a walk instead sends the sheep into a corner it cannot leave, which
 // is exactly where the first version of this got stuck, eight prods in a row with nothing moving.
-const D4: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+/**
+ * AND THE FLAG THAT IS NOT IN WALK_BLOCKED.
+ *
+ * `canTravel` with an extraFlag of 0 tests WALK_BLOCKED, which is FLOOR | FLOOR_DECORATION | LOC.
+ * It does NOT include BLOCK_NPC_AND_PLAYERS (0x100000), and that is the flag a blocking loc writes
+ * for bodies: both a player and an npc carry it in their own blockWalkFlag, so both refuse a tile
+ * that has it while canTravel says the tile is fine.
+ *
+ * Planning a prod without it produces pushes the ANIMAL refuses - "twenty-five prods in a row and
+ * it has not moved, at 2609,3339" - and walks to stand tiles the PLAYER refuses. Both halves of a
+ * prod are bodies moving, so both ask with the flag.
+ */
+const BODY = CollisionFlag.BLOCK_NPC_AND_PLAYERS;
 
 function stepOk(level: number, x: number, z: number, dx: number, dz: number): boolean {
-    return canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL);
+    return canTravel(level, x, z, dx, dz, 1, BODY, CollisionType.NORMAL);
 }
 
 /** Can anything stand here? True if some neighbour can walk onto the tile. */
@@ -261,12 +342,23 @@ function standable(level: number, x: number, z: number): boolean {
     return false;
 }
 
-/** The tiles to push an npc through to get it into the box, or null if it cannot be done. */
+/**
+ * The tiles to push an npc through to get it into the box, or null if it cannot be done.
+ *
+ * `blocked` is where the OTHER bodies are standing (see `occupied`). Both halves of a prod need it:
+ * the animal will not walk onto an occupied tile, because an npc's own block flag carries NPC_OCC,
+ * and the player cannot stand on one either. Without it the plan is drawn over ground that is only
+ * notionally empty, the engine refuses the move, and the step spends its prods shoving a sheep into
+ * its neighbour - which is what left Sheep Herder passing about half the time.
+ */
 export function prodPlan(
     level: number,
     sx: number,
     sz: number,
-    box: [number, number, number, number]
+    box: [number, number, number, number],
+    blocked?: Set<number>,
+    reach?: Set<number>,
+    reachFirstOnly = false
 ): [number, number][] | null {
     const key = (a: number, b: number) => a * 20000 + b;
     const inBox = (x: number, z: number) => x >= box[0] && x <= box[2] && z >= box[1] && z <= box[3];
@@ -294,6 +386,22 @@ export function prodPlan(
                 if (seen.has(key(nx, nz))) continue;
                 if (!stepOk(level, x, z, dx, dz)) continue;
                 if (!standable(level, x - dx, z - dz)) continue;
+                // the animal will not step onto a body, and nobody can stand behind it on one
+                if (blocked && (blocked.has(key(nx, nz)) || blocked.has(key(x - dx, z - dz)))) continue;
+                // AND EVERY PUSH HAS TO BE ONE THE PLAYER CAN MAKE, not just the next one.
+                //
+                // `reach` is the player's walkable COMPONENT, and walking about inside a component
+                // does not change it - so a stand tile outside it is a push that is impossible
+                // now and still impossible ten tiles later. Gating only the first step let the
+                // plan turn into the fence on step two: push south, re-plan, west is refused,
+                // push north, re-plan, west is refused - four hundred prods of a sheep walking up
+                // and down the same fence.
+                //
+                // (The first attempt at this gated every step against a flood that had the OTHER
+                // sheep subtracted from it, which cuts the component in half at any doorway one of
+                // them is standing in, and threw away every route instead. Animals belong in
+                // `blocked`; terrain belongs here.)
+                if (reach && (!reachFirstOnly || (x === sx && z === sz)) && !reach.has(key(x - dx, z - dz))) continue;
                 seen.add(key(nx, nz));
                 prev.set(key(nx, nz), key(x, z));
                 next.push([nx, nz]);
@@ -301,6 +409,36 @@ export function prodPlan(
         }
         q = next;
     }
+    // THE TWO CONSTRAINTS ARE NOT EQUAL, and dropping the wrong one first is what kept Sheep
+    // Herder failing about half the time even with both in place.
+    //
+    // `blocked` is soft: the animals wander, so a push refused because one of them is in the way
+    // this round is often legal two rounds later, and a plan that goes through them is worth
+    // having because the caller re-plans every round.
+    //
+    // `reach` is NOT soft. It says the player cannot get to the tile the push has to come from -
+    // a fence between 2623 and 2624 in the field north of Ardougne, free ground either side of it
+    // and no way across for eight tiles. Dropping it hands back a plan whose first move nobody can
+    // make, and the step then spends forty rounds walking to a tile it will never reach. Which is
+    // exactly what it did: "could not get behind it: NO WALKABLE ROUTE from 2623,3368 to
+    // 2624,3366", on the sheep that was standing against that fence.
+    //
+    // So: drop the soft one, keep the hard one, and if there is still nothing, say so. No plan is
+    // the honest answer, and the caller waits for the animal to wander out of the corner.
+    // THE FALLBACK HAS THREE RUNGS AND NO FOURTH.
+    //
+    //   every step makeable, animals avoided   the best plan, and usually there is one
+    //   every step makeable                    animals are soft: they wander, and the caller
+    //                                          re-plans every round
+    //   the NEXT push makeable                 the rest of the plan may need re-planning as the
+    //                                          player walks, which the caller does anyway - this
+    //                                          is the rung that gets a sheep out of a corner the
+    //                                          strict plan can see no way out of
+    //
+    // And nothing below that. A plan whose next push comes from a tile the player cannot reach is
+    // not a plan: the step walks towards it, never arrives, and spends forty rounds finding out.
+    if (blocked) return prodPlan(level, sx, sz, box, undefined, reach, reachFirstOnly);
+    if (reach && !reachFirstOnly) return prodPlan(level, sx, sz, box, blocked, reach, true);
     return null;
 }
 
@@ -883,6 +1021,20 @@ export function play(m: Manifest, p: Player): Result[] {
             let behind = 0;
             let rounds = 0;
             let why = '';
+            // THE FLOOD IS CACHED ON WHERE THE PLAYER IS STANDING. It is about terrain - which
+            // tiles the player can walk to at all - and a thousand rounds of re-flooding three
+            // thousand tiles is minutes of nothing. Other bodies are left out of it deliberately:
+            // they move, and they belong in `blocked` where they can be dropped.
+            let reachFrom = '';
+            let reachSet = new Set<number>();
+            const reachNow = (): Set<number> => {
+                const key = p.x + ',' + p.z;
+                if (key !== reachFrom) {
+                    reachFrom = key;
+                    reachSet = reachable(p.level, p.x, p.z, 72, undefined, CollisionFlag.BLOCK_NPC_AND_PLAYERS);
+                }
+                return reachSet;
+            };
             while (prods < maxProds && rounds < maxProds * 4 && !done()) {
                 rounds++;
                 if (!sheep.isValid()) {
@@ -903,16 +1055,27 @@ export function play(m: Manifest, p: Player): Result[] {
                         }
                     }
                 } else {
-                    const plan = prodPlan(p.level, sheep.x, sheep.z, s.gate);
+                    const plan = prodPlan(p.level, sheep.x, sheep.z, s.gate, occupied(p.level, sheep), reachNow());
                     if (!plan || !plan.length) {
                         // THE JUMP TAKES A FEW TICKS. The prod that lands a sheep in the gateway
                         // teleports it inside, waits two ticks and only then deletes it and sets
                         // the quest bit, so for that window the npc is standing in a walled pen
                         // with no route anywhere and nothing to say it has been herded. Give it a
                         // moment before calling that a dead end.
+                        // AND WAITING IS NOW A REAL STRATEGY, not just a window for the gate's
+                        // two-tick jump. With the reach constraint kept (see prodPlan) "no plan"
+                        // means the animal is somewhere it cannot be pushed from at all - against
+                        // a fence, or boxed in by another one - and it wanders out of that on its
+                        // own. Six waits of five ticks was not enough to find out.
+                        // Ninety of them, which is four hundred and fifty ticks. The field north
+                        // of Ardougne has a pocket east of its fence that is cut off from both
+                        // sides, and a sheep that wanders into it cannot be pushed anywhere at all
+                        // until it wanders out again - "no way to prod it from 2624,3371 to the
+                        // pen", which is true, and which thirty waits was not long enough to
+                        // outlast. A wait costs a sim nothing; a false dead end costs the run.
                         stranded++;
-                        if (stranded > 6) {
-                            why = 'no way to prod it from ' + sheep.x + ',' + sheep.z + ' to the pen';
+                        if (stranded > 90) {
+                            why = 'no way to prod it from ' + sheep.x + ',' + sheep.z + ' to the pen, after 450 ticks of waiting for it to move';
                             break;
                         }
                         H.tick(5);
@@ -927,11 +1090,11 @@ export function play(m: Manifest, p: Player): Result[] {
                 // sheep wanders - so this is a moment to wait out rather than a dead end, the same
                 // way `stranded` above is. Giving up on the first one lost Sheep Herder about one
                 // run in twenty on "NO WALKABLE ROUTE from 2623,3367 to 2624,3365".
-                let err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                let err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0, occupied(p.level, sheep));
                 for (let b = 0; b < 6 && err; b++) {
                     H.tick(5);
                     if (!sheep.isValid()) break;
-                    err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0);
+                    err = travel(p, sheep.x - dx, sheep.z - dz, p.level, 32, 0, occupied(p.level, sheep));
                 }
                 // AND IF IT STAYS UNREACHABLE, RE-PLAN RATHER THAN PROD FROM ANYWHERE. Pushing
                 // from whichever side happens to be reachable sounds helpful and is not: a sheep
@@ -951,9 +1114,12 @@ export function play(m: Manifest, p: Player): Result[] {
                     const sides = D4.map(([ax, az]) => ({ ax, az, score: ax * dx + az * dz })).filter(c => c.score > 0);
                     sides.sort((a, b) => b.score - a.score);
                     let moved = false;
+                    const occ = occupied(p.level, sheep);
                     for (const c of sides) {
                         if (!standable(p.level, sheep.x + c.ax, sheep.z + c.az)) continue;
-                        if (travel(p, sheep.x - c.ax, sheep.z - c.az, p.level, 32, 0)) continue;
+                        if (occ.has((sheep.x + c.ax) * 20000 + sheep.z + c.az)) continue; // a body in the way of the push
+                        if (occ.has((sheep.x - c.ax) * 20000 + sheep.z - c.az)) continue; // or standing where we would
+                        if (travel(p, sheep.x - c.ax, sheep.z - c.az, p.level, 32, 0, occ)) continue;
                         moved = true;
                         break;
                     }
@@ -964,12 +1130,12 @@ export function play(m: Manifest, p: Player): Result[] {
                     // waiting alone and the agreeing-sides scoring here both land around half,
                     // and any-side was worse than both. So this is an improvement and not a cure.
                     //
-                    // The reason it cannot be cured here: a sim npc barely wanders
-                    // ([[sims-never-hunt]]), so a sheep whose approach is blocked by the OTHER
-                    // sheep stays blocked however long the step waits - and the block is npc flags
-                    // the flood cannot see, which is why the tile reads walkable while the router
-                    // refuses it. The real fix is for prodPlan to route the sheep around the other
-                    // sheep rather than through them, which is a bigger change than this.
+                    // WHAT FINALLY CURED IT was none of the above: prodPlan and the walk now count
+                    // the other sheep (see `occupied`). A sim npc barely wanders, so a sheep whose
+                    // approach is blocked by another one stays blocked however long the step waits
+                    // - the block being npc flags the terrain flood cannot see, which is why the
+                    // tile reads walkable while the router refuses it. Planning around them is
+                    // what made this repeat; everything above is kept as the safety net it is.
                     if (moved) {
                         err = '';
                     } else {
@@ -981,13 +1147,38 @@ export function play(m: Manifest, p: Player): Result[] {
                         continue;
                     }
                 }
+                // AND CHECK WHERE IT IS STANDING NOW, not where it was when the plan was made.
+                //
+                // The animal wanders while the player walks to the tile behind it, and the script
+                // works out which way to shove it from ~coord_direction(player, animal) at the
+                // moment of the prod - so a sheep that has shuffled one tile is pushed in a
+                // direction nobody planned, usually into the wall the plan was routing around. It
+                // does not move, the prod is spent, and twenty-five of those in a row is how both
+                // remaining failures looked: "it has not moved, at 2609,3339".
+                //
+                // Re-planning costs nothing and the loop has a round budget four times the prod
+                // budget, so a shuffle is now a re-plan rather than a wasted shove.
+                if (sheep.x - p.x !== dx || sheep.z - p.z !== dz) {
+                    H.tick(1);
+                    continue;
+                }
                 const before = sheep.x * 20000 + sheep.z;
                 H.opNpc(p, sheep, 1);
                 H.tick(6);
                 prods++;
                 stillness = sheep.x * 20000 + sheep.z === before ? stillness + 1 : 0;
-                if (stillness > 8) {
-                    why = 'eight prods in a row and it has not moved, at ' + sheep.x + ',' + sheep.z;
+                // A PROD THAT MOVES NOTHING IS USUALLY A RACE, not a dead end. The plan is made
+                // against where the other animals are standing and the prod lands a tick or two
+                // later; by then one of them can have stepped into the tile this one was going to
+                // take, and `npc_walk` quietly refuses. Waiting and re-planning fixes it, and
+                // giving up at eight lost about one run in eight on "eight prods in a row and it
+                // has not moved".
+                if (stillness > 8 && stillness <= 24) {
+                    H.tick(5);
+                    continue;
+                }
+                if (stillness > 24) {
+                    why = 'twenty-five prods in a row and it has not moved, at ' + sheep.x + ',' + sheep.z;
                     break;
                 }
             }
