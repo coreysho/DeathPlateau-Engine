@@ -39,14 +39,17 @@ const ROOMS: [number, [number, number], [number, number], [number, number], [num
     [11, [2143, 5001], [2134, 5032], [2143, 4999], [2126, 5016]],
     [12, [2082, 5041], [2103, 5037], [2080, 5041], null],
     [13, [2092, 5004], [2090, 5024], [2092, 5002], null],
-    [14, [2269, 5006], [2269, 5021], [2269, 5004], null]
+    [14, [2269, 5006], [2269, 5021], [2269, 5004], null],
+    // the boat: no Path locs anywhere near it, so no success/fail/evade coords - the Boat loc
+    // carries op4=Continue-trek and op5=Escape-event instead
+    [15, [2062, 5035], [2062, 5034], [2062, 5034], null]
 ];
 const EVENT_OF: Record<number, string> = {
     1: 'snakes', 5: 'snakes', 9: 'snakes',
     2: 'ghasts', 6: 'ghasts', 10: 'ghasts',
     3: 'snails', 7: 'snails',
     4: 'vampyres', 8: 'vampyres',
-    11: 'shades', 12: 'bridge', 13: 'vines', 14: 'samaritan'
+    11: 'shades', 12: 'bridge', 13: 'vines', 14: 'samaritan', 15: 'tentacles'
 };
 
 // Use an item on a loc. The harness has no helper for this and three of Temple Trekking's events
@@ -73,6 +76,8 @@ const useLocObj = (x: number, z: number, locName: string, objName: string): bool
     return true;
 };
 
+const legOf = () => H.getVarBit(p, 'trek_leg');
+
 let bad = 0;
 const check = (what: string, got: unknown, want: unknown) => {
     const ok = JSON.stringify(got) === JSON.stringify(want);
@@ -89,7 +94,7 @@ H.runProc(p, '[proc,player_combat_stat]');
 // Teleport into each room first so its zone is allocated - isZoneAllocated is false until something
 // has been there, and asking before visiting reports every tile blocked.
 console.log('THE FOURTEEN ROOMS: every entry tile floor, and every Path in place');
-for (const [n, entry, success, fail, evade] of ROOMS) {
+for (const [n, entry, success, fail, evade] of ROOMS.filter(r => r[0] <= 14)) {
     p.teleport(entry[0], entry[1], 0);
     H.tick(2);
     const floor = isZoneAllocated(0, entry[0], entry[1]) && !isMapBlocked(entry[0], entry[1], 0);
@@ -214,9 +219,55 @@ for (let leg = 1; leg <= legs; leg++) {
 
     if (['snakes', 'ghasts', 'snails', 'vampyres', 'shades'].includes(ev)) {
         const spawned = H.getVarBit(p, 'trek_spawned');
-        check('it put three monsters out and the way on is shut', [spawned, H.getVarBit(p, 'trek_event_done')], [3, 0]);
+        // AND THEY HAVE TO EXIST. trek_spawned is a number the script wrote; it says nothing about
+        // whether an npc came out. These are big - a ghast is 2x2, a snail 3x3, a swamp snake 3x3
+        // on route 1 and 5x5 on route 3 - so two of them spawned too close together means the
+        // second one silently never appears, and the room can never be cleared.
+        const types: Record<string, string[]> = {
+            snakes: ['templetrek_snake_1', 'templetrek_snake_2', 'templetrek_snake_3'],
+            ghasts: ['templetrek_ghast_invis_1', 'templetrek_ghast_invis_2', 'templetrek_ghast_invis_3',
+                     'templetrek_ghast_vis_1', 'templetrek_ghast_vis_2', 'templetrek_ghast_vis_3'],
+            snails: ['templetrek_giantsnail_1', 'templetrek_giantsnail_2', 'templetrek_giantsnail_3'],
+            vampyres: ['templetrek_vampire_1', 'templetrek_vampire_2', 'templetrek_vampire_3'],
+            shades: ['templetrek_shade_1', 'templetrek_shade_2', 'templetrek_shade_3']
+        };
+        let alive = 0;
+        for (const nm of types[ev]) {
+            const id = NpcType.getId(nm);
+            for (const npc of World.npcs) {
+                if (npc && npc.isActive && npc.type === id && npc.level === p.level &&
+                    Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= 20) alive++;
+            }
+        }
+        check('it put three monsters out, all three of them real, and the way on is shut',
+              [spawned, alive, H.getVarBit(p, 'trek_event_done')], [3, 3, 0]);
         // resolved the blunt way: this probe is about the trek machine, not the fighting
         H.setVarBit(p, 'trek_kills', spawned);
+        H.setVarBit(p, 'trek_event_done', 1);
+    } else if (ev === 'tentacles') {
+        // the boat. Five of them come up out of the water around a six-tile deck, and the deck is
+        // the only thing to stand on.
+        check('the deck is where the trek put you', [p.x, p.z, p.level], [2062, 5035, 2]);
+        let arms = 0;
+        const armId = NpcType.getId('templetrek_tentacle_arm');
+        const headId = NpcType.getId('templetrek_tentacle_head');
+        let heads = 0;
+        for (const npc of World.npcs) {
+            if (!npc || !npc.isActive || npc.level !== 2) continue;
+            if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > 6) continue;
+            if (npc.type === armId) arms++;
+            if (npc.type === headId) heads++;
+        }
+        check('four tentacles and a head, all risen and done spawning', [arms, heads, H.getVarBit(p, 'trek_spawned')], [4, 1, 5]);
+        check('the way on is shut until they are dealt with', H.getVarBit(p, 'trek_event_done'), 0);
+        // the boat refuses to go on while they are up
+        const ifaceMark = H.ifaces.length;
+        H.opLoc(p, 2062, 5034, 'templetrek_boat_dummy_poly', 4);
+        for (let i = 0; i < 30; i++) H.tick(1);
+        const held = H.ifaces.slice(ifaceMark).some((i: any) => (i.text ?? '').includes('has not finished with you'));
+        p.closeModal();
+        check('Continue-trek is refused while the thing is alive', [held, H.getVarBit(p, 'trek_leg')], [true, legOf()]);
+        H.setVarBit(p, 'trek_kills', 5);
         H.setVarBit(p, 'trek_event_done', 1);
     } else if (ev === 'bridge') {
         check('the way on is shut', H.getVarBit(p, 'trek_event_done'), 0);
@@ -257,7 +308,11 @@ for (let leg = 1; leg <= legs; leg++) {
         for (let i = 0; i < 40 && H.getVarBit(p, 'trek_event_done') === 0; i++) H.tick(1);
         p.closeModal();
         check('the rope goes over the branch and the way opens', H.getVarBit(p, 'trek_event_done'), 1);
-        // and the gully is crossed by swinging, because z 5014 and 5015 are solid
+        // and the gully is crossed by swinging, because z 5014 and 5015 are solid. idle() first:
+        // the rope handler sets its flag and THEN animates, so the probe now stops ticking while
+        // the script is still in its p_delay - and a click sent inside a delay is dropped.
+        idle();
+        p.closeModal();
         H.opLoc(p, 2093, 5014, 'templetrek_swamptree_branch_vine', 2);
         for (let i = 0; i < 40 && p.z < 5016; i++) H.tick(1);
         p.closeModal();
@@ -265,7 +320,17 @@ for (let leg = 1; leg <= legs; leg++) {
     }
 
     const legBefore = H.getVarBit(p, 'trek_leg');
-    takePath(r[2], 'templetrek_swamp_success_path');
+    if (ev === 'tentacles') {
+        // op4 on the boat, not a Path
+        for (let go = 0; go < 2 && H.getVarBit(p, 'trek_leg') === legBefore; go++) {
+            idle();
+            p.closeModal();
+            H.opLoc(p, 2062, 5034, 'templetrek_boat_dummy_poly', 4);
+            for (let i = 0; i < 90 && H.getVarBit(p, 'trek_leg') === legBefore; i++) H.tick(1);
+        }
+    } else {
+        takePath(r[2], 'templetrek_swamp_success_path');
+    }
     if (leg < legs) {
         const now = settle();
         check('Continue-trek took you to the next room', [H.getVarBit(p, 'trek_leg'), now !== 0, now !== room || legs === 1], [legBefore + 1, true, true]);
@@ -415,7 +480,7 @@ const region = (sx: number, sz: number): Set<string> => {
 // have no walking route between them and the vine crossing is a two-tile gap of solid ground. Those
 // two are proven by the legs above instead, which cross them the way a player does.
 const PUZZLE = new Set([12, 13]);
-for (const [n, entry, success, fail, evade] of ROOMS) {
+for (const [n, entry, success, fail, evade] of ROOMS.filter(r => r[0] <= 14)) {
     p.teleport(entry[0], entry[1], 0);
     H.tick(3);
     const reg = region(entry[0], entry[1]);
