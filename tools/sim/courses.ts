@@ -5,8 +5,9 @@
 // the course cam in javaclient/tools/clienttests (which runs the lap in the real client) - and a
 // course that disagrees between them is a course nobody is really checking.
 //
-// Draynor and Al Kharid are NOT here: each has its own sim, written before this table existed and
-// carrying the lessons that made it.
+// Draynor and Al Kharid keep their own sims as well - each was written before this table existed
+// and carries the lesson that made the next one - but their obstacles are listed here too, so
+// courseland.ts can ask the same question of all nine courses.
 export type Ob = {
     name: string;
     loc: string;
@@ -19,6 +20,8 @@ export type Ob = {
 };
 export type Course = {
     key: string;
+    /** It has a sim of its own, so the shared rooftop suite leaves it alone unless asked by name. */
+    ownSim?: boolean;
     title: string;
     level: number;
     lapXp: number;
@@ -146,6 +149,41 @@ export const COURSES: Course[] = [
             { name: 'gap 3', loc: 'osrsloc_15611', x: 2653, z: 3308, level: 3, land: 'ardougne_land_gap3', xp: 'ardougne_xp_gap3' },
             { name: 'steep roof', loc: 'osrsloc_28912', x: 2654, z: 3300, level: 3, land: 'ardougne_land_roof', xp: 'ardougne_xp_roof' },
             { name: 'gap 4', loc: 'osrsloc_15612', x: 2656, z: 3296, level: 3, land: 'ardougne_land_gap4', xp: 'ardougne_xp_gap4' }
+        ]
+    },
+    {
+        key: 'draynor',
+        ownSim: true,
+        title: 'DRAYNOR VILLAGE',
+        level: 10,
+        lapXp: 1200,
+        start: [3103, 3280, 0],
+        obstacles: [
+            { name: 'rough wall', loc: 'osrsloc_11404', x: 3103, z: 3279, level: 0, land: 'draynor_land_wall', xp: 'draynor_xp_wall' },
+            { name: 'tightrope 1', loc: 'osrsloc_11405', x: 3098, z: 3277, level: 3, land: 'draynor_land_rope1', xp: 'draynor_xp_rope1' },
+            { name: 'tightrope 2', loc: 'osrsloc_11406', x: 3092, z: 3276, level: 3, land: 'draynor_land_rope2', xp: 'draynor_xp_rope2' },
+            { name: 'narrow wall', loc: 'osrsloc_11430', x: 3089, z: 3264, level: 3, land: 'draynor_land_narrow', xp: 'draynor_xp_narrow' },
+            { name: 'wall', loc: 'osrsloc_11630', x: 3088, z: 3256, level: 3, land: 'draynor_land_jumpup', xp: 'draynor_xp_jumpup' },
+            { name: 'gap', loc: 'osrsloc_11631', x: 3095, z: 3255, level: 3, land: 'draynor_land_gap', xp: 'draynor_xp_gap' },
+            { name: 'crate', loc: 'osrsloc_11632', x: 3102, z: 3261, level: 3, land: 'draynor_land_crate', xp: 'draynor_xp_crate' }
+        ]
+    },
+    {
+        key: 'alkharid',
+        ownSim: true,
+        title: 'AL KHARID',
+        level: 20,
+        lapXp: 2160,
+        start: [3273, 3196, 0],
+        obstacles: [
+            { name: 'rough wall', loc: 'osrsloc_11633', x: 3273, z: 3195, level: 0, land: 'alkharid_land_wall', xp: 'alkharid_xp_wall' },
+            { name: 'tightrope 1', loc: 'osrsloc_14398', x: 3272, z: 3181, level: 3, land: 'alkharid_land_rope1', xp: 'alkharid_xp_rope1', walk: 'alkharid_rope1_start' },
+            { name: 'cable', loc: 'osrsloc_14402', x: 3269, z: 3166, level: 3, land: 'alkharid_land_cable', xp: 'alkharid_xp_cable' },
+            { name: 'zip line', loc: 'osrsloc_14403', x: 3302, z: 3163, level: 3, land: 'alkharid_land_zip', xp: 'alkharid_xp_zip' },
+            { name: 'tropical tree', loc: 'osrsloc_14404', x: 3318, z: 3166, level: 1, land: 'alkharid_land_tree', xp: 'alkharid_xp_tree' },
+            { name: 'beams', loc: 'osrsloc_11634', x: 3316, z: 3179, level: 2, land: 'alkharid_land_beams', xp: 'alkharid_xp_beams' },
+            { name: 'tightrope 2', loc: 'osrsloc_14409', x: 3313, z: 3186, level: 3, land: 'alkharid_land_rope2', xp: 'alkharid_xp_rope2', walk: 'alkharid_rope2_start' },
+            { name: 'gap', loc: 'osrsloc_14399', x: 3300, z: 3193, level: 3, land: 'alkharid_land_gap', xp: 'alkharid_xp_gap' }
         ]
     }
 ];

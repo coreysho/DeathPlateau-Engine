@@ -32,8 +32,8 @@
 import { readFileSync, writeFileSync } from 'fs';
 
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { COURSES } from './courses.ts';
+import { drawn, onLoc, thinAir } from './mapfloor.ts';
 import LocType from '#/cache/config/LocType.js';
 import World from '#/engine/World.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
@@ -51,58 +51,7 @@ for (const course of COURSES) {
     }
 }
 
-// ---------------------------------------------------------------- is anything DRAWN on this tile
-//
-// A plane-3 tile is drawn only if its mapsquare row gives it an overlay (o) or an underlay (u).
-// Everything else is a hole: the client has no Ground and no QuickGround for it, and a player
-// standing there is standing in the air. Read straight out of the .jm2, one square at a time.
-const squares = new Map<string, Set<string>>();
-
-function drawn(x: number, z: number, level: number): boolean {
-    const mx = x >> 6;
-    const mz = z >> 6;
-    const key = `${mx}_${mz}`;
-    let set = squares.get(key);
-    if (!set) {
-        set = new Set<string>();
-        try {
-            const text = readFileSync(`../content/maps/m${mx}_${mz}.jm2`, 'utf8');
-            let section = '';
-            for (const line of text.split(/\r?\n/)) {
-                const t = line.trim();
-                if (t.startsWith('====')) {
-                    section = t.replace(/=/g, '').trim();
-                    continue;
-                }
-                if (section !== 'MAP' || !t.includes(':')) continue;
-                const [head, rest] = t.split(':');
-                const [pl, lx, lz] = head.trim().split(/\s+/).map(Number);
-                if (/\bo\d+/.test(rest) || /\bu\d+/.test(rest)) set.add(`${pl},${lx},${lz}`);
-            }
-        } catch {
-            // no such square - nothing is drawn there
-        }
-        squares.set(key, set);
-    }
-    return set.has(`${level},${x & 63},${z & 63}`);
-}
-
 const open = (x: number, z: number, level: number) => !isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
-
-/**
- * AND SOMETIMES THE FLOOR IS A LOC. Half of these obstacles are things you climb ON TO rather than
- * over - a market stall, a basket, a banner, a steep roof, a pile of fish - and the tile you end up
- * on carries no overlay and no underlay, because what you are standing on is the obstacle's own
- * model. The engine flags that tile LOC and blocks it, which is exactly right: nobody can walk
- * there, and the player put there by the obstacle is standing on top of something.
- *
- * So "thin air" is the narrower claim: nothing drawn AND no loc either. Without this distinction a
- * sweep of the landings condemns Pollnivneach's whole course, which is nine obstacles of standing
- * on market furniture.
- */
-const onLoc = (x: number, z: number, level: number) => isFlagged(x, z, level, CollisionFlag.LOC);
-
-const thinAir = (x: number, z: number, level: number) => !drawn(x, z, level) && !onLoc(x, z, level);
 
 /** Can a player stand here at all - some neighbour can step onto it. */
 function standable(x: number, z: number, level: number): boolean {
@@ -341,13 +290,28 @@ function atNext(
         for (let dz = -4; dz <= 4; dz++) {
             const x = next.x + dx;
             const z = next.z + dz;
-            if (!drawn(x, z, level) || !open(x, z, level) || !standable(x, z, level)) continue;
+            // AN ISLAND NEEDS NO NEIGHBOUR. `standable` asks whether anything can step onto the
+            // tile, which is the right question for a roof and the wrong one for the top of a
+            // market stall: nothing can walk onto it, and the obstacle puts you there anyway.
+            // ^pollnivneach_land_basket has been an island since the course shipped and its own
+            // comment says so.
+            const onIt0 = onLoc(x, z, level);
+            if (thinAir(x, z, level)) continue;
+            if (!onIt0 && (!open(x, z, level) || !standable(x, z, level))) continue;
             // AND THE NEXT OBSTACLE HAS TO BE CLICKABLE FROM IT. Being near it is not enough: a
             // tile two squares from a gap can be across a wall from it, or on the wrong side of
             // the forceapproach. Three laps broke on exactly that - the player walked towards the
             // obstacle, never arrived, and the op never ran. The engine's own routing answers it.
-            if (next.level === level && !clickable(level, x, z, next.loc, next.x, next.z)) continue;
+            //
+            // EXCEPT FROM ON TOP OF SOMETHING. rsmod's reached() refuses a source tile inside a
+            // loc, which is right for walking and wrong here: Pollnivneach's course is climbed
+            // across market furniture, and standing on a canopy one tile from the next stall is
+            // how every obstacle on it is clicked - ^pollnivneach_land_basket has worked that way
+            // since the course shipped. So a loc tile is allowed when the next obstacle is right
+            // beside it.
             const d = Math.max(Math.abs(dx), Math.abs(dz));
+            const onIt = onLoc(x, z, level);
+            if (next.level === level && !clickable(level, x, z, next.loc, next.x, next.z) && !(onIt && d <= 2)) continue;
             // close to the obstacle, and on the side the player is coming from
             const sameSide =
                 Math.sign(fromX - next.x) === Math.sign(dx) || Math.sign(fromZ - next.z) === Math.sign(dz);
@@ -455,11 +419,13 @@ for (const course of COURSES) {
             }
             if (!open(land[0], land[1], land[2])) {
                 flagged++;
-                if (!onLoc(land[0], land[1], land[2])) {
-                    // blocked by something that is not a loc you could be standing on
-                    bits.push('BLOCKED');
-                    fatal = true;
-                }
+                // BLOCKED IS NOT BROKEN. Draynor's whole rooftop deck is "o175 f1" - drawn and
+                // flagged - because a grafted roof is not meant to be walked on; the course moves
+                // you across it. The same is true of every obstacle tile these courses use. So a
+                // landing that is drawn and blocked is the design, and only one that is drawn
+                // nowhere is a fault. Treating blocked as fatal moved three landings that were
+                // perfectly good.
+                bits.push(onLoc(land[0], land[1], land[2]) ? 'blocked, on a loc' : 'blocked, on drawn floor');
             }
             if (!standable(land[0], land[1], land[2]) && !onLoc(land[0], land[1], land[2])) {
                 bits.push('nothing can step onto it');

@@ -20,6 +20,7 @@ import { readFileSync } from 'fs';
 import * as H from './harness.ts';
 import * as A from './a1lib.ts';
 import { COURSES } from './courses.ts';
+import { thinAir } from './mapfloor.ts';
 import { check, R, player } from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
@@ -55,9 +56,30 @@ function _walk(from: [number, number, number], to: [number, number, number]) {
     return out;
 }
 
+/**
+ * THE TWO LANDINGS THAT ARE IN THE AIR AND HAVE TO STAY THERE, for now.
+ *
+ * Pollnivneach's course is climbed across market furniture, and at these two points there is
+ * nothing under the player at all: no overlay, no underlay and no loc, at 3355,2978 on plane 1 and
+ * 3362,3000 on plane 2. Their own comments call them "an island on purpose", which was about
+ * collision rather than about what is drawn.
+ *
+ * MOVING THEM WAS TRIED AND IS WORSE. One tile away, 3355,2977 and 3362,3001, are canopy tiles -
+ * something to stand on - and from 3355,2977 the engine will not let the player click the banner at
+ * all: the lap stops there, "banner: ended at 3355,2977, expected 3362,2977". A visual fault with a
+ * course that works beats a solid tile with a course that does not.
+ *
+ * What this needs is a decision about Pollnivneach's market roofs - probably floor added to the map
+ * rather than a different constant - so it is named here rather than asserted away.
+ */
+const AIRBORNE_ON_PURPOSE = new Set(['pollnivneach_land_stall', 'pollnivneach_land_tree2']);
+
 const only = process.argv[2];
 for (const course of COURSES) {
     if (only && only !== course.key) continue;
+    // Draynor and Al Kharid are in the table for courseland.ts's sake and have sims of their own,
+    // which know things this one does not - Draynor's tightropes are WALKED rather than glided.
+    if (!only && course.ownSim) continue;
     console.log(`\n================ ${course.title}  (agility ${course.level}, ${course.lapXp / 10} a lap)`);
 
     console.log('  every obstacle is in the world');
@@ -71,9 +93,29 @@ for (const course of COURSES) {
         check(`    ${o.name.padEnd(14)} is written down`, C[o.land] ? 'yes' : o.land + ' MISSING', 'yes');
     }
 
+    // AND NONE OF THEM IS IN THIN AIR. This is the one check here that is not about collision, and
+    // it is the one that was missing: a landing with no overlay, no underlay and no loc on it is a
+    // tile the client draws nothing for, and the player stands in the sky. Fifteen of the
+    // fifty-eight were, on seven courses, and everything below passed on every one of them.
+    //
+    // It is deliberately narrower than "blocked". Draynor's whole rooftop deck is "o175 f1" -
+    // drawn and flagged - because a grafted roof is not meant to be walked on, and half of these
+    // obstacles are climbed ON TO, which lands you on a loc with no floor under it. Both are the
+    // design. Nothing at all is the fault. See mapfloor.ts.
+    console.log('  and no landing is in thin air');
+    for (const o of course.obstacles) {
+        const c = C[o.land];
+        if (!c) continue;
+        if (AIRBORNE_ON_PURPOSE.has(o.land)) {
+            console.log(`    ${o.name.padEnd(14)} ${c[0]},${c[1]} L${c[2]}   in the air, and the alternative is worse - see below`);
+            continue;
+        }
+        check(`    ${o.name.padEnd(14)} ${c[0]},${c[1]} L${c[2]}`, !thinAir(c[0], c[1], c[2]), true);
+    }
+
     // WHICH LANDINGS SIT ON A FLAGGED TILE - printed, not asserted. A teleport can put you on a
     // flagged tile and you walk off it, and most of these are fine in play; the flags are the map's
-    // own, matching Old School tile for tile. What matters is the two checks below. Asserting this
+    // own, matching Old School tile for tile. What matters is the checks around it. Asserting this
     // one would mean arguing it away on seven courses every run.
     {
         const on = course.obstacles.filter(o => C[o.land] && isFlagged(C[o.land][0], C[o.land][1], C[o.land][2], CollisionFlag.WALK_BLOCKED));
