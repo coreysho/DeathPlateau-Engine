@@ -13,7 +13,7 @@ import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
-import { isMapBlocked, isZoneAllocated, findPathToLoc, canTravel } from '#/engine/GameMap.js';
+import { isMapBlocked, isZoneAllocated, findPathToLoc, findPathToEntity, canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
@@ -62,6 +62,14 @@ const slotOf = (obj: string): number => {
         if (inv.get(i)?.id === id) return i;
     }
     return -1;
+};
+const useNpcObj = (npc: any, objName: string): void => {
+    p.clearPendingAction();
+    p.lastUseItem = ObjType.getId(objName);
+    p.lastUseSlot = slotOf(objName);
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
+    p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPCU);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
 };
 const useLocObj = (x: number, z: number, locName: string, objName: string): boolean => {
     const loc = World.getLoc(x, z, p.level, LocType.getId(locName));
@@ -126,6 +134,42 @@ for (const nm of ['templetrek_multi_retired_man_easy', 'templetrek_multi_retired
                   'templetrek_multi_woman_med', 'templetrek_multi_oldman_hard', 'templetrek_multi_child_hard']) {
     check(`${nm.replace('templetrek_multi_', '')} is in Burgh de Rott`, H.npcNear(nm, 3478, 3238, 0) !== null, true);
 }
+
+// ------------------------------------------------------------------------------- the escort's pack
+// Old School lets you stock the follower with up to fifteen food items before you leave, and the
+// cache keeps a four-bit counter for exactly that. There is no interface for it, so it is done by
+// using the food on them.
+console.log("\nSTOCKING THE PACK");
+H.setVarBit(p, 'templetrek_multi_npc_food_give', 0);
+H.clearInv(p);
+H.give(p, 'lobster', 20);
+H.give(p, 'bronze_axe');
+const volunteer = H.npcNear('templetrek_multi_retired_man_easy', 3481, 3241, 0)!;
+p.teleport(3481, 3242, 0);
+H.tick(2);
+useNpcObj(volunteer, 'lobster');
+for (let i = 0; i < 20 && H.getVarBit(p, 'templetrek_multi_npc_food_give') === 0; i++) H.tick(1);
+p.closeModal();
+check('a lobster goes in the pack', [H.getVarBit(p, 'templetrek_multi_npc_food_give'), H.invCount(p, 'lobster')], [1, 19]);
+
+useNpcObj(volunteer, 'bronze_axe');
+for (let i = 0; i < 20; i++) H.tick(1);
+p.closeModal();
+check('an axe does not', [H.getVarBit(p, 'templetrek_multi_npc_food_give'), H.invCount(p, 'bronze_axe')], [1, 1]);
+
+// fill it to the brim and then try one more
+for (let n = 2; n <= 15; n++) {
+    useNpcObj(volunteer, 'lobster');
+    for (let i = 0; i < 20 && H.getVarBit(p, 'templetrek_multi_npc_food_give') < n; i++) H.tick(1);
+    p.closeModal();
+}
+check('fifteen is as many as it holds', H.getVarBit(p, 'templetrek_multi_npc_food_give'), 15);
+const spare = H.invCount(p, 'lobster');
+useNpcObj(volunteer, 'lobster');
+for (let i = 0; i < 20; i++) H.tick(1);
+p.closeModal();
+check('the sixteenth is refused and stays in your pack', [H.getVarBit(p, 'templetrek_multi_npc_food_give'), H.invCount(p, 'lobster')], [15, spare]);
+H.clearInv(p);
 
 // ------------------------------------------------------------------------------- driving dialogue
 const drive = (picks: number[] = []): string[] => {
@@ -294,6 +338,7 @@ for (let leg = 1; leg <= legs; leg++) {
         p.closeModal();
         check('Walk-across puts you on the east bank', [p.x, p.z], [2091, 5039]);
     } else if (ev === 'samaritan') {
+        // what he actually does is tested on its own further down, forced rather than waited for
         check('Abidor Crank is here and the room is already clear', [H.npcNear('templetrek_good_samaritan', p.x, p.z, 0) !== null, H.getVarBit(p, 'trek_event_done')], [true, 1]);
     } else if (ev === 'vines') {
         check('the way on is shut', H.getVarBit(p, 'trek_event_done'), 0);
@@ -519,6 +564,8 @@ check('the escort is here with full hitpoints', charge ? charge.levels[3] : 0, 7
 // this test saw exactly one bite and concluded the mauling did not work.
 const pin = [p.x + 5, p.z + 4];
 console.log(`        watch queued: ${H.queued(p, '[queue,trek_escort_watch]').length}`);
+// First with an EMPTY pack, so the bite is the only thing moving the number.
+H.setVarBit(p, 'templetrek_multi_npc_food_give', 0);
 const hpBefore = charge ? charge.levels[3] : 0;
 for (let i = 0; i < 40; i++) {
     if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
@@ -526,7 +573,19 @@ for (let i = 0; i < 40; i++) {
 }
 const hpAfter = charge ? charge.levels[3] : 0;
 check('left among the monsters, they are mauled', hpAfter < hpBefore, true);
-console.log(`        ${hpBefore} -> ${hpAfter} hitpoints over 40 ticks`);
+console.log(`        ${hpBefore} -> ${hpAfter} hitpoints over 40 ticks, empty pack`);
+
+// Then with a stocked one and the escort down near half, which is the threshold for eating. The two
+// are measured separately because together they cancel: four meals at eight points against ten
+// bites at four leaves them no worse off, and that reads as the mauling not working.
+H.setVarBit(p, 'templetrek_multi_npc_food_give', 5);
+if (charge) charge.levels[3] = 40;
+for (let i = 0; i < 40; i++) {
+    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    H.tick(1);
+}
+check('and with food in the pack they eat out of it to stay up', H.getVarBit(p, 'templetrek_multi_npc_food_give') < 5, true);
+console.log(`        pack: 5 -> ${H.getVarBit(p, 'templetrek_multi_npc_food_give')}, hitpoints ${charge ? charge.levels[3] : -1}`);
 
 // and when it runs out the trek is over
 if (charge) charge.levels[3] = 2;
@@ -549,6 +608,57 @@ for (const npc of World.npcs) {
         Math.max(Math.abs(npc.x - pin[0]), Math.abs(npc.z - pin[1])) <= 30) escorts++;
 }
 check('and the escort is gone', escorts, 0);
+check('and the pack is emptied with the trek', H.getVarBit(p, 'templetrek_multi_npc_food_give'), 0);
+
+// ------------------------------------------------------------------------------- Abidor Crank
+// Forced, because the samaritan room is one room in fourteen and a run that never draws it never
+// tests him. Old School: he heals you AND the follower, raises your Defence, and turns rotten food
+// into stew - the first pass healed the player and left the villager bleeding.
+console.log('\nABIDOR CRANK');
+idle(40);
+p.closeModal();
+H.runProc(p, '[proc,trek_player_died]', [], undefined, true);
+freshTrek(1);
+idle(40);
+p.closeModal();
+H.runProc(p, '[proc,trek_clear_escort]', [], undefined, true);
+const cr = ROOMS.find(q => q[0] === 14)!;
+H.setVarBit(p, 'trek_room', 14);
+p.clearPendingAction();
+p.queueWaypoints([]);
+p.teleport(cr[1][0], cr[1][1], 0);
+H.tick(3);
+H.runProc(p, '[proc,trek_place_escort]', [], undefined, true);
+H.runProc(p, '[label,trek_event_samaritan_start]', [], undefined, true);
+H.tick(3);
+p.closeModal();
+const crank = H.npcNear('templetrek_good_samaritan', p.x, p.z, 0);
+check('he is sitting by the path', crank !== null, true);
+if (crank) {
+    const mine = H.npcNear('templetrek_retired_man_easy', p.x, p.z, p.level);
+    if (mine) mine.levels[3] = 10;
+    p.levels[3] = 10;
+    H.clearInv(p);
+    H.give(p, 'rotten_food', 3);
+    // let the forced setup settle, and stand right next to him - an op sent while the player is
+    // still delayed is dropped, and one sent from out of range waits on a walk that may not finish
+    idle(40);
+    p.closeModal();
+    p.clearPendingAction();
+    p.queueWaypoints([]);
+    p.teleport(crank.x, crank.z - 1, 0);
+    H.tick(3);
+    H.opNpc(p, crank, 1);
+    const said2 = drive([]);
+    for (let i = 0; i < 20; i++) H.tick(1);
+    p.closeModal();
+    console.log(`        said: ${said2.join(' | ').slice(0, 160) || '(nothing)'}`);
+    console.log(`        player hp ${p.levels[3]}, charge hp ${mine ? mine.levels[3] : -1}, rotten ${H.invCount(p, 'rotten_food')}, stew ${H.invCount(p, 'stew')}`);
+    check('he feeds you both and turns the rotten food into stew',
+          [p.levels[3] > 10, mine ? mine.levels[3] > 10 : false, H.invCount(p, 'rotten_food'), H.invCount(p, 'stew')],
+          [true, true, 0, 3]);
+}
+H.runProc(p, '[proc,trek_player_died]', [], undefined, true);
 
 // the player dying in the swamp tears the trek down too, or they are on one for ever
 console.log('\nDYING IN THE SWAMP');
