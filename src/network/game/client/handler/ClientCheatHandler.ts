@@ -18,6 +18,8 @@ import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import InstanceMap from '#/engine/InstanceMap.js';
 import World from '#/engine/World.js';
+import VoteService from '#/engine/vote/VoteService.js';
+import VoteSites from '#/engine/vote/VoteSites.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import Loc from '#/engine/entity/Loc.js';
 import { MoveStrategy } from '#/engine/entity/MoveStrategy.js';
@@ -644,6 +646,30 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 const count = Math.max(1, Math.min(tryParseInt(args[1], 1), 0x7fffffff));
                 player.invAdd(InvType.INV, obj, count);
+            } else if (cmd === 'vote') {
+                // custom (2026-10-27) - credit a vote as if a site had reported one, for testing
+                // the claim path with no site configured and for making good a vote a site lost.
+                // It goes through the ledger like any other, so it is in the audit trail, it is
+                // delivered the same way, and it cannot be claimed twice.
+                //
+                // ::vote                     what the ledger knows about you
+                // ::vote <username> [count]  credit that player, as the site "staff"
+                if (args.length < 1) {
+                    const owed = VoteService.owed(player.username);
+                    const sites = VoteSites.count();
+                    player.messageGame(`vote: ${sites} site(s) configured, ${owed} ticket(s) owed to you`);
+                    for (const row of VoteService.ledger().history(player.username, 5)) {
+                        player.messageGame(`  ${new Date(row.cast_at).toISOString()} ${row.site} x${row.tickets}`);
+                    }
+                    return true;
+                }
+
+                const who = args[0];
+                const count = Math.max(1, Math.min(tryParseInt(args[1], 1), 1000));
+                const ref = `staff:${player.username}:${Date.now()}`;
+                VoteService.ledger().credit('staff', ref, who, count, Date.now(), 0);
+                VoteService.deliver(who);
+                player.messageGame(`vote: credited ${count} to ${who}`);
             } else if (cmd === 'giveother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {

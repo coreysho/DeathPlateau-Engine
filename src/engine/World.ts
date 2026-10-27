@@ -405,7 +405,15 @@ class World {
         makeCrcs();
     }
 
+    /**
+     * Whether this world runs its own loop. False means a tool is driving the ticks by hand
+     * (tools/sim, tools/charter), and then cycle() must not schedule the next one - see the comment
+     * where it would.
+     */
+    private ownsTheLoop = true;
+
     async start(skipMaps = false, startCycle = true): Promise<void> {
+        this.ownsTheLoop = startCycle;
         printInfo('Starting world');
 
         FontType.load('data/pack');
@@ -625,7 +633,15 @@ class World {
 
             // ----
 
-            setTimeout(this.cycle.bind(this), Math.max(0, this.tickRate - (Date.now() - start) - drift));
+            // ONLY IF THIS WORLD OWNS THE LOOP. A tool that calls cycle() by hand (World.start's
+            // startCycle = false) must not have one scheduled behind its back: tools/sim is
+            // synchronous, so the timer never fires and nobody noticed - until a scenario awaited
+            // something, the pending cycle ran while it waited, and because tick() refreshes
+            // lastConnected only around its OWN cycles, every player in the run was logged out for
+            // a lost connection in the gap. See tools/sim/harness.ts tick().
+            if (this.ownsTheLoop) {
+                setTimeout(this.cycle.bind(this), Math.max(0, this.tickRate - (Date.now() - start) - drift));
+            }
         } catch (err) {
             if (err instanceof Error) {
                 printError('eep eep cabbage! An unhandled error occurred during the cycle: ' + err.message);

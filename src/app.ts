@@ -14,6 +14,7 @@ import OnDemand from '#/engine/OnDemand.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
+import VoteSites from '#/engine/vote/VoteSites.js';
 
 if (OnDemand.cache.count(0) !== 9 || OnDemand.cache.count(2) === 0 || !fs.existsSync('data/pack/server/script.dat')) {
     printInfo('Packing cache, please wait until you see the world is ready.');
@@ -51,6 +52,11 @@ if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
 // World.start, because the login and startup scripts run inside it and a fault there is exactly the
 // kind nobody is watching for. Does nothing at all unless NODE_SCRIPT_FAULTS is set.
 ScriptFaults.init();
+
+// custom (2026-10-27) - read the voting sites now rather than the first time somebody talks to the
+// Vote clerk, so a mistyped sites.json is a line in the boot log and not a surprise in front of a
+// player. With no file there are no sites and this says nothing at all.
+VoteSites.load();
 
 await World.start();
 

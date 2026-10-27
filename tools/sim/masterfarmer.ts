@@ -73,9 +73,15 @@ console.log('\nAND IT PAYS SEEDS');
     const r = pick('mf_pick');
     const names = [...r.got.keys()];
     check('  sixty pickpockets give something', names.length > 0, true);
+    // A ROGUE PIECE IS NOT THE POCKET'S DOING, and leaving it out of this is not looking away.
+    // ~thieving_xp rolls ^outfit_rogue on every award of Thieving experience
+    // (skilling_outfits/scripts/outfit_xp.rs2), so sixty pickpockets at 99 occasionally end with a
+    // piece of the Rogue outfit in the pack. That is the outfit system working, not the Master
+    // Farmer's loot table, and asserting on it made this check fail about one run in five.
+    const ROGUE = /^rogue_(mask|top|trousers|boots|gloves)$/;
     check(
-        '  and all of it is seeds or spores',
-        names.filter(n => !/_seed$|_spore$|^mushroom_seed$/.test(n)),
+        '  and all of it is seeds or spores, bar what the outfit roll gave',
+        names.filter(n => !/_seed$|_spore$|^mushroom_seed$/.test(n) && !ROGUE.test(n)),
         []
     );
     check(

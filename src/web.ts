@@ -15,6 +15,7 @@ import ServerGameZoneProt from '#/network/game/server/ServerGameZoneProt.js';
 
 import OnDemand from '#/engine/OnDemand.js';
 import World from '#/engine/World.js';
+import VoteService from '#/engine/vote/VoteService.js';
 
 import NullClientSocket from '#/server/NullClientSocket.js';
 
@@ -678,6 +679,35 @@ fastify.get<{ Params: { crc: string } }>('/sounds:crc', async (req, reply) => {
     }
 
     reply.send(OnDemand.cache.read(0, 8));
+});
+
+// Toplists POST their callbacks as HTML form data about as often as JSON, and Fastify answers 415
+// to a content type it has no parser for. This is that parser, rather than a dependency on
+// @fastify/formbody for twelve lines. Nothing else here accepts a POST body.
+fastify.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
+    try {
+        done(null, Object.fromEntries(new URLSearchParams(body as string)));
+    } catch (err) {
+        done(err instanceof Error ? err : new Error(String(err)), undefined);
+    }
+});
+
+// vote callback (custom, 2026-10-27) - see engine/vote/VoteService.ts
+//
+// What a toplist calls when somebody votes. The site is given <server>/vote/<id>/callback and a
+// shared secret; this checks the secret, writes the vote down once, and hands the tickets over if
+// the player happens to be online.
+//
+// GET AND POST, AND QUERY AND BODY MERGED, because sites disagree and several send the same values
+// in both. The answers are deliberately dull - a site is a machine, it wants a status and a word -
+// and an unknown site and a wrong secret answer identically, so neither can be probed for.
+fastify.route<{ Params: { site: string } }>({
+    method: ['GET', 'POST'],
+    url: '/vote/:site/callback',
+    handler: async (req, reply) => {
+        const { status, body } = VoteService.fromHttp(req.params.site, req.query, req.body);
+        reply.status(status).type('text/plain').send(body);
+    }
 });
 
 fastify.register(FastifyStatic, {
