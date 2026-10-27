@@ -1,0 +1,28 @@
+[
+    {
+        "_comment": "COPY THIS TO data/vote/sites.json AND FILL IT IN. With no sites.json there are no sites: the Vote clerk says voting is not set up yet and nothing pretends to check. Everything else - the ledger, the tickets, the shop - is built and works today.",
+
+        "_comment_id": "id goes in the callback URL and into the ledger for ever. Do not rename it once votes have been credited under it, or their cooldowns and duplicate checks start again from nothing.",
+        "id": "example",
+        "name": "Example Toplist",
+        "url": "https://example.com/vote/12345",
+        "tickets": 1,
+        "cooldownHours": 12,
+
+        "_comment_callback": "THE SITE CALLS US. Give the site <your server>/vote/example/callback as its callback or postback URL. secretParam/userParam/refParam are what the site calls those things in its request - read its docs. The secret is never written here: put it in the environment and name it.",
+        "callback": {
+            "secret": "env:VOTE_EXAMPLE_SECRET",
+            "secretParam": "key",
+            "userParam": "username",
+            "refParam": "voteid"
+        },
+
+        "_comment_check": "WE CALL THE SITE, when a player clicks Claim. {user} and {key} are substituted. success says how to read a yes out of the answer: either \"contains\" with a substring, or \"json\" with a dotted path and \"equals\". refJson is where the site puts its own id for the vote, if it sends one - without it, one claim per cooldown window is the most anybody can get.",
+        "check": {
+            "url": "https://example.com/api/vote?key={key}&user={user}",
+            "key": "env:VOTE_EXAMPLE_KEY",
+            "success": { "json": "status", "equals": 1 },
+            "refJson": "voteid"
+        }
+    }
+]

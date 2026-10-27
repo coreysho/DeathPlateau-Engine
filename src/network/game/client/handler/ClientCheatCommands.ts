@@ -71,6 +71,7 @@ export const CHEATS: Cheat[] = [
     { name: 'giveother', args: '<username> <item> [amount]', what: "put an item in a player's inventory", rank: 3, staffWorld: true },
     { name: 'givecrap', what: 'fill your inventory with 28 random items', rank: 3 },
     { name: 'givemany', args: '<item>', what: '1000 of an item', rank: 3 },
+    { name: 'vote', args: '[username] [count]', what: 'what the vote ledger knows, or credit a player a vote', rank: 3 },
     { name: 'broadcast', args: '<message>', what: 'a staff announcement to every player, with your crown', rank: 3, staffWorld: true },
     { name: 'reboot', what: 'shut the world down now, applying packed changes', rank: 3, staffWorld: true },
     { name: 'slowreboot', args: '<seconds>', what: 'the same, after a countdown every client can see', rank: 3, staffWorld: true },

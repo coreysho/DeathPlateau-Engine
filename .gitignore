@@ -45,6 +45,12 @@ data/tradingpost/
 # Clan chat channels (ClanChat), written at runtime like the saves and the trading post above.
 data/clans/
 
+# the vote ledger (its own sqlite, one per profile) and the live site list, which carries nothing
+# secret itself but names which sites this server is listed on. data/vote/sites.example.json IS
+# tracked - it is the documentation for the shape.
+data/vote/*.sqlite*
+data/vote/sites.json
+
 # The web client files, which are put on the server rather than committed: public/client.jar is
 # the release jar the browser runs through CheerpJ (src/web.ts), and whatever bundle came with the
 # server lives here too. None of it is built from this repository.

@@ -1133,6 +1133,21 @@ const ScriptOpcodePointers: {
         require: ['active_player']
     },
 
+    // vote_sitecount/sitename/siteurl read configuration and need nobody; the rest are about a
+    // particular player's ledger.
+    [ScriptOpcode.VOTE_COOLDOWN]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.VOTE_CLAIM]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.VOTE_OWED]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.VOTE_TAKE]: {
+        require: ['active_player']
+    },
+
     [ScriptOpcode.CLAN_SETNAME]: {
         require: ['active_player']
     },

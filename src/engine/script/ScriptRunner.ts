@@ -21,6 +21,7 @@ import ServerOps from '#/engine/script/handlers/ServerOps.js';
 import StringOps from '#/engine/script/handlers/StringOps.js';
 import StructOps from '#/engine/script/handlers/StructOps.js';
 import TradingPostOps from '#/engine/script/handlers/TradingPostOps.js';
+import VoteOps from '#/engine/script/handlers/VoteOps.js';
 import ClanOps from '#/engine/script/handlers/ClanOps.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
@@ -57,6 +58,7 @@ export default class ScriptRunner {
         ...StructOps,
         ...DbOps,
         ...TradingPostOps,
+        ...VoteOps,
         ...ClanOps,
         ...DebugOps
     };
