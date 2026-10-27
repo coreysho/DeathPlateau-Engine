@@ -195,5 +195,37 @@ console.log('\nAND THE TWO ENDS ARE NOT ROCKS, WHICH IS WHAT THE CLICK BOX COMPL
     H.despawn(p);
 }
 
+console.log('\nAND THE CLICK AREA IS ONE TILE, WHICH IS THE ONE THE CACHE SHIPS');
+{
+    // The other half of the report was "too big of click box for rocks". Measured, not argued:
+    //
+    //   - all ten locs carry ONE model, horror_jumping_spot1_8. `_8` is the suffix for shape 10,
+    //     centrepiece_straight, which is the shape rev 474 and Old School both give loc 4551-4558.
+    //   - that model is 41 bytes: four vertices, two triangles, x and z at -64 and +64, every y 0.
+    //     A flat 128x128 square lying on the ground - one tile, no height. It is byte-identical to
+    //     474's model 4556, which Old School also still uses for these.
+    //   - the rock you can SEE is not the loc at all. It is the map's own terrain; the loc is an
+    //     invisible marker laid over it, which is why the model is a black flat square.
+    //   - the client picks locs triangle by triangle (Model.method385). The bounds-only shortcut
+    //     next to it is behind field1227, and that is set in NpcType, ObjType, ClientNpc and
+    //     ClientPlayer only - never for a loc. So the clickable area IS those two triangles.
+    //
+    // Two triangles covering one tile is therefore the real game's click area, not a fault in the
+    // import, and there is nothing in the cache to replace it with. What content could still do is
+    // shrink it - resizex/resizez below 128 scale the quad and the click area with it - but that
+    // would be a deliberate difference from Old School rather than a fix, so it is not done here.
+    // These checks hold the pieces that decision rests on.
+    const first = LocType.getId('horror_jumping_spot1');
+    for (const [name] of [...CHAIN1, ...CHAIN2]) {
+        const t: any = LocType.get(LocType.getId(name));
+        const firstT: any = LocType.get(first);
+        // shapes stays null when every model is shape 10 - that is the loc config's "1 model, no
+        // shape" opcode, and LocType.ts reads a null shapes as 10 in exactly the same place.
+        check(`  ${name.replace('horror_jumping_spot', 'rock ').padEnd(8)} is one model on shape 10`, [t.models?.length, t.shapes === null ? 10 : t.shapes?.[0]], [1, 10]);
+        check('    the same model as the beach, so there is one click area and not ten', t.models?.[0], firstT.models?.[0]);
+        check('    one tile, unscaled, unmoved', [t.width, t.length, t.resizex, t.resizey, t.resizez, t.offsetx, t.offsety, t.offsetz], [1, 1, 128, 128, 128, 0, 0, 0]);
+    }
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
