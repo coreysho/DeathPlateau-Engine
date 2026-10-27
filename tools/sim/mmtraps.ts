@@ -153,7 +153,10 @@ console.log('\nAND IT STOPS AT THE DOOR');
 
     // Garkor's clearing on the surface, a hundred and twenty tiles and three mapsquares away
     leaveZone(p, 0, 2703, 9108);
-    p.teleport(0, 2755, 2798, 0);
+    // PathingEntity.teleport is (x, z, level). This used to pass four arguments with the level
+    // first, which put the player on level 2798 at 0,2755 - far from the cave either way, so the
+    // check passed for the wrong reason.
+    p.teleport(2755, 2798, 0);
     H.tick(6);
     const after = H.hits.filter(h => h.who === p.username).length;
     const hpAfter = p.levels[HP];
