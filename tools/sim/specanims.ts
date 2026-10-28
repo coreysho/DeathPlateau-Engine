@@ -16,9 +16,9 @@
 // to assert; a special that plays the weapon's own attack animation is what actually shipped, and
 // only a comparison against the ordinary swing catches it.
 //
-// The 2006 specials are checked too, so that the cache's own puncture/cleave/shatter set stays
-// where it belongs - this is not an argument for importing a newer animation over a weapon that
-// already has one.
+// The 2006 specials are checked too. That was once an argument for leaving them alone, and it only
+// holds where the weapon's own animation is what it is playing: the bone dagger was playing the
+// DRAGON DAGGER's, which is not a period choice, it is the wrong weapon's.
 import * as H from './harness.ts';
 import { check, R, player } from './a1lib.ts';
 import ObjType from '#/cache/config/ObjType.js';
@@ -89,8 +89,11 @@ const SPECS: Row[] = [
     // second import of the same animation that used to be here
     { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'abyssal_bludgeon_special_attack', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
     { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', where: 'player', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] },
-    // 2006, and staying on the cache's own special animations.
-    { weapon: 'bone_dagger', label: '[label,pvm_bone_dagger_sa]', anim: 'puncture', spot: 'sp_attack_puncture_spotanim', where: 'player', height: 96, ordinary: ['stabattack_anim', 'slashattack_anim'] }
+    // Backstab's own, OSRS 4198 and gfx 704. It used to play `puncture` with spotanim 252, which
+    // the beta-world dump names as the DRAGON DAGGER's special - the same defect as the bludgeon
+    // borrowing the granite maul's, and the reason this row is no longer the "2006 weapons keep
+    // the cache's own" example it was written as.
+    { weapon: 'bone_dagger', label: '[label,pvm_bone_dagger_sa]', anim: 'osrs_bone_dagger_spec', spot: 'bone_dagger_spec_gfx', where: 'player', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] }
 ];
 
 // ---------------------------------------------------------------------------------------------
