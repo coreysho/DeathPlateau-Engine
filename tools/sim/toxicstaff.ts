@@ -66,6 +66,35 @@ console.log("THE ITEMS ARE THE CACHE'S, AND THE FANG IS THE ONLY DIFFERENCE BETW
     );
 }
 
+console.log('\nAND THE FANG DOES NOT TAKE POWER OF DEATH OFF IT');
+{
+    // The staff of the dead's special attack landed the same day this did. A staff of the dead
+    // with a fang on it is still a staff of the dead, and Old School's toxic staff has the spec.
+    const specwep = ParamType.getId('specwep');
+    const energy = ParamType.getId('sa_energy');
+    const bare: any = ObjType.get(ObjType.getId('staff_of_the_dead'));
+    for (const n of ['toxic_staff_uncharged', 'toxic_staff_of_the_dead']) {
+        const t: any = ObjType.get(ObjType.getId(n));
+        check(`  ${n.padEnd(24)} carries the spec bar`, t.params?.get(specwep), bare.params?.get(specwep));
+        check("    at the staff of the dead's price", t.params?.get(energy), bare.params?.get(energy));
+    }
+    // And the one proc that says which staves it applies to knows all four.
+    const p: any = player('toxspec', 3200, 3200);
+    H.maxOut(p);
+    H.tick(2);
+    for (const [n, want] of [
+        ['staff_of_the_dead', 1],
+        ['staff_of_light', 1],
+        ['toxic_staff_uncharged', 1],
+        ['toxic_staff_of_the_dead', 1],
+        ['abyssal_whip', 0]
+    ] as [string, number][]) {
+        const got = A.runProcProtected(p, '[proc,sotd_spec_weapon]', [ObjType.getId(n)]);
+        check(`  ~sotd_spec_weapon knows ${n}`, got[0], want);
+    }
+    H.despawn(p);
+}
+
 console.log('\nTHE CORRECT ITEMS MAKE ONE, AND NOTHING ELSE DOES');
 {
     const p: any = player('toxmake', 3200, 3200);
