@@ -28,6 +28,18 @@ built and works today.
 4. **Restart the world.** The site list is read at boot. `Vote sites: topg, runelocus` in the log
    means it loaded; anything wrong with an entry is printed line by line and that entry is skipped.
 
+## The reminder
+
+A player who *could* vote right now and has not is told so in the chatbox, five minutes after
+logging in and every half hour after that. A player who has voted is told nothing - which is the
+point of doing it this way rather than broadcasting every vote: the message only ever goes to
+somebody it is useful to. "Could vote right now" is read off the ledger, so it means at least one
+site whose cooldown has run out for them.
+
+With no sites configured the timer is never armed, so an unlisted server has no reminder at all.
+The Vote clerk can turn it off and on again for a player, at the end of "Where can I vote?". Both
+intervals are constants in `content/scripts/vote/configs/vote.constant`.
+
 ## Checking it without waiting for a real vote
 
 `::vote` prints what the ledger knows about you - how many sites are configured, what you are owed,

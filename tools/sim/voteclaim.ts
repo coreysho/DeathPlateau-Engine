@@ -28,6 +28,8 @@ import { check, R, player } from './a1lib.js';
 import VoteBook, { CreditResult } from '#/engine/vote/VoteBook.js';
 import VoteService, { ClaimOutcome, ClaimStatus } from '#/engine/vote/VoteService.js';
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import World from '#/engine/World.js';
 
 await H.boot();
 H.loginOrder();
@@ -240,8 +242,9 @@ console.log('\nAND THE CLERK IS HOW A PLAYER ASKS FOR ANY OF IT');
     H.clearInv(p);
     H.tick(2);
 
-    // "Where can I vote?" - the list, with the site's own name and address in it.
-    const where = A.talk(p, 'vote_clerk', [3]);
+    // "Where can I vote?" - the list, with the site's own name and address in it. The 1 answers
+    // the reminder question that follows it ("Thanks.").
+    const where = A.talk(p, 'vote_clerk', [3, 1]);
     check('  she names the site', A.saw(where, 'Asky Toplist'), true);
     check('    and where to go', A.saw(where, 'example.invalid'), true);
 
@@ -311,6 +314,81 @@ console.log('\nAND A SITE THAT GIVES A VOTE NO ID IS STILL HELD TO ONE PER COOLD
     check('  the first claim credits', book.credit('idless', first, 'windowy', 1, noon, 0), CreditResult.CREDITED);
     check('    the second does not', book.credit('idless', first, 'windowy', 1, noon + 1000, 0), CreditResult.DUPLICATE);
     check('    and only one ticket is owed', book.owed('windowy'), 1);
+}
+
+console.log('\nAND THE ONLY PLAYER TOLD ANYTHING IS ONE WHO COULD VOTE AND HAS NOT');
+{
+    // The reminder, which is deliberately not a broadcast: nothing is said to somebody who has
+    // voted, and nothing is said at all on a server with nowhere to vote.
+    const timerScript = ScriptProvider.getByName('[softtimer,vote_reminder]');
+    check('  the timer exists', !!timerScript, true);
+    const armed = (q: any) => q.timers.get(timerScript!.id)?.interval ?? -1;
+
+    // Firing it by hand rather than ticking to it: the first interval is five minutes of game
+    // ticks, which is a minute of wall clock in here for nothing. What is being tested is what the
+    // handler decides, and that login arms it at all.
+    const fire = (q: any) => {
+        const m = A.mark();
+        A.runProcProtected(q, '[softtimer,vote_reminder]');
+        H.tick(1);
+        return A.mesSince(q, m).some(l => l.includes('You can vote again'));
+    };
+
+    reset([]);
+    {
+        const p: any = player('remindnone', 3094, 3491, 0);
+        H.tick(2);
+        check('  with nowhere to vote, no timer is armed', armed(p), -1);
+        check('    and firing it says nothing', fire(p), false);
+        H.despawn(p);
+    }
+
+    reset([CHECK_SITE]);
+    {
+        const p: any = player('remindme', 3094, 3491, 0);
+        H.tick(2);
+        check('  with a site, login arms it for the short interval', armed(p), 500);
+        check('    and somebody who has never voted is reminded', fire(p), true);
+        check('    after which it settles into the long one', armed(p), 3000);
+
+        // AND IT REALLY FIRES ON ITS OWN, through World's own processTimers rather than by hand.
+        // The clock is wound back instead of ticking five minutes of game time for one message.
+        const t = (p.timers as Map<number, { clock: number; interval: number }>).get(timerScript!.id)!;
+        t.clock = World.currentTick - (t.interval + 1);
+        const m = A.mark();
+        H.tick(2);
+        check(
+            '    and the world fires it when it comes due',
+            A.mesSince(p, m).some(l => l.includes('You can vote again')),
+            true
+        );
+
+        // Voted just now: the ledger says so, and the reminder has nothing to say.
+        VoteService.ledger().credit('asky', 'r1', 'remindme', 2, Date.now(), 0);
+        check('  somebody who has just voted is told nothing', fire(p), false);
+
+        // The same vote, thirteen hours ago, against a twelve-hour cooldown.
+        VoteService.useLedger(new VoteBook(':memory:'));
+        VoteService.ledger().credit('asky', 'r2', 'remindme', 2, Date.now() - 13 * 3600000, 0);
+        check('    and is reminded again once the cooldown has run out', fire(p), true);
+        H.despawn(p);
+    }
+
+    {
+        // Off, through the clerk, which is where somebody annoyed by it would go.
+        const p: any = player('remindoff', 3094, 3491, 0);
+        H.tick(2);
+        check('  reminders start on', H.getVar(p, 'vote_reminders_off'), 0);
+        A.talk(p, 'vote_clerk', [3, 2]);
+        check('    the clerk can turn them off', H.getVar(p, 'vote_reminders_off'), 1);
+        check('    the timer is dropped there and then', armed(p), -1);
+        check('    and firing it anyway says nothing', fire(p), false);
+
+        A.talk(p, 'vote_clerk', [3, 1]);
+        check('    and she can turn them back on', H.getVar(p, 'vote_reminders_off'), 0);
+        check('    re-arming the timer', armed(p), 500);
+        H.despawn(p);
+    }
 }
 
 async function claimAndWait(username: string): Promise<ClaimOutcome[]> {
