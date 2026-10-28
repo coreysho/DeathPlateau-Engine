@@ -50,6 +50,41 @@ console.log(`  NODE_PROFILE    ${Environment.NODE_PROFILE}`);
 console.log(`  VOTE_LEDGER     ${Environment.VOTE_LEDGER || '(unset, so the path below is the default)'}`);
 console.log(`  ledger          ${resolved}`);
 console.log(`  exists already  ${existed ? 'yes' : 'no'}`);
+// WHICH FILESYSTEM IT IS ON. Permissions are not the only thing that stops a write, and on a
+// server running as root they are the LEAST likely thing: root walks past a mode, and does not
+// walk past a read-only mount. A world under a systemd unit with ProtectSystem=strict, or in a
+// container with a read-only volume, sees a directory that looks perfectly writable and cannot
+// make a file in it. The mount's own options say so in one line.
+try {
+    const mounts = fs
+        .readFileSync('/proc/mounts', 'utf8')
+        .trim()
+        .split('\n')
+        .map(l => l.split(' '));
+    let best: string[] | null = null;
+    for (const m of mounts) {
+        const point = m[1].replace(/\\040/g, ' ');
+        const prefix = point.endsWith('/') ? point : point + '/';
+        if ((resolved + '/').startsWith(prefix) && (!best || point.length > best[1].length)) {
+            best = m;
+        }
+    }
+    if (best) {
+        const opts = best[3].split(',');
+        console.log(`  filesystem      ${best[2]} on ${best[1]} (${best[0]}), ${opts.slice(0, 4).join(',')}`);
+        if (opts.includes('ro')) {
+            bad++;
+            console.log('  FAIL            that filesystem is mounted READ-ONLY. Root does not get past that.');
+        }
+        if (/^(nfs|cifs|smb|fuse)/.test(best[2])) {
+            bad++;
+            console.log(`  FAIL            ${best[2]} is a network filesystem, and sqlite will not carry a WAL`);
+            console.log('                  database on one. Put the ledger on local disk with VOTE_LEDGER.');
+        }
+    }
+} catch {
+    // Not Linux, or no /proc. Nothing to say rather than something wrong.
+}
 if (/onedrive|dropbox|google ?drive|icloud/i.test(resolved)) {
     console.log('  NOTE            that path is inside a file-syncing folder. Those hold handles open and');
     console.log('                  replace files underneath a process, which sqlite will not survive. Set');
