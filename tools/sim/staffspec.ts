@@ -33,7 +33,10 @@ await H.boot();
 
 const param = (obj: string, key: string): unknown =>
     (ObjType.get(ObjType.getId(obj)) as unknown as { params?: Map<number, unknown> }).params?.get(ParamType.getId(key));
-const STAVES = ['staff_of_the_dead', 'staff_of_light'];
+// All four: the staff of the dead, the staff of light, and the toxic staff of the dead charged
+// and uncharged - a fang on a staff of the dead takes neither its blade nor its special off it.
+const STAVES = ['staff_of_the_dead', 'staff_of_light',
+                'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
 
 /** The npc->player melee funnel, with the protected pointer it needs to write %npc_action_delay. */
 const hitPlayer = (npc: Npc, p: Player, damage: number, maxhit: number) => {

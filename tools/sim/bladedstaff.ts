@@ -24,7 +24,10 @@ import Player from '#/engine/entity/Player.js';
 
 await H.boot();
 
-const STAVES = ['staff_of_the_dead', 'staff_of_light'];
+// All four: the staff of the dead, the staff of light, and the toxic staff of the dead charged
+// and uncharged - a fang on a staff of the dead takes neither its blade nor its special off it.
+const STAVES = ['staff_of_the_dead', 'staff_of_light',
+                'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
 // combat_damagetypes.constant / combat_damagestyles.constant
 const STAB = 0, SLASH = 1, CRUSH = 2, MAGIC = 4;
 const ACCURATE = 0, AGGRESSIVE = 1, DEFENSIVE = 2, MAGIC_NORMAL = 7, MAGIC_DEFENSIVE = 8;
