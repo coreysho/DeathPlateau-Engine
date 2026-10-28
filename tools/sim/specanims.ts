@@ -51,17 +51,29 @@ const runSpec = (label: string, npc: Npc, p: Player) => {
     ScriptRunner.execute(state);
 };
 
+// WHERE THE GRAPHIC GOES, which is the second thing the owner reported: the abyssal bludgeon's
+// miasma was venting under the PLAYER instead of the target, and the warhammer looked "close but
+// not quite". Both were spotanim_pl at height 96 - the wrong entity and the wrong height. These
+// are impact effects, so they belong on the target at ground level, which is what all five
+// godsword graphics already do. `spot: null` means the special throws no graphic of its own.
+//
+// Asserting this needs the entity's spotanimId read BEFORE the next tick clears it, so the rows
+// below are checked inside the same loop that fires each special rather than afterwards.
 // weapon, its spec label, the animation the special should play, the graphic it should throw, and
 // the params holding the weapon's ORDINARY attack animations - the thing it must not play.
-type Row = { weapon: string; label: string; anim: string; spot: string | null; ordinary: string[] };
+// `where` is the entity the graphic belongs on: 'npc' for an impact effect at the point of the
+// hit, 'player' for a 2006 special whose glow is around the wielder, which is where the cache's
+// own puncture/cleave/shatter set puts it.
+type Row = { weapon: string; label: string; anim: string; spot: string | null;
+             where: 'npc' | 'player'; height: number; ordinary: string[] };
 const SPECS: Row[] = [
     // Post-2006, imported: see content/scripts/skill_combat/configs/melee/osrs_spec_anims.seq
-    { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', ordinary: ['crushattack_anim'] },
-    { weapon: 'granite_hammer', label: '[label,pvm_granite_hammer_sa]', anim: 'osrs_dwh_spec', spot: 'granite_hammer_spec', ordinary: ['crushattack_anim'] },
-    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'osrs_bludgeon_spec', spot: 'bludgeon_spec', ordinary: ['crushattack_anim'] },
-    { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', ordinary: ['stabattack_anim', 'slashattack_anim'] },
+    { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
+    { weapon: 'granite_hammer', label: '[label,pvm_granite_hammer_sa]', anim: 'osrs_dwh_spec', spot: 'granite_hammer_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
+    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'osrs_bludgeon_spec', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
+    { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', where: 'npc', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] },
     // 2006, and staying on the cache's own special animations.
-    { weapon: 'bone_dagger', label: '[label,pvm_bone_dagger_sa]', anim: 'puncture', spot: 'sp_attack_puncture_spotanim', ordinary: ['stabattack_anim', 'slashattack_anim'] }
+    { weapon: 'bone_dagger', label: '[label,pvm_bone_dagger_sa]', anim: 'puncture', spot: 'sp_attack_puncture_spotanim', where: 'player', height: 96, ordinary: ['stabattack_anim', 'slashattack_anim'] }
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -97,11 +109,25 @@ console.log('\n== each special plays its own animation, and not the weapon\'s or
 
         const mark = H.anims.length;
         pin(0.99);
+        let onNpc = { id: -1, height: -1 };
+        let onPlayer = { id: -1, height: -1 };
         try {
             runSpec(r.label, npc, p);
+            // read before the tick: PathingEntity clears spotanimId at the end of one
+            onNpc = { id: npc.spotanimId, height: npc.spotanimHeight };
+            onPlayer = { id: p.spotanimId, height: p.spotanimHeight };
             H.tick(1);
         } finally {
             pin(null);
+        }
+        if (r.spot !== null) {
+            const want = SpotanimType.getId(r.spot);
+            // THE HALF THAT WAS REPORTED: an impact effect goes on the target at ground level, and
+            // nowhere near the player. The 2006 row below is the other way round on purpose.
+            const [here, there] = r.where === 'npc' ? [onNpc, onPlayer] : [onPlayer, onNpc];
+            check(`${r.weapon}: ${r.spot} is on the ${r.where}`, here.id, want);
+            check(`${r.weapon}: ...at height ${r.height}`, here.height, r.height);
+            check(`${r.weapon}: ...and not on the other one`, there.id === want, false);
         }
         const played = H.anims.slice(mark).filter(a => a.who === p.username).map(a => seqName(a.seq));
         check(`${r.weapon}: plays ${r.anim}`, played.includes(r.anim), true);
