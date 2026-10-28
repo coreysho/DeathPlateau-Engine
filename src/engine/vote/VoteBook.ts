@@ -25,6 +25,34 @@ import { DatabaseSync } from 'node:sqlite';
 // ONE WORLD'S LEDGER. Two worlds pointed at the same file would each think they owned it; that is
 // true of the trading post too and is written down there.
 
+/**
+ * Which of the several things that all report as "unable to open database file" it actually was.
+ * Checked after the failure, not before it, so this never decides whether to open - it only
+ * explains. WAL needs to write `-wal` and `-shm` beside the database, so a readable file in a
+ * directory it cannot write in fails too, which is why the directory is tested as well as the file.
+ */
+function whyNot(file: string): string {
+    const dir = path.dirname(file);
+    try {
+        if (!fs.statSync(dir).isDirectory()) {
+            return `${dir} is not a directory`;
+        }
+    } catch {
+        return `${dir} does not exist`;
+    }
+    try {
+        fs.accessSync(dir, fs.constants.W_OK);
+    } catch {
+        return `${dir} is not writable by this process`;
+    }
+    try {
+        fs.accessSync(file, fs.constants.R_OK | fs.constants.W_OK);
+    } catch (err) {
+        return fs.existsSync(file) ? 'the file is there but not readable and writable' : `the file cannot be created (${err instanceof Error ? err.message : err})`;
+    }
+    return 'the directory and the file both look fine, so this is sqlite itself - a lock held by another process, or a filesystem that will not take a WAL database';
+}
+
 export type VoteRow = {
     id: number;
     site: string;
@@ -51,7 +79,15 @@ export default class VoteBook {
         if (file !== ':memory:') {
             fs.mkdirSync(path.dirname(file), { recursive: true });
         }
-        this.db = new DatabaseSync(file);
+        try {
+            this.db = new DatabaseSync(file);
+        } catch (err) {
+            // node:sqlite says "unable to open database file" and nothing else, for a missing
+            // directory, a directory that is really a file, a directory it may not write in, and a
+            // file it may not write to alike. That sentence arrived in a player's chatbox with no
+            // way to tell which, so say which here instead of making somebody guess.
+            throw new Error(`vote ledger ${path.resolve(file)}: ${whyNot(file)} (${err instanceof Error ? err.message : err})`, { cause: err });
+        }
         this.db.exec('PRAGMA journal_mode = WAL');
         this.db.exec('PRAGMA synchronous = FULL');
         this.db.exec(`

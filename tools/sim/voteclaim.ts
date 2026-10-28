@@ -19,8 +19,12 @@
 //   - a site's COOLDOWN is enforced against the ledger, not against anything in the save
 //   - with NO SITES CONFIGURED - the default, and the state this server is in today - nothing
 //     pretends to work: the clerk says so and the claim path returns ^vote_claim_nosites
+//   - a LEDGER THAT WILL NOT OPEN is not allowed to take [login,_] down with it
+import fs from 'fs';
 import http from 'http';
 import { AddressInfo } from 'net';
+import os from 'os';
+import path from 'path';
 
 import * as H from './harness.js';
 import * as A from './a1lib.js';
@@ -30,6 +34,7 @@ import VoteService, { ClaimOutcome, ClaimStatus } from '#/engine/vote/VoteServic
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import World from '#/engine/World.js';
+import Environment from '#/util/Environment.js';
 
 await H.boot();
 H.loginOrder();
@@ -389,6 +394,84 @@ console.log('\nAND THE ONLY PLAYER TOLD ANYTHING IS ONE WHO COULD VOTE AND HAS N
         check('    re-arming the timer', armed(p), 500);
         H.despawn(p);
     }
+}
+
+console.log('\nAND A LEDGER THAT WILL NOT OPEN DOES NOT TAKE THE LOGIN SCRIPT DOWN WITH IT');
+{
+    // FROM A REAL LOGIN, 28 October: "script error: vote_owed unable to open database file", with
+    // a backtrace through [proc,vote_deliver] -> [proc,vote_login] -> [login,_]. A script error
+    // ABANDONS THE SCRIPT, so everything in login.rs2 after ~vote_login stopped happening - for a
+    // feature this server has no voting site for. Reading a balance must never be able to do that.
+    //
+    // THE LEDGER IS BROKEN THE ONLY WAY THAT WORKS AS ROOT: a directory where the database file
+    // should be. Permissions cannot be used - root is not refused by them, so a chmod 000 ledger
+    // opens fine in here and would make this test pass for the wrong reason.
+    const broken = path.join(os.tmpdir(), `voteclaim-broken-${process.pid}.sqlite`);
+    fs.mkdirSync(broken, { recursive: true });
+    const previous = Environment.VOTE_LEDGER;
+    Environment.VOTE_LEDGER = broken;
+    VoteSites.override([CALLBACK_SITE]);
+    VoteService.useLedger(null);
+
+    check('  the ledger refuses to open', VoteService.ledgerOrNull(), null);
+
+    // And ledger() - the one that throws - still does. That is the split: the paths that would have
+    // to invent an answer keep the exception, and only the ones that can honestly say "nothing"
+    // swallow it. This call is also exactly what [proc,vote_deliver] used to reach.
+    let threw = false;
+    try {
+        VoteService.ledger();
+    } catch {
+        threw = true;
+    }
+    check('    while ledger() still throws, which is what the login hit', threw, true);
+
+    let opened = '';
+    try {
+        new VoteBook(broken);
+    } catch (err) {
+        opened = err instanceof Error ? err.message : String(err);
+    }
+    check('    and says which file it was', opened.includes(path.resolve(broken)), true);
+    check("    rather than only sqlite's own sentence", opened === 'unable to open database file', false);
+
+    // The two calls [proc,vote_deliver] makes, which is what the login ran into.
+    check('  vote_owed answers nothing rather than throwing', VoteService.owed('brokenly'), 0);
+    check('    and vote_take takes nothing', VoteService.take('brokenly', 5), 0);
+
+    // THE WHOLE LOGIN SCRIPT RUNS. animmag_attract is armed by the line directly after
+    // ~vote_login in login.rs2, so a player who has it is a player the script got past the vote.
+    const attract = ScriptProvider.getByName('[softtimer,animmag_attract]');
+    check('  the timer login sets after ~vote_login exists', !!attract, true);
+    const m = A.mark();
+    const p: any = H.makePlayer('brokenly', 3094, 3491, 0);
+    H.tick(2);
+    check('    and login gets past ~vote_login to set it', p.timers.has(attract!.id), true);
+    check(
+        '    with no script error in the chatbox',
+        A.mesSince(p, m).some(l => l.includes('script error')),
+        false
+    );
+
+    // The clerk, who would otherwise say "no new votes found" - which reads as "you did not vote".
+    check('  a claim says the ledger is unavailable', VoteService.claim('brokenly'), ClaimStatus.UNAVAILABLE);
+    const lines = A.talk(p, 'vote_clerk', [2]);
+    check('    and the clerk says so without blaming the player', A.saw(lines, "can't get at the ledger"), true);
+    H.despawn(p);
+
+    // A SITE'S CALLBACK IS A REAL VOTE WITH NOWHERE TO GO. 503, not 200: every toplist that
+    // retries a callback retries on a non-200, so saying so is what saves the vote.
+    const reply = VoteService.fromCallback(CALLBACK_SITE.id, { key: 'hunter2', player: 'brokenly' });
+    check('  a callback refuses out loud', reply.status, 503);
+
+    // IT IS TRIED ONCE. The directory is gone now, so the ledger WOULD open - and it must not go
+    // and look, or every login on a broken server writes the same stack trace to the log again.
+    fs.rmSync(broken, { recursive: true, force: true });
+    check('  and it does not try again once it has refused', VoteService.ledgerOrNull(), null);
+
+    Environment.VOTE_LEDGER = previous;
+    VoteService.useLedger(new VoteBook(':memory:'));
+    check('    until something hands it a working one', VoteService.ledgerOrNull() === null, false);
 }
 
 async function claimAndWait(username: string): Promise<ClaimOutcome[]> {
