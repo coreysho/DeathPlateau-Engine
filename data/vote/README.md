@@ -56,10 +56,34 @@ it exercises a real HTTP round trip with no site in the world.
 - `sites.json` - yours. Not tracked.
 - `<profile>.sqlite` - the ledger: every credited vote, and what each player is still owed. Not
   tracked, and not part of a player's save, because a vote can be credited while they are offline.
+  Set `VOTE_LEDGER` to put it somewhere else entirely.
+
+## If the ledger will not open
+
+**Run `npm run vote:doctor` on the machine the world runs on.** It does what the engine does, in
+the same order, and says what happened at each step: where it is running from, what it resolves the
+ledger path to, what every directory on the way there is, whether a file can be made in that
+directory at all, and then open / WAL / write / read. The first FAIL is the cause. It leaves the
+ledger exactly as it found it.
+
+The log says `vote: vote ledger <full path>: <what is wrong with it>`, and then that voting is off
+until it is fixed. **Nothing else is affected**: logins, the clerk and the shop all carry on, a
+player is told nothing is owed rather than being shown a script error, and a site's callback gets a
+503 so it retries the vote rather than losing it.
+
+SQLite reports a missing directory, a directory that is really a file, and a directory it may not
+write in as one sentence - "unable to open database file" - so the line above works out which and
+says so. The usual causes are the world running from a different directory than you think, and the
+account the world runs as not being able to write under `data/`. WAL needs to create `<profile>
+.sqlite-wal` and `-shm` beside the database, so read access to the file alone is not enough.
+
+It is tried once per boot. Fix the path or the permissions - or point `VOTE_LEDGER` at somewhere
+writable - and restart the world.
 
 ## Where the code is
 
 - `src/engine/vote/VoteBook.ts` - the ledger, and why it is its own database
+- `tools/vote/doctor.ts` - `npm run vote:doctor`, for when it will not open
 - `src/engine/vote/VoteSites.ts` - this file's format, and what every field means
 - `src/engine/vote/VoteService.ts` - both ways a vote arrives, and how it is handed over
 - `src/engine/script/handlers/VoteOps.ts` - what content can ask
