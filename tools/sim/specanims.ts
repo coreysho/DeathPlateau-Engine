@@ -51,11 +51,26 @@ const runSpec = (label: string, npc: Npc, p: Player) => {
     ScriptRunner.execute(state);
 };
 
-// WHERE THE GRAPHIC GOES, which is the second thing the owner reported: the abyssal bludgeon's
-// miasma was venting under the PLAYER instead of the target, and the warhammer looked "close but
-// not quite". Both were spotanim_pl at height 96 - the wrong entity and the wrong height. These
-// are impact effects, so they belong on the target at ground level, which is what all five
-// godsword graphics already do. `spot: null` means the special throws no graphic of its own.
+// WHERE THE GRAPHIC GOES. The beta-world dump (rune-server 697435) spells this out and I read it
+// wrong twice. It writes "gfx: N" for a graphic on the PLAYER and says "enemy entity gfx: N" when
+// it means the target - and of these four only the bludgeon says enemy entity:
+//
+//     dragon warhammer   anim 1378  gfx 1292               -> player
+//     granite hammer     anim 1378  gfx 1450               -> player
+//     dragon sword       anim 7515  gfx 1369               -> player
+//     abyssal bludgeon   anim 3299  enemy entity gfx 1284   -> target
+//
+// First it was spotanim_pl at height 96 for all four - right entity for three, wrong height for
+// all. Then it was spotanim_npc at 0 for all four - right height, wrong entity for three. The
+// build demonstrated the rule the whole time: pvm_godswords.rs2 puts each godsword's own graphic
+// on the player and only the Zamorakian's freeze on the target, which is exactly what the dump's
+// "zgs ... gfx: 1210 enemy entity gfx: 369" says.
+//
+// Height 0 is right for all of them, measured rather than assumed: every one of these models runs
+// from y=0 down to y=-4500..-9700, so it stands on the ground and extends upward, the same shape
+// as spot_ags_spec which this build has always drawn at 0.
+//
+// `spot: null` means the special throws no graphic of its own.
 //
 // Asserting this needs the entity's spotanimId read BEFORE the next tick clears it, so the rows
 // below are checked inside the same loop that fires each special rather than afterwards.
@@ -68,10 +83,12 @@ type Row = { weapon: string; label: string; anim: string; spot: string | null;
              where: 'npc' | 'player'; height: number; ordinary: string[] };
 const SPECS: Row[] = [
     // Post-2006, imported: see content/scripts/skill_combat/configs/melee/osrs_spec_anims.seq
-    { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
-    { weapon: 'granite_hammer', label: '[label,pvm_granite_hammer_sa]', anim: 'osrs_dwh_spec', spot: 'granite_hammer_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
-    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'osrs_bludgeon_spec', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
-    { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', where: 'npc', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] },
+    { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', where: 'player', height: 0, ordinary: ['crushattack_anim'] },
+    { weapon: 'granite_hammer', label: '[label,pvm_granite_hammer_sa]', anim: 'osrs_dwh_spec', spot: 'granite_hammer_spec', where: 'player', height: 0, ordinary: ['crushattack_anim'] },
+    // the build's own copy of OSRS 3299, in all.seq with the rest of the bludgeon's set - not the
+    // second import of the same animation that used to be here
+    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'abyssal_bludgeon_special_attack', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
+    { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', where: 'player', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] },
     // 2006, and staying on the cache's own special animations.
     { weapon: 'bone_dagger', label: '[label,pvm_bone_dagger_sa]', anim: 'puncture', spot: 'sp_attack_puncture_spotanim', where: 'player', height: 96, ordinary: ['stabattack_anim', 'slashattack_anim'] }
 ];
@@ -79,7 +96,7 @@ const SPECS: Row[] = [
 // ---------------------------------------------------------------------------------------------
 console.log('== the four imported animations exist and look like player specials');
 {
-    for (const nm of ['osrs_dwh_spec', 'osrs_bludgeon_spec', 'osrs_dsword_spec']) {
+    for (const nm of ['osrs_dwh_spec', 'osrs_dsword_spec', 'osrs_sotd_spec', 'osrs_sol_spec']) {
         const id = SeqType.getId(nm);
         check(`${nm} is in the build`, id !== -1, true);
         if (id === -1) continue;
@@ -89,7 +106,8 @@ console.log('== the four imported animations exist and look like player specials
         check(`${nm} has special priority`, s.priority, 6);
         check(`${nm} walk-merges`, s.walkmerge !== null && s.walkmerge !== undefined, true);
     }
-    for (const nm of ['dwh_spec', 'granite_hammer_spec', 'bludgeon_spec', 'dsword_spec']) {
+    for (const nm of ['dwh_spec', 'granite_hammer_spec', 'bludgeon_spec', 'dsword_spec',
+                      'sotd_spec_gfx', 'sol_spec_gfx']) {
         check(`spotanim ${nm} is in the build`, SpotanimType.getId(nm) !== -1, true);
     }
 }
@@ -172,6 +190,66 @@ console.log('\n== and the dragon warhammer still takes 30% of the target\'s curr
         pin(null);
     }
     check('a second Smash compounds off the current level', mid - npc.levels[DEFENCE], Math.floor(mid * 0.3));
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log('\n== and the ORDINARY attack animations are the ones Old School plays');
+{
+    // THE CHECK THAT WOULD HAVE CAUGHT ALL OF THIS. Every fault reported this round was an
+    // animation id sitting in an obj param that nothing ever read back - "the bludgeon and the
+    // hill giant club are swinging like a gmaul", "the staves have the wrong swipe". A param can
+    // name any animation in the build and nothing errors; it just looks wrong in game.
+    //
+    // Expectations are the beta-world dump's, quoted per weapon. Where a 377 name is given, the
+    // dump's id IS that name's id in this build - checked, not assumed.
+    type Anims = { weapon: string; want: Record<string, string>; why: string };
+    const ORDINARY: Anims[] = [
+        {
+            weapon: 'abyssal_bludgeon',
+            why: 'crush 3298, defence 1666, stance 1652 - and 1666 IS the granite maul\'s, shared',
+            want: {
+                crushattack_anim: 'abyssal_bludgeon_crush',
+                defend_anim: 'slayer_granite_maul_defend',
+                ready_baseanim: 'abyssal_bludgeon_ready',
+                walk_f_baseanim: 'abyssal_bludgeon_walk',
+                running_baseanim: 'abyssal_bludgeon_run'
+            }
+        },
+        {
+            weapon: 'dragon_warhammer',
+            why: 'crush 401, defence 403 - already right, and worth pinning so it stays right',
+            want: { crushattack_anim: 'human_blunt_pound', defend_anim: 'human_blunt_block' }
+        },
+        {
+            weapon: 'dragon_sword',
+            why: 'stab 386, slash 390',
+            want: { stabattack_anim: 'human_sword_stab', slashattack_anim: 'human_sword_slash' }
+        }
+    ];
+    // the four bladed staves: stance 813, stab 428, slash 440, crush 419, defence 420. We had the
+    // one-handed SWORD's 386/390 and the Kodai wand's 414/415.
+    for (const s of ['staff_of_the_dead', 'staff_of_light',
+                     'toxic_staff_of_the_dead', 'toxic_staff_uncharged']) {
+        ORDINARY.push({
+            weapon: s,
+            why: 'bladed staff: stance 813, stab 428, slash 440, crush 419, defence 420',
+            want: {
+                ready_baseanim: 'human_staffready',
+                stabattack_anim: 'human_spear_spike',
+                slashattack_anim: 'human_scythe_sweep',
+                crushattack_anim: 'human_stafforb_pummel',
+                defend_anim: 'human_stafforb_block'
+            }
+        });
+    }
+
+    for (const row of ORDINARY) {
+        if (ObjType.getId(row.weapon) === -1) { check(`${row.weapon} exists`, false, true); continue; }
+        console.log(`   ${row.weapon}: ${row.why}`);
+        for (const [key, want] of Object.entries(row.want)) {
+            check(`  ${row.weapon}.${key}`, seqName(param(row.weapon, key) as number), want);
+        }
+    }
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);

@@ -22,6 +22,8 @@ import { check, R, player } from './a1lib.ts';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import Component from '#/cache/config/Component.js';
+import SeqType from '#/cache/config/SeqType.js';
+import SpotanimType from '#/cache/config/SpotanimType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
@@ -119,6 +121,81 @@ console.log('\n== clicking it spends the whole bar and starts the minute');
         const said = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
         check(`${s}: says so`, said.some(t => t.includes('Spirits of deceased evildoers')), true);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log('\n== each staff plays ITS OWN special, on itself, at ground height');
+{
+    // THE HALF THAT WAS REPORTED. Everything below this was already asserted - the energy, the
+    // clock, the halving - and none of it says what the special looks like, which is the only
+    // thing a player sees. From the beta-world dump (rune-server 697435):
+    //
+    //     staff of the dead / toxic staff   special attack anim: 7083  gfx: 1228
+    //     staff of light                    special attack anim: 7967  gfx: 1516
+    //
+    // The staff of light having its OWN pair is the part worth a test: one shared animation is the
+    // plausible reading, it is wrong, and "it plays something" would pass on it. Before this the
+    // special played Excalibur's blue glow on every one of them.
+    const seqName = (id: number): string => (id >= 0 ? (SeqType.get(id)?.debugname ?? `seq_${id}`) : '-');
+    const want: Record<string, [string, string]> = {
+        staff_of_the_dead: ['osrs_sotd_spec', 'sotd_spec_gfx'],
+        toxic_staff_of_the_dead: ['osrs_sotd_spec', 'sotd_spec_gfx'],
+        toxic_staff_uncharged: ['osrs_sotd_spec', 'sotd_spec_gfx'],
+        staff_of_light: ['osrs_sol_spec', 'sol_spec_gfx']
+    };
+    for (const s of STAVES) {
+        const [anim, gfx] = want[s];
+        const p = player(`gfx_${s}`, 3254, 3254);
+        H.setVar(p, 'tutorial', 1000);
+        H.clearInv(p);
+        H.give(p, s);
+        H.opheld(p, s, 2);
+        H.tick(1);
+        H.setVar(p, 'sa_energy', 1000);
+        H.setVar(p, 'sotd_spec', 0);
+
+        const mark = H.anims.length;
+        H.ifButton(p, 'combat_bladed_staff:specbar');
+        // read before the tick: PathingEntity clears spotanimId at the end of one
+        const onPlayer = { id: p.spotanimId, height: p.spotanimHeight };
+        H.tick(1);
+
+        const played = H.anims.slice(mark).filter(a => a.who === p.username).map(a => seqName(a.seq));
+        check(`${s}: plays ${anim}`, played.includes(anim), true);
+        check(`${s}: throws ${gfx}`, onPlayer.id, SpotanimType.getId(gfx));
+        // on the player: the dump says plain "gfx", not "enemy entity gfx", and this is a self-buff
+        check(`${s}: at ground height`, onPlayer.height, 0);
+    }
+    // ...and the two are genuinely different animations, not one name twice
+    check('the staff of light\'s special is not the dead\'s',
+        SeqType.getId('osrs_sol_spec') === SeqType.getId('osrs_sotd_spec'), false);
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log('\n== and it says so when the minute runs out');
+{
+    // "when special fades green game msg: Your protection fades away." Nothing was watching the
+    // minute end before - the halving just stopped reading true - so there was nothing that could
+    // have said it.
+    const p = player('sotd_fade', 3256, 3256);
+    H.setVar(p, 'tutorial', 1000);
+    H.clearInv(p);
+    H.give(p, 'staff_of_the_dead');
+    H.opheld(p, 'staff_of_the_dead', 2);
+    H.tick(1);
+    H.setVar(p, 'sa_energy', 1000);
+    H.setVar(p, 'sotd_spec', 0);
+
+    const mark = H.mesgs.length;
+    H.ifButton(p, 'combat_bladed_staff:specbar');
+    H.tick(5);
+    const early = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
+    check('nothing fades five ticks in', early.some(t => t.includes('fades away')), false);
+
+    H.tick(100);
+    const late = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
+    check('it fades at the minute', late.filter(t => t.includes('fades away')).length, 1);
+    check('and the clock is cleared', H.getVar(p, 'sotd_spec'), 0);
 }
 
 // ---------------------------------------------------------------------------------------------

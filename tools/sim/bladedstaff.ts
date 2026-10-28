@@ -34,9 +34,12 @@ const ACCURATE = 0, AGGRESSIVE = 1, DEFENSIVE = 2, MAGIC_NORMAL = 7, MAGIC_DEFEN
 
 // Old School's five combat options for a bladed staff: Jab, Swipe, Fend and the two Spell boxes.
 const STYLES: { mode: number; name: string; type: number; style: number; anim: string | null }[] = [
-    { mode: 0, name: 'Jab', type: STAB, style: ACCURATE, anim: 'human_sword_stab' },
-    { mode: 1, name: 'Swipe', type: SLASH, style: AGGRESSIVE, anim: 'human_sword_slash' },
-    { mode: 2, name: 'Fend', type: CRUSH, style: DEFENSIVE, anim: 'human_staff_pummel' },
+    // the animations are the beta-world dump's: stab 428, slash 440, crush 419. Reported from
+    // play as the wrong swipe, and it was the one-handed sword's 390; the crush and the block were
+    // 414 and 415, which the same dump names as the Kodai wand's.
+    { mode: 0, name: 'Jab', type: STAB, style: ACCURATE, anim: 'human_spear_spike' },
+    { mode: 1, name: 'Swipe', type: SLASH, style: AGGRESSIVE, anim: 'human_scythe_sweep' },
+    { mode: 2, name: 'Fend', type: CRUSH, style: DEFENSIVE, anim: 'human_stafforb_pummel' },
     { mode: 3, name: 'Spell', type: MAGIC, style: MAGIC_NORMAL, anim: null },
     { mode: 4, name: 'Spell (defensive)', type: MAGIC, style: MAGIC_DEFENSIVE, anim: null }
 ];
