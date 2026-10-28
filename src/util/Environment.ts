@@ -99,6 +99,10 @@ export default {
     // How long to wait on a toplist's "has this player voted" API before giving up on it. A player
     // is standing in front of the clerk while this runs, so it is short on purpose.
     VOTE_CHECK_TIMEOUT: tryParseInt(process.env.VOTE_CHECK_TIMEOUT, 5000),
+    // Where the vote ledger lives (VoteBook.ts). Named so it can be moved off a path the server
+    // process cannot write to, which is the one thing that stops it opening, and so a test can
+    // point it somewhere that is guaranteed not to open.
+    VOTE_LEDGER: tryParseString(process.env.VOTE_LEDGER, ''),
     NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
     NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
     // what bots pray in a fight: smite, protect or none ('' = the file, or the default: smite)

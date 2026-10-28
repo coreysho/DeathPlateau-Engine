@@ -47,13 +47,16 @@ const VoteOps: CommandHandlers = {
             return;
         }
         const cooldown = VoteSites.cooldownMs(site);
-        const last = VoteService.ledger().lastVote(site.id, state.activePlayer.username);
+        // No ledger, no record of a last vote, so nothing is on cooldown. Reading a balance must
+        // not throw into a script - see VoteService.ledgerOrNull.
+        const last = VoteService.ledgerOrNull()?.lastVote(site.id, state.activePlayer.username) ?? 0;
         const left = last === 0 || cooldown === 0 ? 0 : cooldown - (Date.now() - last);
         state.pushInt(left > 0 ? Math.ceil(left / 1000) : 0);
     },
 
     // vote_claim()(int): go and ask every site that can be asked. Returns ^vote_claim_started,
-    // ^vote_claim_nosites or ^vote_claim_busy - see content/scripts/vote/configs/vote.constant.
+    // ^vote_claim_nosites, ^vote_claim_busy or ^vote_claim_unavailable - see
+    // content/scripts/vote/configs/vote.constant.
     [ScriptOpcode.VOTE_CLAIM]: state => {
         const player = state.activePlayer;
         const status = VoteService.claim(player.username, outcomes => {
@@ -80,7 +83,9 @@ const VoteOps: CommandHandlers = {
             }
             player.wrappedMessageGame('No new votes found. If you have just voted, give the site a minute.');
         });
-        state.pushInt(status === ClaimStatus.STARTED ? 0 : status === ClaimStatus.NO_SITES ? 1 : 2);
+        // Written out rather than passed through: the enum and the ^vote_claim_* constants are two
+        // files that happen to agree on four numbers, and this is where they are made to.
+        state.pushInt(status === ClaimStatus.STARTED ? 0 : status === ClaimStatus.NO_SITES ? 1 : status === ClaimStatus.BUSY ? 2 : 3);
     },
 
     // vote_owed()(int): tickets credited to the active player and not yet handed over. Looks only.

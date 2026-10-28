@@ -30,7 +30,9 @@ export const enum ClaimStatus {
     /** No site is configured with a check, so there is nothing to ask. */
     NO_SITES = 1,
     /** This player already has a claim in flight. */
-    BUSY = 2
+    BUSY = 2,
+    /** The ledger will not open, so there is nowhere to put a vote even if one is found. */
+    UNAVAILABLE = 3
 }
 
 export type ClaimOutcome = {
@@ -42,21 +44,53 @@ export type ClaimOutcome = {
 };
 
 let book: VoteBook | null = null;
+let bookRefused = false;
 const inFlight = new Set<string>();
 
 export default class VoteService {
     static ledger(): VoteBook {
         if (!book) {
-            const file = `data/vote/${Environment.NODE_PROFILE}.sqlite`;
+            const file = Environment.VOTE_LEDGER || `data/vote/${Environment.NODE_PROFILE}.sqlite`;
             book = new VoteBook(file);
             printInfo(`Vote ledger open: ${file}`);
         }
         return book;
     }
 
+    /**
+     * The ledger, or null if it will not open.
+     *
+     * VOTING IS NOT WORTH A BROKEN LOGIN. [login,_] calls ~vote_login, so the first thing a failed
+     * ledger did was throw a script error into the chatbox and abandon the REST OF THE LOGIN SCRIPT
+     * - everything after that line, for a feature this server has no voting site for yet. The
+     * callers that only read a balance go through here instead and get nothing rather than an
+     * exception; the ones that would have to invent an answer (a callback crediting a real vote)
+     * still refuse out loud.
+     *
+     * It is tried once. A ledger that cannot be opened now will not open itself a tick later, and
+     * retrying on every vote_owed would put the same stack trace in the log at every login.
+     */
+    static ledgerOrNull(): VoteBook | null {
+        if (book) {
+            return book;
+        }
+        if (bookRefused) {
+            return null;
+        }
+        try {
+            return VoteService.ledger();
+        } catch (err) {
+            bookRefused = true;
+            printError(`vote: ${err instanceof Error ? err.message : err}`);
+            printError('vote: voting is off until that is fixed. Nothing else is affected.');
+            return null;
+        }
+    }
+
     /** Only for the tests, which run the whole service against an in-memory ledger. */
     static useLedger(replacement: VoteBook | null) {
         book = replacement;
+        bookRefused = false;
         inFlight.clear();
     }
 
@@ -112,7 +146,13 @@ export default class VoteService {
         // No cooldown on a callback: the site has already decided this vote counts, and refusing it
         // because our clock disagrees with theirs is how a real vote goes unpaid. The (site, ref)
         // key is what stops a retry paying twice.
-        const result = VoteService.ledger().credit(site.id, ref, username, site.tickets, at, 0);
+        const ledger = VoteService.ledgerOrNull();
+        if (!ledger) {
+            // A real vote, and nowhere to write it down. 503 rather than 200: every toplist that
+            // retries a callback retries on a non-200, so the vote is not lost by saying so.
+            return { status: 503, body: 'unavailable' };
+        }
+        const result = ledger.credit(site.id, ref, username, site.tickets, at, 0);
         if (result === CreditResult.DUPLICATE) {
             return { status: 200, body: 'duplicate' };
         }
@@ -134,6 +174,9 @@ export default class VoteService {
      */
     static claim(username: string, onDone?: (outcomes: ClaimOutcome[]) => void): ClaimStatus {
         const who = username.toLowerCase();
+        if (!VoteService.ledgerOrNull()) {
+            return ClaimStatus.UNAVAILABLE;
+        }
         const sites = VoteService.checkable();
         if (!sites.length) {
             return ClaimStatus.NO_SITES;
@@ -209,11 +252,11 @@ export default class VoteService {
     // ------------------------------------------------------------------ handing them over
 
     static owed(username: string): number {
-        return VoteService.ledger().owed(username);
+        return VoteService.ledgerOrNull()?.owed(username) ?? 0;
     }
 
     static take(username: string, want: number): number {
-        return VoteService.ledger().take(username, want);
+        return VoteService.ledgerOrNull()?.take(username, want) ?? 0;
     }
 
     /**

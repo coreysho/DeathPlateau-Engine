@@ -29,7 +29,8 @@
     "sqlite:reset": "prisma migrate reset --force --schema prisma/singleworld/schema.prisma",
     "sqlite:schema": "prisma migrate dev --schema prisma/singleworld/schema.prisma",
     "start": "npm install && tsx src/app.ts",
-    "tickets": "tsx src/tickets.ts"
+    "tickets": "tsx src/tickets.ts",
+    "vote:doctor": "tsx tools/vote/doctor.ts"
   },
   "lint-staged": {
     "*.{js,ts}": [
