@@ -226,11 +226,13 @@ console.log('== the Undertaker sells them');
     const stocked = Array.from(t.stockobj ?? []).map(id => ObjType.get(id).debugname);
     const missing = COLOURS.map(c => `whip_kit_${c}`).filter(k => !stocked.includes(k));
     check('all nine kits are on the shelf', missing, []);
-    // EIGHTEEN SINCE THE ROYAL SEED POD. Corey put it on this shelf at stock18 (content
-    // b584ca3d), which is a legitimate row and not a whip colour, so this count moves with the
+    // NINETEEN SINCE THE ANCIENT FABRIC. The royal seed pod (content b584ca3d) and the ancient
+    // fabric (89e646ed) are legitimate rows and not whip colours, so this count moves with the
     // shelf rather than with the nine kits above it - those are checked by name on the line above,
-    // which is the assertion that actually belongs to this file.
-    check('eighteen rows now', t.size, 18);
+    // which is the assertion that actually belongs to this file. The shelf was also SIZED for 20
+    // with 19 rows stocked, which showed the player an empty slot and is what deathtoken.ts was
+    // failing on; the inv says 19 now.
+    check('nineteen rows now', t.size, 19);
     check(
         'and the eight he already sold are still there',
         ['slayer_imbue_scroll', 'undertaker_hat', 'undertaker_coat', 'undertaker_trousers', 'undertaker_boots', 'undertaker_cane', 'gravedigger_kit', 'undertaker_cape'].filter(n => !stocked.includes(n)),
