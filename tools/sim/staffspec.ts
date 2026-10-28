@@ -63,13 +63,17 @@ console.log('== both staves are special attack weapons');
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('\n== the staff tab has a bar, and it is the same one every other tab has');
+console.log('\n== the staves\' tab has a bar, and it is the same one every other tab has');
 {
-    // THE DEFECT: these two did not exist, so there was nothing to show and nothing to click.
-    for (const com of ['combat_staff_2:specbar_layer', 'combat_staff_2:specbar']) {
+    // THE DEFECT: no staff tab had either of these, so there was nothing to show and nothing to
+    // click. combat_bladed_staff is the tab the two staves are shown now (they moved to
+    // weapon_bladed_staff for Jab/Swipe/Fend - see bladedstaff.ts); combat_staff_2 keeps a bar of
+    // its own, wired to the same handler, for the day a plain staff gets a special.
+    for (const com of ['combat_bladed_staff:specbar_layer', 'combat_bladed_staff:specbar',
+                       'combat_staff_2:specbar_layer', 'combat_staff_2:specbar']) {
         check(`${com} is on the tab`, Component.getId(com) !== -1, true);
     }
-    const mine = Component.getId('combat_staff_2:specbar_layer');
+    const mine = Component.getId('combat_bladed_staff:specbar_layer');
     const theirs = Component.getId('combat_blunt:specbar_layer');
     if (mine !== -1 && theirs !== -1) {
         const a = Component.get(mine);
@@ -80,8 +84,11 @@ console.log('\n== the staff tab has a bar, and it is the same one every other ta
         // hidden by default: ~weapon_category_tab_attack unhides it only for a specwep weapon
         check('hidden until a special weapon is held', a.hide, true);
     }
-    // and the click has a handler, which ifButton will not find if the trigger is missing
-    check('the bar has an if_button', ScriptProvider.getByName('[if_button,combat_staff_2:specbar]') !== null, true);
+    // and both clicks have a handler, which ifButton will not find if a trigger is missing
+    for (const tab of ['combat_bladed_staff', 'combat_staff_2']) {
+        check(`${tab}'s bar has an if_button`,
+            ScriptProvider.getByName(`[if_button,${tab}:specbar]`) !== null, true);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -99,7 +106,7 @@ console.log('\n== clicking it spends the whole bar and starts the minute');
         H.setVar(p, 'sotd_spec', 0);
         const mark = H.mesgs.length;
         const at = World.currentTick;
-        H.ifButton(p, 'combat_staff_2:specbar');
+        H.ifButton(p, 'combat_bladed_staff:specbar');
         H.tick(1);
 
         check(`${s}: the bar is empty`, H.getVar(p, 'sa_energy'), 0);
