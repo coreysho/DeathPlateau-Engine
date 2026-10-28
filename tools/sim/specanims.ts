@@ -85,9 +85,9 @@ const SPECS: Row[] = [
     // Post-2006, imported: see content/scripts/skill_combat/configs/melee/osrs_spec_anims.seq
     { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', where: 'player', height: 0, ordinary: ['crushattack_anim'] },
     { weapon: 'granite_hammer', label: '[label,pvm_granite_hammer_sa]', anim: 'osrs_dwh_spec', spot: 'granite_hammer_spec', where: 'player', height: 0, ordinary: ['crushattack_anim'] },
-    // the build's own copy of OSRS 3299, in all.seq with the rest of the bludgeon's set - not the
-    // second import of the same animation that used to be here
-    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'abyssal_bludgeon_special_attack', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
+    // NOT all.seq's abyssal_bludgeon_special_attack, which has the same OSRS id and is the same
+    // corrupt import as the rest of that set: it forces a bronze axe into the left hand.
+    { weapon: 'abyssal_bludgeon', label: '[label,pvm_abyssal_bludgeon_sa]', anim: 'osrs_bludgeon_spec', spot: 'bludgeon_spec', where: 'npc', height: 0, ordinary: ['crushattack_anim'] },
     { weapon: 'dragon_sword', label: '[label,pvm_dragon_sword_sa]', anim: 'osrs_dsword_spec', spot: 'dsword_spec', where: 'player', height: 0, ordinary: ['stabattack_anim', 'slashattack_anim'] },
     // Backstab's own, OSRS 4198 and gfx 704. It used to play `puncture` with spotanim 252, which
     // the beta-world dump names as the DRAGON DAGGER's special - the same defect as the bludgeon
@@ -209,13 +209,18 @@ console.log('\n== and the ORDINARY attack animations are the ones Old School pla
     const ORDINARY: Anims[] = [
         {
             weapon: 'abyssal_bludgeon',
+            // THE osrs_* NAMES, not all.seq's. Those carry an invented held-model swap - an
+            // ectophial on the stance, a rune axe on the walk, a dragon axe on the run, an iron
+            // axe on the swing - which puts an AXE in the player's hands for most of every frame.
+            // The OSRS ids are the dump's either way, which is exactly why this could only be
+            // caught in the client: an id checker compares ids, and these ARE the right ids.
             why: 'crush 3298, defence 1666, stance 1652 - and 1666 IS the granite maul\'s, shared',
             want: {
-                crushattack_anim: 'abyssal_bludgeon_crush',
+                crushattack_anim: 'osrs_bludgeon_crush',
                 defend_anim: 'slayer_granite_maul_defend',
-                ready_baseanim: 'abyssal_bludgeon_ready',
-                walk_f_baseanim: 'abyssal_bludgeon_walk',
-                running_baseanim: 'abyssal_bludgeon_run'
+                ready_baseanim: 'osrs_bludgeon_ready',
+                walk_f_baseanim: 'osrs_bludgeon_walk',
+                running_baseanim: 'osrs_bludgeon_run'
             }
         },
         {
