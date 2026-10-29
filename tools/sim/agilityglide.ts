@@ -116,7 +116,13 @@ function callsTo(src: string, name: string): string[][] {
 const KNOWN: Record<string, string> = {
     'human_doublepipesqueeze|30|30|126': '16 cycles - a third of a second as the player clears the pipe',
     'human_doublepipesqueeze|30|30|158': '48 cycles - the long gnome-course crawl, worth a look in game',
-    'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl'
+    'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl',
+    // Falador's hand holds and its five ledges. A sidestep is a WALK animation with no loop point,
+    // so played as a one-shot it runs 30 cycles against the roof window's 50 and the last 20 are
+    // an idle pose. Fixing it is a choice, not a correction: a 30-cycle window makes six obstacles
+    // faster, and crossing with a walk bas the way the tightropes do moves a tile a tick and makes
+    // them a great deal slower. Either changes what a lap is worth, so it is the owner's call.
+    'human_walk_sidestep|0|0|50': '20 cycles x6 on Falador - the roof window suits the 48-cycle log balance, not a 30-cycle sidestep'
 };
 
 type Site = { file: string; anim: string; animDelay: number; start: number; end: number };
@@ -144,6 +150,72 @@ function scan(dir: string) {
     }
 }
 scan(path.join(CONTENT, 'scripts'));
+
+// ---------------------------------------------------------------- the rooftop chain
+//
+// ~agility_roof_move(xp, end, anim, dir) hardcodes the window: p_exactmove runs 0->50 for every
+// obstacle it is given, whatever that obstacle is. So any proc that takes a `seq` and hands it
+// straight to that one is a 0->50 site, and so is every call to such a proc. Without this the
+// nine rooftop courses - 73 obstacles, every gap jump in the game - are invisible to this tool.
+const ROOF_START = 0;
+const ROOF_END = 50;
+
+/** procs that forward a seq parameter into ~agility_roof_move, and which argument it is */
+function roofForwarders(): Map<string, number> {
+    const out = new Map<string, number>([['agility_roof_move', 2]]);
+    let grew = true;
+    while (grew) {
+        grew = false;
+        for (const fn of allScripts()) {
+            const src2 = fs.readFileSync(fn, 'utf8');
+            for (const m of src2.matchAll(/\[proc,(\w+)\]\(([^)]*)\)([\s\S]*?)(?=\n\[|$)/g)) {
+                const name = m[1];
+                if (out.has(name)) continue;
+                const params = m[2].split(',').map(s => s.trim()).filter(Boolean);
+                const body = m[3];
+                for (const [callee, argIdx] of out) {
+                    for (const args of callsTo(body, callee)) {
+                        const passed = args[argIdx];
+                        if (!passed || !passed.startsWith('$')) continue;
+                        const pos = params.findIndex(p => p.startsWith('seq ') && p.split(/\s+/)[1] === passed);
+                        if (pos >= 0) { out.set(name, pos); grew = true; }
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
+
+function allScripts(): string[] {
+    const out: string[] = [];
+    (function walk(dir: string) {
+        for (const fn of fs.readdirSync(dir)) {
+            const p = path.join(dir, fn);
+            if (fs.statSync(p).isDirectory()) walk(p);
+            else if (fn.endsWith('.rs2')) out.push(p);
+        }
+    })(path.join(CONTENT, 'scripts'));
+    return out;
+}
+
+const forwarders = roofForwarders();
+let roofSites = 0;
+for (const fn of allScripts()) {
+    const body = fs.readFileSync(fn, 'utf8');
+    const rel = path.relative(CONTENT, fn);
+    for (const [name, argIdx] of forwarders) {
+        for (const args of callsTo(body, name)) {
+            const anim = args[argIdx];
+            if (!anim || anim.startsWith('$')) continue;
+            sites.push({ file: rel, anim, animDelay: 0, start: ROOF_START, end: ROOF_END });
+            roofSites++;
+        }
+    }
+}
+console.log(`
+   (${roofSites} obstacle(s) reach p_exactmove through ${forwarders.size} forwarding proc(s)`
+    + ` - ${[...forwarders.keys()].join(', ')} - and glide ${ROOF_START}->${ROOF_END})`);
 
 console.log(`\n== ${sites.length} exactmove call sites: the glide window against the animation ==\n`);
 console.log('   ' + 'animation'.padEnd(28) + 'anim@'.padStart(7) + 'glide'.padStart(11) + 'lasts'.padStart(8) + '   verdict');
