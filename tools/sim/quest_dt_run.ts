@@ -39,7 +39,7 @@ const KAMIL_ARENA: [number, number, number] = [2852, 3732, 0];
 
 // --- smoke: the well west of Pollnivneach, four torches, a chest and Fareed's gate
 const SMOKE_WELL: [number, number] = [3310, 2962];
-const SMOKE_BOTTOM: [number, number, number] = [3206, 9379, 0];
+const _SMOKE_BOTTOMSMOKE_BOTTOM: [number, number, number] = [3206, 9379, 0];
 const TORCHES: [string, [number, number]][] = [
     ['4d_standing_torch1', [3323, 9398]],
     ['4d_standing_torch2', [3321, 9355]],
@@ -48,13 +48,13 @@ const TORCHES: [string, [number, number]][] = [
 ];
 const FIRE_CHEST: [number, number] = [3248, 9364];
 const FAREED_GATE: [number, number] = [3305, 9375];
-const FAREED_ARENA: [number, number, number] = [3309, 9375, 0];
+const _FAREED_ARENAFAREED_ARENA: [number, number, number] = [3309, 9375, 0];
 
 // --- shadow: Rasolo by the waterfall, the bandits' locked chest, the ladder you cannot see
 const RASOLO: [number, number, number] = [2535, 3433, 0];
 const BANDIT_CHEST: [number, number] = [3169, 2967];
 const SHADOW_LADDER: [number, number] = [2547, 3421];
-const SHADOW_DUNGEON: [number, number, number] = [2629, 5071, 0];
+const _SHADOW_DUNGEONSHADOW_DUNGEON: [number, number, number] = [2629, 5071, 0];
 const DAMIS_LAIR: [number, number, number] = [2626, 5065, 0];
 
 // --- the obelisks, the pyramid and the temple
@@ -90,7 +90,7 @@ const m: Manifest = {
         { setvar: 'waterfall_quest', to: 10, why: '^waterfall_complete' },
         { setvar: 'desertrescue', to: 30, why: '^desertrescue_complete' },
         { note: 'skills: Magic 50 for the obelisks, Firemaking 50 for the smoke torches,' },
-        { note: 'Thieving 53 for the bandits\' three-lock chest. maxOut covers all three.' },
+        { note: "Thieving 53 for the bandits' three-lock chest. maxOut covers all three." },
 
         { note: 'THE KIT DOES NOT FIT IN ONE INVENTORY. Six molten glass, six steel bars and the' },
         { note: 'lockpicks are unstackable, so handing the whole quest out at the start left' },
@@ -98,7 +98,6 @@ const m: Manifest = {
         { note: 'no room, which is a real check and not a harness problem. Each leg is handed what' },
         { note: 'it needs when it needs it.' },
         { give: 'coins', n: 1000 },
-
 
         { note: 'wiki step 1: Indiana, digging in the desert north of the bandit camp' },
         { setpos: INDIANA, why: 'to Indiana' },
@@ -210,7 +209,7 @@ const m: Manifest = {
         { has: 'fd_blood_diamond' },
 
         { note: '================ THE DIAMOND OF ICE' },
-        { note: "wiki step 10: the troll child at the ice gate. A sweet buys the way past, and" },
+        { note: 'wiki step 10: the troll child at the ice gate. A sweet buys the way past, and' },
         { note: 'giving it is what puts Kamil in his arena.' },
         { give: 'cake' },
         { setpos: TROLL_CHILD, why: 'to the troll child' },
@@ -228,7 +227,7 @@ const m: Manifest = {
 
         { note: '================ THE DIAMOND OF SMOKE' },
         { note: 'wiki step 12: the well west of Pollnivneach. The smoke needs a mask - a gasmask, a' },
-        { note: "slayer facemask or a slayer helmet - and a lap of four torches has four minutes in" },
+        { note: 'slayer facemask or a slayer helmet - and a lap of four torches has four minutes in' },
         { note: 'it before the first one burns out, which is about 510 tiles of running.' },
         { give: 'gasmask' },
         { give: 'tinderbox' },
@@ -294,7 +293,7 @@ const m: Manifest = {
         { note: '================ THE PYRAMID' },
         { note: "wiki step 19: a diamond in each of the pyramid's four obelisks, each carved with" },
         { note: 'its own element. Magic 50 to place one.' },
-        ...(OBELISKS.flatMap(([name, diamond, at], i) => [
+        ...(OBELISKS.flatMap(([name, _diamonddiamond, at], i) => [
             { setpos: [at[0], at[1] - 2, 0], why: 'to obelisk ' + (i + 1) },
             { loc: name, at, want: i === 3 ? 'pyramid has opened' : 'obelisk hums', why: 'place the diamond' }
         ]) as Step[]),

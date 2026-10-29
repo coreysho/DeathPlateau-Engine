@@ -65,13 +65,19 @@ function clearCaptors() {
 function pocket(level: number, x: number, z: number, cap = 400): number {
     const seen = new Set<string>([x + ',' + z]);
     const q: [number, number][] = [[x, z]];
-    const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const DIRS: [number, number][] = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ];
     while (q.length && seen.size < cap) {
         const [cx, cz] = q.shift()!;
         for (const [dx, dz] of DIRS) {
-            const k = (cx + dx) + ',' + (cz + dz);
+            const k = cx + dx + ',' + (cz + dz);
             if (seen.has(k) || !canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
-            seen.add(k); q.push([cx + dx, cz + dz]);
+            seen.add(k);
+            q.push([cx + dx, cz + dz]);
         }
     }
     return seen.size;
@@ -91,8 +97,7 @@ console.log('\nSEVEN LEVEL-149 MONSTERS THAT HAD NO STATS');
 // The engine default is 1 across the board, which is what all seven of these had.
 for (const name of [...CAPTORS, 'mm_padulah']) {
     const st = (NpcType.get(NpcType.getId(name)) as any).stats as number[];
-    check(`  ${name.padEnd(18)} att/def/str/hp/mage`,
-          [st[0], st[1], st[2], st[3], st[5]], [130, 130, 130, 130, 130]);
+    check(`  ${name.padEnd(18)} att/def/str/hp/mage`, [st[0], st[1], st[2], st[3], st[5]], [130, 130, 130, 130, 130]);
 }
 {
     const guard: any = NpcType.get(NpcType.getId('mm_monkey_guard'));
@@ -101,8 +106,7 @@ for (const name of [...CAPTORS, 'mm_padulah']) {
 console.log('\nAND THE BONES THEY DROP');
 {
     const DEATH_DROP = ParamType.getId('death_drop');
-    const dropOf = (npc: string) =>
-        (NpcType.get(NpcType.getId(npc)).params as Map<number, number | string>).get(DEATH_DROP);
+    const dropOf = (npc: string) => (NpcType.get(NpcType.getId(npc)).params as Map<number, number | string>).get(DEATH_DROP);
     // Small for the guards, medium for the five named and for Padulah: "unlike the named ninja
     // monkeys, the monkey guards only drop small ninja monkey bones", and a medium ninja greegree
     // is carved from the medium ones.
@@ -119,21 +123,43 @@ console.log('\nAND THE BONES THEY DROP');
 // ---------------------------------------------------------------- every silent Talk-to answers now
 console.log('\nTWENTY-TWO SILENT TALK-TOS');
 {
-    const SILENT = ['mm_aberab', 'mm_bonzara', 'mm_bunkdo', 'mm_bunkwicket', 'mm_carado',
-        'mm_denadu', 'mm_dugopul', 'mm_hafuba', 'mm_karam', 'mm_karam_talker', 'mm_lofu',
-        'mm_lumo', 'mm_murowoi', 'mm_padulah', 'mm_sleeping_monkey_guard', 'mm_trefaji',
-        'mm_uwogo', 'mm_waymottin', 'mm_solihib', 'mm_ifaba', 'mm_hamab', 'mm_tutab'];
+    const SILENT = [
+        'mm_aberab',
+        'mm_bonzara',
+        'mm_bunkdo',
+        'mm_bunkwicket',
+        'mm_carado',
+        'mm_denadu',
+        'mm_dugopul',
+        'mm_hafuba',
+        'mm_karam',
+        'mm_karam_talker',
+        'mm_lofu',
+        'mm_lumo',
+        'mm_murowoi',
+        'mm_padulah',
+        'mm_sleeping_monkey_guard',
+        'mm_trefaji',
+        'mm_uwogo',
+        'mm_waymottin',
+        'mm_solihib',
+        'mm_ifaba',
+        'mm_hamab',
+        'mm_tutab'
+    ];
     let missing = 0;
     for (const n of SILENT) {
-        if (!ScriptProvider.getByName(`[opnpc1,${n}]`)) { console.log(`  --   ${n} still says nothing`); missing++; }
+        if (!ScriptProvider.getByName(`[opnpc1,${n}]`)) {
+            console.log(`  --   ${n} still says nothing`);
+            missing++;
+        }
     }
     check(`  all ${SILENT.length} have an [opnpc1]`, missing, 0);
     // the three in the cells need the approach as well - no tile outside the bars is adjacent
     for (const n of ['mm_lumo', 'mm_bunkdo', 'mm_carado']) {
         check(`  ${n} also answers an approach`, !!ScriptProvider.getByName(`[apnpc1,${n}]`), true);
     }
-    check('  and every tile beside Lumo is inside his own cell',
-          pocket(0, 2776, 2797) < 20, true);
+    check('  and every tile beside Lumo is inside his own cell', pocket(0, 2776, 2797) < 20, true);
 }
 
 // ---------------------------------------------------------------- 2, 3 and 4. the ambush
@@ -157,7 +183,10 @@ console.log('A HUMAN WHO SPEAKS TO A MONKEY IS SET UPON, AND THE HIT IS THE ARRE
     check('  Uwogo does not talk to a human', saidInChat(i0, 'Nobody is new'), false);
 
     let most = 0;
-    for (let i = 0; i < 16; i++) { H.tick(1); most = Math.max(most, captorsNear(street[0], street[1])); }
+    for (let i = 0; i < 16; i++) {
+        H.tick(1);
+        most = Math.max(most, captorsNear(street[0], street[1]));
+    }
     check(`  something comes for you (${most} of them)`, most >= 2, true);
     check('  one named monkey and one or two guards, no more', most <= 3, true);
     check('  the cooldown is set', H.getVar(p, 'mm_guards_cooldown') > 0, true);
@@ -182,7 +211,10 @@ console.log('\nAND A SECOND MONKEY IN THE SAME MINUTE IS NOT A SECOND AMBUSH');
     const before = captorsNear(street[0], street[1]);
     talk(p, 'mm_uwogo', [], 1, true);
     let most = 0;
-    for (let i = 0; i < 10; i++) { H.tick(1); most = Math.max(most, captorsNear(street[0], street[1])); }
+    for (let i = 0; i < 10; i++) {
+        H.tick(1);
+        most = Math.max(most, captorsNear(street[0], street[1]));
+    }
     check('  nothing new comes', most, before);
     H.despawn(p);
 }

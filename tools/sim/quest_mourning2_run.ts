@@ -35,7 +35,7 @@ const TUNNEL_STAND: [number, number] = [2311, 9793];
 const TUNNEL: [number, number] = [2311, 9792];
 
 // --- the temple. m29_72, so every tile is 1856+x, 4608+z of the generated graph's own numbering
-const ENTRY: [number, number] = [1916, 4639]; // ^mt_temple_entry, where the tunnel puts you
+const _ENTRYENTRY: [number, number] = [1916, 4639]; // ^mt_temple_entry, where the tunnel puts you
 const CORPSE: [number, number] = [1925, 4642]; // mourning_dead_guard1, one of five in the east cave
 const CORPSE_STAND: [number, number, number] = [1926, 4642, 0];
 
@@ -55,10 +55,10 @@ const STAIRS_W2_DOWN: [number, number, number] = [1890, 4634, 2];
 const STAIRS_W2_UP: [number, number, number] = [1890, 4638, 1];
 const STAIRS_W1: [number, number] = [1887, 4638]; // middle floor <-> bottom
 const STAIRS_W1_DOWN: [number, number, number] = [1890, 4638, 1];
-const STAIRS_W1_UP: [number, number, number] = [1886, 4638, 0];
+const _STAIRS_W1_UPSTAIRS_W1_UP: [number, number, number] = [1886, 4638, 0];
 
 const DOOR_B: [number, number] = [1885, 4639]; // cyan; the three tiles east of it are a dead end
-const DOOR_B_W: [number, number, number] = [1886, 4638, 0];
+const _DOOR_B_WDOOR_B_W: [number, number, number] = [1886, 4638, 0];
 const DOOR_B_E: [number, number, number] = [1884, 4639, 0];
 const DOOR_C: [number, number] = [1865, 4639]; // the black door; any light opens it
 const DOOR_C_W: [number, number, number] = [1866, 4639, 0];
@@ -121,11 +121,7 @@ const INTO_THE_WEST_END: Step[] = [
     { loc: 'mourning_door_1_c', at: DOOR_C, hop: true, why: 'through the black door' }
 ];
 
-const OUT_OF_THE_WEST_END: Step[] = [
-    { go: [HOLE_STAND[0], HOLE_STAND[1]], why: 'to the hole in the west wall' },
-    { loc: 'mourning_temple_light_wall_with_hole', at: HOLE, hop: true, why: 'squeeze out' },
-    { level: 0 }
-];
+const OUT_OF_THE_WEST_END: Step[] = [{ go: [HOLE_STAND[0], HOLE_STAND[1]], why: 'to the hole in the west wall' }, { loc: 'mourning_temple_light_wall_with_hole', at: HOLE, hop: true, why: 'squeeze out' }, { level: 0 }];
 
 // from the west end back up to the top floor, for the crystal
 const UP_FROM_THE_WEST_END: Step[] = [
@@ -173,20 +169,20 @@ const m: Manifest = {
     done: 50, // ^mt_complete
     start: ARIANWYN,
     steps: [
-        { note: 'items: a chisel for the black crystal, and the twenty-one on Thorgel\'s list. The' },
+        { note: "items: a chisel for the black crystal, and the twenty-one on Thorgel's list. The" },
         { note: 'list does not fit in one inventory beside the temple kit, so it goes over the' },
         { note: 'counter in two batches - which is what the handin script is written for: it takes' },
         { note: 'whatever you are carrying and tells you how many are left.' },
         { setvar: 'mourning_quest', to: 20, why: "^mourning_complete - Mourning's End Part I" },
         { give: 'chisel' },
 
-        { note: 'wiki step 1: Arianwyn in Lletya has read the mourners\' list and knows what it is for' },
+        { note: "wiki step 1: Arianwyn in Lletya has read the mourners' list and knows what it is for" },
         { go: [ARIANWYN[0], ARIANWYN[1]], why: 'to Arianwyn' },
         { talk: 'mourning_arianwyn', want: 'sealed six hundred years ago', why: 'take the quest' },
         { stage: 10 },
         { varis: 'mourning_light_door_1_c_first_time', to: 1 },
 
-        { note: 'wiki step 2: in through the mourners\' own dig, west along the cave, and in at the' },
+        { note: "wiki step 2: in through the mourners' own dig, west along the cave, and in at the" },
         { note: 'east wall of the temple' },
         ...THE_TUNNEL_IN,
         { stage: 20 },

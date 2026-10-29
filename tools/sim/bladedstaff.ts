@@ -26,11 +26,17 @@ await H.boot();
 
 // All four: the staff of the dead, the staff of light, and the toxic staff of the dead charged
 // and uncharged - a fang on a staff of the dead takes neither its blade nor its special off it.
-const STAVES = ['staff_of_the_dead', 'staff_of_light',
-                'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
+const STAVES = ['staff_of_the_dead', 'staff_of_light', 'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
 // combat_damagetypes.constant / combat_damagestyles.constant
-const STAB = 0, SLASH = 1, CRUSH = 2, MAGIC = 4;
-const ACCURATE = 0, AGGRESSIVE = 1, DEFENSIVE = 2, MAGIC_NORMAL = 7, MAGIC_DEFENSIVE = 8;
+const STAB = 0,
+    SLASH = 1,
+    CRUSH = 2,
+    MAGIC = 4;
+const ACCURATE = 0,
+    AGGRESSIVE = 1,
+    DEFENSIVE = 2,
+    MAGIC_NORMAL = 7,
+    MAGIC_DEFENSIVE = 8;
 
 // Old School's five combat options for a bladed staff: Jab, Swipe, Fend and the two Spell boxes.
 const STYLES: { mode: number; name: string; type: number; style: number; anim: string | null }[] = [
@@ -102,15 +108,25 @@ console.log('\n== and not one of them is the old all-crush table');
     H.give(p, 'staff_of_the_dead');
     H.opheld(p, 'staff_of_the_dead', 2);
     H.tick(1);
-    const melee = [0, 1, 2].map(m => { onStyle(p, m); return H.getVar(p, 'damagetype'); });
+    const melee = [0, 1, 2].map(m => {
+        onStyle(p, m);
+        return H.getVar(p, 'damagetype');
+    });
     check('the three melee styles are stab, slash and crush', melee, [STAB, SLASH, CRUSH]);
-    check('...and not three crushes', melee.every(t => t === CRUSH), false);
+    check(
+        '...and not three crushes',
+        melee.every(t => t === CRUSH),
+        false
+    );
 
     // a plain staff is untouched and still Bash/Pound/Focus
     H.give(p, 'mystic_air_staff');
     H.opheld(p, 'mystic_air_staff', 2);
     H.tick(1);
-    const plain = [0, 1, 2].map(m => { onStyle(p, m); return H.getVar(p, 'damagetype'); });
+    const plain = [0, 1, 2].map(m => {
+        onStyle(p, m);
+        return H.getVar(p, 'damagetype');
+    });
     check('a plain staff is still all crush', plain, [CRUSH, CRUSH, CRUSH]);
 }
 
@@ -140,10 +156,8 @@ console.log('\n== the tab says Jab, Swipe and Fend, and keeps both Spell boxes')
         if (id !== -1) check(`${com} mentions ${want}`, (Component.get(id).text ?? '').includes(want), true);
     }
     // every button the tab needs a handler for. A missing one is a dead box, not an error.
-    for (const com of ['staff2a', 'staff2b', 'staff2c', 'auto_cast', 'auto_defensive',
-                       'auto_retaliate', 'specbar']) {
-        check(`combat_bladed_staff:${com} is wired`,
-            ScriptProvider.getByName(`[if_button,combat_bladed_staff:${com}]`) !== null, true);
+    for (const com of ['staff2a', 'staff2b', 'staff2c', 'auto_cast', 'auto_defensive', 'auto_retaliate', 'specbar']) {
+        check(`combat_bladed_staff:${com} is wired`, ScriptProvider.getByName(`[if_button,combat_bladed_staff:${com}]`) !== null, true);
     }
 }
 

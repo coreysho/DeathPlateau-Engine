@@ -31,7 +31,7 @@ await H.boot();
 const RANTZ: [number, number, number] = [2630, 2981, 0];
 const CAVE_IN: [number, number] = [2629, 2998]; // rantzogrecaveentrance -> 2647,9379
 const CAVE_OUT: [number, number] = [2647, 9377]; // rantzogrecaveexitl -> 2630,2997
-const CAVE_ARRIVE: [number, number, number] = [2647, 9379, 0];
+const _CAVE_ARRIVECAVE_ARRIVE: [number, number, number] = [2647, 9379, 0];
 const FYCIE: [number, number, number] = [2650, 9393, 0];
 const BUGS: [number, number, number] = [2640, 9391, 0];
 const CHEST: [number, number] = [2637, 9398];
@@ -60,7 +60,7 @@ const m: Manifest = {
     start: RANTZ,
     steps: [
         { note: 'no quest requirements. Skills: Fletching 5, Cooking 30, Ranged 30.' },
-        { note: 'items: an axe, about 100 feathers, coins for Fycie\'s flufsies and Bugs\'s' },
+        { note: "items: an axe, about 100 feathers, coins for Fycie's flufsies and Bugs's" },
         { note: 'scratchers, and the six seasonings - the family each want one of two at random,' },
         { note: 'so all six have to be carried to the spit.' },
         { give: 'rune_axe' },

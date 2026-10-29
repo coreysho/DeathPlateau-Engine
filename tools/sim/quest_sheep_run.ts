@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'SHEEP SHEARER',
     source: 'oldschool.runescape.wiki/w/Sheep_Shearer',
     stageVar: 'sheep',
-    done: 22,   // ^sheep_complete
+    done: 22, // ^sheep_complete
     start: [3190, 3273, 0],
     steps: [
         { note: 'wiki: shears, and twenty balls of wool by the end' },
@@ -30,7 +30,7 @@ const m: Manifest = {
         { useNpc: 'sheepunsheered', obj: 'shears', until: 'wool', tries: 12, why: 'shear it - it gets away one time in four' },
         { has: 'wool' },
 
-        { note: "wiki step 3: spin it on the wheel upstairs in Lumbridge Castle" },
+        { note: 'wiki step 3: spin it on the wheel upstairs in Lumbridge Castle' },
         { setpos: [3209, 3213, 1], why: 'south to the castle and up the staircase' },
         { useLoc: 'spinningwheel', at: [3209, 3212], obj: 'wool', picks: [6], why: 'the wheel, and Make 1 on the panel it opens' },
         { has: 'ball_of_wool' },

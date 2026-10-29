@@ -26,10 +26,10 @@ const BOWL: [number, number, number] = [3437, 3337, 0];
 const STONE_NATURE: [number, number] = [3439, 3336];
 const STONE_SPIRIT: [number, number] = [3441, 3336];
 const STONE_FAITH: [number, number] = [3440, 3335];
-const FILLIMAN_SPOT: [number, number] = [3440, 3336];
+const _FILLIMAN_SPOTFILLIMAN_SPOT: [number, number] = [3440, 3336];
 const LOG: [number, number] = [3439, 3348];
 const LOG_STAND: [number, number, number] = [3440, 3348, 0];
-const GROTTO_IN: [number, number, number] = [3442, 9734, 0];
+const _GROTTO_INGROTTO_IN: [number, number, number] = [3442, 9734, 0];
 const GROTTO_SEARCH: [number, number] = [3441, 9740];
 const GROTTO_EXIT: [number, number] = [3442, 9733];
 const GHAST: [number, number, number] = [3422, 3337, 0]; // the three nearest spawns, 3422-3423,3335-3336
@@ -58,12 +58,7 @@ const m: Manifest = {
         { setpos: DREZEL, why: 'to Drezel' },
         {
             talk: 'priestperiltrappedmonk2',
-            picks: [
-                'Is there anything else interesting to do around here?',
-                'Well, what is it, I may be able to help?',
-                "Yes, I'll go and look for him.",
-                "Yes, I'm sure."
-            ],
+            picks: ['Is there anything else interesting to do around here?', 'Well, what is it, I may be able to help?', "Yes, I'll go and look for him.", "Yes, I'm sure."],
             want: 'take this food to Filliman',
             why: 'he asks you to look for Filliman'
         },

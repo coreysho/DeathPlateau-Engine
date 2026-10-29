@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'GOBLIN DIPLOMACY',
     source: 'oldschool.runescape.wiki/w/Goblin_Diplomacy',
     stageVar: 'goblinquest',
-    done: 6,   // ^gobdip_complete
+    done: 6, // ^gobdip_complete
     start: [3045, 3256, 0],
     steps: [
         { note: 'wiki: three goblin mails, orange dye and blue dye. Goblin mail is a goblin drop and' },
@@ -24,7 +24,7 @@ const m: Manifest = {
         { give: 'orangedye' },
         { give: 'bluedye' },
 
-        { note: "wiki step 1: the barman in the Rusty Anchor, Port Sarim" },
+        { note: 'wiki step 1: the barman in the Rusty Anchor, Port Sarim' },
         { talk: 'rustyanchor_bartender', picks: ['Not very busy in here today'], why: 'he has heard the goblins are arguing' },
         { stage: 1 },
 

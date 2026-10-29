@@ -29,7 +29,7 @@ const TRELLIS: [number, number] = [2548, 3119]; // loc_2299 -> L1 2548,3117
 const LADDER_UP: [number, number] = [2549, 3111]; // watchladderup, L1 -> L2
 const LADDER_DOWN: [number, number] = [2549, 3111]; // watchladderdown, L2 -> L1
 const LADDER_TOP: [number, number] = [2544, 3111]; // laddertop, L1 -> L0
-const WIZARD: [number, number, number] = [2549, 3113, 2];
+const _WIZARDWIZARD: [number, number, number] = [2549, 3113, 2];
 const LEVER: [number, number] = [2543, 3115]; // watchleverup, L2
 const NAIL_BUSH: [number, number] = [2544, 3134]; // watchtowerbushnail
 
@@ -43,7 +43,7 @@ const GORAD: [number, number, number] = [2577, 3023, 0];
 const TOBAN_CHEST: [number, number] = [2575, 3031];
 
 // --- Gu'Tanoth
-const GUT_HILL: [number, number, number] = [2546, 3065, 0]; // ^gutanoth_hill
+const _GUT_HILLGUT_HILL: [number, number, number] = [2546, 3065, 0]; // ^gutanoth_hill
 const GUARD2: [number, number, number] = [2505, 3063, 0]; // the north-west gate
 const STALL: [number, number] = [2506, 3023]; // rockcounter_withcakes
 const GUARD3: [number, number, number] = [2502, 3013, 0];
@@ -67,7 +67,7 @@ const MAD: [number, number, number] = [2523, 9412, 0];
 const NIGHTSHADE: [number, number, number] = [2528, 9415, 0];
 
 // --- the ogre enclave (m40_147)
-const ENCLAVE_IN: [number, number, number] = [2588, 9410, 0]; // where the guard's nightshade lands you
+const _ENCLAVE_INENCLAVE_IN: [number, number, number] = [2588, 9410, 0]; // where the guard's nightshade lands you
 const SHAMANS: [number, number, number][] = [
     [2577, 9451, 0],
     [2582, 9437, 0],
@@ -128,7 +128,7 @@ const m: Manifest = {
         },
         { stage: 1 },
 
-        { note: 'wiki step 3: the far north-west bush holds a skavid\'s fingernails' },
+        { note: "wiki step 3: the far north-west bush holds a skavid's fingernails" },
         { loc: 'watchladderdown', at: LADDER_DOWN, why: 'down to the middle floor' },
         { loc: 'laddertop', at: LADDER_TOP, why: 'and down to the ground' },
         { level: 0 },
@@ -150,7 +150,7 @@ const m: Manifest = {
         { loc: 'watchladderdown', at: LADDER_DOWN, why: 'down' },
         { loc: 'laddertop', at: LADDER_TOP, why: 'and down' },
 
-        { note: "wiki step 5: Og, north-west of Yanille, wants his gold back off Toban and gives" },
+        { note: 'wiki step 5: Og, north-west of Yanille, wants his gold back off Toban and gives' },
         { note: 'you the key to the chest it is in' },
         { setpos: OG, why: 'to Og' },
         { talk: 'og', picks: ['I seek entrance to the city of ogres.'], want: 'key to the chest', why: 'take the job' },
@@ -162,9 +162,9 @@ const m: Manifest = {
         { note: 'step is soft: a player who ends up anywhere but beside the tree has worked.' },
         { useLoc: 'loc_2326', at: ROPE_TREE, obj: 'rope', want: 'swing across', soft: true, why: 'swing over' },
         { go: [GREW[0], GREW[1] - 1], why: "across Grew's island on foot" },
-        { talk: 'grew', picks: ['Don\'t eat me; I can help you.'], want: 'knock one of his teeth out', why: 'take the job' },
+        { talk: 'grew', picks: ["Don't eat me; I can help you."], want: 'knock one of his teeth out', why: 'take the job' },
 
-        { note: 'wiki steps 8-9: the tunnel south of Gu\'Tanoth comes out in Toban\'s camp, where' },
+        { note: "wiki steps 8-9: the tunnel south of Gu'Tanoth comes out in Toban's camp, where" },
         { note: 'Gorad is. Killing him knocks the tooth out.' },
         { setpos: [TOBAN_TUNNEL[0], TOBAN_TUNNEL[1] + 1, 0], why: 'to the tunnel to Toban' },
         { loc: 'tobancave', at: TOBAN_TUNNEL, want: 'tunnel went a long way', why: 'through the tunnel' },
@@ -172,7 +172,7 @@ const m: Manifest = {
         { fight: 'gorad', until: 'ogretooth', tries: 2, r: 12, why: 'kill Gorad' },
         { has: 'ogretooth' },
 
-        { note: 'wiki steps 10-11: Toban wants adult dragon bones, and his chest holds Og\'s gold' },
+        { note: "wiki steps 10-11: Toban wants adult dragon bones, and his chest holds Og's gold" },
         { setpos: TOBAN, why: 'to Toban' },
         {
             talk: 'toban',
@@ -211,7 +211,7 @@ const m: Manifest = {
         { loc: 'watchladderdown', at: LADDER_DOWN, why: 'down' },
         { loc: 'laddertop', at: LADDER_TOP, why: 'and down' },
 
-        { note: "wiki step 15: the north-west gate. The guard throws you down the hill the first" },
+        { note: 'wiki step 15: the north-west gate. The guard throws you down the hill the first' },
         { note: 'time whatever you are carrying, and only looks at the relic on the second.' },
         { setpos: GUARD2, why: "to Gu'Tanoth's north-west gate" },
         { talk: 'ogre_guard2', want: 'back to whence you came', why: 'he throws you down the hill' },

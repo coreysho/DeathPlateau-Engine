@@ -34,7 +34,6 @@ import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc, useOnObj } from './a1lib.js';
-import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import JavaRandom from '#/util/JavaRandom.js';
@@ -60,10 +59,39 @@ function groundObj(p: Player, objName: string, radius: number): [number, number]
 export type Step =
     | { go: [number, number] | [number, number, number]; why?: string; r?: number; exact?: boolean }
     | { talk: string; picks?: (number | string)[]; op?: number; want?: string; why?: string; tries?: number; until?: string; soft?: boolean }
-    | { loc: string; at: [number, number]; op?: number; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; exact?: boolean; tries?: number; until?: string; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number; brief?: number; hop?: boolean }
+    | {
+          loc: string;
+          at: [number, number];
+          op?: number;
+          picks?: (number | string)[];
+          want?: string;
+          why?: string;
+          soft?: boolean;
+          exact?: boolean;
+          tries?: number;
+          until?: string;
+          first?: string | [string, number, number, number][];
+          firstAt?: [number, number];
+          firstOp?: number;
+          brief?: number;
+          hop?: boolean;
+      }
     | { held: string; op?: number; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { use: [string, string]; picks?: (number | string)[]; want?: string; why?: string }
-    | { useLoc: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean; hop?: boolean; near?: number; first?: string | [string, number, number, number][]; firstAt?: [number, number]; firstOp?: number }
+    | {
+          useLoc: string;
+          at: [number, number];
+          obj: string;
+          picks?: (number | string)[];
+          want?: string;
+          why?: string;
+          soft?: boolean;
+          hop?: boolean;
+          near?: number;
+          first?: string | [string, number, number, number][];
+          firstAt?: [number, number];
+          firstOp?: number;
+      }
     | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number }
@@ -265,7 +293,6 @@ export function route(level: number, x: number, z: number, tx: number, tz: numbe
     return [];
 }
 
-
 /**
  * A LOC YOU CAN WALK ON IS USED FROM ITS OWN TILE, not from beside it. The route an interaction
  * sends goes adjacent, which is right for a door or a chest and wrong for a farming patch: rake in
@@ -282,7 +309,12 @@ function standOnIfWalkable(p: Player, name: string, x: number, z: number): void 
 }
 
 /** Walk a route, one waypoint a tick, the way a client feeds them. Returns '' or why it failed. */
-const D4: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+const D4: [number, number][] = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0]
+];
 
 export function travel(p: Player, tx: number, tz: number, level = p.level, radius = 96, tol = 2, blocked?: Set<number>): string {
     if (p.level !== level) {
@@ -351,15 +383,7 @@ function standable(level: number, x: number, z: number): boolean {
  * notionally empty, the engine refuses the move, and the step spends its prods shoving a sheep into
  * its neighbour - which is what left Sheep Herder passing about half the time.
  */
-export function prodPlan(
-    level: number,
-    sx: number,
-    sz: number,
-    box: [number, number, number, number],
-    blocked?: Set<number>,
-    reach?: Set<number>,
-    reachFirstOnly = false
-): [number, number][] | null {
+export function prodPlan(level: number, sx: number, sz: number, box: [number, number, number, number], blocked?: Set<number>, reach?: Set<number>, reachFirstOnly = false): [number, number][] | null {
     const key = (a: number, b: number) => a * 20000 + b;
     const inBox = (x: number, z: number) => x >= box[0] && x <= box[2] && z >= box[1] && z <= box[3];
     const prev = new Map<number, number>();
@@ -458,7 +482,6 @@ export function play(m: Manifest, p: Player): Result[] {
     console.log('  step list from ' + m.source);
     console.log('  progress read off ' + m.stageVar + ', complete at ' + m.done);
 
-
     // THE OPS A STEP NEEDS BEFORE IT, in order, and with as few ticks between them as possible.
     // Shilo Village's carved doors are the case this exists for: the palm trees over them have to
     // be SEARCHED to reveal them, they hide themselves again fifty ticks later, and getting inside
@@ -527,11 +550,7 @@ export function play(m: Manifest, p: Player): Result[] {
             // ok" with the player standing outside, and the bookcase step then failed as though the
             // bookcase were the problem. Where the player actually stopped is now part of the line.
             const off = Math.max(Math.abs(p.x - x), Math.abs(p.z - z));
-            hard(
-                'walk to ' + x + ',' + z + (s.why ? ' - ' + s.why : ''),
-                !err,
-                err || (off ? 'stopped ' + off + ' short, at ' + p.x + ',' + p.z : '')
-            );
+            hard('walk to ' + x + ',' + z + (s.why ? ' - ' + s.why : ''), !err, err || (off ? 'stopped ' + off + ' short, at ' + p.x + ',' + p.z : ''));
             continue;
         }
         if ('take' in s) {
@@ -598,7 +617,22 @@ export function play(m: Manifest, p: Player): Result[] {
                         drive(p, []);
                     }
                     got = H.invCount(p, s.take) > before;
-                    if (!got) why = 'clicked Take at ' + at[0] + ',' + at[1] + ' and it never arrived; the player is at ' + p.x + ',' + p.z + ', the obj is ' + (groundObj(p, s.take, 1) ? 'still there' : 'gone') + ', target=' + !!p.target + ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?');
+                    if (!got)
+                        why =
+                            'clicked Take at ' +
+                            at[0] +
+                            ',' +
+                            at[1] +
+                            ' and it never arrived; the player is at ' +
+                            p.x +
+                            ',' +
+                            p.z +
+                            ', the obj is ' +
+                            (groundObj(p, s.take, 1) ? 'still there' : 'gone') +
+                            ', target=' +
+                            !!p.target +
+                            ', free=' +
+                            (p.getInventory(InvType.INV)?.freeSlotCount ?? '?');
                 }
             }
             // A CLICK THAT IS MEANT TO FAIL. Witch's House spawns the shapeshifter the first time
@@ -670,7 +704,10 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
                 for (let t = 0; t < 20; t++) {
                     H.tick(1);
-                    const said = H.mesgs.slice(mesMarkCast).map(x => x.text).join(' ');
+                    const said = H.mesgs
+                        .slice(mesMarkCast)
+                        .map(x => x.text)
+                        .join(' ');
                     if (s.want ? said.includes(s.want) : (target.levels[3] ?? 0) < (target.baseLevels[3] ?? 0)) {
                         hit = true;
                         break;
@@ -689,7 +726,15 @@ export function play(m: Manifest, p: Player): Result[] {
                     } catch {
                         // a menu this step has no answer for is the next step's business
                     }
-                    if (H.mesgs.slice(mesMarkCast).map(x => x.text).concat(spoke).join(' ').includes(s.want)) hit = true;
+                    if (
+                        H.mesgs
+                            .slice(mesMarkCast)
+                            .map(x => x.text)
+                            .concat(spoke)
+                            .join(' ')
+                            .includes(s.want)
+                    )
+                        hit = true;
                 }
             }
             soft(whatCast, hit, hit ? '' : whyNot);
@@ -737,7 +782,14 @@ export function play(m: Manifest, p: Player): Result[] {
                 } catch {
                     // a menu this step has no answer for is the next step's business
                 }
-                if (!s.want || linesCL.concat(H.mesgs.slice(markCL).map(x => x.text)).join(' ').includes(s.want)) break;
+                if (
+                    !s.want ||
+                    linesCL
+                        .concat(H.mesgs.slice(markCL).map(x => x.text))
+                        .join(' ')
+                        .includes(s.want)
+                )
+                    break;
             }
             const saidCL = linesCL.concat(H.mesgs.slice(markCL).map(x => x.text)).join(' ');
             if (blewCL) hard(whatCL, false, blewCL);
@@ -746,13 +798,23 @@ export function play(m: Manifest, p: Player): Result[] {
                 soft(
                     whatCL,
                     false,
-                    'nothing said "' + s.want + '"' +
-                        '; at ' + p.x + ',' + p.z +
-                        ', protect=' + (p as unknown as { protect: boolean }).protect +
-                        ', delayed=' + (p as unknown as { delayed: boolean }).delayed +
-                        ', busy=' + (p as unknown as { busy: () => boolean }).busy() +
-                        ', free=' + (p.getInventory(InvType.INV)?.freeSlotCount ?? '?') +
-                        '; got: ' + saidCL.replace(/Total XP:[^|]*/g, '').slice(0, 200)
+                    'nothing said "' +
+                        s.want +
+                        '"' +
+                        '; at ' +
+                        p.x +
+                        ',' +
+                        p.z +
+                        ', protect=' +
+                        (p as unknown as { protect: boolean }).protect +
+                        ', delayed=' +
+                        (p as unknown as { delayed: boolean }).delayed +
+                        ', busy=' +
+                        (p as unknown as { busy: () => boolean }).busy() +
+                        ', free=' +
+                        (p.getInventory(InvType.INV)?.freeSlotCount ?? '?') +
+                        '; got: ' +
+                        saidCL.replace(/Total XP:[^|]*/g, '').slice(0, 200)
                 );
             else hard(whatCL, true);
             continue;
@@ -832,7 +894,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     if (!obj || keep.has(obj.id)) continue;
                     took.push(ObjType.get(obj.id).debugname ?? String(obj.id));
                     worn.delete(slot);
-                    p.invAdd(InvType.INV, obj.id, obj.count, false);
+                    p.invAdd(InvType.INV, obj.id, obj.count);
                 }
             }
             (p as unknown as { buildAppearance: (inv: number) => void }).buildAppearance?.(InvType.WORN);
@@ -1041,8 +1103,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     why = 'the sheep vanished at ' + sheep.x + ',' + sheep.z + ' without the quest noticing';
                     break;
                 }
-                const inGate =
-                    sheep.x >= s.gate[0] && sheep.x <= s.gate[2] && sheep.z >= s.gate[1] && sheep.z <= s.gate[3];
+                const inGate = sheep.x >= s.gate[0] && sheep.x <= s.gate[2] && sheep.z >= s.gate[1] && sheep.z <= s.gate[3];
                 let dx = 0;
                 let dz = 0;
                 if (inGate) {
@@ -1195,10 +1256,7 @@ export function play(m: Manifest, p: Player): Result[] {
             // difference between "nothing in there" and a click the engine threw away - so the only
             // honest test is to keep looking until the thing is out.
             const want = NpcType.getId(s.untilnpc);
-            const near = () =>
-                [...World.npcs].some(
-                    n => n && n.isActive && n.type === want && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= 40
-                );
+            const near = () => [...World.npcs].some(n => n && n.isActive && n.type === want && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= 40);
             const triesHunt = ('tries' in s ? s.tries : undefined) ?? 3;
             // With untilvar the step is the whole room, not one look: keep opening holes AND
             // killing whatever comes out until the counter says it is done. Splitting the two in
@@ -1300,7 +1358,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     if (!paused || !H.choose(p, s.press)) {
                         try {
                             H.ifButton(p, s.press);
-                        } catch (e1) {
+                        } catch {
                             // A PANEL SLOT, not a component. The crafting jewellery window's
                             // rows are one inv each and the trigger is INV_BUTTON1 on the row with
                             // last_slot set - so "the ruby ring" is rings_inv slot 3, and without
@@ -1394,14 +1452,26 @@ export function play(m: Manifest, p: Player): Result[] {
                 }
                 if (!found) H.tick(1);
             }
-            soft(s.nearnpc + ' is here' + (s.why ? ' - ' + s.why : ''), found !== '', found
+            soft(
+                s.nearnpc + ' is here' + (s.why ? ' - ' + s.why : ''),
+                found !== '',
+                found
                     ? 'at ' + found
-                    : 'nothing of that type within ' + r + ' tiles of ' + p.x + ',' + p.z + ' L' + p.level + '; what is there: ' +
-                      [...World.npcs]
-                          .filter(n => n && n.isActive && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= r)
-                          .map(n => NpcType.get(n!.type).debugname + '@' + n!.x + ',' + n!.z)
-                          .join(' ')
-                          .slice(0, 160));
+                    : 'nothing of that type within ' +
+                          r +
+                          ' tiles of ' +
+                          p.x +
+                          ',' +
+                          p.z +
+                          ' L' +
+                          p.level +
+                          '; what is there: ' +
+                          [...World.npcs]
+                              .filter(n => n && n.isActive && n.level === p.level && Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z)) <= r)
+                              .map(n => NpcType.get(n!.type).debugname + '@' + n!.x + ',' + n!.z)
+                              .join(' ')
+                              .slice(0, 160)
+            );
             continue;
         }
         if ('hasnt' in s) {
@@ -1427,13 +1497,8 @@ export function play(m: Manifest, p: Player): Result[] {
             // big ones, then the middle ones, then the small ones" is not a sequence - it is
             // whichever of the three happens to be standing in front of you.
             const types = Array.isArray(s.fight) ? s.fight : [s.fight];
-            const what2 =
-                'kill ' + types.join('/') +
-                (want ? ' until it drops ' + want : '') +
-                (wantVar ? ' until ' + wantVar + ' is ' + wantTo : '') +
-                (s.why ? ' - ' + s.why : '');
-            const got = () =>
-                wantVar ? stageOf(p, wantVar) === wantTo : want ? !!groundObj(p, want, 14) || H.invCount(p, want) > 0 : false;
+            const what2 = 'kill ' + types.join('/') + (want ? ' until it drops ' + want : '') + (wantVar ? ' until ' + wantVar + ' is ' + wantTo : '') + (s.why ? ' - ' + s.why : '');
+            const got = () => (wantVar ? stageOf(p, wantVar) === wantTo : want ? !!groundObj(p, want, 14) || H.invCount(p, want) > 0 : false);
             let t = 0;
             let died = false;
             let rounds = 0;
@@ -1515,9 +1580,7 @@ export function play(m: Manifest, p: Player): Result[] {
                         seen.push((NpcType.get(other.type).debugname ?? 'npc_' + other.type) + '@' + other.x + ',' + other.z + 'L' + other.level);
                         if (seen.length >= 8) break;
                     }
-                    missing =
-                        'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z + ' L' + p.level +
-                        (seen.length ? '; what is there: ' + seen.join(' ') : '; nothing at all is within 30 tiles');
+                    missing = 'none of ' + types.join('/') + ' is spawned anywhere near ' + p.x + ',' + p.z + ' L' + p.level + (seen.length ? '; what is there: ' + seen.join(' ') : '; nothing at all is within 30 tiles');
                     break;
                 }
                 H.maxOut(p);
@@ -1568,11 +1631,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     // Pass's three paladins have op2=Attack and no huntmode, and the player chased
                     // Sir Jerro east across the room two tiles behind him for 150 ticks without
                     // ever closing. Re-issuing the click re-queues the route from where he is now.
-                    const chasing =
-                        k > 0 &&
-                        k % 15 === 0 &&
-                        npc.levels[3] >= hp0 &&
-                        Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > 1;
+                    const chasing = k > 0 && k % 15 === 0 && npc.levels[3] >= hp0 && Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > 1;
                     // and WALK, rather than trusting the click to route: re-issuing the op queues
                     // waypoints that setInteraction then replaces, so a player who is not already
                     // beside a passive npc never takes a step. travel() is the same BFS the `go`
@@ -1615,11 +1674,7 @@ export function play(m: Manifest, p: Player): Result[] {
             const detail = ok
                 ? t + ' ticks' + (rounds > 1 ? ', ' + rounds + ' of them' : '')
                 : missing ||
-                  (wantVar
-                      ? 'killed ' + rounds + ' in ' + t + ' ticks and ' + wantVar + ' is ' + stageOf(p, wantVar)
-                      : want
-                        ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor'
-                        : t + ' ticks and it is still alive');
+                  (wantVar ? 'killed ' + rounds + ' in ' + t + ' ticks and ' + wantVar + ' is ' + stageOf(p, wantVar) : want ? 'killed ' + rounds + ' in ' + t + ' ticks and no ' + want + ' on the floor' : t + ' ticks and it is still alive');
             // AND `soft` COUNTS HERE TOO. A fight that is only insurance - "kill whatever is left
             // after shoving the thing again" - has nothing to do when the first attempt finished
             // the job, and finding nothing to hit is the expected outcome rather than a failure.
@@ -1820,7 +1875,14 @@ export function play(m: Manifest, p: Player): Result[] {
             const doneLoc = () =>
                 untilLoc
                     ? H.invCount(p, untilLoc) > 0
-                    : !wantLoc || lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ').includes(wantLoc);
+                    : !wantLoc ||
+                      lines
+                          .concat(
+                              saidSince(),
+                              H.mesgs.slice(mesMark).map(x => x.text)
+                          )
+                          .join(' ')
+                          .includes(wantLoc);
             for (let a = 1; a < triesLoc && (untilLoc || wantLoc) && !doneLoc(); a++) {
                 // LEAVE AND COME BACK, which is what the wiki tells you to do about Sir Vyvin and
                 // what the player has to do about any npc standing in the way: an npc parks itself
@@ -1965,7 +2027,12 @@ export function play(m: Manifest, p: Player): Result[] {
             // Rat Catchers' King rat passed its want three runs in a row while the handler was not
             // running at all. The loc step has always done this; useLoc never did.
             if ('want' in s && s.want) {
-                const saidUse = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' | ');
+                const saidUse = lines
+                    .concat(
+                        saidSince(),
+                        H.mesgs.slice(mesMark).map(x => x.text)
+                    )
+                    .join(' | ');
                 if (!saidUse.includes(s.want)) {
                     soft(what, false, 'nothing said "' + s.want + '"' + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
                     continue;
@@ -2006,7 +2073,12 @@ export function play(m: Manifest, p: Player): Result[] {
                 hard(what, false, threw);
                 continue;
             }
-            const joinedUse = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+            const joinedUse = lines
+                .concat(
+                    saidSince(),
+                    H.mesgs.slice(mesMark).map(x => x.text)
+                )
+                .join(' ');
             if (untilUse && H.invCount(p, untilUse) === 0) {
                 soft(what, false, 'after ' + triesUse + ' tries there is still no ' + untilUse);
             } else if (s.want && !joinedUse.includes(s.want)) {
@@ -2017,7 +2089,12 @@ export function play(m: Manifest, p: Player): Result[] {
             continue;
         }
 
-        const joined = lines.concat(saidSince(), H.mesgs.slice(mesMark).map(x => x.text)).join(' ');
+        const joined = lines
+            .concat(
+                saidSince(),
+                H.mesgs.slice(mesMark).map(x => x.text)
+            )
+            .join(' ');
         // A STEP THAT ASKED FOR NOTHING CANNOT HAVE FAILED TO GET IT. Some clicks open a
         // conversation through a QUEUE - swinging the bullroarer in Legends' Quest runs
         // [queue,bullroarer_use] a tick later, which walks Gujuo over and opens his menu - so the

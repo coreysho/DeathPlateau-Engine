@@ -20,14 +20,14 @@ const ARRG: [number, number] = [2828, 10098];
 // is a different loc and no longer there to click
 const DOOR: [number, number] = [2828, 10091];
 const DOOR_S: [number, number] = [2828, 10090];
-const DOOR_N: [number, number] = [2828, 10092];
+const _DOOR_NDOOR_N: [number, number] = [2828, 10092];
 const TENZING: [number, number, number] = [2821, 3554, 0];
 const DUNSTAN: [number, number, number] = [2919, 3574, 0];
 // Trollheim, the mouth of the ice troll cave. The loc is 3x2 and stands on its own tiles; the only
 // walkable ground beside it is to the east, which is also the chill zone.
 const CAVE_MOUTH: [number, number] = [2820, 3743];
 const CAVE_STAND: [number, number] = [2822, 3743];
-const CAVE_LANDING: [number, number, number] = [2803, 10187, 0];
+const _CAVE_LANDINGCAVE_LANDING: [number, number, number] = [2803, 10187, 0];
 const CREVASSE: [number, number] = [2772, 10233];
 const SLOPE: [number, number] = [2772, 3835]; // the top slope, down to the Trollweiss plateau
 const SLOPE_STAND: [number, number] = [2772, 3836];
@@ -38,7 +38,7 @@ const SLOPE2: [number, number] = [2785, 3771];
 const SLOPE2_STAND: [number, number] = [2785, 3772];
 const CRASH: [number, number] = [2793, 3725];
 const EXIT_TUNNEL: [number, number] = [2795, 3717];
-const CAVE2_LANDING: [number, number] = [2799, 10134];
+const _CAVE2_LANDINGCAVE2_LANDING: [number, number] = [2799, 10134];
 const CAVE2_OUT: [number, number] = [2771, 10161];
 
 const m: Manifest = {
@@ -147,7 +147,7 @@ const m: Manifest = {
         { stage: 30 },
         { has: 'trollromance_rare_flower' },
 
-        { note: "wiki step 5, the way home: the plateau is a dead end going back - Tenzing says as" },
+        { note: 'wiki step 5, the way home: the plateau is a dead end going back - Tenzing says as' },
         { note: 'much - so you ride the second slope, crash into the rocks above the tunnel, and come' },
         { note: "out on Rellekka's side of the mountain. The tunnel takes the sled off your back." },
         { go: SLOPE2_STAND, exact: true, r: 90, why: 'to the top of the second slope' },
@@ -180,7 +180,7 @@ const m: Manifest = {
         { fight: 'trollromance_arrg_attackable', untilvar: 'troll_love', to: 40, tries: 4, why: 'kill him' },
         { stage: 40 },
 
-        { note: "wiki step 7: and then you walk out. The arena is a 614-tile pocket with no way out" },
+        { note: 'wiki step 7: and then you walk out. The arena is a 614-tile pocket with no way out' },
         { note: 'on foot except its own doors, and those stay shut until Troll Stronghold is done -' },
         { note: 'which it is, since Troll Romance requires it. A player who could not open them would' },
         { note: 'be sealed in with the body.' },

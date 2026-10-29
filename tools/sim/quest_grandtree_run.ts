@@ -21,7 +21,7 @@ const ANITA: [number, number, number] = [2390, 3514, 1];
 const CUPBOARD: [number, number] = [2476, 3465];
 const CHEST: [number, number] = [2482, 3462];
 const LADDER: [number, number] = [2466, 3495]; // plane 2, climbing up spawns Charlie
-const JAIL: [number, number, number] = [2464, 3496, 3];
+const _JAILJAIL: [number, number, number] = [2464, 3496, 3];
 const CLIMBTREE: [number, number] = [2484, 3464]; // plane 1, up into the watchtower
 const PILLAR_T: [number, number] = [2485, 3467];
 const PILLAR_U: [number, number] = [2486, 3467];
@@ -69,14 +69,7 @@ const m: Manifest = {
         { setpos: NARNODE, why: 'back to the King' },
         {
             talk: 'grandtree_narnode',
-            picks: [
-                'I think so!',
-                'None of the above.',
-                'None of the above.',
-                "A man came to me with the King's seal.",
-                'I gave the man Daconia rocks.',
-                'And Daconia rocks will kill the tree!'
-            ],
+            picks: ['I think so!', 'None of the above.', 'None of the above.', "A man came to me with the King's seal.", 'I gave the man Daconia rocks.', 'And Daconia rocks will kill the tree!'],
             want: 'forged my royal seal',
             why: 'translate the scroll'
         },
@@ -133,11 +126,7 @@ const m: Manifest = {
         { setpos: FOREMAN, why: 'to the foreman' },
         {
             talk: 'grandtree_foreman',
-            picks: [
-                'Sadly his wife is no longer with us!',
-                'He loves worm holes.',
-                'Anita.'
-            ],
+            picks: ['Sadly his wife is no longer with us!', 'He loves worm holes.', 'Anita.'],
             want: 'order for the lumber',
             why: 'answer the interrogation'
         },

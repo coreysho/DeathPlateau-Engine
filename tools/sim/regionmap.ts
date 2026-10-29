@@ -67,7 +67,7 @@ for (let x = x0; x <= x1; x++) {
 const order = sizes.map((n, i) => [n, i]).sort((a, b) => b[0] - a[0]);
 const letter = new Map<number, string>();
 const ABC = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-order.forEach(([n, i], rank) => letter.set(i, rank < ABC.length ? ABC[rank] : '?'));
+order.forEach(([_nn, i], rank) => letter.set(i, rank < ABC.length ? ABC[rank] : '?'));
 console.log(`L${level}  x ${x0}..${x1}  z ${z0}..${z1}   ${sizes.length} regions, clipped to the box`);
 for (const [n, i] of order.slice(0, 14)) console.log(`  ${letter.get(i)} = ${n} tiles`);
 

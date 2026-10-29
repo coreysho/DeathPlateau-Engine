@@ -13,7 +13,8 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 
-const BX = 30 * 64, BZ = 69 * 64;
+const BX = 30 * 64,
+    BZ = 69 * 64;
 {
     const p = H.makePlayer('plunder_graph_seed', BX + 32, BZ + 32);
     p.teleport(BX + 32, BZ + 32, 0);
@@ -26,7 +27,10 @@ const rows: Row[] = [];
     const text = readFileSync('../content/maps/m30_69.jm2', 'utf8');
     let section = '';
     for (const line of text.split(/\r?\n/)) {
-        if (line.startsWith('====')) { section = line.replace(/=/g, '').trim(); continue; }
+        if (line.startsWith('====')) {
+            section = line.replace(/=/g, '').trim();
+            continue;
+        }
         if (section !== 'LOC') continue;
         const m = /^(\d+) (\d+) (\d+): (\d+) (\d+)(?: (\d+))?\s*$/.exec(line);
         if (!m || m[1] !== '0') continue;
@@ -42,8 +46,14 @@ const flood = (x: number, z: number, stop: Set<number> = new Set()): Set<number>
     const q: [number, number][] = [[x, z]];
     while (q.length) {
         const [cx, cz] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz;
             if (nx < BX || nx > BX + 63 || nz < BZ || nz > BZ + 63) continue;
             const k = key(nx, nz);
             if (seen.has(k) || stop.has(k)) continue;
@@ -60,9 +70,20 @@ const chests = rows.filter(r => r.name === 'plunder_chest').sort((a, b) => a.z -
 const roomTiles: Set<number>[] = [];
 for (const c of chests) {
     let seed: [number, number] | null = null;
-    for (const [dx, dz] of [[0, -1], [0, 1], [-1, 0], [1, 0], [0, -2], [0, 2]]) {
-        const x = c.x + dx, z = c.z + dz;
-        if (canTravel(0, x, z, 1, 0, 1, 0, CollisionType.NORMAL) || canTravel(0, x, z, 0, 1, 1, 0, CollisionType.NORMAL)) { seed = [x, z]; break; }
+    for (const [dx, dz] of [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+        [0, -2],
+        [0, 2]
+    ]) {
+        const x = c.x + dx,
+            z = c.z + dz;
+        if (canTravel(0, x, z, 1, 0, 1, 0, CollisionType.NORMAL) || canTravel(0, x, z, 0, 1, 1, 0, CollisionType.NORMAL)) {
+            seed = [x, z];
+            break;
+        }
     }
     roomTiles.push(seed ? flood(seed[0], seed[1]) : new Set());
 }
@@ -78,19 +99,26 @@ for (const s of roomTiles) for (const k of s) allRoom.add(k);
 const FAR: Record<number, [number, number]> = { 0: [-1, 0], 1: [0, 1], 2: [1, 0], 3: [0, -1] };
 
 console.log('rooms:');
-chests.forEach((c, i) => console.log(`  ${label(i)}  ${roomTiles[i].size} tiles`));
+chests.forEach((_cc, i) => console.log(`  ${label(i)}  ${roomTiles[i].size} tiles`));
 
 console.log('\ndoors:');
 for (const d of rows.filter(r => /^plunder_door_\d$/.test(r.name)).sort((a, b) => a.x - b.x || a.z - b.z)) {
     const [dx, dz] = FAR[d.angle];
     const inner = roomOfTile(d.x, d.z);
-    const outerX = d.x + dx, outerZ = d.z + dz;
+    const outerX = d.x + dx,
+        outerZ = d.z + dz;
     const corridor = allRoom.has(key(outerX, outerZ)) ? new Set([key(outerX, outerZ)]) : flood(outerX, outerZ, allRoom);
     // Which rooms does that corridor border? Any room tile orthogonally beside a corridor tile.
     const borders = new Set<number>();
     for (const k of corridor) {
-        const x = k >>> 16, z = k & 0xffff;
-        for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = k >>> 16,
+            z = k & 0xffff;
+        for (const [ax, az] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const r = roomOfTile(x + ax, z + az);
             if (r >= 0) borders.add(r);
         }
@@ -103,7 +131,14 @@ for (const d of rows.filter(r => /^plunder_door_\d$/.test(r.name)).sort((a, b) =
 
 console.log('\nspear traps (the way into a room):');
 for (const t of rows.filter(r => r.name === 'plunder_speartrap').sort((a, b) => a.x - b.x || a.z - b.z)) {
-    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => roomOfTile(t.x + dx, t.z + dz)).filter(r => r >= 0);
+    const sides = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]
+        .map(([dx, dz]) => roomOfTile(t.x + dx, t.z + dz))
+        .filter(r => r >= 0);
     console.log(`  ${t.x},${t.z} r${t.angle}: beside ${[...new Set(sides)].map(label).join(', ') || 'no room'}`);
 }
 
@@ -113,8 +148,17 @@ for (const t of rows.filter(r => r.name === 'plunder_speartrap').sort((a, b) => 
 // arrives, and the tile on the room side is where passing it puts them.
 console.log('');
 console.log('room table:');
-const roomTrap = (i: number) => rows.filter(r => r.name === 'plunder_speartrap').filter(t =>
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => roomOfTile(t.x + dx, t.z + dz) === i));
+const roomTrap = (i: number) =>
+    rows
+        .filter(r => r.name === 'plunder_speartrap')
+        .filter(t =>
+            [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ].some(([dx, dz]) => roomOfTile(t.x + dx, t.z + dz) === i)
+        );
 for (let i = 0; i < chests.length; i++) {
     const traps = roomTrap(i);
     // The trap is four 2x1 locs making one barrier across the corridor. Its footprint turns with
@@ -126,27 +170,70 @@ for (let i = 0; i < chests.length; i++) {
         const l = t.angle % 2 === 1 ? 2 : 1;
         for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < l; dz++) barrier.add(key(t.x + dx, t.z + dz));
     }
-    const outside = new Set<string>(), inside = new Set<string>();
+    const outside = new Set<string>(),
+        inside = new Set<string>();
     for (const b of barrier) {
-        const bx = b >>> 16, bz = b & 0xffff;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const x = bx + dx, z = bz + dz;
+        const bx = b >>> 16,
+            bz = b & 0xffff;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const x = bx + dx,
+                z = bz + dz;
             if (barrier.has(key(x, z))) continue;
-            const walkable = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ax, az]) => canTravel(0, x + ax, z + az, -ax, -az, 1, 0, CollisionType.NORMAL));
+            const walkable = [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ].some(([ax, az]) => canTravel(0, x + ax, z + az, -ax, -az, 1, 0, CollisionType.NORMAL));
             if (!walkable) continue;
             if (roomTiles[i].has(key(x, z))) inside.add(`${x},${z}`);
             else if (roomOfTile(x, z) < 0) outside.add(`${x},${z}`);
         }
     }
-    const mine = (re: RegExp) => rows.filter(r => re.test(r.name)).filter(r =>
-        [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([dx, dz]) => roomOfTile(r.x + dx, r.z + dz) === i));
+    const mine = (re: RegExp) =>
+        rows
+            .filter(r => re.test(r.name))
+            .filter(r =>
+                [
+                    [0, 0],
+                    [1, 0],
+                    [-1, 0],
+                    [0, 1],
+                    [0, -1],
+                    [1, 1],
+                    [-1, -1],
+                    [1, -1],
+                    [-1, 1]
+                ].some(([dx, dz]) => roomOfTile(r.x + dx, r.z + dz) === i)
+            );
     console.log(`R${i + 1} chest ${chests[i].x},${chests[i].z}`);
     console.log(`   trap locs : ${traps.map(t => `${t.x},${t.z}`).join(' ')}`);
     console.log(`   outside   : ${[...outside].join(' ')}`);
     console.log(`   inside    : ${[...inside].join(' ')}`);
-    console.log(`   sarc      : ${mine(/^plunder_sarcophagus$/).map(r => `${r.x},${r.z}`).join(' ')}`);
-    console.log(`   doors     : ${mine(/^plunder_door_\d$/).map(r => `${r.name.slice(-1)}:${r.x},${r.z}`).join(' ')}`);
-    console.log(`   exits     : ${mine(/^plunder_exit/).map(r => `${r.x},${r.z}`).join(' ')}`);
-    console.log(`   urns      : ${mine(/^plunder_urn_\d+$/).map(r => `${r.name.replace('plunder_urn_', '')}:${r.x},${r.z}`).join(' ')}`);
+    console.log(
+        `   sarc      : ${mine(/^plunder_sarcophagus$/)
+            .map(r => `${r.x},${r.z}`)
+            .join(' ')}`
+    );
+    console.log(
+        `   doors     : ${mine(/^plunder_door_\d$/)
+            .map(r => `${r.name.slice(-1)}:${r.x},${r.z}`)
+            .join(' ')}`
+    );
+    console.log(
+        `   exits     : ${mine(/^plunder_exit/)
+            .map(r => `${r.x},${r.z}`)
+            .join(' ')}`
+    );
+    console.log(
+        `   urns      : ${mine(/^plunder_urn_\d+$/)
+            .map(r => `${r.name.replace('plunder_urn_', '')}:${r.x},${r.z}`)
+            .join(' ')}`
+    );
 }
 process.exit(0);

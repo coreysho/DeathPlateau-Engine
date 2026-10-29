@@ -93,7 +93,7 @@ const m: Manifest = {
         { loc: 'plaguesewerpipe_open', at: PIPE, want: 'too secure', why: 'the grill will not budge' },
         { useLoc: 'plague_grill', at: GRILL, obj: 'rope', want: 'tie the end', why: 'tie the rope to it' },
         { stage: 9 },
-        { talk: 'edmond_bottom', want: "done the job", why: 'and the two of you pull' },
+        { talk: 'edmond_bottom', want: 'done the job', why: 'and the two of you pull' },
         { stage: 10 },
 
         { note: 'wiki step 11: the gas mask, then up the pipe' },

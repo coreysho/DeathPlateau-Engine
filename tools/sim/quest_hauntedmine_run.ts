@@ -11,7 +11,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const ZEALOT: [number, number, number] = [3444, 3259, 0];
+const _ZEALOTZEALOT: [number, number, number] = [3444, 3259, 0];
 // One of eighteen, and one of the six a player standing in the loading bay can actually reach:
 // most of them are wall decorations with their only open side facing a different chamber.
 const FUNGUS: [number, number] = [2782, 4494];
@@ -31,7 +31,7 @@ const m: Manifest = {
     quest: 'HAUNTED MINE',
     source: 'oldschool.runescape.wiki/w/Haunted_Mine/Quick_guide',
     stageVar: 'hauntedmine',
-    done: 6,   // ^hm_complete
+    done: 6, // ^hm_complete
     start: [3444, 3259, 0],
     steps: [
         { note: 'requirement: Priest in Peril, which quest_priestperil_run.ts walks in full. The' },
