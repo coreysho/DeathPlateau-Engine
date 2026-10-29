@@ -36,7 +36,7 @@ import { readFileSync, readdirSync } from 'fs';
 await H.boot();
 
 // What the content constant says, so a change there has to come through here too.
-const GFX_HEIGHT = 280;
+const GFX_HEIGHT = 370;
 
 /** model.pack id -> name, for turning a spotanim's model id back into a file on disk. */
 const MODEL_NAMES = new Map<number, string>(
