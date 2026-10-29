@@ -34,6 +34,7 @@ import * as H from './harness.js';
 import EnumType from '#/cache/config/EnumType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
+import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import Player from '#/engine/entity/Player.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
@@ -257,6 +258,97 @@ console.log('== and the growth engine is actually using it');
     clear(VEG_PATCH);
     check('and has after 10, exactly as before', grownFor(potato, VEG_PATCH, 10) >= 1, true);
     clear(VEG_PATCH);
+}
+
+// ============================================================ 8. the countdown the client reads
+//
+// farming_due_N is the world minute a patch next advances, and it is the whole reason a plugin
+// can show "ready in 28 minutes" instead of watching a patch twice and guessing. It is written
+// by ~farming_update, around the work rather than inside it, so no early return can skip it.
+//
+// WHAT WOULD GO WRONG QUIETLY. A due time is one addition away from being plausible and wrong:
+// built on the growth cycle where it should be the produce cycle, left behind when a patch
+// finishes, or written for a dead plant that is never going to move again. Every one of those
+// shows a countdown ticking down to nothing on a page the player is planning a trip around. So
+// each branch is asserted against the interval the engine itself would use, read back through
+// the same procs rather than from a number typed here.
+console.log('');
+console.log('== the due time the client counts down from');
+{
+    const HEALTHY = constant('farming_healthy');
+    const DEAD = constant('farming_dead');
+    const VEG_PATCH = constant('farming_patch_veg_patch_1');
+
+    const due = (patch: number) => runProtected('[proc,farming_get_due]', [patch])[0];
+    const time = (patch: number) => runProtected('[proc,farming_get_time]', [patch])[0];
+    const now = () => runProtected('[proc,farming_now]')[0];
+
+    const plant = (s: Seed, patch: number, ago: number, condition = HEALTHY) => {
+        runProtected('[proc,farming_set_crop_id]', [patch, ObjType.get(s.obj).params.get(P_CROP) as number]);
+        runProtected('[proc,farming_set_protected]', [patch, 1]);
+        runProtected('[proc,farming_set_state]', [patch, runProtected('[proc,farming_encode]', [s.obj, 0, condition, 0])[0]]);
+        runProtected('[proc,farming_set_time]', [patch, now() - ago]);
+        runProtected('[proc,farming_update]', [patch]);
+    };
+    const clear = (patch: number) => {
+        runProtected('[proc,farming_set_crop_id]', [patch, 0]);
+        runProtected('[proc,farming_update]', [patch]);
+    };
+
+    const potato = SEEDS.find(s => s.name === 'potato_seed')!;
+    plant(potato, VEG_PATCH, 3);
+    // Not the raw cycle and not a number typed here: the interval the engine would use, asked
+    // for through the same proc the growth engine asks.
+    check('a growing crop is due one growth cycle after it last moved', due(VEG_PATCH) - time(VEG_PATCH), growthMinutes(potato));
+    check('  which is in the future', due(VEG_PATCH) > now(), true);
+    check('  and inside one cycle of now', due(VEG_PATCH) - now() <= growthMinutes(potato), true);
+
+    // Advancing a stage must move the due time with it, or the countdown sticks at the first
+    // stage's deadline and runs negative for the rest of the plant's life. Two WHOLE cycles
+    // back, so the timestamp lands somewhere the first reading did not - replanting it one
+    // cycle earlier puts the clock back exactly where it was and the check passes on a bug.
+    const before = due(VEG_PATCH);
+    const cycle = growthMinutes(potato);
+    runProtected('[proc,farming_set_time]', [VEG_PATCH, now() - cycle * 2 - 5]);
+    runProtected('[proc,farming_update]', [VEG_PATCH]);
+    check('advancing a stage moves the due time on', due(VEG_PATCH) !== before, true);
+    check('  and it is still one cycle past the new timestamp', due(VEG_PATCH) - time(VEG_PATCH), cycle);
+    clear(VEG_PATCH);
+
+    // A plant that is finished and has no produce is never going to move again. 0 is how the
+    // client is told to show no countdown at all rather than a time in the past.
+    plant(potato, VEG_PATCH, growthMinutes(potato) * (potato.stages + 1));
+    check('a fully grown allotment with no produce is due nothing', due(VEG_PATCH), 0);
+    clear(VEG_PATCH);
+
+    plant(potato, VEG_PATCH, 3, DEAD);
+    check('and neither is a dead one', due(VEG_PATCH), 0);
+    clear(VEG_PATCH);
+
+    // A grown fruit tree DOES keep moving: its clock becomes the produce clock, which is the
+    // raw cycle rather than the reduced one. Built on the wrong one this reads half right.
+    const FRUIT_PATCH = constant('farming_patch_fruit_tree_patch_1');
+    const apple = SEEDS.find(s => s.name === 'plantpot_apple_sapling')!;
+    plant(apple, FRUIT_PATCH, growthMinutes(apple) * (apple.stages + 1));
+    // GROWN IS NOT CHECKED. ~farming_set_grown leaves a fruit tree at its unchecked state -
+    // 34 for an apple - which is outside the produce range entirely, so nothing is due from it
+    // and the engine agrees: ~farming_regrow_produce returns on the same condition. The health
+    // check is what moves it into the range, and that is a state change, not just the flag.
+    check('a grown but unchecked fruit tree is due nothing, as the engine also thinks', due(FRUIT_PATCH), 0);
+    const checkedState = ObjType.get(apple.obj).params!.get(ParamType.getId('farming_checked_state')) as number;
+    runProtected('[proc,farming_set_checked]', [FRUIT_PATCH, 1]);
+    runProtected('[proc,farming_set_state]', [FRUIT_PATCH, checkedState]);
+    runProtected('[proc,farming_update]', [FRUIT_PATCH]);
+    check('a checked one counts down to its next fruit, on the PRODUCE clock', due(FRUIT_PATCH) - time(FRUIT_PATCH), regrowMinutes(apple));
+    check('  which is the raw cycle, not the reduced growth one', regrowMinutes(apple) !== growthMinutes(apple), true);
+    clear(FRUIT_PATCH);
+
+    // And the clock the client subtracts from. Without it a due minute is a number with no
+    // reference point and every countdown is nonsense.
+    runProtected('[proc,farming_update_all]');
+    check('the world clock reaches the client', H.getVar(p, 'farming_world_minute'), now());
+    check('  and it transmits, or the client never sees it', VarPlayerType.get(VarPlayerType.getId('farming_world_minute')).transmit, true);
+    check('  as does a due time', VarPlayerType.get(VarPlayerType.getId('farming_due_0')).transmit, true);
 }
 
 console.log('');
