@@ -353,12 +353,12 @@ for (const course of COURSES) {
         const p = placed(o.loc, o.x, o.z, o.level);
         const land = C[o.land];
         let desc = 'UNPLACED';
-        let foot = '?';
+        let _foot = '?';
         let faces = '-';
         if (p) {
             const type = LocType.get(p.loc.type);
             const [fw, fl] = footprint(type, p.angle);
-            foot = `${fw}x${fl}`;
+            _foot = `${fw}x${fl}`;
             const side = approachSide(type, p.angle);
             faces = side ? DIRS[[-1, 0].toString() === side.toString() ? 0 : [0, 1].toString() === side.toString() ? 1 : [1, 0].toString() === side.toString() ? 2 : 3] : 'any';
             desc = `${p.x},${p.z} s${p.shape} a${p.angle}`;

@@ -11,7 +11,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const ZEALOT: [number, number, number] = [3444, 3259, 0];
+const _ZEALOTZEALOT: [number, number, number] = [3444, 3259, 0];
 // One of eighteen, and one of the six a player standing in the loading bay can actually reach:
 // most of them are wall decorations with their only open side facing a different chamber.
 const FUNGUS: [number, number] = [2782, 4494];

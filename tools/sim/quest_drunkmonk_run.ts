@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const OMAD: [number, number, number] = [2605, 3211, 0];
+const _OMADOMAD: [number, number, number] = [2605, 3211, 0];
 const CEDRIC: [number, number, number] = [2614, 3261, 0];
 
 const m: Manifest = {

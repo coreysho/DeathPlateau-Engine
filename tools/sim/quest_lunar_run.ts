@@ -35,7 +35,7 @@ const FURNACE: [number, number] = [2616, 3666]; // viking_furnace
 const ANVIL: [number, number, number] = [2613, 3078, 0]; // Falador - see the note at the helm
 
 // --- Pirates' Cove and the crossing
-const COVE: [number, number, number] = [2202, 3806, 0];
+const _COVECOVE: [number, number, number] = [2202, 3806, 0];
 // Bentley has moved aboard, onto the main deck beside the gangplank.
 const BENTLEY: [number, number, number] = [2224, 3800, 2];
 // --- the Lady Zay: two ladders and a gangplank to get aboard, then her own stairs
@@ -59,7 +59,7 @@ const SYM_SUPPORT: [number, number] = [2224, 3793]; // L0
 const SYM_CRATE: [number, number] = [2226, 3790]; // L0
 
 // --- Lunar Isle
-const ISLE_PIER: [number, number, number] = [2113, 3892, 0];
+const _ISLE_PIERISLE_PIER: [number, number, number] = [2113, 3892, 0];
 const ONEIRO: [number, number, number] = [2155, 3862, 0];
 const WATER_SOURCE: [number, number] = [2086, 3895]; // loc474_16643
 const BABA: [number, number, number] = [2088, 3931, 0];

@@ -36,7 +36,7 @@ const param = (objName: string, paramName: string): unknown => {
 const ATTACK = 0,
     STRENGTH = 2,
     SMITHING = 13,
-    HITPOINTS = 3,
+    _HITPOINTS = 3,
     DEFENCE = 1;
 
 // ---------------------------------------------------------------------------------------------

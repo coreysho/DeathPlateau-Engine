@@ -42,8 +42,8 @@ const BOOTS: [number, number] = [2654, 9767];
 const DARKSTAIRS_UP: [number, number] = [2638, 9763];
 const NORTHGATE: [number, number] = [2662, 9815];
 const SOUTHGATE: [number, number] = [2662, 9803];
-const BRIDGE_SOUTH: [number, number] = [2649, 9827];
-const LEVER_OBJ: [number, number] = [2637, 9819];
+const _BRIDGE_SOUTHBRIDGE_SOUTH: [number, number] = [2649, 9827];
+const _LEVER_OBJLEVER_OBJ: [number, number] = [2637, 9819];
 const BRACKET: [number, number] = [2671, 9804];
 const CHESTS: [number, number][] = [
     [2710, 9850],
@@ -57,7 +57,7 @@ const TRAPLEVER: [number, number] = [2665, 9855];
 const WARRIORDOOR: [number, number] = [2646, 9870];
 const WINELDA: [number, number, number] = [2656, 9876, 0];
 const BRICKWALL: [number, number] = [2643, 9892];
-const GUARDIAN: [number, number, number] = [2648, 9902, 0];
+const _GUARDIANGUARDIAN: [number, number, number] = [2648, 9902, 0];
 const LUCIEN_HOUSE: [number, number, number] = [3176, 3477, 0];
 const STAFF: [number, number] = [2638, 9906]; // on the table in the north-west room
 

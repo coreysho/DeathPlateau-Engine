@@ -39,7 +39,7 @@ const KAMIL_ARENA: [number, number, number] = [2852, 3732, 0];
 
 // --- smoke: the well west of Pollnivneach, four torches, a chest and Fareed's gate
 const SMOKE_WELL: [number, number] = [3310, 2962];
-const SMOKE_BOTTOM: [number, number, number] = [3206, 9379, 0];
+const _SMOKE_BOTTOMSMOKE_BOTTOM: [number, number, number] = [3206, 9379, 0];
 const TORCHES: [string, [number, number]][] = [
     ['4d_standing_torch1', [3323, 9398]],
     ['4d_standing_torch2', [3321, 9355]],
@@ -48,13 +48,13 @@ const TORCHES: [string, [number, number]][] = [
 ];
 const FIRE_CHEST: [number, number] = [3248, 9364];
 const FAREED_GATE: [number, number] = [3305, 9375];
-const FAREED_ARENA: [number, number, number] = [3309, 9375, 0];
+const _FAREED_ARENAFAREED_ARENA: [number, number, number] = [3309, 9375, 0];
 
 // --- shadow: Rasolo by the waterfall, the bandits' locked chest, the ladder you cannot see
 const RASOLO: [number, number, number] = [2535, 3433, 0];
 const BANDIT_CHEST: [number, number] = [3169, 2967];
 const SHADOW_LADDER: [number, number] = [2547, 3421];
-const SHADOW_DUNGEON: [number, number, number] = [2629, 5071, 0];
+const _SHADOW_DUNGEONSHADOW_DUNGEON: [number, number, number] = [2629, 5071, 0];
 const DAMIS_LAIR: [number, number, number] = [2626, 5065, 0];
 
 // --- the obelisks, the pyramid and the temple
@@ -293,7 +293,7 @@ const m: Manifest = {
         { note: '================ THE PYRAMID' },
         { note: "wiki step 19: a diamond in each of the pyramid's four obelisks, each carved with" },
         { note: 'its own element. Magic 50 to place one.' },
-        ...(OBELISKS.flatMap(([name, diamond, at], i) => [
+        ...(OBELISKS.flatMap(([name, _diamonddiamond, at], i) => [
             { setpos: [at[0], at[1] - 2, 0], why: 'to obelisk ' + (i + 1) },
             { loc: name, at, want: i === 3 ? 'pyramid has opened' : 'obelisk hums', why: 'place the diamond' }
         ]) as Step[]),

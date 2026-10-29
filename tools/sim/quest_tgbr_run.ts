@@ -20,18 +20,18 @@ await H.boot();
 const HARMLESS: [number, number, number] = [3670, 2979, 0]; // beside Brother Tranquility
 const MILL: [number, number, number] = [3786, 2824, 0]; // inside the Harmony windmill's ring
 const STATUE: [number, number, number] = [3794, 2844, 0]; // west of the statue
-const CHAMBER_W: [number, number, number] = [3786, 9254, 0];
-const TUNNEL_W: [number, number, number] = [3789, 9254, 1];
-const CHAMBER_E: [number, number, number] = [3829, 9254, 0];
-const LADDER_TOP: [number, number, number] = [3831, 2854, 0];
-const PEEP: [number, number, number] = [3804, 2845, 0]; // outside the gate, at the peephole
+const _CHAMBER_WCHAMBER_W: [number, number, number] = [3786, 9254, 0];
+const _TUNNEL_WTUNNEL_W: [number, number, number] = [3789, 9254, 1];
+const _CHAMBER_ECHAMBER_E: [number, number, number] = [3829, 9254, 0];
+const _LADDER_TOPLADDER_TOP: [number, number, number] = [3831, 2854, 0];
+const _PEEPPEEP: [number, number, number] = [3804, 2845, 0]; // outside the gate, at the peephole
 const BOOKCASE: [number, number, number] = [3049, 3484, 0]; // Edgeville monastery, by the shelf
 const JAIL: [number, number, number] = [3549, 3554, 2]; // the cell at the top of the castle
 const CRATE: [number, number, number] = [3548, 3555, 2];
 const CANIFIS: [number, number, number] = [3507, 3495, 0]; // Rufus's counter
 const CELLAR: [number, number, number] = [3786, 9224, 0];
 const LOCKER: [number, number, number] = [3792, 2873, 0]; // on the sand beside the ship's locker
-const DECK: [number, number, number] = [3799, 2873, 1]; // the deck above, after the bridge flag
+const _DECKDECK: [number, number, number] = [3799, 2873, 1]; // the deck above, after the bridge flag
 const GATE: [number, number, number] = [3804, 2844, 0]; // outside the monastery gate
 const COURTYARD: [number, number, number] = [3808, 2843, 0]; // inside the gate
 

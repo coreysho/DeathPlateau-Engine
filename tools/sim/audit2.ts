@@ -44,7 +44,7 @@ const check = (what: string, got: unknown, want: unknown) => {
 
 // ------------------------------------------------------------------------------------ helpers
 const blocked = (l: number, x: number, z: number) => isFlagged(x, z, l, CollisionFlag.WALK_BLOCKED);
-const at = (p: Player) => [p.x, p.z, p.level];
+const _atat = (p: Player) => [p.x, p.z, p.level];
 const standing = (p: Player) => !blocked(p.level, p.x, p.z);
 
 function v(p: Player, name: string): number {
@@ -238,7 +238,7 @@ const run = (name: string) => !only || name.toLowerCase().includes(only.toLowerC
 
 // Quest-stage constants, read rather than typed: a digit copied into a sim is a line that fails
 // for the wrong reason the next time somebody renumbers a quest.
-const QUEST: Record<string, number> = (() => {
+const _QUESTQUEST: Record<string, number> = (() => {
     const out: Record<string, number> = {};
     const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
     for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);

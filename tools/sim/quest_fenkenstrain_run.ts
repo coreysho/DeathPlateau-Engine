@@ -17,7 +17,7 @@ await H.boot();
 
 const SIGNPOST: [number, number] = [3494, 3490];
 const PUB: [number, number, number] = [3493, 3473, 0];
-const ROAVAR: [number, number] = [3493, 3472];
+const _ROAVARROAVAR: [number, number] = [3493, 3472];
 const DOCTOR: [number, number, number] = [3551, 3551, 0];
 const BOOKCASE_W: [number, number] = [3542, 3558];
 const BOOKCASE_E: [number, number] = [3555, 3558];

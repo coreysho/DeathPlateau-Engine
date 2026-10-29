@@ -30,12 +30,12 @@ H.tick(1);
 
 const rocks = () =>
     [...World.npcs]
-        .filter(n => n && n.isActive && n.type === want && n.level === 0)
+        .filter((n): n is NonNullable<typeof n> => !!n && n.isActive && n.type === want && n.level === 0)
         .map(n => `${n.x},${n.z}`)
         .join(' ') || 'none';
 const closeWanderer = () => {
     const n = [...World.npcs]
-        .filter(x => x && x.isActive && x.type === wander && x.level === 0)
+        .filter((x): x is NonNullable<typeof x> => !!x && x.isActive && x.type === wander && x.level === 0)
         .sort((a, b) => Math.max(Math.abs(a.x - p.x), Math.abs(a.z - p.z)) - Math.max(Math.abs(b.x - p.x), Math.abs(b.z - p.z)))[0];
     return n ? `${n.x},${n.z} d${Math.max(Math.abs(n.x - p.x), Math.abs(n.z - p.z))}` : 'none';
 };
@@ -60,14 +60,14 @@ for (const [fx, fz] of [
     for (let t = 0; t < 24; t++) {
         H.tick(1);
         if ([2, 5, 10, 16, 24].includes(t + 1)) {
-            console.log(
-                `  t${String(t + 1).padStart(2)}  at ${p.x},${p.z}  script ${p.activeScript ? p.activeScript.execution : '-'}  ` +
-                    `delayed ${p.delayed ? 1 : 0}  target ${p.target ? 'yes' : 'no'}  rocks [${rocks()}]`
-            );
+            console.log(`  t${String(t + 1).padStart(2)}  at ${p.x},${p.z}  script ${p.activeScript ? p.activeScript.execution : '-'}  ` + `delayed ${p.delayed ? 1 : 0}  target ${p.target ? 'yes' : 'no'}  rocks [${rocks()}]`);
         }
     }
     const said = H.mesgs.slice(mark).map(x => x.text);
-    const iface = H.ifaces.slice(imark).filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map((i: any) => i.text);
+    const iface = H.ifaces
+        .slice(imark)
+        .filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map((i: any) => i.text);
     console.log('  said [' + said.join(' | ') + ']  iface [' + iface.slice(0, 6).join(' | ') + ']');
 }
 process.exit(0);

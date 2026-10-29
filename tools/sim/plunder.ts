@@ -589,7 +589,7 @@ console.log('== the sceptre ends the run, and the mummy fills it again');
     check('the run is over', H.getVarBit(p, 'plunder_room'), 0);
 
     // Three charges, spent one at a time, and each one takes you back to the lobby.
-    for (const [held, next, left] of [
+    for (const [held, next, _leftleft] of [
         ['pharaohs_sceptre', 'pharaohs_sceptre_2', 2],
         ['pharaohs_sceptre_2', 'pharaohs_sceptre_1', 1],
         ['pharaohs_sceptre_1', 'pharaohs_sceptre_0', 0]

@@ -70,7 +70,7 @@ for (const nm of [
 ]) {
     try {
         console.log(`  type ${nm.padEnd(40)} = ${NpcType.getId(nm)}`);
-    } catch (e) {
+    } catch {
         console.log(`  type ${nm} MISSING`);
     }
 }

@@ -99,7 +99,7 @@ for (const s of roomTiles) for (const k of s) allRoom.add(k);
 const FAR: Record<number, [number, number]> = { 0: [-1, 0], 1: [0, 1], 2: [1, 0], 3: [0, -1] };
 
 console.log('rooms:');
-chests.forEach((c, i) => console.log(`  ${label(i)}  ${roomTiles[i].size} tiles`));
+chests.forEach((_cc, i) => console.log(`  ${label(i)}  ${roomTiles[i].size} tiles`));
 
 console.log('\ndoors:');
 for (const d of rows.filter(r => /^plunder_door_\d$/.test(r.name)).sort((a, b) => a.x - b.x || a.z - b.z)) {

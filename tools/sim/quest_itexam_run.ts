@@ -57,11 +57,11 @@ const WINCH_N: [number, number] = [3370, 3428]; // digwinch2 - the private dig
 const PERMIT_WORKMAN: [number, number, number] = [3350, 3401, 0]; // not the one by a winch
 
 // --- underground, before the blast (m52_153)
-const CAVE_E: [number, number, number] = [3370, 9828, 0]; // where the western winch drops you
+const _CAVE_ECAVE_E: [number, number, number] = [3370, 9828, 0]; // where the western winch drops you
 const ARCENIA: [number, number] = [3369, 9835];
 const BRICKS: [number, number] = [3379, 9825];
 const LADDER_E: [number, number] = [3370, 9827]; // winchladder2, up to 3354,3417
-const CAVE_W: [number, number, number] = [3353, 9818, 0]; // where the private winch drops you
+const _CAVE_WCAVE_W: [number, number, number] = [3353, 9818, 0]; // where the private winch drops you
 const WORKMAN2: [number, number, number] = [3348, 9819, 0];
 const LADDER_W: [number, number] = [3353, 9817]; // winchladder1, up to 3370,3427
 

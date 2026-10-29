@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 const ISLWYN: [number, number, number] = [2294, 3145, 0];
-const CHALICE: [number, number] = [2603, 9910];
+const _CHALICECHALICE: [number, number] = [2603, 9910];
 
 const m: Manifest = {
     quest: 'ROVING ELVES',

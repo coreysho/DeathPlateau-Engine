@@ -34,7 +34,6 @@ import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 import { findNpc, drive, useOn, useOnNpc, useOnObj } from './a1lib.js';
-import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import JavaRandom from '#/util/JavaRandom.js';
@@ -895,7 +894,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     if (!obj || keep.has(obj.id)) continue;
                     took.push(ObjType.get(obj.id).debugname ?? String(obj.id));
                     worn.delete(slot);
-                    p.invAdd(InvType.INV, obj.id, obj.count, false);
+                    p.invAdd(InvType.INV, obj.id, obj.count);
                 }
             }
             (p as unknown as { buildAppearance: (inv: number) => void }).buildAppearance?.(InvType.WORN);
@@ -1359,7 +1358,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     if (!paused || !H.choose(p, s.press)) {
                         try {
                             H.ifButton(p, s.press);
-                        } catch (e1) {
+                        } catch {
                             // A PANEL SLOT, not a component. The crafting jewellery window's
                             // rows are one inv each and the trigger is INV_BUTTON1 on the row with
                             // last_slot set - so "the ruby ring" is rings_inv slot 3, and without

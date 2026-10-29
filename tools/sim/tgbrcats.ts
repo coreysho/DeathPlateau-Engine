@@ -25,7 +25,11 @@ let bad = 0;
 function check(what: string, got: unknown, want?: unknown) {
     const pass = want === undefined ? got === true : JSON.stringify(got) === JSON.stringify(want);
     console.log(`  ${pass ? 'ok  ' : 'FAIL'}   ${what}: ${JSON.stringify(got)}${pass || want === undefined ? '' : '   (want ' + JSON.stringify(want) + ')'}`);
-    pass ? ok++ : bad++;
+    if (pass) {
+        ok++;
+    } else {
+        bad++;
+    }
 }
 
 const p: any = H.makePlayer('cats', 3787, 2826);

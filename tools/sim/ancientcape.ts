@@ -172,9 +172,9 @@ for (const [, ancient] of PAIRS) {
 // cape, so a cosmetic that forgot which cape it was made from would take the spell with it.
 console.log('== each one still answers its own god, one step and two');
 {
-    const GOD = { saradomin: 1, guthix: 2, zamorak: 3 } as const; // mage_arena_2.constant order
+    const _GOD = { saradomin: 1, guthix: 2, zamorak: 3 } as const; // mage_arena_2.constant order
     for (const [base, ancient] of PAIRS) {
-        const god = base.split('_')[1] as keyof typeof GOD;
+        const god = base.split('_')[1] as keyof typeof _GOD;
         const p = player(`god_${ancient}`);
         H.give(p, ancient);
         H.opheld(p, ancient, 2);

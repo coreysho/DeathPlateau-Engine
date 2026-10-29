@@ -35,7 +35,7 @@ const TUNNEL_STAND: [number, number] = [2311, 9793];
 const TUNNEL: [number, number] = [2311, 9792];
 
 // --- the temple. m29_72, so every tile is 1856+x, 4608+z of the generated graph's own numbering
-const ENTRY: [number, number] = [1916, 4639]; // ^mt_temple_entry, where the tunnel puts you
+const _ENTRYENTRY: [number, number] = [1916, 4639]; // ^mt_temple_entry, where the tunnel puts you
 const CORPSE: [number, number] = [1925, 4642]; // mourning_dead_guard1, one of five in the east cave
 const CORPSE_STAND: [number, number, number] = [1926, 4642, 0];
 
@@ -55,10 +55,10 @@ const STAIRS_W2_DOWN: [number, number, number] = [1890, 4634, 2];
 const STAIRS_W2_UP: [number, number, number] = [1890, 4638, 1];
 const STAIRS_W1: [number, number] = [1887, 4638]; // middle floor <-> bottom
 const STAIRS_W1_DOWN: [number, number, number] = [1890, 4638, 1];
-const STAIRS_W1_UP: [number, number, number] = [1886, 4638, 0];
+const _STAIRS_W1_UPSTAIRS_W1_UP: [number, number, number] = [1886, 4638, 0];
 
 const DOOR_B: [number, number] = [1885, 4639]; // cyan; the three tiles east of it are a dead end
-const DOOR_B_W: [number, number, number] = [1886, 4638, 0];
+const _DOOR_B_WDOOR_B_W: [number, number, number] = [1886, 4638, 0];
 const DOOR_B_E: [number, number, number] = [1884, 4639, 0];
 const DOOR_C: [number, number] = [1865, 4639]; // the black door; any light opens it
 const DOOR_C_W: [number, number, number] = [1866, 4639, 0];

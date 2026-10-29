@@ -33,7 +33,7 @@ const BRIDGE_W: [number, number] = [2596, 3608]; // horror_broken_bridge_left_sp
 const DOOR: [number, number] = [2509, 3636]; // horror_lighthouse_doorway, real lighthouse
 
 // --- the attacked copy, m38_71 (the real lighthouse's tiles minus 64 x, plus 960 z)
-const C_ARRIVE: [number, number, number] = [2445, 4596, 0];
+const _C_ARRIVEC_ARRIVE: [number, number, number] = [2445, 4596, 0];
 const C_STAIRS_BASE: [number, number] = [2442, 4600];
 const C_STAIRS_MID: [number, number] = [2442, 4600]; // same tile, plane 1
 const C_STAIRS_TOP: [number, number] = [2442, 4601];
@@ -42,7 +42,7 @@ const C_COG: [number, number] = [2443, 4599];
 const C_LADDER: [number, number] = [2445, 4604];
 
 // --- the basement and Jossik's cave, m39_72
-const BASEMENT: [number, number, number] = [2519, 4619, 1];
+const _BASEMENTBASEMENT: [number, number, number] = [2519, 4619, 1];
 const WALL_PANEL: [number, number] = [2514, 4627]; // horror_mid_left_door, studied and used on
 const WALL_DOOR: [number, number] = [2516, 4627]; // horror_far_right_door, the hinged one
 const LADDER_DOWN: [number, number] = [2515, 4630]; // horror_ladder_top2
@@ -50,9 +50,9 @@ const JOSSIK: [number, number, number] = [2518, 4633, 0];
 const LADDER_UP: [number, number] = [2519, 4618]; // horror_ladder_base, back to the lighthouse
 
 // --- the real lighthouse again, after she is dead
-const R_ARRIVE: [number, number, number] = [2510, 3644, 0];
+const _R_ARRIVER_ARRIVE: [number, number, number] = [2510, 3644, 0];
 const R_STAIRS_BASE: [number, number] = [2506, 3640];
-const R_JOSSIK: [number, number, number] = [2509, 3639, 1];
+const _R_JOSSIKR_JOSSIK: [number, number, number] = [2509, 3639, 1];
 
 const MOTHER = ['horror_dagganoth_air', 'horror_dagganoth_water', 'horror_dagganoth_melee', 'horror_dagganoth_earth', 'horror_dagganoth_fire', 'horror_dagganoth_ranged'];
 

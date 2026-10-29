@@ -223,7 +223,7 @@ console.log(`        said: ${said.join(' | ').slice(0, 150)}`);
 check('route and escort are set, and you are in the vestibule', [H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort'), p.x, p.z], [ROUTE, 1, 2052, 5044]);
 
 const legs = ROUTE === 1 ? 5 : ROUTE === 2 ? 4 : 3;
-const roomOf = (x: number, z: number) => ROOMS.find(r => Math.abs(r[1][0] - x) <= 3 && Math.abs(r[1][1] - z) <= 3)?.[0] ?? 0;
+const _roomOfroomOf = (x: number, z: number) => ROOMS.find(r => Math.abs(r[1][0] - x) <= 3 && Math.abs(r[1][1] - z) <= 3)?.[0] ?? 0;
 
 // A ROOM CHANGE IS NOT DONE WHEN THE VARBIT CHANGES. trek_next_room writes trek_room, then
 // mes/p_delay(2)/p_teleport, then places the escort and starts the event - so a probe that stops
@@ -397,7 +397,7 @@ for (let leg = 1; leg <= legs; leg++) {
     }
     if (leg < legs) {
         const now = settle();
-        check('Continue-trek took you to the next room', [H.getVarBit(p, 'trek_leg'), now !== 0, now !== room || legs === 1], [legBefore + 1, true, true]);
+        check('Continue-trek took you to the next room', [H.getVarBit(p, 'trek_leg'), now !== 0, now !== room], [legBefore + 1, true, true]);
     } else {
         for (let i = 0; i < 40 && H.getVarBit(p, 'trek_route') !== 0; i++) H.tick(1);
         p.closeModal();

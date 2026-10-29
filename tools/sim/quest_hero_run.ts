@@ -20,7 +20,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const ACHIETTIES: [number, number, number] = [2904, 3510, 0];
+const _ACHIETTIESACHIETTIES: [number, number, number] = [2904, 3510, 0];
 const FIRE: [number, number] = [2890, 9768];
 
 const m: Manifest = {

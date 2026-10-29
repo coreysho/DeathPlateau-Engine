@@ -29,7 +29,7 @@ const TRELLIS: [number, number] = [2548, 3119]; // loc_2299 -> L1 2548,3117
 const LADDER_UP: [number, number] = [2549, 3111]; // watchladderup, L1 -> L2
 const LADDER_DOWN: [number, number] = [2549, 3111]; // watchladderdown, L2 -> L1
 const LADDER_TOP: [number, number] = [2544, 3111]; // laddertop, L1 -> L0
-const WIZARD: [number, number, number] = [2549, 3113, 2];
+const _WIZARDWIZARD: [number, number, number] = [2549, 3113, 2];
 const LEVER: [number, number] = [2543, 3115]; // watchleverup, L2
 const NAIL_BUSH: [number, number] = [2544, 3134]; // watchtowerbushnail
 
@@ -43,7 +43,7 @@ const GORAD: [number, number, number] = [2577, 3023, 0];
 const TOBAN_CHEST: [number, number] = [2575, 3031];
 
 // --- Gu'Tanoth
-const GUT_HILL: [number, number, number] = [2546, 3065, 0]; // ^gutanoth_hill
+const _GUT_HILLGUT_HILL: [number, number, number] = [2546, 3065, 0]; // ^gutanoth_hill
 const GUARD2: [number, number, number] = [2505, 3063, 0]; // the north-west gate
 const STALL: [number, number] = [2506, 3023]; // rockcounter_withcakes
 const GUARD3: [number, number, number] = [2502, 3013, 0];
@@ -67,7 +67,7 @@ const MAD: [number, number, number] = [2523, 9412, 0];
 const NIGHTSHADE: [number, number, number] = [2528, 9415, 0];
 
 // --- the ogre enclave (m40_147)
-const ENCLAVE_IN: [number, number, number] = [2588, 9410, 0]; // where the guard's nightshade lands you
+const _ENCLAVE_INENCLAVE_IN: [number, number, number] = [2588, 9410, 0]; // where the guard's nightshade lands you
 const SHAMANS: [number, number, number][] = [
     [2577, 9451, 0],
     [2582, 9437, 0],

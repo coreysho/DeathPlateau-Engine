@@ -11,7 +11,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const REEN_ALKHARID: [number, number, number] = [3272, 3158, 0];
+const _REEN_ALKHARIDREEN_ALKHARID: [number, number, number] = [3272, 3158, 0];
 const DAVE_CELLAR: [number, number, number] = [3080, 9890, 0];
 const UZER_PRIESTS: [number, number, number] = [3483, 3092, 0];
 const GOLEM: [number, number, number] = [3487, 3090, 0];

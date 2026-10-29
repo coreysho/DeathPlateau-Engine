@@ -13,8 +13,8 @@ await H.boot();
 
 // --- the Legends' Guild, east of Ardougne
 const GUARD: [number, number, number] = [2724, 3351, 0];
-const GUILD_GATE: [number, number] = [2728, 3349];
-const GUILD_DOOR: [number, number] = [2728, 3373];
+const _GUILD_GATEGUILD_GATE: [number, number] = [2728, 3349];
+const _GUILD_DOORGUILD_DOOR: [number, number] = [2728, 3373];
 const RADIMUS: [number, number, number] = [2726, 3367, 0];
 const STUDY_DOOR: [number, number] = [2726, 3368];
 const CUPBOARD: [number, number] = [2724, 3370];
@@ -32,7 +32,7 @@ const TOTEM: [number, number] = [2793, 2908]; // lg_ord_totem_pole
 const SHAMAN_ROCKS: [number, number] = [2781, 2936]; // lgshamancaverock1, the mossy rock
 
 // --- Ungadulu's cave, under the jungle
-const UNGADULU: [number, number, number] = [2791, 9328, 0];
+const _UNGADULUUNGADULU: [number, number, number] = [2791, 9328, 0];
 const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the west face of the octagram
 // and the plain west wall two tiles north of it, which is the one to cross. ~legends_fire_wall_walk
 // reads the player's own coord against the loc's to decide which side to put you on, and for a
@@ -41,7 +41,7 @@ const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the w
 // z throws you out onto the ring instead, where the shaman is out of spell range.
 const FIREWALL_CROSS: [number, number] = [2788, 9331]; // lqfirewall_straight, angle east
 const FIREWALL_CROSS_OUT: [number, number] = [2787, 9331]; // stand here to cross in
-const FIREWALL_CROSS_IN: [number, number] = [2789, 9331]; // and here to cross back
+const _FIREWALL_CROSS_INFIREWALL_CROSS_IN: [number, number] = [2789, 9331]; // and here to cross back
 const CAVE_EXIT: [number, number] = [2772, 9342]; // shaman_entrance_cavel
 const REEDS: [number, number] = [2836, 2916];
 const POOL: [number, number] = [2837, 2915]; // sacred_water
@@ -68,7 +68,7 @@ const WINCH: [number, number] = [2759, 9329]; // lg_winchdown_norope, over the h
 // --- the Viyeldi caves, at the bottom of the hole. The rope drops you on an eleven-tile ledge and
 //     the cave proper is 1458 tiles away across six climbs, every one of them a teleport: walkgraph
 //     finds 1032 regions down here and six edges, none of which are these.
-const VIYELDI_IN: [number, number] = [2377, 4712]; // where the rope lands you
+const _VIYELDI_INVIYELDI_IN: [number, number] = [2377, 4712]; // where the rope lands you
 const CLIMBS: [string, [number, number], [number, number], string][] = [
     ['rocky_ledge', [2377, 4717], [2378, 4717], 'nothing more exciting'],
     ['rocky_ledge1', [2377, 4728], [2377, 4727], 'nothing more exciting'],
@@ -90,7 +90,7 @@ const CLIMBS_BACK: [string, [number, number], [number, number]][] = [
     ['rocky_ledge1', [2377, 4728], [2378, 4728]],
     ['rocky_ledge', [2377, 4717], [2376, 4717]]
 ];
-const VIYELDI_HAT: [number, number] = [2379, 4712]; // the only viyeldihat on the map
+const _VIYELDI_HATVIYELDI_HAT: [number, number] = [2379, 4712]; // the only viyeldihat on the map
 const FURNACE: [number, number] = [2426, 4726]; // furnace_legendsquest
 const DRAGONS_EYE: [number, number] = [2410, 4715]; // dragons_eye_rock
 const HEART_RECESS: [number, number] = [2422, 4691]; // heart_recess_empty

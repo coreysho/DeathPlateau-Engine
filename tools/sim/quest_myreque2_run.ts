@@ -13,7 +13,7 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 // The Myreque are in the Hollows until they move into the inn cellar.
-const HOLLOWS_VELIAF: [number, number, number] = [3507, 9841, 0];
+const _HOLLOWS_VELIAFHOLLOWS_VELIAF: [number, number, number] = [3507, 9841, 0];
 const GATE: [number, number] = [3484, 3244];
 const FOOD_CHEST: [number, number] = [3483, 3246];
 const LEADER: [number, number, number] = [3491, 3241, 0];

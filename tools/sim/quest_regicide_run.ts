@@ -19,9 +19,9 @@ await H.boot();
 const LATHAS: [number, number, number] = [2577, 3293, 1];
 const WELL: [number, number] = [2373, 9718];
 const TEMPLE_EXIT: [number, number] = [2312, 9623];
-const TEMPLE_WELL: [number, number] = [2341, 9622];
-const CAVE_MOUTH: [number, number, number] = [2313, 3214, 0];
-const TEMPLE_ENTRANCE: [number, number] = [2313, 3215];
+const _TEMPLE_WELLTEMPLE_WELL: [number, number] = [2341, 9622];
+const _CAVE_MOUTHCAVE_MOUTH: [number, number, number] = [2313, 3214, 0];
+const _TEMPLE_ENTRANCETEMPLE_ENTRANCE: [number, number] = [2313, 3215];
 const IORWERTH: [number, number, number] = [2203, 3251, 0];
 const LOOM: [number, number] = [2198, 3249];
 const TRACKER: [number, number, number] = [2258, 3147, 0];
@@ -33,7 +33,7 @@ const STILL: [number, number] = [2927, 3212];
 const CHEMIST: [number, number, number] = [2934, 3207, 0];
 const CATAPULT: [number, number] = [2185, 3183];
 const CATAPULT_STAND: [number, number, number] = [2187, 3183, 0]; // ^regicide_catapult_stand
-const LAZY_GUARD: [number, number, number] = [2181, 3182, 0];
+const _LAZY_GUARDLAZY_GUARD: [number, number, number] = [2181, 3182, 0];
 
 // The still, driven the way the guides describe it: tar valve Full until the pressure is in the
 // green band, release valve Half to hold it there, then coal on the burner and nothing else

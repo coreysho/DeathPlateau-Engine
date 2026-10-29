@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const GERTRUDE: [number, number, number] = [3152, 3409, 0];
+const _GERTRUDEGERTRUDE: [number, number, number] = [3152, 3409, 0];
 const PHINGSPET: [number, number, number] = [3249, 9869, 0];
 const GRIMESQUIT: [number, number, number] = [3239, 9868, 0];
 const JIMMY: [number, number, number] = [2563, 3321, 0];

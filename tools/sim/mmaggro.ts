@@ -16,7 +16,6 @@
 //
 //   npx tsx tools/sim/mmaggro.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';

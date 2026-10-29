@@ -22,7 +22,7 @@ const VALVE5: [number, number] = [2609, 3243];
 const CAVE: [number, number] = [2585, 3233];
 const RAFT: [number, number] = [2567, 9679];
 const ALOMONE: [number, number, number] = [2610, 9671, 0];
-const STAIRS: [number, number] = [2570, 9683];
+const _STAIRSSTAIRS: [number, number] = [2570, 9683];
 const UPSTAIRS: [number, number, number] = [2572, 3267, 1];
 const CUPBOARD: [number, number] = [2573, 3267];
 

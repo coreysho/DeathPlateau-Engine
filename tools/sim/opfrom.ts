@@ -34,7 +34,7 @@ for (let dx = -2; dx <= 2; dx++) {
         let sent = false;
         try {
             sent = H.opLoc(p, x, z, nm, op);
-        } catch (e) {
+        } catch {
             continue;
         }
         if (!sent) continue;

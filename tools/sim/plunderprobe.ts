@@ -91,7 +91,7 @@ console.log(`\n${chests.length} Grand Gold Chests -> ${chests.length} rooms\n`);
 
 const roomOf = new Map<string, number>();
 const floods: Set<number>[] = [];
-chests.forEach((c, i) => {
+chests.forEach((c, _ii) => {
     // The chest is 3x1 and blocks, so flood from the tile in front of it.
     let seed: [number, number] | null = null;
     for (const [dx, dz] of [
