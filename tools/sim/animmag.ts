@@ -460,13 +460,21 @@ const fightNpc = (p: Player, npc: Npc, ticks: number) => {
         if (!p.target && !p.delayed) H.attackNpc(p, npc);
     }
 };
+/**
+ * Fire for a fixed stretch and report how many arrows left the quiver.
+ *
+ * TWO HUNDRED TICKS WAS NOT A SAMPLE. It is about twenty-five shots, and an accumulator is expected
+ * to spend seven of them - so the "far fewer" comparison below came down to a handful of coin
+ * flips and failed about one run in five. A thousand ticks is around a hundred and twenty shots,
+ * which settles it.
+ */
 const quiverLeft = (device: string | null) => {
     const s = A.player(`archer_${device ?? 'none'}`, 3200, 3200);
     H.equip(s, device ? { rhand: 'magic_shortbow', quiver: 'rune_arrow', back: device } : { rhand: 'magic_shortbow', quiver: 'rune_arrow' });
-    s.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 2000, 13);
+    s.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 20000, 13);
     const target = dummy(s.x + 3, s.z);
-    fightNpc(s, target, 200);
-    return 2000 - (s.getInventory(InvType.WORN)!.get(13)?.count ?? 0);
+    fightNpc(s, target, 1000);
+    return 20000 - (s.getInventory(InvType.WORN)!.get(13)?.count ?? 0);
 };
 const spentNone = quiverLeft(null);
 const spentAcc = quiverLeft('avas_accumulator');
@@ -513,10 +521,25 @@ truthy('attractor: 40% of darts are spent', Math.abs(bpAtt - 40) < 3, bpAtt);
 // =============================================================== the metal attraction
 
 console.log('\n-- attracting metal');
+/**
+ * Run one 3.5-minute attraction and report what was attracted, WHEREVER IT LANDED.
+ *
+ * The pack is not the only place it can go: "the item will prioritise being equipped over going to
+ * the inventory if the attracted item can be equipped", and the table is a steel arrow 1975 times
+ * in 2000, so on a player with an empty quiver the overwhelmingly likely outcome is a worn arrow
+ * and an empty inventory. Reading the pack alone said "attracted nothing" to the commonest case
+ * there is.
+ */
 const attract = (p: Player, device: string, torso?: string) => {
     H.clearInv(p);
     H.equip(p, torso ? { back: device, torso } : { back: device });
     if (!torso) p.invDel(InvType.WORN, p.getInventory(InvType.WORN)!.get(4)?.id ?? 0, 1);
+    const wornBefore = new Map<number, number>();
+    const worn = p.getInventory(InvType.WORN)!;
+    for (let i = 0; i < worn.capacity; i++) {
+        const s = worn.get(i);
+        if (s) wornBefore.set(i, s.count);
+    }
     H.setVar(p, 'animmag_attract_clock', 0);
     A.enqueue(p, '[queue,animmag_attract]'); // starts the clock
     H.tick(2);
@@ -525,11 +548,17 @@ const attract = (p: Player, device: string, torso?: string) => {
     H.tick(1);
     A.enqueue(p, '[queue,animmag_attract]');
     H.tick(2);
-    const inv = p.getInventory(InvType.INV)!;
     const got: string[] = [];
+    const inv = p.getInventory(InvType.INV)!;
     for (let i = 0; i < inv.capacity; i++) {
         const s = inv.get(i);
         if (s) got.push(ObjType.get(s.id).debugname ?? String(s.id));
+    }
+    for (let i = 0; i < worn.capacity; i++) {
+        const s = worn.get(i);
+        if (!s) continue;
+        if (i === 1 || (torso !== undefined && i === 4)) continue; // the device itself, and the torso under test
+        if ((wornBefore.get(i) ?? 0) < s.count) got.push(ObjType.get(s.id).debugname ?? String(s.id));
     }
     return got;
 };
@@ -550,6 +579,146 @@ const gotPlate = attract(magnet, 'avas_accumulator', 'rune_platebody');
 check('a rune platebody interferes', gotPlate, []);
 const gotStud = attract(magnet, 'avas_accumulator', 'studded_body');
 truthy('studded leather does not interfere', gotStud.length > 0, gotStud);
+
+// --------------------------------------------------------------- WHAT IT ATTRACTS, AND HOW MUCH
+//
+// Reported from the game as "ava's attractor/acumm - not picking up arrows, picks up 24 stack of
+// steel items/iron items", and that is what it did: five to twenty-four items at a time off a
+// three-row table that rolled an arrow six times in eight. The live table is one item, and a
+// steel arrow 1975 times in 2000:
+//
+//   steel arrow 1975 | steel dart 5 | steel knife 5 | iron ore 5 | steel nails 5
+//   toy mouse 1 | broken arrow 1 | steel arrowtips 1 | steel med helm 1 | steel bar 1
+//
+// (/w/Ava's_accumulator, Metal attraction.) This cache has no broken arrow, so that row's 1 goes
+// to the arrow - which is why the arrow is checked against 1976 rather than 1975.
+console.log('\n-- the table it rolls on');
+{
+    const N = 40000;
+    const roll = (proc: string) => {
+        const tally = new Map<string, number>();
+        for (let i = 0; i < N; i++) {
+            const n = ObjType.get(A.runProcProtected(magnet, proc)[0]).debugname ?? '?';
+            tally.set(n, (tally.get(n) ?? 0) + 1);
+        }
+        return tally;
+    };
+    const steel = roll('[proc,avas_steel_item]');
+    const iron = roll('[proc,avas_iron_item]');
+    const per2000 = (t: Map<string, number>, n: string) => ((t.get(n) ?? 0) / N) * 2000;
+
+    // The arrow is the whole table in practice, and it is the half the report was about.
+    truthy('a steel arrow 1976 times in 2000', Math.abs(per2000(steel, 'steel_arrow') - 1976) < 12, per2000(steel, 'steel_arrow').toFixed(1));
+    truthy('an iron arrow just as often', Math.abs(per2000(iron, 'iron_arrow') - 1976) < 12, per2000(iron, 'iron_arrow').toFixed(1));
+    // ...and the knife and the dart are a quarter of a per cent, not a quarter of the table
+    truthy('a steel knife 5 times in 2000, not 250', Math.abs(per2000(steel, 'steel_knife') - 5) < 4, per2000(steel, 'steel_knife').toFixed(2));
+    truthy('a steel dart 5 times in 2000', Math.abs(per2000(steel, 'steel_dart') - 5) < 4, per2000(steel, 'steel_dart').toFixed(2));
+    // every row exists, and no row that should not
+    check('the steel table is exactly the live one', [...steel.keys()].sort(), ['iron_ore', 'nails', 'poh_toy_mouse_unwound', 'steel_arrow', 'steel_arrowheads', 'steel_bar', 'steel_dart', 'steel_knife', 'steel_med_helm'].sort());
+    check('and the iron table is its twin, iron ore and all', [...iron.keys()].sort(), ['iron_arrow', 'iron_arrowheads', 'iron_bar', 'iron_dart', 'iron_knife', 'iron_med_helm', 'iron_ore', 'nails_iron', 'poh_toy_mouse_unwound'].sort());
+}
+
+// --------------------------------------------------------------- ONE ITEM, AND WHERE IT GOES
+//
+// "The item will prioritise being equipped over going to the inventory if the attracted item can
+// be equipped. The item will drop to the ground if there is no space in the equipment or
+// inventory." The old code put a stack in the pack and, with the pack full, silently did nothing.
+console.log('\n-- one item, and where it goes');
+{
+    /** One attraction on a player set up by `prep`, reporting quiver, pack and ground. */
+    const once = (name: string, prep: (p: Player) => void) => {
+        const p = A.player(name, 3240, 3240);
+        H.clearInv(p);
+        H.equip(p, { back: 'avas_accumulator' });
+        p.invDel(InvType.WORN, p.getInventory(InvType.WORN)!.get(4)?.id ?? 0, 1);
+        prep(p);
+        H.setVar(p, 'animmag_attract_clock', 0);
+        A.enqueue(p, '[queue,animmag_attract]');
+        H.tick(2);
+        H.setVar(p, 'animmag_attract_clock', 1);
+        p.teleport(p.x + 8, p.z, p.level);
+        H.tick(1);
+        A.enqueue(p, '[queue,animmag_attract]');
+        H.tick(2);
+        const q = p.getInventory(InvType.WORN)!.get(13);
+        const ground = [...World.gameMap.getZone(p.x, p.z, p.level).getAllObjsUnsafe()].filter(o => o && o.x === p.x && o.z === p.z).map(o => `${ObjType.get(o!.type).debugname}x${o!.count}`);
+        return {
+            quiver: q ? `${ObjType.get(q.id).debugname}x${q.count}` : null,
+            pack: H.invCount(p, 'steel_arrow') + H.invCount(p, 'steel_dart') + H.invCount(p, 'steel_knife'),
+            ground,
+            p
+        };
+    };
+
+    // An empty quiver takes it: "it can also generate iron arrows into the player's ammo slot if
+    // it's empty or there are iron arrows in it".
+    const empty = once('mag_empty', () => {});
+    truthy('an empty quiver gets it, one at a time', empty.quiver?.endsWith('x1') === true, empty.quiver);
+    truthy('and the pack stays empty', empty.pack === 0, empty.pack);
+
+    // ...and a quiver already holding the same thing stacks it
+    const same = once('mag_same', p => p.invSet(InvType.WORN, ObjType.getId('steel_arrow'), 50, 13));
+    truthy('a matching quiver stacks it', same.quiver === 'steel_arrowx51', same.quiver);
+
+    // ...and one holding something else does not, so it goes to the pack
+    const other = once('mag_other', p => p.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 50, 13));
+    truthy('a quiver full of something else leaves it in the pack', other.pack === 1, { quiver: other.quiver, pack: other.pack });
+
+    // ...and with nowhere at all it lands at your feet rather than vanishing
+    const full = once('mag_full', p => {
+        p.invSet(InvType.WORN, ObjType.getId('rune_arrow'), 50, 13);
+        H.fillInv(p);
+    });
+    truthy('nowhere to put it: it lands at your feet', full.ground.length > 0, full.ground);
+}
+
+// --------------------------------------------------------------- INTERFERENCE STOPS THE RECOVERY
+//
+// "The ammunition recovery effect does not work if the player is wearing metallic torso armour
+// (most melee armour, Ahrim's robetop, etc.) due to the metal causing interference with the
+// magnet" (/w/Ava's_device). This file used to say in its own comments that interference stopped
+// the attraction and NOT the ammo coming back, which is the wrong way round.
+console.log('\n-- interference stops the ammunition coming back too');
+{
+    const saveRateWith = (device: string, torso?: string) => {
+        const s = A.player(`int_${device}_${torso ?? 'bare'}`, 3250, 3250);
+        H.equip(s, torso ? { back: device, torso } : { back: device });
+        if (!torso) s.invDel(InvType.WORN, s.getInventory(InvType.WORN)!.get(4)?.id ?? 0, 1);
+        let saved = 0;
+        for (let i = 0; i < 4000; i++) if (A.runProcProtected(s, '[proc,ranged_ammo_saved]')[0] === 1) saved++;
+        return Math.round((saved * 1000) / 4000) / 10;
+    };
+    truthy('bare chested, the accumulator saves 72%', Math.abs(saveRateWith('avas_accumulator') - 72) < 3, saveRateWith('avas_accumulator'));
+    check('in a rune platebody it saves nothing', saveRateWith('avas_accumulator', 'rune_platebody'), 0);
+    check("and in Ahrim's robetop, which the wiki names, nothing either", saveRateWith('avas_accumulator', 'barrows_ahrim_body'), 0);
+    // ...and the armour that does not interfere still works
+    truthy('studded leather is fine', Math.abs(saveRateWith('avas_accumulator', 'studded_body') - 72) < 3, saveRateWith('avas_accumulator', 'studded_body'));
+}
+
+// --------------------------------------------------------------- BREAK OR FLOOR
+//
+// Twenty per cent of every shot breaks on impact whatever is worn, and the device takes its
+// recovery out of the other eighty - "20% of ammunition is broken upon impact, so this percentage
+// is 80% minus the Recovery Rate" (/w/Ava's_device). So of the shots a device did NOT bring back,
+// how many land on the floor depends on the device, and a flat one-in-five break of the remainder
+// gave an accumulator 22% on the floor where the live game gives it 8%.
+console.log('\n-- what becomes of a shot that did not come back');
+{
+    const floorRate = (device: string | null) => {
+        const s = A.player(`fall_${device ?? 'none'}`, 3260, 3260);
+        H.equip(s, device ? { back: device } : {});
+        if (device) s.invDel(InvType.WORN, s.getInventory(InvType.WORN)!.get(4)?.id ?? 0, 1);
+        let falls = 0;
+        for (let i = 0; i < 8000; i++) if (A.runProcProtected(s, '[proc,ranged_ammo_falls]')[0] === 1) falls++;
+        return (falls * 100) / 8000;
+    };
+    // Read as a share of the shots that were NOT saved, which is what the proc is asked about.
+    truthy('no device: 80% of a spent shot falls, 20% breaks', Math.abs(floorRate(null) - 80) < 3, floorRate(null).toFixed(1));
+    // attractor: 40 left over, 20 of it on the floor -> half
+    truthy('attractor: half of what it does not save falls', Math.abs(floorRate('avas_attractor') - 50) < 3, floorRate('avas_attractor').toFixed(1));
+    // accumulator: 28 left over, 8 of it on the floor
+    truthy('accumulator: 8 of its 28 fall', Math.abs(floorRate('avas_accumulator') - 800 / 28) < 3, floorRate('avas_accumulator').toFixed(1));
+}
 
 // =============================================================== the Accumulator max cape
 //

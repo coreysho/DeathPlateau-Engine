@@ -515,14 +515,17 @@ export function opLoc(p: Player, x: number, z: number, locName: string, op: numb
  * Op 3 is the ground "Take" - ObjType defaults op[2] to it - so this is what content hooks with
  * [opobj3,...], and the only way to test one.
  */
-export function opObj(p: Player, x: number, z: number, objName: string, op: number) {
+export function opObj(p: Player, x: number, z: number, objName: string, op: number, walk = true) {
     if (p.delayed) return false;
     const id = ObjType.getId(objName);
     if (id === -1) throw new Error('no such obj: ' + objName);
     const obj = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
     if (!obj) throw new Error(`no ${objName} at ${x},${z}`);
     p.clearPendingAction();
-    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, x, z, p.width, 1, 1));
+    // THE ROUTE GOES TO A TILE NEXT TO IT, which is wrong for a ground obj: you pick one up from
+    // its own tile. A caller already standing on it passes walk=false, because otherwise the route
+    // walks the player back OFF the obj and the pickup never lands.
+    if (walk) p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, x, z, p.width, 1, 1));
     p.setInteraction(Interaction.ENGINE, obj, ServerTriggerType.APOBJ1 + (op - 1));
     (p as unknown as { opcalled: boolean }).opcalled = true;
     return true;

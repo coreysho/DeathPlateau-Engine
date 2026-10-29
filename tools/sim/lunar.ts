@@ -650,6 +650,12 @@ say('THE REWARD');
 
 // ================================================================ Dream Mentor
 say('DREAM MENTOR: THE FALLEN MAN');
+// THE ALTAR LEAVES ITS BOX OPEN. The last spellbook switch above answers a multiobj3, and the
+// interface is still up when this section starts - so the first talk() here walked into a
+// multiobj3 with no options set in it and threw "unexpected menu: multiobj3:", which aborted the
+// whole file after Lunar Diplomacy had passed. Nothing to do with Cyrisus.
+(P as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+H.tick(2);
 const CYRISUS = [2345, 10335];
 const dmStage = () => H.getVar(P, 'dreammentor');
 {

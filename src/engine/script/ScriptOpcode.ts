@@ -524,6 +524,15 @@ export const enum ScriptOpcode {
     // See engine/script/OpHeldUTrigger.ts and ~displaymessage.
     OPHELDU_DECLINE,
 
+    // Vote claiming (custom, 2026-10-27) - see engine/vote/. APPENDED, for the reason above.
+    VOTE_SITECOUNT,
+    VOTE_SITENAME,
+    VOTE_SITEURL,
+    VOTE_COOLDOWN,
+    VOTE_CLAIM,
+    VOTE_OWED,
+    VOTE_TAKE,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -1016,6 +1025,14 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['CLAN_FRIEND_RANK', ScriptOpcode.CLAN_FRIEND_RANK],
     ['CLAN_SETFRIENDRANK', ScriptOpcode.CLAN_SETFRIENDRANK],
     ['FINDNAME', ScriptOpcode.FINDNAME],
+
+    ['VOTE_SITECOUNT', ScriptOpcode.VOTE_SITECOUNT],
+    ['VOTE_SITENAME', ScriptOpcode.VOTE_SITENAME],
+    ['VOTE_SITEURL', ScriptOpcode.VOTE_SITEURL],
+    ['VOTE_COOLDOWN', ScriptOpcode.VOTE_COOLDOWN],
+    ['VOTE_CLAIM', ScriptOpcode.VOTE_CLAIM],
+    ['VOTE_OWED', ScriptOpcode.VOTE_OWED],
+    ['VOTE_TAKE', ScriptOpcode.VOTE_TAKE],
 
     ['CONSOLE', ScriptOpcode.CONSOLE],
     ['ERROR', ScriptOpcode.ERROR],

@@ -257,5 +257,35 @@ console.log('\nAND AN EMPTY CANDLE LANTERN TAKES A CANDLE, which nothing would p
     H.despawn(q);
 }
 
+console.log('\nAND THE PRODUCT ICONS ARE MAKE ALL, which is what wiring this panel took away');
+{
+    // Before the panel, a pipe on molten glass worked the whole stack; after it, the nearest thing
+    // was Make X and a number big enough to cover the pack. The seven icons were plain models doing
+    // nothing, so they carry Make all now - com_3 to com_9, in the same product order as the four
+    // button columns beside them.
+    const ICONS: [number, string][] = [
+        [3, 'vial_empty'],
+        [4, 'stafforb'],
+        [5, 'beer_glass'],
+        [6, 'candle_lantern_empty'],
+        [7, 'oil_lamp_empty'],
+        [8, 'bullseye_lantern_lens'],
+        [9, 'fishbowl_empty']
+    ];
+    for (const [com, obj] of ICONS) {
+        // 17 pieces: more than Make 10 and not a round number, so a count that quietly capped would
+        // show up rather than looking like a deliberate ten.
+        const r = make(`gl_all_${obj}`, com, 17);
+        check(`  com_${com} makes all 17 ${obj}`, r.made[obj] ?? 0, 17);
+        check('    and spends every piece', r.glass, 0);
+    }
+    // ...and it asks for no count, which is the whole point of it
+    const asked = make('gl_all_noask', 3, 6);
+    check('  it never opens the count dialog', [asked.made.vial_empty ?? 0, asked.glass], [6, 0]);
+    // ...and a level the player has not got still refuses, exactly as the numbered buttons do
+    const low = make('gl_all_low', 9, 10, 1);
+    check('  and the level gate still applies to it', low.made.fishbowl_empty ?? 0, 0);
+}
+
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

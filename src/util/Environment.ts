@@ -90,6 +90,19 @@ export default {
     // NODE_UNLIMITED_RUN=false to put the ordinary drain back without a code change.
     NODE_UNLIMITED_RUN: tryParseBoolean(process.env.NODE_UNLIMITED_RUN, true),
     NODE_BOTS_CONFIG: tryParseString(process.env.NODE_BOTS_CONFIG, 'data/config/bots.json'),
+    // custom (2026-10-27) - which toplists this server is listed on, for vote claiming
+    // (src/engine/vote). A JSON array; see data/vote/sites.example.json for the shape and
+    // VoteSites.ts for what every field means. NO FILE MEANS NO SITES, which is the right default:
+    // everything behind it is built, and the Vote clerk says voting is not set up yet rather than
+    // pretending to check. Secrets are named here, not written here - "env:VOTE_TOPG_KEY".
+    VOTE_SITES_CONFIG: tryParseString(process.env.VOTE_SITES_CONFIG, 'data/vote/sites.json'),
+    // How long to wait on a toplist's "has this player voted" API before giving up on it. A player
+    // is standing in front of the clerk while this runs, so it is short on purpose.
+    VOTE_CHECK_TIMEOUT: tryParseInt(process.env.VOTE_CHECK_TIMEOUT, 5000),
+    // Where the vote ledger lives (VoteBook.ts). Named so it can be moved off a path the server
+    // process cannot write to, which is the one thing that stops it opening, and so a test can
+    // point it somewhere that is guaranteed not to open.
+    VOTE_LEDGER: tryParseString(process.env.VOTE_LEDGER, ''),
     NODE_BOTS_ROAMERS: tryParseInt(process.env.NODE_BOTS_ROAMERS, -1),
     NODE_BOTS_PKERS: tryParseInt(process.env.NODE_BOTS_PKERS, -1),
     // what bots pray in a fight: smite, protect or none ('' = the file, or the default: smite)

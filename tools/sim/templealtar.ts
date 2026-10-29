@@ -239,9 +239,14 @@ check('  and the crystal renders as the repowered one',
     World.getLoc(...T(52, 30), 2, LocType.getId('mourning_temple_obsidian_crystal')) !== null, true);
 opLoc(...T(52, 30), 'mourning_temple_obsidian_crystal');
 check('  searching it now says it is lit', Q(), 48);
+// THE REWARD, which used to be a tenth of itself spread over two skills the quest does not touch.
+// The wiki gives one: 60,000 Agility XP, and the crystal trinket that lets you back into the
+// temple - and ~send_quest_complete only DRAWS the obj on the scroll, so it was never handed over.
+H.clearInv(p);
+const agility0 = p.stats[16];
 talk('mourning_arianwyn');
 check('Arianwyn: Mourning\'s End Part II complete', Q(), 50);
-check('  and the reward came through', H.invCount(p, 'mourning_crystal_trinket') >= 0, true);
+check('  60,000 Agility XP, and the crystal trinket', [(p.stats[16] - agility0) / 10, H.invCount(p, 'mourning_crystal_trinket')], [60000, 1]);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

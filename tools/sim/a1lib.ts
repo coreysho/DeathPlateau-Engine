@@ -58,7 +58,13 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
     for (let guard = 0; guard < 600 && idle < guardTicks; guard++) {
         const s = p.activeScript;
         if (!s || s.execution !== ScriptState.PAUSEBUTTON) {
-            if (!s && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
+            // A WORLD_SUSPENDED SCRIPT IS NOT THE PLAYER'S BUSINESS. world_delay parks a script
+            // for later - lighting a fire parks one for the whole burn, a hundred ticks and more -
+            // and counting that as "still working" meant drive() ran its 600-tick guard out every
+            // time. Sea Slug lit a fire, warmed nothing over it and reported no fire there: it had
+            // burned out inside the step that lit it.
+            const parked = !!s && s.execution === ScriptState.WORLD_SUSPENDED;
+            if ((!s || parked) && !p.delayed && [...p.queue.all()].length === 0 && !p.target) idle++;
             else idle = 0;
             H.tick(1);
             continue;
@@ -66,6 +72,18 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
         idle = 0;
         const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
         const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
+        // A MAKE-X PANEL IS NOT AN OPTION LIST. skillmulti1..5 are their own interfaces with their
+        // own Make X / 10 / 5 / 1 buttons, and resuming them without pressing one closes them - so
+        // spinning wool looked like it had worked and produced nothing. A numeric pick here is the
+        // button's own com number (6 is Make 1 on a one-product panel); a string matches its name.
+        if (open.startsWith('skillmulti')) {
+            const pick = picks.shift();
+            if (pick === undefined) throw new Error('unexpected make-x panel: ' + open + ': ' + names.filter(Boolean).join(' | '));
+            const com = typeof pick === 'number' ? `${open}:com_${pick}` : names.find((n: string) => n.toLowerCase().includes(String(pick).toLowerCase()));
+            if (!com) throw new Error(`no button "${pick}" on ${open}: ${names.filter(Boolean).join(' | ')}`);
+            H.choose(p, com);
+            continue;
+        }
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             let pick = picks.shift();
@@ -77,9 +95,14 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
                 opts.push(t?.text ?? '');
             }
             if (typeof pick === 'string') {
-                const want = pick;
-                const idx = opts.findIndex(o => o.toLowerCase().includes(want.toLowerCase()));
-                if (idx === -1) throw new Error(`no option "${want}" in ${root}: ${opts.filter(Boolean).join(' | ')}`);
+                // ONE PICK, SEVERAL ACCEPTABLE ANSWERS, separated by ||. A courting round in Throne
+                // of Miscellania asks one of nine questions at random and each has its own flattering
+                // answer, so "the right option" is not a fixed string and not a fixed slot either -
+                // it is whichever of the nine happens to be on the menu. A single substring cannot
+                // say that; a list of them can, and every other use of a string pick is unaffected.
+                const wants = pick.split('||').map(w => w.trim().toLowerCase()).filter(Boolean);
+                const idx = opts.findIndex(o => wants.some(w => o.toLowerCase().includes(w)));
+                if (idx === -1) throw new Error(`no option "${pick}" in ${root}: ${opts.filter(Boolean).join(' | ')}`);
                 pick = idx + 1;
             }
             if (pick === undefined) throw new Error('unexpected menu: ' + root + ': ' + opts.filter(Boolean).join(' | '));
@@ -149,6 +172,26 @@ export function useOn(p: Player, x: number, z: number, locName: string, objName:
     p.lastUseItem = obj;
     p.lastUseSlot = slot;
     p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return drive(p, picks);
+}
+/**
+ * "Use" an inventory item on a ground obj: OpObjUHandler. The route goes to the obj's own TILE,
+ * not beside it, because that is where a ground obj is reached from - the same reason
+ * harness.opObj takes a walk flag. Zogre Flesh Eaters' cup of tea is the only thing in the pass
+ * that needs it: the potion goes into a cup standing on Sithik's drawers, not into Sithik.
+ */
+export function useOnObj(p: Player, x: number, z: number, objName: string, useName: string, picks: (number | string)[] = []) {
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const ground = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
+    if (!ground) throw new Error(`no ${objName} on the ground at ${x},${z},${p.level}`);
+    const { obj, slot } = slotOf(p, useName);
+    p.clearPendingAction();
+    p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, x, z, p.width, 1, 1));
+    p.lastUseItem = obj;
+    p.lastUseSlot = slot;
+    p.setInteraction(Interaction.ENGINE, ground, ServerTriggerType.APOBJU);
     (p as unknown as { opcalled: boolean }).opcalled = true;
     return drive(p, picks);
 }
