@@ -137,9 +137,7 @@ function callsTo(src: string, name: string): string[][] {
 // of a second to show. The 30->158 pair is the one worth watching on a real lap: the gnome course
 // crawls three tiles west over 128 cycles with an 80-cycle animation, which is a second of sliding.
 // Drop an entry from here the moment it is either fixed or confirmed fine, and the check will say so.
-const KNOWN: Record<string, string> = {
-    'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl'
-};
+const KNOWN: Record<string, string> = {};
 
 type Site = { file: string; anim: string; animDelay: number; start: number; end: number };
 const sites: Site[] = [];
@@ -342,6 +340,10 @@ for (const [key, group] of [...groups.entries()].sort()) {
 
 if (skipped.length) {
     console.log(`\n   (${skipped.length} call site(s) pass the animation or a cycle in through a variable` + ' and cannot be read statically)');
+    // NAMED, not just counted. A bare number here is where every one of this tool's blind
+    // spots has hidden: all 73 rooftop obstacles sat in this count while one direct call
+    // carried a conclusion about every gap jump in the game.
+    for (const line of [...new Set(skipped)].sort()) console.log('      ' + line);
 }
 
 check('no crossing carries the player far past the end of its animation (outside the known list)', bad === 0, true);
