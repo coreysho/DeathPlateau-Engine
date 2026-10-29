@@ -32,7 +32,7 @@ const m: Manifest = {
     quest: "ICTHLARIN'S LITTLE HELPER",
     source: 'oldschool.runescape.wiki/w/Icthlarin%27s_Little_Helper/Quick_guide',
     stageVar: 'ics_little_var',
-    done: 26,   // ^icslittle_complete
+    done: 26, // ^icslittle_complete
     start: [3317, 2849, 0],
     steps: [
         { note: 'requirement: Gertrude’s Cat, which the High Priest never checked, and a cat, which' },

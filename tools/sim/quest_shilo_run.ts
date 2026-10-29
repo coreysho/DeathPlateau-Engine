@@ -68,13 +68,7 @@ const m: Manifest = {
         { setpos: MOSOL, why: 'to Mosol Rei' },
         {
             talk: 'mosol_rei',
-            picks: [
-                'Why do I need to run?',
-                'Rashiliyia? Who is she?',
-                'What can we do?',
-                "I'll go to see the Shaman.",
-                "Yes, I'm sure and I'll take the Wampum belt to Trufitus."
-            ],
+            picks: ['Why do I need to run?', 'Rashiliyia? Who is she?', 'What can we do?', "I'll go to see the Shaman.", "Yes, I'm sure and I'll take the Wampum belt to Trufitus."],
             want: 'Wampum belt',
             why: 'take the belt'
         },
@@ -85,12 +79,7 @@ const m: Manifest = {
         {
             useNpc: 'trufitus',
             obj: 'mosol_wampum_belt',
-            picks: [
-                'Mosol Rei said something about a legend?',
-                'Why was it called Ah Za Rhoon?',
-                'I am going to search for Ah Za Rhoon!',
-                "Yes, I will seriously look for Ah Za Rhoon and I'd appreciate your help."
-            ],
+            picks: ['Mosol Rei said something about a legend?', 'Why was it called Ah Za Rhoon?', 'I am going to search for Ah Za Rhoon!', "Yes, I will seriously look for Ah Za Rhoon and I'd appreciate your help."],
             want: 'good luck with your quest',
             why: 'commit to finding Ah Za Rhoon'
         },

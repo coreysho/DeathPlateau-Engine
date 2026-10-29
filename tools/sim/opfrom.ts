@@ -8,7 +8,10 @@ import World from '#/engine/World.js';
 
 await H.boot();
 const [nm, xs, zs, ls, ops] = process.argv.slice(2);
-const x = Number(xs), z = Number(zs), level = Number(ls ?? 0), op = Number(ops ?? 1);
+const x = Number(xs),
+    z = Number(zs),
+    level = Number(ls ?? 0),
+    op = Number(ops ?? 1);
 const id = LocType.getId(nm);
 const t = LocType.get(id);
 const loc = World.getLoc(x, z, level, id);
@@ -29,10 +32,17 @@ for (let dx = -2; dx <= 2; dx++) {
         const mark = H.mesgs.length;
         const before = p.x + ',' + p.z + ',' + p.level;
         let sent = false;
-        try { sent = H.opLoc(p, x, z, nm, op); } catch (e) { continue; }
+        try {
+            sent = H.opLoc(p, x, z, nm, op);
+        } catch (e) {
+            continue;
+        }
         if (!sent) continue;
         for (let i = 0; i < 12; i++) H.tick(1);
-        const said = H.mesgs.slice(mark).map((m: any) => m.text).join(' | ');
+        const said = H.mesgs
+            .slice(mark)
+            .map((m: any) => m.text)
+            .join(' | ');
         const after = p.x + ',' + p.z + ',' + p.level;
         if (said || after !== before) {
             console.log(`  from ${x + dx},${z + dz}  ->  ${after !== before ? 'MOVED to ' + after + '  ' : ''}${said}`);

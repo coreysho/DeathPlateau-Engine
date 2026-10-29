@@ -21,7 +21,7 @@ const m: Manifest = {
     quest: 'SHADOW OF THE STORM',
     source: 'oldschool.runescape.wiki/w/Shadow_of_the_Storm/Quick_guide',
     stageVar: 'agrith_quest',
-    done: 125,   // ^agrith_complete
+    done: 125, // ^agrith_complete
     start: [3272, 3158, 0],
     steps: [
         { note: 'requirements: Demon Slayer, which is where Silverlight comes from, and The Golem,' },

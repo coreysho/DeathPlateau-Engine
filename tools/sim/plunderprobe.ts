@@ -17,7 +17,8 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 
-const BX = 30 * 64, BZ = 69 * 64;
+const BX = 30 * 64,
+    BZ = 69 * 64;
 
 // Seed the square so its zones are allocated and measured, not assumed.
 {
@@ -32,7 +33,10 @@ const rows: Row[] = [];
     const text = readFileSync('../content/maps/m30_69.jm2', 'utf8');
     let section = '';
     for (const line of text.split(/\r?\n/)) {
-        if (line.startsWith('====')) { section = line.replace(/=/g, '').trim(); continue; }
+        if (line.startsWith('====')) {
+            section = line.replace(/=/g, '').trim();
+            continue;
+        }
         if (section !== 'LOC') continue;
         const m = /^(\d+) (\d+) (\d+): (\d+) (\d+)(?: (\d+))?\s*$/.exec(line);
         if (!m) continue;
@@ -49,8 +53,14 @@ const flood = (x: number, z: number, level: number): Set<number> => {
     const q: [number, number][] = [[x, z]];
     while (q.length) {
         const [cx, cz] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz;
             if (nx < BX || nx > BX + 63 || nz < BZ || nz > BZ + 63) continue;
             if (seen.has(key(nx, nz))) continue;
             if (!canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
@@ -68,7 +78,8 @@ const touches = (room: Set<number>, r: Row): boolean => {
     const loc = World.getLoc(r.x, r.z, r.level, id);
     if (!loc) return false;
     for (const packed of room) {
-        const x = packed >>> 16, z = packed & 0xffff;
+        const x = packed >>> 16,
+            z = packed & 0xffff;
         if (Math.abs(x - r.x) > 4 || Math.abs(z - r.z) > 4) continue;
         if (reachedLoc(r.level, x, z, loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, type.forceapproach)) return true;
     }
@@ -83,11 +94,26 @@ const floods: Set<number>[] = [];
 chests.forEach((c, i) => {
     // The chest is 3x1 and blocks, so flood from the tile in front of it.
     let seed: [number, number] | null = null;
-    for (const [dx, dz] of [[0, -1], [0, 1], [-1, 0], [1, 0], [0, -2], [0, 2]]) {
-        const x = c.x + dx, z = c.z + dz;
-        if (canTravel(c.level, x, z, 1, 0, 1, 0, CollisionType.NORMAL) || canTravel(c.level, x, z, 0, 1, 1, 0, CollisionType.NORMAL)) { seed = [x, z]; break; }
+    for (const [dx, dz] of [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+        [0, -2],
+        [0, 2]
+    ]) {
+        const x = c.x + dx,
+            z = c.z + dz;
+        if (canTravel(c.level, x, z, 1, 0, 1, 0, CollisionType.NORMAL) || canTravel(c.level, x, z, 0, 1, 1, 0, CollisionType.NORMAL)) {
+            seed = [x, z];
+            break;
+        }
     }
-    if (!seed) { console.log(`chest ${c.x},${c.z}: nothing beside it`); floods.push(new Set()); return; }
+    if (!seed) {
+        console.log(`chest ${c.x},${c.z}: nothing beside it`);
+        floods.push(new Set());
+        return;
+    }
     floods.push(flood(seed[0], seed[1], c.level));
 });
 
@@ -95,7 +121,8 @@ for (let i = 0; i < chests.length; i++) {
     const room = floods[i];
     const mine = rows.filter(r => touches(room, r));
     for (const r of mine) roomOf.set(`${r.name}@${r.x},${r.z}`, i);
-    const xs = [...room].map(p => p >>> 16), zs = [...room].map(p => p & 0xffff);
+    const xs = [...room].map(p => p >>> 16),
+        zs = [...room].map(p => p & 0xffff);
     const tally: Record<string, number> = {};
     for (const r of mine) tally[r.name.replace(/_\d+$/, m => m)] = (tally[r.name] ?? 0) + 1;
     console.log(`room ${i + 1}: chest ${chests[i].x},${chests[i].z}  ${room.size} floor tiles, x ${Math.min(...xs)}-${Math.max(...xs)} z ${Math.min(...zs)}-${Math.max(...zs)}`);

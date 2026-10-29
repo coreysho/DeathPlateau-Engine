@@ -210,7 +210,13 @@ const m: Manifest = {
         { rng: null },
         { note: 'and Gujuo opens with a menu of his own, straight off the bullroarer - five more' },
         { note: 'to the point where he asks you to free Ungadulu' },
-        { talk: 'gujuo', tries: 3, picks: ['attract the attention', 'friendly relations', 'get your people together', 'What can we do instead', 'How do we make the totem pole', 'I will release Ungadulu'], want: 'triangular shape', why: 'hear him out' },
+        {
+            talk: 'gujuo',
+            tries: 3,
+            picks: ['attract the attention', 'friendly relations', 'get your people together', 'What can we do instead', 'How do we make the totem pole', 'I will release Ungadulu'],
+            want: 'triangular shape',
+            why: 'hear him out'
+        },
         { stage: 5 },
 
         { note: 'wiki step 9: the mossy rock in the north-west, and 50 Agility to crawl inside' },
@@ -376,10 +382,7 @@ const m: Manifest = {
 
         { note: 'wiki step 24: seven stalagmites and seven gems. Each rock takes one gem and no' },
         { note: 'other - "But nothing happens" is the wrong rock, not the wrong order.' },
-        ...(GEM_ROCKS.flatMap(([gem, at]) => [
-            { give: gem },
-            { useLoc: 'lg_gemplacerock', at, obj: gem, want: 'glows and starts spinning', why: 'the ' + gem.split('_').join(' ') + ' rock' }
-        ]) as Step[]),
+        ...(GEM_ROCKS.flatMap(([gem, at]) => [{ give: gem }, { useLoc: 'lg_gemplacerock', at, obj: gem, want: 'glows and starts spinning', why: 'the ' + gem.split('_').join(' ') + ' rock' }]) as Step[]),
         { note: 'and the seventh blows you into the middle of the room, where the book lands - but' },
         { note: 'not at once: ~check_gem_puzzle_complete is thirteen world_delays of shooting stars' },
         { note: 'from the seven rocks before the obj_add, on top of the exactmove that carries you' },
@@ -449,24 +452,7 @@ const m: Manifest = {
         { note: 'reads exactly like a cast the engine never delivered. Twenty-eight slots is a' },
         { note: 'real constraint on a quest this long, and the trials above are finished with.' },
         {
-            drop: [
-                'papyrus',
-                'charcoal',
-                'rune_axe',
-                'lockpick',
-                'rune_pickaxe',
-                'soulrune',
-                'mindrune',
-                'lawrune',
-                'thkaramjamap',
-                'swamprocks1',
-                'bodyrune',
-                'waterrune',
-                'vial_empty',
-                'scrawled_note1',
-                'scrawled_note2',
-                'scrawled_note3'
-            ],
+            drop: ['papyrus', 'charcoal', 'rune_axe', 'lockpick', 'rune_pickaxe', 'soulrune', 'mindrune', 'lawrune', 'thkaramjamap', 'swamprocks1', 'bodyrune', 'waterrune', 'vial_empty', 'scrawled_note1', 'scrawled_note2', 'scrawled_note3'],
             why: 'the spent trial kit'
         },
 
@@ -503,11 +489,7 @@ const m: Manifest = {
         { note: 'loc with its own wording and its own idea of which side you came from, and each' },
         { note: 'is a teleport rather than a walk, so the ledges between them are tiny pockets.' },
         { rng: 0, why: 'stat_random true: no slips on the ledges' },
-        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [
-            { go: from, r: 64, why: 'to ' + loc },
-            { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' },
-            { level: 0 }
-        ]) as Step[]),
+        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [{ go: from, r: 64, why: 'to ' + loc }, { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' }, { level: 0 }]) as Step[]),
         { rng: null },
 
         { note: 'and the pack has to have room before the heroes: each of the three inv_adds a' },

@@ -31,7 +31,7 @@ const m: Manifest = {
     quest: 'HAUNTED MINE',
     source: 'oldschool.runescape.wiki/w/Haunted_Mine/Quick_guide',
     stageVar: 'hauntedmine',
-    done: 6,   // ^hm_complete
+    done: 6, // ^hm_complete
     start: [3444, 3259, 0],
     steps: [
         { note: 'requirement: Priest in Peril, which quest_priestperil_run.ts walks in full. The' },

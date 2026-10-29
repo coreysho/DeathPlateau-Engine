@@ -141,7 +141,7 @@ const m: Manifest = {
         { loc: 'miningcampgateclosedr', at: GATE, hop: true, why: 'out of the camp' },
 
         { note: 'wiki step 8: Al Shabim of the Bedabin, a hundred squares west, will trade a' },
-        { note: 'pineapple for the technical plans in Captain Siad\'s chest - and hands over a copy' },
+        { note: "pineapple for the technical plans in Captain Siad's chest - and hands over a copy" },
         { note: 'of the key for it' },
         { go: [AL_SHABIM[0], AL_SHABIM[1]], r: 256, why: 'west to the Bedabin camp' },
         { talk: 'al_shabim', picks: [1, 1], want: 'copy of the key', why: 'take the deal' },

@@ -70,7 +70,7 @@ const m: Manifest = {
         },
         { stage: 1 },
 
-        { note: 'wiki step 2: the two halves of the old lord\'s amulet are pressed in the two books' },
+        { note: "wiki step 2: the two halves of the old lord's amulet are pressed in the two books" },
         { note: 'in the library upstairs - The Joy of Grave Digging and Handy Maggot Avoidance' },
         { note: 'Techniques - and they lock together into the star the memorials are cut for.' },
         { setpos: [BOOKCASE_W[0], BOOKCASE_W[1] - 1, 1], why: 'upstairs, west room' },
@@ -97,7 +97,7 @@ const m: Manifest = {
         { note: 'so it cannot be walked up to and taken, which is exactly why the wiki offers' },
         { note: 'Telekinetic Grab as the free route. Fifty gold is the other one.' },
 
-        { note: 'wiki step 3: the head is in the paupers\' field south-east of Canifis' },
+        { note: "wiki step 3: the head is in the paupers' field south-east of Canifis" },
         { give: 'spade' },
         { setpos: [WOODS_GRAVE[0] + 1, WOODS_GRAVE[1], 0], why: "to the paupers' field" },
         { loc: 'fenk_grave_poor', at: WOODS_GRAVE, want: 'ED LESTWIT', why: 'read it' },
@@ -167,7 +167,7 @@ const m: Manifest = {
         { has: 'fenk_brush3' },
         { hasnt: 'bronzecraftwire' },
 
-        { note: 'wiki step 19: the centre of the fireplace, not the surround - which is the cache\'s' },
+        { note: "wiki step 19: the centre of the fireplace, not the surround - which is the cache's" },
         { note: 'own distinction: fenk_fireplace has no ops and the two surrounds beside it are' },
         { note: '"Mmm.. scented candles".' },
         { setpos: [FIREPLACE[0] - 1, FIREPLACE[1], 1], why: 'upstairs to the west room' },
@@ -199,7 +199,7 @@ const m: Manifest = {
         { talk: 'fenk_creature', want: 'Lord Rologarth', why: 'what Fenkenstrain did' },
         { stage: 6 },
 
-        { note: 'wiki step 24: the ring is on the doctor\'s finger, and 25 Thieving gets it off' },
+        { note: "wiki step 24: the ring is on the doctor's finger, and 25 Thieving gets it off" },
         { setpos: DOCTOR, why: 'back down to the doctor' },
         { talk: 'fenk_fenkenstrain', op: 3, want: 'off the doctor', why: 'pick his pocket' },
         { has: 'ring_of_charos' },

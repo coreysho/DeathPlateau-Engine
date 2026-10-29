@@ -45,11 +45,21 @@ const ROOMS: [number, [number, number], [number, number], [number, number], [num
     [15, [2062, 5035], [2062, 5034], [2062, 5034], null]
 ];
 const EVENT_OF: Record<number, string> = {
-    1: 'snakes', 5: 'snakes', 9: 'snakes',
-    2: 'ghasts', 6: 'ghasts', 10: 'ghasts',
-    3: 'snails', 7: 'snails',
-    4: 'vampyres', 8: 'vampyres',
-    11: 'shades', 12: 'bridge', 13: 'vines', 14: 'samaritan', 15: 'tentacles'
+    1: 'snakes',
+    5: 'snakes',
+    9: 'snakes',
+    2: 'ghasts',
+    6: 'ghasts',
+    10: 'ghasts',
+    3: 'snails',
+    7: 'snails',
+    4: 'vampyres',
+    8: 'vampyres',
+    11: 'shades',
+    12: 'bridge',
+    13: 'vines',
+    14: 'samaritan',
+    15: 'tentacles'
 };
 
 // Use an item on a loc. The harness has no helper for this and three of Temple Trekking's events
@@ -130,8 +140,7 @@ H.runProc(p, '[proc,trek_unlock]', [], undefined, true);
 check('visible once the quest is done', H.getVarBit(p, 'templetrek_npcs_visible'), 1);
 // The six placed npcs are the MULTI forms - multinpc only changes what a client draws - so that is
 // what is standing there and what the op arrives on.
-for (const nm of ['templetrek_multi_retired_man_easy', 'templetrek_multi_retired_soldier_easy', 'templetrek_multi_man_med',
-                  'templetrek_multi_woman_med', 'templetrek_multi_oldman_hard', 'templetrek_multi_child_hard']) {
+for (const nm of ['templetrek_multi_retired_man_easy', 'templetrek_multi_retired_soldier_easy', 'templetrek_multi_man_med', 'templetrek_multi_woman_med', 'templetrek_multi_oldman_hard', 'templetrek_multi_child_hard']) {
     check(`${nm.replace('templetrek_multi_', '')} is in Burgh de Rott`, H.npcNear(nm, 3478, 3238, 0) !== null, true);
 }
 
@@ -139,7 +148,7 @@ for (const nm of ['templetrek_multi_retired_man_easy', 'templetrek_multi_retired
 // Old School lets you stock the follower with up to fifteen food items before you leave, and the
 // cache keeps a four-bit counter for exactly that. There is no interface for it, so it is done by
 // using the food on them.
-console.log("\nSTOCKING THE PACK");
+console.log('\nSTOCKING THE PACK');
 H.setVarBit(p, 'templetrek_multi_npc_food_give', 0);
 H.clearInv(p);
 H.give(p, 'lobster', 20);
@@ -195,7 +204,10 @@ const drive = (picks: number[] = []): string[] => {
             p.executeScript(sc, true, true);
         }
     }
-    return H.ifaces.slice(from).filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map((i: any) => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map((i: any) => i.text!);
 };
 
 // -------------------------------------------------------------------------------------- the trek
@@ -275,8 +287,7 @@ for (let leg = 1; leg <= legs; leg++) {
         // second one silently never appears, and the room can never be cleared.
         const types: Record<string, string[]> = {
             snakes: ['templetrek_snake_1', 'templetrek_snake_2', 'templetrek_snake_3'],
-            ghasts: ['templetrek_ghast_invis_1', 'templetrek_ghast_invis_2', 'templetrek_ghast_invis_3',
-                     'templetrek_ghast_vis_1', 'templetrek_ghast_vis_2', 'templetrek_ghast_vis_3'],
+            ghasts: ['templetrek_ghast_invis_1', 'templetrek_ghast_invis_2', 'templetrek_ghast_invis_3', 'templetrek_ghast_vis_1', 'templetrek_ghast_vis_2', 'templetrek_ghast_vis_3'],
             snails: ['templetrek_giantsnail_1', 'templetrek_giantsnail_2', 'templetrek_giantsnail_3'],
             vampyres: ['templetrek_vampire_1', 'templetrek_vampire_2', 'templetrek_vampire_3'],
             shades: ['templetrek_shade_1', 'templetrek_shade_2', 'templetrek_shade_3']
@@ -285,12 +296,10 @@ for (let leg = 1; leg <= legs; leg++) {
         for (const nm of types[ev]) {
             const id = NpcType.getId(nm);
             for (const npc of World.npcs) {
-                if (npc && npc.isActive && npc.type === id && npc.level === p.level &&
-                    Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= 20) alive++;
+                if (npc && npc.isActive && npc.type === id && npc.level === p.level && Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) <= 20) alive++;
             }
         }
-        check('it put three monsters out, all three of them real, and the way on is shut',
-              [spawned, alive, H.getVarBit(p, 'trek_event_done')], [3, 3, 0]);
+        check('it put three monsters out, all three of them real, and the way on is shut', [spawned, alive, H.getVarBit(p, 'trek_event_done')], [3, 3, 0]);
         // resolved the blunt way: this probe is about the trek machine, not the fighting
         H.setVarBit(p, 'trek_kills', spawned);
         H.setVarBit(p, 'trek_event_done', 1);
@@ -324,7 +333,11 @@ for (let leg = 1; leg <= legs; leg++) {
         H.give(p, 'plank', 5);
         H.give(p, 'hammer');
         // three stages, one piece of wood each, and the loc changes under you every time
-        for (const [from, to] of [['templetrek_bridge_broken', 1], ['templetrek_bridge_fixed_1', 2], ['templetrek_bridge_fixed_2', 3]] as [string, number][]) {
+        for (const [from, to] of [
+            ['templetrek_bridge_broken', 1],
+            ['templetrek_bridge_fixed_1', 2],
+            ['templetrek_bridge_fixed_2', 3]
+        ] as [string, number][]) {
             H.opLoc(p, 2090, 5039, from, 1);
             for (let i = 0; i < 40 && H.getVarBit(p, 'trek_bridge_fixed') < to; i++) H.tick(1);
             p.closeModal();
@@ -420,8 +433,7 @@ check('and paid something out', got > 0, true);
 // doing it - a leg transition is not. This is the check that caught the real leak: the teardown used
 // to run AFTER the teleport, so every leg left its escort standing three hundred tiles away.
 let strays = 0;
-for (const nm of ['templetrek_retired_man_easy', 'templetrek_retired_soldier_easy', 'templetrek_man_med',
-                  'templetrek_woman_med', 'templetrek_oldman_hard', 'templetrek_child_hard']) {
+for (const nm of ['templetrek_retired_man_easy', 'templetrek_retired_soldier_easy', 'templetrek_man_med', 'templetrek_woman_med', 'templetrek_oldman_hard', 'templetrek_child_hard']) {
     const id = NpcType.getId(nm);
     for (const npc of World.npcs) {
         if (npc && npc.isActive && npc.type === id) {
@@ -568,7 +580,10 @@ console.log(`        watch queued: ${H.queued(p, '[queue,trek_escort_watch]').le
 H.setVarBit(p, 'templetrek_multi_npc_food_give', 0);
 const hpBefore = charge ? charge.levels[3] : 0;
 for (let i = 0; i < 40; i++) {
-    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    if (charge) {
+        charge.x = pin[0];
+        charge.z = pin[1];
+    }
     H.tick(1);
 }
 const hpAfter = charge ? charge.levels[3] : 0;
@@ -581,7 +596,10 @@ console.log(`        ${hpBefore} -> ${hpAfter} hitpoints over 40 ticks, empty pa
 H.setVarBit(p, 'templetrek_multi_npc_food_give', 5);
 if (charge) charge.levels[3] = 40;
 for (let i = 0; i < 40; i++) {
-    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    if (charge) {
+        charge.x = pin[0];
+        charge.z = pin[1];
+    }
     H.tick(1);
 }
 check('and with food in the pack they eat out of it to stay up', H.getVarBit(p, 'templetrek_multi_npc_food_give') < 5, true);
@@ -590,22 +608,22 @@ console.log(`        pack: 5 -> ${H.getVarBit(p, 'templetrek_multi_npc_food_give
 // and when it runs out the trek is over
 if (charge) charge.levels[3] = 2;
 for (let i = 0; i < 120 && H.getVarBit(p, 'trek_route') !== 0; i++) {
-    if (charge) { charge.x = pin[0]; charge.z = pin[1]; }
+    if (charge) {
+        charge.x = pin[0];
+        charge.z = pin[1];
+    }
     H.tick(1);
 }
 for (let i = 0; i < 20 && p.x !== 3480; i++) H.tick(1);
 p.closeModal();
-check('when they go down the trek fails and you are back in Burgh de Rott',
-      [p.x, p.z, H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort'), H.getVarBit(p, 'templetrek_npc_point_value')],
-      [3480, 3243, 0, 0, 0]);
+check('when they go down the trek fails and you are back in Burgh de Rott', [p.x, p.z, H.getVarBit(p, 'trek_route'), H.getVarBit(p, 'trek_escort'), H.getVarBit(p, 'templetrek_npc_point_value')], [3480, 3243, 0, 0, 0]);
 // Counted around THIS test's escort rather than across the whole map. The forced-state tests above
 // strand villagers in other rooms by design, and the map-wide count belongs where it is - after a
 // natural trek, where nothing is allowed to be left behind.
 let escorts = 0;
 const eid = NpcType.getId('templetrek_retired_man_easy');
 for (const npc of World.npcs) {
-    if (npc && npc.isActive && npc.type === eid &&
-        Math.max(Math.abs(npc.x - pin[0]), Math.abs(npc.z - pin[1])) <= 30) escorts++;
+    if (npc && npc.isActive && npc.type === eid && Math.max(Math.abs(npc.x - pin[0]), Math.abs(npc.z - pin[1])) <= 30) escorts++;
 }
 check('and the escort is gone', escorts, 0);
 check('and the pack is emptied with the trek', H.getVarBit(p, 'templetrek_multi_npc_food_give'), 0);
@@ -654,9 +672,7 @@ if (crank) {
     p.closeModal();
     console.log(`        said: ${said2.join(' | ').slice(0, 160) || '(nothing)'}`);
     console.log(`        player hp ${p.levels[3]}, charge hp ${mine ? mine.levels[3] : -1}, rotten ${H.invCount(p, 'rotten_food')}, stew ${H.invCount(p, 'stew')}`);
-    check('he feeds you both and turns the rotten food into stew',
-          [p.levels[3] > 10, mine ? mine.levels[3] > 10 : false, H.invCount(p, 'rotten_food'), H.invCount(p, 'stew')],
-          [true, true, 0, 3]);
+    check('he feeds you both and turns the rotten food into stew', [p.levels[3] > 10, mine ? mine.levels[3] > 10 : false, H.invCount(p, 'rotten_food'), H.invCount(p, 'stew')], [true, true, 0, 3]);
 }
 H.runProc(p, '[proc,trek_player_died]', [], undefined, true);
 
@@ -678,14 +694,20 @@ check('and Burgh de Rott is not a trek room', H.runProc(p, '[proc,in_templetrek]
 // Driving a player there instead was the first attempt and it was no good - rooms are twenty-five
 // tiles long, a walk that far is at the mercy of the tick budget, and it reported rooms as broken
 // that a real leg had already walked. The question is reachability, so ask reachability.
-console.log("\nEVERY ROOM: the way north is in the same region as the entry tile");
+console.log('\nEVERY ROOM: the way north is in the same region as the entry tile');
 const region = (sx: number, sz: number): Set<string> => {
     const seen = new Set<string>([`${sx},${sz}`]);
     const st: [number, number][] = [[sx, sz]];
     while (st.length) {
         const [cx, cz] = st.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = cx + dx, nz = cz + dz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz;
             const k = `${nx},${nz}`;
             if (seen.has(k)) continue;
             if (Math.abs(nx - sx) > 45 || Math.abs(nz - sz) > 45) continue;
@@ -704,7 +726,14 @@ for (const [n, entry, success, fail, evade] of ROOMS.filter(r => r[0] <= 14)) {
     p.teleport(entry[0], entry[1], 0);
     H.tick(3);
     const reg = region(entry[0], entry[1]);
-    const near = (t: [number, number]) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => reg.has(`${t[0] + dx},${t[1] + dz}`));
+    const near = (t: [number, number]) =>
+        [
+            [0, 0],
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ].some(([dx, dz]) => reg.has(`${t[0] + dx},${t[1] + dz}`));
     const want = !PUZZLE.has(n);
     check(`room ${n} (${EVENT_OF[n]}): entry region ${reg.size} tiles, Continue-trek in it`, near(success), want);
     check(`room ${n}: Escape and Evade in it too`, [near(fail), evade === null ? true : near(evade)], [true, true]);

@@ -147,7 +147,7 @@ const m: Manifest = {
         { stage: 30 },
         { has: 'trollromance_rare_flower' },
 
-        { note: "wiki step 5, the way home: the plateau is a dead end going back - Tenzing says as" },
+        { note: 'wiki step 5, the way home: the plateau is a dead end going back - Tenzing says as' },
         { note: 'much - so you ride the second slope, crash into the rocks above the tunnel, and come' },
         { note: "out on Rellekka's side of the mountain. The tunnel takes the sled off your back." },
         { go: SLOPE2_STAND, exact: true, r: 90, why: 'to the top of the second slope' },
@@ -180,7 +180,7 @@ const m: Manifest = {
         { fight: 'trollromance_arrg_attackable', untilvar: 'troll_love', to: 40, tries: 4, why: 'kill him' },
         { stage: 40 },
 
-        { note: "wiki step 7: and then you walk out. The arena is a 614-tile pocket with no way out" },
+        { note: 'wiki step 7: and then you walk out. The arena is a 614-tile pocket with no way out' },
         { note: 'on foot except its own doors, and those stay shut until Troll Stronghold is done -' },
         { note: 'which it is, since Troll Romance requires it. A player who could not open them would' },
         { note: 'be sealed in with the body.' },

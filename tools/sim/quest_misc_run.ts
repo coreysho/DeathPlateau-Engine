@@ -71,8 +71,7 @@ const WEEDS: [string, number, number, number, number][] = [
 
 // A courting round asks one of nine questions at random and each has its own flattering answer, so
 // the pick is the whole list and a1lib takes whichever of them is on the menu.
-const FLATTER =
-    'Be still, my heart||understand your poetry||greatest bard||How poetic||How inspiring||nobler pursuit||touched||presume to have the skill||glad to hear it';
+const FLATTER = 'Be still, my heart||understand your poetry||greatest bard||How poetic||How inspiring||nobler pursuit||touched||presume to have the skill||glad to hear it';
 
 const TO_THRONE_ROOM: Step[] = [
     { go: [2509, 3859], r: 192, why: 'to the castle hall door' },

@@ -42,7 +42,7 @@ const m: Manifest = {
     quest: 'IN AID OF THE MYREQUE',
     source: 'oldschool.runescape.wiki/w/In_Aid_of_the_Myreque',
     stageVar: 'myreque_2_quest',
-    done: 110,  // ^m2_complete
+    done: 110, // ^m2_complete
     start: [3507, 9841, 0],
     steps: [
         { note: 'requirements: In Search of the Myreque, 25 Agility, 25 Crafting, 15 Mining and 7' },

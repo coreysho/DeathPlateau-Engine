@@ -45,9 +45,17 @@ console.log('EVERY TRAP TILE LANDS IN A DECLARED ZONE');
 {
     const TRAPS: [number, number, number][] = [
         // one tile out of each of the four trap types, plus the two upper-level rows
-        [0, 2703, 9108], [0, 2697, 9115], [0, 2701, 9141], [0, 2693, 9109],
-        [0, 2691, 9115], [0, 2746, 9101], [0, 2809, 9111], [0, 2785, 9204],
-        [1, 2705, 9158], [1, 2744, 9195], [1, 2697, 9213]
+        [0, 2703, 9108],
+        [0, 2697, 9115],
+        [0, 2701, 9141],
+        [0, 2693, 9109],
+        [0, 2691, 9115],
+        [0, 2746, 9101],
+        [0, 2809, 9111],
+        [0, 2785, 9204],
+        [1, 2705, 9158],
+        [1, 2744, 9195],
+        [1, 2697, 9213]
     ];
     let missing = 0;
     for (const [level, x, z] of TRAPS) {
@@ -161,8 +169,7 @@ console.log('\nAND IT STOPS AT THE DOOR');
     const after = H.hits.filter(h => h.who === p.username).length;
     const hpAfter = p.levels[HP];
     H.tick(20);
-    check('    and nothing follows you out of the cave',
-          [H.hits.filter(h => h.who === p.username).length, p.levels[HP]], [after, hpAfter]);
+    check('    and nothing follows you out of the cave', [H.hits.filter(h => h.who === p.username).length, p.levels[HP]], [after, hpAfter]);
     H.despawn(p);
 }
 
@@ -180,9 +187,15 @@ console.log('\nTHE ROCK TELLS YOU WHAT IT IS, AND A PLANK CROSSES IT');
     const i0 = H.ifaces.length;
     op(p, 2693, 9109, 'mm_double_springtrap_trigger', 1);
     H.tick(8);
-    const box = H.ifaces.slice(i0).filter(i => i.kind === 'text').map(i => i.text ?? '');
-    check('    searching it says it is a trap with nothing to disarm',
-          box.some(t => t.includes('It is a trap')), true);
+    const box = H.ifaces
+        .slice(i0)
+        .filter(i => i.kind === 'text')
+        .map(i => i.text ?? '');
+    check(
+        '    searching it says it is a trap with nothing to disarm',
+        box.some(t => t.includes('It is a trap')),
+        true
+    );
 
     H.give(p, 'woodplank', 1);
     const m1 = mark();

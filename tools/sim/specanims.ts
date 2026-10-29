@@ -35,10 +35,8 @@ import Player from '#/engine/entity/Player.js';
 await H.boot();
 
 const DEFENCE = 1;
-const param = (obj: string, key: string): unknown =>
-    (ObjType.get(ObjType.getId(obj)) as unknown as { params?: Map<number, unknown> }).params?.get(ParamType.getId(key));
-const seqName = (id: number | undefined): string =>
-    (typeof id === 'number' && id >= 0 ? (SeqType.get(id)?.debugname ?? `seq_${id}`) : '-');
+const param = (obj: string, key: string): unknown => (ObjType.get(ObjType.getId(obj)) as unknown as { params?: Map<number, unknown> }).params?.get(ParamType.getId(key));
+const seqName = (id: number | undefined): string => (typeof id === 'number' && id >= 0 ? (SeqType.get(id)?.debugname ?? `seq_${id}`) : '-');
 
 const origND = JavaRandom.nextDouble.bind(JavaRandom);
 const pin = (v: number | null) => {
@@ -79,8 +77,7 @@ const runSpec = (label: string, npc: Npc, p: Player) => {
 // `where` is the entity the graphic belongs on: 'npc' for an impact effect at the point of the
 // hit, 'player' for a 2006 special whose glow is around the wielder, which is where the cache's
 // own puncture/cleave/shatter set puts it.
-type Row = { weapon: string; label: string; anim: string; spot: string | null;
-             where: 'npc' | 'player'; height: number; ordinary: string[] };
+type Row = { weapon: string; label: string; anim: string; spot: string | null; where: 'npc' | 'player'; height: number; ordinary: string[] };
 const SPECS: Row[] = [
     // Post-2006, imported: see content/scripts/skill_combat/configs/melee/osrs_spec_anims.seq
     { weapon: 'dragon_warhammer', label: '[label,pvm_dragon_warhammer_sa]', anim: 'osrs_dwh_spec', spot: 'dwh_spec', where: 'player', height: 0, ordinary: ['crushattack_anim'] },
@@ -109,17 +106,19 @@ console.log('== the four imported animations exist and look like player specials
         check(`${nm} has special priority`, s.priority, 6);
         check(`${nm} walk-merges`, s.walkmerge !== null && s.walkmerge !== undefined, true);
     }
-    for (const nm of ['dwh_spec', 'granite_hammer_spec', 'bludgeon_spec', 'dsword_spec',
-                      'sotd_spec_gfx', 'sol_spec_gfx']) {
+    for (const nm of ['dwh_spec', 'granite_hammer_spec', 'bludgeon_spec', 'dsword_spec', 'sotd_spec_gfx', 'sol_spec_gfx']) {
         check(`spotanim ${nm} is in the build`, SpotanimType.getId(nm) !== -1, true);
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('\n== each special plays its own animation, and not the weapon\'s ordinary swing');
+console.log("\n== each special plays its own animation, and not the weapon's ordinary swing");
 {
     for (const r of SPECS) {
-        if (ObjType.getId(r.weapon) === -1) { check(`${r.weapon} exists`, false, true); continue; }
+        if (ObjType.getId(r.weapon) === -1) {
+            check(`${r.weapon} exists`, false, true);
+            continue;
+        }
         const p = player(`spec_${r.weapon}`, 3250, 3250);
         H.clearInv(p);
         H.give(p, r.weapon);
@@ -150,7 +149,10 @@ console.log('\n== each special plays its own animation, and not the weapon\'s or
             check(`${r.weapon}: ...at height ${r.height}`, here.height, r.height);
             check(`${r.weapon}: ...and not on the other one`, there.id === want, false);
         }
-        const played = H.anims.slice(mark).filter(a => a.who === p.username).map(a => seqName(a.seq));
+        const played = H.anims
+            .slice(mark)
+            .filter(a => a.who === p.username)
+            .map(a => seqName(a.seq));
         check(`${r.weapon}: plays ${r.anim}`, played.includes(r.anim), true);
 
         // THE HALF THAT CAUGHT NOTHING BEFORE: the ordinary swing must not be what ran.
@@ -162,7 +164,7 @@ console.log('\n== each special plays its own animation, and not the weapon\'s or
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('\n== and the dragon warhammer still takes 30% of the target\'s current Defence');
+console.log("\n== and the dragon warhammer still takes 30% of the target's current Defence");
 {
     // The animation change must not have disturbed the drain, which is the whole point of Smash.
     const p = player('dwh_drain', 3250, 3250);
@@ -174,7 +176,7 @@ console.log('\n== and the dragon warhammer still takes 30% of the target\'s curr
     H.setVar(p, 'com_maxhit', 20);
 
     const before = npc.levels[DEFENCE];
-    pin(0.99);                                   // the accuracy roll lands on a HIGH pin
+    pin(0.99); // the accuracy roll lands on a HIGH pin
     try {
         runSpec('[label,pvm_dragon_warhammer_sa]', npc, p);
     } finally {
@@ -214,7 +216,7 @@ console.log('\n== and the ORDINARY attack animations are the ones Old School pla
             // axe on the swing - which puts an AXE in the player's hands for most of every frame.
             // The OSRS ids are the dump's either way, which is exactly why this could only be
             // caught in the client: an id checker compares ids, and these ARE the right ids.
-            why: 'crush 3298, defence 1666, stance 1652 - and 1666 IS the granite maul\'s, shared',
+            why: "crush 3298, defence 1666, stance 1652 - and 1666 IS the granite maul's, shared",
             want: {
                 crushattack_anim: 'osrs_bludgeon_crush',
                 defend_anim: 'slayer_granite_maul_defend',
@@ -236,8 +238,7 @@ console.log('\n== and the ORDINARY attack animations are the ones Old School pla
     ];
     // the four bladed staves: stance 813, stab 428, slash 440, crush 419, defence 420. We had the
     // one-handed SWORD's 386/390 and the Kodai wand's 414/415.
-    for (const s of ['staff_of_the_dead', 'staff_of_light',
-                     'toxic_staff_of_the_dead', 'toxic_staff_uncharged']) {
+    for (const s of ['staff_of_the_dead', 'staff_of_light', 'toxic_staff_of_the_dead', 'toxic_staff_uncharged']) {
         ORDINARY.push({
             weapon: s,
             why: 'bladed staff: stance 813, stab 428, slash 440, crush 419, defence 420',
@@ -252,7 +253,10 @@ console.log('\n== and the ORDINARY attack animations are the ones Old School pla
     }
 
     for (const row of ORDINARY) {
-        if (ObjType.getId(row.weapon) === -1) { check(`${row.weapon} exists`, false, true); continue; }
+        if (ObjType.getId(row.weapon) === -1) {
+            check(`${row.weapon} exists`, false, true);
+            continue;
+        }
         console.log(`   ${row.weapon}: ${row.why}`);
         for (const [key, want] of Object.entries(row.want)) {
             check(`  ${row.weapon}.${key}`, seqName(param(row.weapon, key) as number), want);

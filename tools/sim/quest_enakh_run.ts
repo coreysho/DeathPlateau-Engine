@@ -170,7 +170,7 @@ const m: Manifest = {
         { varis: 'enakh_shadow_room', to: 1 },
 
         { note: 'and blood is Pentyn, who has been running the ward for four thousand years' },
-        { setpos: PRISON, why: "to the light prison" },
+        { setpos: PRISON, why: 'to the light prison' },
         { talk: 'enakh_pentyn', want: 'anchored', why: 'he says where to hit it' },
         { useLoc: 'enakh_light_prison', at: [PRISON[0], PRISON[1] - 1], obj: 'enakh_chisel', want: 'light goes out', why: 'put the chisel through the anchor' },
         { varis: 'enakh_blood_room', to: 1 },

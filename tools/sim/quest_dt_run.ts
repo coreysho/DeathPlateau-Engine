@@ -90,7 +90,7 @@ const m: Manifest = {
         { setvar: 'waterfall_quest', to: 10, why: '^waterfall_complete' },
         { setvar: 'desertrescue', to: 30, why: '^desertrescue_complete' },
         { note: 'skills: Magic 50 for the obelisks, Firemaking 50 for the smoke torches,' },
-        { note: 'Thieving 53 for the bandits\' three-lock chest. maxOut covers all three.' },
+        { note: "Thieving 53 for the bandits' three-lock chest. maxOut covers all three." },
 
         { note: 'THE KIT DOES NOT FIT IN ONE INVENTORY. Six molten glass, six steel bars and the' },
         { note: 'lockpicks are unstackable, so handing the whole quest out at the start left' },
@@ -98,7 +98,6 @@ const m: Manifest = {
         { note: 'no room, which is a real check and not a harness problem. Each leg is handed what' },
         { note: 'it needs when it needs it.' },
         { give: 'coins', n: 1000 },
-
 
         { note: 'wiki step 1: Indiana, digging in the desert north of the bandit camp' },
         { setpos: INDIANA, why: 'to Indiana' },
@@ -210,7 +209,7 @@ const m: Manifest = {
         { has: 'fd_blood_diamond' },
 
         { note: '================ THE DIAMOND OF ICE' },
-        { note: "wiki step 10: the troll child at the ice gate. A sweet buys the way past, and" },
+        { note: 'wiki step 10: the troll child at the ice gate. A sweet buys the way past, and' },
         { note: 'giving it is what puts Kamil in his arena.' },
         { give: 'cake' },
         { setpos: TROLL_CHILD, why: 'to the troll child' },
@@ -228,7 +227,7 @@ const m: Manifest = {
 
         { note: '================ THE DIAMOND OF SMOKE' },
         { note: 'wiki step 12: the well west of Pollnivneach. The smoke needs a mask - a gasmask, a' },
-        { note: "slayer facemask or a slayer helmet - and a lap of four torches has four minutes in" },
+        { note: 'slayer facemask or a slayer helmet - and a lap of four torches has four minutes in' },
         { note: 'it before the first one burns out, which is about 510 tiles of running.' },
         { give: 'gasmask' },
         { give: 'tinderbox' },

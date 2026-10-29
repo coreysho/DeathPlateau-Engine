@@ -58,12 +58,7 @@ const m: Manifest = {
         { setpos: DREZEL, why: 'to Drezel' },
         {
             talk: 'priestperiltrappedmonk2',
-            picks: [
-                'Is there anything else interesting to do around here?',
-                'Well, what is it, I may be able to help?',
-                "Yes, I'll go and look for him.",
-                "Yes, I'm sure."
-            ],
+            picks: ['Is there anything else interesting to do around here?', 'Well, what is it, I may be able to help?', "Yes, I'll go and look for him.", "Yes, I'm sure."],
             want: 'take this food to Filliman',
             why: 'he asks you to look for Filliman'
         },

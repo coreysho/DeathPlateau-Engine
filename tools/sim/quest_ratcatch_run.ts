@@ -35,7 +35,7 @@ const m: Manifest = {
     quest: 'RAT CATCHERS',
     source: 'oldschool.runescape.wiki/w/Ratcatchers',
     stageVar: 'ratcatch_var',
-    done: 60,   // ^ratcatch_complete
+    done: 60, // ^ratcatch_complete
     start: [3152, 3409, 0],
     steps: [
         { note: 'requirements: Gertrude’s Cat, Icthlarin’s Little Helper, and The Giant Dwarf' },

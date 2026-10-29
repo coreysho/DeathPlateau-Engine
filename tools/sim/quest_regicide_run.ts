@@ -90,7 +90,7 @@ const m: Manifest = {
         { note: 'three logs over the river. Every one of those was broken - the forest and the' },
         { note: 'traps moved the player nowhere at all and the logs had no handler - and all of' },
         { note: 'them are fixed and clicked for real below. But even with every obstacle working,' },
-        { note: "the pockets they join do not add up to a route: flood-filled, the Well of" },
+        { note: 'the pockets they join do not add up to a route: flood-filled, the Well of' },
         { note: "Voyage's clearing and the clearing north of it are 365 and 202 tiles and the" },
         { note: 'chains out of them end in three-tile slots. Tyras Camp is a 471-tile island whose' },
         { note: 'three crossings all face outward. That is map data, not script, and it wants the' },

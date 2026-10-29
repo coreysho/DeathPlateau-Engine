@@ -54,14 +54,7 @@ const R_ARRIVE: [number, number, number] = [2510, 3644, 0];
 const R_STAIRS_BASE: [number, number] = [2506, 3640];
 const R_JOSSIK: [number, number, number] = [2509, 3639, 1];
 
-const MOTHER = [
-    'horror_dagganoth_air',
-    'horror_dagganoth_water',
-    'horror_dagganoth_melee',
-    'horror_dagganoth_earth',
-    'horror_dagganoth_fire',
-    'horror_dagganoth_ranged'
-];
+const MOTHER = ['horror_dagganoth_air', 'horror_dagganoth_water', 'horror_dagganoth_melee', 'horror_dagganoth_earth', 'horror_dagganoth_fire', 'horror_dagganoth_ranged'];
 
 const m: Manifest = {
     quest: 'HORROR FROM THE DEEP',
@@ -70,7 +63,7 @@ const m: Manifest = {
     done: 6, // ^horror_complete
     start: LARRISSA,
     steps: [
-        { note: 'requirement: Alfred Grimhand\'s Barcrawl (the 35 Agility is the Barbarian Outpost' },
+        { note: "requirement: Alfred Grimhand's Barcrawl (the 35 Agility is the Barbarian Outpost" },
         { note: 'pipe between the player and Gunnjorn, which barbarian_course.rs2 enforces itself).' },
         { setvar: 'barcrawl', to: 2, why: '^barcrawl_complete' },
         { note: 'items: a hammer, 60 steel nails and 2 planks for the bridge; swamp tar, a tinderbox' },
@@ -102,7 +95,7 @@ const m: Manifest = {
         { note: 'wiki step 2: her cousin Gunnjorn has the spare key - he is the agility arena guard' },
         { note: 'at the Barbarian Outpost, not behind the broken bridge at all.' },
         { setpos: GUNNJORN, why: 'to the Barbarian Outpost' },
-        { talk: 'gunnjorn', want: 'Here you go', why: 'ask for Larrissa\'s key' },
+        { talk: 'gunnjorn', want: 'Here you go', why: "ask for Larrissa's key" },
         { has: 'horror_key' },
 
         { note: 'wiki steps 3-4: a plank on the span you are standing on, then jump the gap and do' },
@@ -124,7 +117,7 @@ const m: Manifest = {
         { note: 'and the player is now in the attacked copy of the building, 64 west and 960 north' },
 
         { note: 'wiki step 6 (optional, and the only place the puzzles are explained): the bookcase' },
-        { note: 'on the middle floor holds the manual, Silas\'s diary and Jossik\'s journal.' },
+        { note: "on the middle floor holds the manual, Silas's diary and Jossik's journal." },
         { loc: 'horror_lighthouse_spiralstairs_base', at: C_STAIRS_BASE, why: 'up to the middle floor' },
         { loc: 'horror_bookcase', at: C_BOOKCASE, picks: ['Take all three books.'], why: 'search the bookcase' },
         { has: 'horror_diary1' },
@@ -132,7 +125,7 @@ const m: Manifest = {
         { has: 'horror_diary3' },
         { held: 'horror_diary3', op: 1, want: 'molten glass', why: 'the manual says how the light is mended' },
         { close: true },
-        { held: 'horror_diary2', op: 1, want: 'warrior\'s sword', why: 'and the diary how the wall is opened' },
+        { held: 'horror_diary2', op: 1, want: "warrior's sword", why: 'and the diary how the wall is opened' },
         { close: true },
 
         { note: 'wiki step 7: swamp tar, a tinderbox and molten glass on the mechanism, any order' },
@@ -193,7 +186,7 @@ const m: Manifest = {
         { has: 'horror_casket' },
 
         { note: 'wiki step 13: back up into the real lighthouse - the copy is gone now - and up to' },
-        { note: 'Jossik\'s library, where he reads the casket with you' },
+        { note: "Jossik's library, where he reads the casket with you" },
         { loc: 'horror_ladder_base', at: LADDER_UP, want: 'climb up', why: 'up out of the basement' },
         { loc: 'horror_lighthouse_spiralstairs_base', at: R_STAIRS_BASE, why: 'up to the library' },
         { note: 'he asks what the casket says twice and will not open it until the answer matches.' },

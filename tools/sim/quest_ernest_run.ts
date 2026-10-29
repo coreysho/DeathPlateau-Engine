@@ -37,9 +37,7 @@ const DOOR: Record<string, [number, number]> = {
     '5to8': [3102, 9758]
 };
 
-const pull = (name: string, dir: string): Step[] => [
-    { loc: 'lever' + name.toLowerCase(), at: LEVER[name], want: 'lever ' + name + ' ' + dir, why: 'pull it ' + dir }
-];
+const pull = (name: string, dir: string): Step[] => [{ loc: 'lever' + name.toLowerCase(), at: LEVER[name], want: 'lever ' + name + ' ' + dir, why: 'pull it ' + dir }];
 const through = (name: string): Step[] => [
     { varis: 'ernestdoor_' + name, to: 1 },
     { loc: name, at: DOOR[name], why: 'through it' }
@@ -47,19 +45,36 @@ const through = (name: string): Step[] => [
 
 // The 23 moves ernestmaze.ts found, which are the wiki's own sequence.
 const maze: Step[] = [
-    ...pull('A', 'down'), ...pull('B', 'down'), ...through('4to7'),
-    ...pull('D', 'down'), ...through('4to5'), ...through('5to8'),
-    ...pull('A', 'up'), ...pull('B', 'up'), ...through('5to8'), ...through('5to6'), ...through('3to6'),
-    ...pull('E', 'down'), ...pull('F', 'down'), ...through('2to3'), ...through('1to2'),
-    ...pull('C', 'down'), ...through('1to2'), ...through('2to3'),
-    ...pull('E', 'up'), ...through('2to3'), ...through('2to5'), ...through('5to8'), ...through('8to9')
+    ...pull('A', 'down'),
+    ...pull('B', 'down'),
+    ...through('4to7'),
+    ...pull('D', 'down'),
+    ...through('4to5'),
+    ...through('5to8'),
+    ...pull('A', 'up'),
+    ...pull('B', 'up'),
+    ...through('5to8'),
+    ...through('5to6'),
+    ...through('3to6'),
+    ...pull('E', 'down'),
+    ...pull('F', 'down'),
+    ...through('2to3'),
+    ...through('1to2'),
+    ...pull('C', 'down'),
+    ...through('1to2'),
+    ...through('2to3'),
+    ...pull('E', 'up'),
+    ...through('2to3'),
+    ...through('2to5'),
+    ...through('5to8'),
+    ...through('8to9')
 ];
 
 const m: Manifest = {
     quest: 'ERNEST THE CHICKEN',
     source: 'oldschool.runescape.wiki/w/Ernest_the_Chicken',
     stageVar: 'haunted',
-    done: 3,   // ^haunted_complete
+    done: 3, // ^haunted_complete
     start: [3111, 3330, 0],
     steps: [
         { note: 'wiki: no requirements and no items - the spade is on the floor of the manor.' },
@@ -82,7 +97,7 @@ const m: Manifest = {
 
         { note: 'wiki step 2: the fish food, in the first-floor room south of the main staircase' },
         { loc: 'sarim_spiralstairstop', at: [3105, 3363], why: 'back down to the first floor' },
-        { setpos: [3108, 3356, 1], why: "round the first floor to the room south of the main staircase - the two wings only join at the north end, and that corridor is not this quest" },
+        { setpos: [3108, 3356, 1], why: 'round the first floor to the room south of the main staircase - the two wings only join at the north end, and that corridor is not this quest' },
         { take: 'fish_food', why: 'off the floor' },
         { has: 'fish_food' },
 

@@ -193,9 +193,9 @@ const m: Manifest = {
         { talk: 'ikov_winelda', want: 'potion is nearly ready', why: 'and takes all twenty' },
         { hasnt: 'limpwurt_root' },
 
-        { note: "wiki step 8, ending B: side with Lucien. The staff is on the table in the north" },
+        { note: 'wiki step 8, ending B: side with Lucien. The staff is on the table in the north' },
         { note: 'west room and a Guardian of Armadyl comes for you the moment you lift it.' },
-        { note: 'Ending A - the Guardians\' own side - is walked as far as their pendant in this' },
+        { note: "Ending A - the Guardians' own side - is walked as far as their pendant in this" },
         { note: "file's history; it is blocked at the last blow by npc_findhero coming back false" },
         { note: 'for Lucien, and the two endings are exclusive, so this manifest takes the one that' },
         { note: 'can be proven end to end.' },

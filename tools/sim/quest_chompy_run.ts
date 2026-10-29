@@ -60,7 +60,7 @@ const m: Manifest = {
     start: RANTZ,
     steps: [
         { note: 'no quest requirements. Skills: Fletching 5, Cooking 30, Ranged 30.' },
-        { note: 'items: an axe, about 100 feathers, coins for Fycie\'s flufsies and Bugs\'s' },
+        { note: "items: an axe, about 100 feathers, coins for Fycie's flufsies and Bugs's" },
         { note: 'scratchers, and the six seasonings - the family each want one of two at random,' },
         { note: 'so all six have to be carried to the spit.' },
         { give: 'rune_axe' },

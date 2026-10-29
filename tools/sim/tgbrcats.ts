@@ -36,8 +36,8 @@ H.tick(1);
 
 // ------------------------------------------------------------------ the cats
 console.log('THE WOODEN CATS, at a workbench');
-H.setVar(p, 'tgbr', 60);               // ^tgbr_doctor - Fenkenstrain has agreed to come
-H.setVarBit(p, 'tgbr_crate', 1);       // ^tgbr_crate_space - Rufus has handed the parts over
+H.setVar(p, 'tgbr', 60); // ^tgbr_doctor - Fenkenstrain has agreed to come
+H.setVarBit(p, 'tgbr_crate', 1); // ^tgbr_crate_space - Rufus has handed the parts over
 check('the workbench offers to carve them', H.runProc(p, '[proc,tgbr_wants_cats]')[0] === 1);
 
 H.clearInv(p);
@@ -100,8 +100,7 @@ check('level 190', t.vislevel, 190);
 check('134 hitpoints', t.stats[3], 134);
 check('170 Attack, 145 Strength, 140 Defence', [t.stats[0], t.stats[2], t.stats[1]], [170, 145, 140]);
 check('3x3', t.size, 3);
-check('and 35 is its max hit through this engine’s own formula',
-    Math.floor(((t.stats[2] + 9) * (80 + 64) + 320) / 640), 35);
+check('and 35 is its max hit through this engine’s own formula', Math.floor(((t.stats[2] + 9) * (80 + 64) + 320) / 640), 35);
 
 // the prayer drain: a point of Attack and Defence, half the damage off the prayer book, and every
 // prayer switched off.
@@ -134,7 +133,10 @@ for (const stage of [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130])
     try {
         H.ifButton(p, 'questlist:tgbr');
         H.tick(1);
-        const text = (H.ifaces as any[]).filter(f => f.kind === 'text').map(f => f.text).join(' ');
+        const text = (H.ifaces as any[])
+            .filter(f => f.kind === 'text')
+            .map(f => f.text)
+            .join(' ');
         if (!text.includes('Brain Robbery') && !text.includes('@')) {
             console.log(`  FAIL   stage ${stage}: nothing was drawn`);
             journalBad++;

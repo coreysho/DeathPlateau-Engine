@@ -19,7 +19,7 @@ const m: Manifest = {
     quest: "MONK'S FRIEND",
     source: 'oldschool.runescape.wiki/w/Monk%27s_Friend',
     stageVar: 'drunkmonkquest',
-    done: 80,   // ^drunkmonk_complete
+    done: 80, // ^drunkmonk_complete
     start: [2605, 3211, 0],
     steps: [
         { note: 'wiki: a jug of water and some logs, both carried from elsewhere' },

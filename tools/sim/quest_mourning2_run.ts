@@ -121,11 +121,7 @@ const INTO_THE_WEST_END: Step[] = [
     { loc: 'mourning_door_1_c', at: DOOR_C, hop: true, why: 'through the black door' }
 ];
 
-const OUT_OF_THE_WEST_END: Step[] = [
-    { go: [HOLE_STAND[0], HOLE_STAND[1]], why: 'to the hole in the west wall' },
-    { loc: 'mourning_temple_light_wall_with_hole', at: HOLE, hop: true, why: 'squeeze out' },
-    { level: 0 }
-];
+const OUT_OF_THE_WEST_END: Step[] = [{ go: [HOLE_STAND[0], HOLE_STAND[1]], why: 'to the hole in the west wall' }, { loc: 'mourning_temple_light_wall_with_hole', at: HOLE, hop: true, why: 'squeeze out' }, { level: 0 }];
 
 // from the west end back up to the top floor, for the crystal
 const UP_FROM_THE_WEST_END: Step[] = [
@@ -173,20 +169,20 @@ const m: Manifest = {
     done: 50, // ^mt_complete
     start: ARIANWYN,
     steps: [
-        { note: 'items: a chisel for the black crystal, and the twenty-one on Thorgel\'s list. The' },
+        { note: "items: a chisel for the black crystal, and the twenty-one on Thorgel's list. The" },
         { note: 'list does not fit in one inventory beside the temple kit, so it goes over the' },
         { note: 'counter in two batches - which is what the handin script is written for: it takes' },
         { note: 'whatever you are carrying and tells you how many are left.' },
         { setvar: 'mourning_quest', to: 20, why: "^mourning_complete - Mourning's End Part I" },
         { give: 'chisel' },
 
-        { note: 'wiki step 1: Arianwyn in Lletya has read the mourners\' list and knows what it is for' },
+        { note: "wiki step 1: Arianwyn in Lletya has read the mourners' list and knows what it is for" },
         { go: [ARIANWYN[0], ARIANWYN[1]], why: 'to Arianwyn' },
         { talk: 'mourning_arianwyn', want: 'sealed six hundred years ago', why: 'take the quest' },
         { stage: 10 },
         { varis: 'mourning_light_door_1_c_first_time', to: 1 },
 
-        { note: 'wiki step 2: in through the mourners\' own dig, west along the cave, and in at the' },
+        { note: "wiki step 2: in through the mourners' own dig, west along the cave, and in at the" },
         { note: 'east wall of the temple' },
         ...THE_TUNNEL_IN,
         { stage: 20 },

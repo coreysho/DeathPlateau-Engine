@@ -112,7 +112,7 @@ const m: Manifest = {
         { give: 'tinderbox' },
         { give: 'coins', n: 1000 },
 
-        { note: 'the Suqah drops are rolled: a tooth is 69/129 and Meteora\'s tiara a flat half' },
+        { note: "the Suqah drops are rolled: a tooth is 69/129 and Meteora's tiara a flat half" },
         { note: 'once she has asked for it, so the rolls are pinned for the hunting.' },
         { rng: 0.3, why: 'a hide and a tooth off every Suqah' },
 
@@ -237,8 +237,8 @@ const m: Manifest = {
         { talk: 'oneiromancer', want: 'waking sleep potion', why: 'she names the three things' },
         { stage: 90 },
 
-        { note: 'wiki steps 6-8: the waking sleep potion. Baba Yaga\'s own vial, filled at the' },
-        { note: 'island\'s water source, then guam, marrentill and a ground Suqah tooth.' },
+        { note: "wiki steps 6-8: the waking sleep potion. Baba Yaga's own vial, filled at the" },
+        { note: "island's water source, then guam, marrentill and a ground Suqah tooth." },
         { setpos: BABA, why: "to Baba Yaga's house" },
         { talk: 'baba_yaga', picks: ['Oneiromancer told me'], want: 'vial', why: 'ask for the vial' },
         { has: 'lunar_empty_vial' },
@@ -250,7 +250,7 @@ const m: Manifest = {
         { use: ['marentill', 'lunar_guam_vial'], why: 'and marrentill' },
         { has: 'lunar_guam_marr_vial' },
 
-        { note: 'the tooth comes off a Suqah, and so do the four hides and Meteora\'s tiara' },
+        { note: "the tooth comes off a Suqah, and so do the four hides and Meteora's tiara" },
         { setpos: SUQAH, why: 'to the Suqah on the east of the island' },
         { fight: 'suqah', until: 'suqah_tooth', tries: 4, r: 24, why: 'kill a Suqah for a tooth' },
         { take: 'suqah_tooth', r: 8, why: 'take the tooth' },
@@ -285,7 +285,7 @@ const m: Manifest = {
         { stage: 110 },
 
         { note: 'wiki step 10a: the helm. Lunar ore out of the stalagmites in the mine under the' },
-        { note: 'island, smelted in Rellekka and hammered on an anvil. Rellekka\'s own three' },
+        { note: "island, smelted in Rellekka and hammered on an anvil. Rellekka's own three" },
         { note: 'viking_anvil locs are scenery in the 377 cache - no ops, no category - so the' },
         { note: 'nearest anvil that smithing actually owns is the Falador one.' },
         { setpos: MINE, why: 'to the mine under the island' },
@@ -380,7 +380,7 @@ const m: Manifest = {
         { level: 2 },
 
         { note: 'THE DREAM WORLD. The six challenges are solved for real in tools/sim/lunar.ts -' },
-        { note: 'a search over the dice states, the Numerator\'s sixteen sequences, the hurdle' },
+        { note: "a search over the dice states, the Numerator's sixteen sequences, the hurdle" },
         { note: 'pattern table - which is not something a step list can hold. What the walk tests' },
         { note: 'here is that the player arrives on the central platform on their own feet, that' },
         { note: 'the Ethereal Being is standing on it, that Me can be fought, and that the lectern' },

@@ -20,7 +20,7 @@ const m: Manifest = {
     quest: 'PRINCE ALI RESCUE',
     source: 'oldschool.runescape.wiki/w/Prince_Ali_Rescue',
     stageVar: 'princequest',
-    done: 110,   // ^prince_complete
+    done: 110, // ^prince_complete
     start: [3299, 3163, 0],
     steps: [
         { note: 'wiki part 1 is a shopping list and a tour of five skills. Declared, not walked:' },
@@ -53,12 +53,12 @@ const m: Manifest = {
         { setpos: [3110, 3262, 0], why: 'west across the river and past Lumbridge to Draynor' },
         { talk: 'leela', picks: ['make a disguise', 'get the key made', 'do with the guards', 'rest of the escape equipment'], why: 'she explains the disguise, the key and the guard' },
 
-        { note: "wiki part 2 step 4: Ned makes the wig out of three balls of wool" },
+        { note: 'wiki part 2 step 4: Ned makes the wig out of three balls of wool' },
         { setpos: [3101, 3257, 0], why: "west to Ned's house" },
         { talk: 'ned', picks: ['other things from wool', 'sort of wig', 'Please, make me a wig'], want: 'pretty good wig', why: 'he knits it' },
         { has: 'plainwig' },
 
-        { note: "wiki part 2 step 5: Aggie makes the skin paste, and the yellow dye out of two onions" },
+        { note: 'wiki part 2 step 5: Aggie makes the skin paste, and the yellow dye out of two onions' },
         { setpos: [3086, 3258, 0], why: "west again to Aggie's" },
         { talk: 'aggie', picks: ['make skin paste', 'Mix me some skin paste'], why: 'the paste' },
         { has: 'skinpaste' },
@@ -100,7 +100,7 @@ const m: Manifest = {
         { stage: 50 },
         { hasnt: 'rope' },
 
-        { note: "wiki part 3 step 8: the key in the cell door" },
+        { note: 'wiki part 3 step 8: the key in the cell door' },
         { useLoc: 'alidoor', at: [3123, 3243], obj: 'princeskey', want: 'unlock the door', why: 'unlock it' },
 
         { note: 'wiki part 3 step 9: the Prince puts the disguise on and walks out' },

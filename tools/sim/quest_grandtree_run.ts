@@ -69,14 +69,7 @@ const m: Manifest = {
         { setpos: NARNODE, why: 'back to the King' },
         {
             talk: 'grandtree_narnode',
-            picks: [
-                'I think so!',
-                'None of the above.',
-                'None of the above.',
-                "A man came to me with the King's seal.",
-                'I gave the man Daconia rocks.',
-                'And Daconia rocks will kill the tree!'
-            ],
+            picks: ['I think so!', 'None of the above.', 'None of the above.', "A man came to me with the King's seal.", 'I gave the man Daconia rocks.', 'And Daconia rocks will kill the tree!'],
             want: 'forged my royal seal',
             why: 'translate the scroll'
         },
@@ -133,11 +126,7 @@ const m: Manifest = {
         { setpos: FOREMAN, why: 'to the foreman' },
         {
             talk: 'grandtree_foreman',
-            picks: [
-                'Sadly his wife is no longer with us!',
-                'He loves worm holes.',
-                'Anita.'
-            ],
+            picks: ['Sadly his wife is no longer with us!', 'He loves worm holes.', 'Anita.'],
             want: 'order for the lumber',
             why: 'answer the interrogation'
         },

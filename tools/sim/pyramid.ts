@@ -36,7 +36,12 @@ const AGILITY = 16;
 const HITPOINTS = 3;
 
 const standable = (x: number, z: number, level: number): boolean => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -51,7 +56,10 @@ const pin = (v: number | null) => {
 };
 
 // Seed every plane of both squares so collision is measured rather than assumed.
-for (const [sx, sz] of [[3365, 2841], [3045, 4697]] as const) {
+for (const [sx, sz] of [
+    [3365, 2841],
+    [3045, 4697]
+] as const) {
     for (let level = 0; level < 4; level++) {
         const p = H.makePlayer(`pyr_seed_${sx}_${level}`, sx, sz);
         p.teleport(sx, sz, level);
@@ -102,7 +110,11 @@ console.log('== the course is gated at Agility 30, on every obstacle and every s
     H.tick(4);
     check('a level 29 player stays on the sand', [p.x, p.z, p.level], [3354, 2830, 0]);
     // ~mesbox is an interface, not a game message, so the refusal is read off the components.
-    check('and is told why', H.ifaces.slice(mark).some(i => (i.text ?? '').includes('Agility level of 30')), true);
+    check(
+        'and is told why',
+        H.ifaces.slice(mark).some(i => (i.text ?? '').includes('Agility level of 30')),
+        true
+    );
     p.setLevel(AGILITY, 30);
     H.opLoc(p, 3354, 2831, 'agility_pyramid_steps1', 1);
     H.tick(4);
@@ -162,8 +174,11 @@ console.log('== every tile the lap uses is a tile');
         check(`${s.what}: and land at ${s.to[0]},${s.to[1]} L${s.to[2]}`, real(s.to[0], s.to[1], s.to[2]), true);
     }
     // The apex walkway and the two tiles the climb and the doorway are used from.
-    for (const [nm, x, z, l] of [['the climbing rocks', 3043, 4697, 3], ['the summit doorway', 3045, 4696, 3],
-        ['the doorway exit', 3365, 2829, 0]] as const) {
+    for (const [nm, x, z, l] of [
+        ['the climbing rocks', 3043, 4697, 3],
+        ['the summit doorway', 3045, 4696, 3],
+        ['the doorway exit', 3365, 2829, 0]
+    ] as const) {
         check(`${nm} at ${x},${z} L${l} is a tile`, real(x, z, l), true);
     }
 }
@@ -173,10 +188,12 @@ console.log('== and the engine takes the click from the tile the lap uses');
     for (const s of LAP) {
         const id = LocType.getId(s.loc);
         const loc = World.getLoc(s.at[0], s.at[1], s.from[2], id);
-        if (!loc) { check(`${s.what}: ${s.loc} is at ${s.at[0]},${s.at[1]}`, false, true); continue; }
+        if (!loc) {
+            check(`${s.what}: ${s.loc} is at ${s.at[0]},${s.at[1]}`, false, true);
+            continue;
+        }
         const t = LocType.get(id) as unknown as { forceapproach: number };
-        check(`${s.what}: reachable from ${s.from[0]},${s.from[1]}`,
-            reachedLoc(s.from[2], s.from[0], s.from[1], loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, t.forceapproach), true);
+        check(`${s.what}: reachable from ${s.from[0]},${s.from[1]}`, reachedLoc(s.from[2], s.from[0], s.from[1], loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, t.forceapproach), true);
     }
 }
 
@@ -223,8 +240,14 @@ console.log('== the rings join up: you can walk from each landing to the next cl
             const [x, z] = queue.shift()!;
             if (x === tx && z === tz) return true;
             if (Math.abs(x - fx) > 40 || Math.abs(z - fz) > 40) continue;
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nx = x + dx, nz = z + dz;
+            for (const [dx, dz] of [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ]) {
+                const nx = x + dx,
+                    nz = z + dz;
                 if (seen.has(key(nx, nz))) continue;
                 if (!canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
                 seen.add(key(nx, nz));
@@ -236,7 +259,7 @@ console.log('== the rings join up: you can walk from each landing to the next cl
     for (let i = 0; i < LAP.length - 1; i++) {
         const land = LAP[i].to;
         const next = LAP[i + 1].from;
-        if (land[2] !== next[2] || (land[0] >> 6) !== (next[0] >> 6)) continue;   // a staircase, not a walk
+        if (land[2] !== next[2] || land[0] >> 6 !== next[0] >> 6) continue; // a staircase, not a walk
         check(`${LAP[i].what} -> ${LAP[i + 1].what}`, reaches(land[2], land[0], land[1], next[0], next[1]), true);
     }
 }
@@ -297,10 +320,7 @@ console.log('== a failure drops you a storey onto a real tile, and costs what Ol
         H.tick(1);
         const hp = p.levels[HITPOINTS];
         const xp = p.stats[AGILITY];
-        const at: [number, number] = loc.includes('ledge_hotspot') ? [3364, 2851]
-            : loc.includes('multi_1') ? [3354, 2841]
-            : loc.includes('plank') ? [3375, 2845]
-            : loc.includes('wallhang') ? [3370, 2831] : [3356, 2847];
+        const at: [number, number] = loc.includes('ledge_hotspot') ? [3364, 2851] : loc.includes('multi_1') ? [3354, 2841] : loc.includes('plank') ? [3375, 2845] : loc.includes('wallhang') ? [3370, 2831] : [3356, 2847];
         pin(0.999);
         try {
             H.opLoc(p, at[0], at[1], loc, 1);
@@ -348,7 +368,11 @@ console.log('== the capstone: taken once, and the lap is paid for carrying it th
     H.opLoc(p, 3043, 4697, 'agility_pyramid_wall_rocks', 1);
     for (let i = 0; i < 10; i++) H.tick(1);
     check('a second climb gives nothing', H.invCount(p, 'agility_pyramid_gold_pyramid'), 1);
-    check('and says so', H.mesgs.slice(mark).some(m => m.text.includes('already taken')), true);
+    check(
+        'and says so',
+        H.mesgs.slice(mark).some(m => m.text.includes('already taken')),
+        true
+    );
 
     // Through the door with it: the bonus is 300 + 8 x level, capped at 1,000, off the BASE level.
     p.teleport(3045, 4696, 3);
