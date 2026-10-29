@@ -71,7 +71,11 @@ travel(deputy, 2781, 3197, 0, 32, 0);
 const mark1 = H.mesgs.length;
 useOn(deputy, SIDEDOOR[0], SIDEDOOR[1], 'pete_sidedoor', 'misc_key');
 H.tick(4);
-const said1 = H.mesgs.slice(mark1).filter(x => x.who === deputy.username).map(x => x.text).join(' ');
+const said1 = H.mesgs
+    .slice(mark1)
+    .filter(x => x.who === deputy.username)
+    .map(x => x.text)
+    .join(' ');
 check('the deputy unlocks the side door with the odd key Grip gave him', !said1.includes('locked'), said1.slice(0, 40));
 
 // 2. and the pair of them head for Grip. The mansion's inside is a chain of small rooms with a
@@ -97,11 +101,7 @@ const saidGate = H.ifaces
     .filter(i => i.who === deputy.username && i.kind === 'text' && i.text)
     .map(i => i.text)
     .join(' ');
-check(
-    'the deputy is refused - too many witnesses, and he wants the promotion',
-    (refusal + ' ' + saidGate).includes("attack the head guard"),
-    (refusal + ' ' + saidGate).slice(0, 46)
-);
+check('the deputy is refused - too many witnesses, and he wants the promotion', (refusal + ' ' + saidGate).includes('attack the head guard'), (refusal + ' ' + saidGate).slice(0, 46));
 const thiefMay = H.runProc(thief, '[proc,grip_attack]')[0];
 check('the Phoenix thief is allowed', thiefMay === 1, 'grip_attack ' + thiefMay);
 
@@ -132,7 +132,11 @@ H.tick(1);
 const mark2 = H.mesgs.length;
 useOn(deputy, TREASUREDOOR[0], TREASUREDOOR[1], 'pete_treasuredoor', 'grip_keys');
 H.tick(4);
-const said2 = H.mesgs.slice(mark2).filter(x => x.who === deputy.username).map(x => x.text).join(' ');
+const said2 = H.mesgs
+    .slice(mark2)
+    .filter(x => x.who === deputy.username)
+    .map(x => x.text)
+    .join(' ');
 check('Grip’s key unlocks the treasure room for the deputy', said2.includes('unlocks the door'), said2.slice(0, 40));
 
 // 5. the chest holds two: one each

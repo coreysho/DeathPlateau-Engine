@@ -38,6 +38,6 @@ for (const [x, z, level] of tries) {
         err = String(e);
     }
     H.tick(3);
-    const now = [...World.npcs].filter(n => n && n.type === id);
+    const now = [...World.npcs].filter((n): n is NonNullable<typeof n> => !!n && n.type === id);
     console.log(`  add at ${x},${z} L${level}: before ${before} now ${now.length}${err ? '  ERR ' + err : ''}  ${now.map(n => `L${n.level} ${n.x},${n.z} active=${n.isActive}`).join(' ')}`);
 }

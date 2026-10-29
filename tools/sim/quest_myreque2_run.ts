@@ -13,7 +13,7 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 // The Myreque are in the Hollows until they move into the inn cellar.
-const HOLLOWS_VELIAF: [number, number, number] = [3507, 9841, 0];
+const _HOLLOWS_VELIAFHOLLOWS_VELIAF: [number, number, number] = [3507, 9841, 0];
 const GATE: [number, number] = [3484, 3244];
 const FOOD_CHEST: [number, number] = [3483, 3246];
 const LEADER: [number, number, number] = [3491, 3241, 0];
@@ -42,7 +42,7 @@ const m: Manifest = {
     quest: 'IN AID OF THE MYREQUE',
     source: 'oldschool.runescape.wiki/w/In_Aid_of_the_Myreque',
     stageVar: 'myreque_2_quest',
-    done: 110,  // ^m2_complete
+    done: 110, // ^m2_complete
     start: [3507, 9841, 0],
     steps: [
         { note: 'requirements: In Search of the Myreque, 25 Agility, 25 Crafting, 15 Mining and 7' },

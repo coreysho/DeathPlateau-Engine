@@ -44,7 +44,7 @@ const check = (what: string, got: unknown, want: unknown) => {
 
 // ------------------------------------------------------------------------------------ helpers
 const blocked = (l: number, x: number, z: number) => isFlagged(x, z, l, CollisionFlag.WALK_BLOCKED);
-const at = (p: Player) => [p.x, p.z, p.level];
+const _atat = (p: Player) => [p.x, p.z, p.level];
 const standing = (p: Player) => !blocked(p.level, p.x, p.z);
 
 function v(p: Player, name: string): number {
@@ -238,7 +238,7 @@ const run = (name: string) => !only || name.toLowerCase().includes(only.toLowerC
 
 // Quest-stage constants, read rather than typed: a digit copied into a sim is a line that fails
 // for the wrong reason the next time somebody renumbers a quest.
-const QUEST: Record<string, number> = (() => {
+const _QUESTQUEST: Record<string, number> = (() => {
     const out: Record<string, number> = {};
     const src = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
     for (const m of src.matchAll(/\^(\w+)\s*=\s*(\d+)/g)) out[m[1]] = Number(m[2]);
@@ -488,24 +488,26 @@ if (run('mourning2')) {
     };
     check('  six mirrors in hand for the route', H.invCount(p, 'mourning_mirror'), 6);
     place(p, ...T(59, 6), 2);
-    mirror(59, 5, 'mourning_temple_pillar_3_16', 1);            // flat, south -> west
+    mirror(59, 5, 'mourning_temple_pillar_3_16', 1); // flat, south -> west
     place(p, ...T(42, 6), 2);
-    mirror(42, 5, 'mourning_temple_pillar_3_15', 0);            // straight through: no mirror here
+    mirror(42, 5, 'mourning_temple_pillar_3_15', 0); // straight through: no mirror here
     place(p, ...T(4, 6), 2);
-    mirror(4, 5, 'mourning_temple_pillar_3_13', 2);             // flat, a quarter turn: west -> north
+    mirror(4, 5, 'mourning_temple_pillar_3_13', 2); // flat, a quarter turn: west -> north
     place(p, ...T(4, 32), 2);
-    mirror(4, 31, 'mourning_temple_pillar_3_8', 3);             // flat, two quarters: north -> east
+    mirror(4, 31, 'mourning_temple_pillar_3_8', 3); // flat, two quarters: north -> east
     place(p, ...T(25, 32), 2);
     mirror(25, 31, 'mourning_temple_pillar_3_a', 1);
-    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_3_a', 1, [3, 2]);   // tilt down, the beam going east
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_3_a', 1, [3, 2]); // tilt down, the beam going east
     place(p, ...T(25, 32), 0);
     mirror(25, 31, 'mourning_temple_pillar_1_b', 1);
-    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_1_b', 1, [2, 2]);   // tilt up: a falling beam goes west
+    opLoc(p, ...T(25, 31), 'mourning_temple_pillar_1_b', 1, [2, 2]); // tilt up: a falling beam goes west
     check('five mirrors, two of them tilted, send the light out of the west wall: stage lit', Q(), 40);
     // 7 is white. The generated graph used to write the literal 1 - red - into every segment.
-    check('  the lit path is drawn in WHITE (3_15_16, 3_13_15, 3_1_8 is dark, 1_b_west)',
+    check(
+        '  the lit path is drawn in WHITE (3_15_16, 3_13_15, 3_1_8 is dark, 1_b_west)',
         ['mourning_light_temple_3_15_16', 'mourning_light_temple_3_13_15', 'mourning_light_temple_1_b_west'].map(n => v(p, n)),
-        [7, 7, 7]);
+        [7, 7, 7]
+    );
     check('  and tools/sim/templelight.ts drives the colours, the crystals and the doors', true, true);
     // every staircase and ladder in the temple: down from the top, then straight back up from where
     // that put the player (so each landing is on the side its partner is climbed from)

@@ -64,8 +64,7 @@ console.log('== the four objs exist, and the old Zaros names are gone');
 for (const n of ['ancient_fabric', ...PAIRS.map(x => x[1])]) {
     check(n, ObjType.getId(n) !== -1, true);
 }
-for (const gone of ['zaros_cape_kit', 'imbued_zaros_cape_saradomin', 'imbued_zaros_cape_guthix',
-    'imbued_zaros_cape_zamorak']) {
+for (const gone of ['zaros_cape_kit', 'imbued_zaros_cape_saradomin', 'imbued_zaros_cape_guthix', 'imbued_zaros_cape_zamorak']) {
     check(`${gone} is gone`, ObjType.getId(gone), -1);
 }
 
@@ -80,7 +79,7 @@ console.log('== a remade cape is worth exactly what its base cape is worth');
 for (const [base, ancient] of PAIRS) {
     const b = params(base);
     const z = { ...params(ancient) };
-    delete z.ancient_cape_from;                    // the only param a remade cape adds
+    delete z.ancient_cape_from; // the only param a remade cape adds
     check(`${ancient} params`, z, b);
     const bo = ObjType.get(ObjType.getId(base));
     const zo = ObjType.get(ObjType.getId(ancient));
@@ -103,12 +102,16 @@ for (const [base, ancient] of PAIRS) {
 {
     const p = player('fab_refuses');
     H.give(p, 'ancient_fabric');
-    H.give(p, 'saradomin_cape');                   // the PLAIN cape, not the imbued one
+    H.give(p, 'saradomin_cape'); // the PLAIN cape, not the imbued one
     const from = H.mesgs.length;
     H.useHeldOn(p, 'ancient_fabric', 'saradomin_cape');
     check('a plain god cape is refused', H.invCount(p, 'saradomin_cape'), 1);
     check('the fabric survives', H.invCount(p, 'ancient_fabric'), 1);
-    check('and it says why', H.mesgs.slice(from).some(m => m.text.includes('imbued god cape')), true);
+    check(
+        'and it says why',
+        H.mesgs.slice(from).some(m => m.text.includes('imbued god cape')),
+        true
+    );
 }
 {
     const p = player('fab_twice');
@@ -118,7 +121,11 @@ for (const [base, ancient] of PAIRS) {
     const from = H.mesgs.length;
     H.useHeldOn(p, 'ancient_fabric', 'imbued_ancient_cape_zamorak');
     check('a second fabric is refused', H.invCount(p, 'ancient_fabric'), 1);
-    check('and it says why', H.mesgs.slice(from).some(m => m.text.includes('already ancient')), true);
+    check(
+        'and it says why',
+        H.mesgs.slice(from).some(m => m.text.includes('already ancient')),
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -138,12 +145,16 @@ for (const [base, ancient] of PAIRS) {
     H.give(p, 'ancient_fabric');
     H.give(p, 'imbued_guthix_cape');
     H.useHeldOn(p, 'ancient_fabric', 'imbued_guthix_cape');
-    H.fillInv(p);                                   // no room for two items where one is
+    H.fillInv(p); // no room for two items where one is
     const from = H.mesgs.length;
     H.opheld(p, 'imbued_ancient_cape_guthix', 5);
     check('a full pack keeps the cape', H.invCount(p, 'imbued_ancient_cape_guthix'), 1);
     check('and nothing is lost', H.invCount(p, 'ancient_fabric'), 0);
-    check('and it says why', H.mesgs.slice(from).some(m => m.text.includes('free inventory space')), true);
+    check(
+        'and it says why',
+        H.mesgs.slice(from).some(m => m.text.includes('free inventory space')),
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -161,9 +172,9 @@ for (const [, ancient] of PAIRS) {
 // cape, so a cosmetic that forgot which cape it was made from would take the spell with it.
 console.log('== each one still answers its own god, one step and two');
 {
-    const GOD = { saradomin: 1, guthix: 2, zamorak: 3 } as const;  // mage_arena_2.constant order
+    const _GOD = { saradomin: 1, guthix: 2, zamorak: 3 } as const; // mage_arena_2.constant order
     for (const [base, ancient] of PAIRS) {
-        const god = base.split('_')[1] as keyof typeof GOD;
+        const god = base.split('_')[1] as keyof typeof _GOD;
         const p = player(`god_${ancient}`);
         H.give(p, ancient);
         H.opheld(p, ancient, 2);
@@ -195,8 +206,7 @@ console.log('== and the max cape variant exists, one look over three records');
         check(`${cape} name`, ObjType.get(ObjType.getId(cape)).name, 'Imbued ancient max cape');
     }
     // one mesh, three records: the three capes point at the same model
-    const models = ['saradomin', 'guthix', 'zamorak']
-        .map(g => ObjType.get(ObjType.getId(`imbued_ancient_${g}_max_cape`)).model);
+    const models = ['saradomin', 'guthix', 'zamorak'].map(g => ObjType.get(ObjType.getId(`imbued_ancient_${g}_max_cape`)).model);
     check('all three share one model', new Set(models).size, 1);
 }
 

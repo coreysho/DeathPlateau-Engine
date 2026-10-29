@@ -150,7 +150,7 @@ const m: Manifest = {
         { go: [MANNI[0], MANNI[1]], why: 'to Manni the Reveller' },
         { talk: 'viking_reveller_3', picks: [1], want: 'Down he goes', why: 'lose the first contest' },
 
-        { note: 'wiki step 3: Sigli the Huntsman, outside, and the hunters\' talisman' },
+        { note: "wiki step 3: Sigli the Huntsman, outside, and the hunters' talisman" },
         { go: [SIGLI[0], SIGLI[1]], why: 'to Sigli' },
         { talk: 'viking_sigli', picks: [1], want: 'which way to go', why: 'take the hunt' },
         { has: 'viking_draugen_talisman_uncharged' },
@@ -185,7 +185,7 @@ const m: Manifest = {
         { go: [THORVALD_HUT[0], THORVALD_HUT[1]], r: 192, why: "to Thorvald's hut" },
         { talk: 'viking_thorvald', want: 'vote', why: 'claim the vote' },
 
-        { note: "wiki step 4: Olaf the Bard, twice - the second time is what sets his trial going" },
+        { note: 'wiki step 4: Olaf the Bard, twice - the second time is what sets his trial going' },
         { go: [OLAF[0], OLAF[1]], why: 'to Olaf' },
         { talk: 'viking_olaf', want: 'enchanted one', why: 'ask for his vote' },
 
@@ -224,7 +224,7 @@ const m: Manifest = {
         { use: ['viking_golden_wool', 'viking_unstrung_lyre'], want: 'lyre', why: 'string the lyre' },
         { has: 'viking_strung_lyre' },
 
-        { note: 'wiki step 8: the Poison Salesman in Seers\' Village sells the low alcohol keg' },
+        { note: "wiki step 8: the Poison Salesman in Seers' Village sells the low alcohol keg" },
         { setpos: SALESMAN, why: "to Seers' Village - world travel, not the quest" },
         { talk: 'poison_salesman', picks: [1, 1], want: 'keg', why: 'buy a low alcohol keg' },
         { has: 'viking_low_alcahol_beerkeg' },
@@ -284,10 +284,7 @@ const m: Manifest = {
         { note: '5,000 coins, and then the same thirteen again in reverse with what each one wants.' },
         { go: [SIGMUND[0], SIGMUND[1]], why: 'to Sigmund the Merchant' },
         { talk: 'viking_sigmund', picks: [1], why: 'ask about the merchant trial' },
-        ...(CHAIN.flatMap(([npc, at, approach]) => [
-            ...(approach ?? [{ go: [at[0], at[1]], r: 256, why: 'to ' + npc }]),
-            { talk: npc, picks: [1], tries: 6, why: 'ask' }
-        ]) as Step[]),
+        ...(CHAIN.flatMap(([npc, at, approach]) => [...(approach ?? [{ go: [at[0], at[1]], r: 256, why: 'to ' + npc }]), { talk: npc, picks: [1], tries: 6, why: 'ask' }]) as Step[]),
         { go: [ASKELADDEN[0], ASKELADDEN[1]], r: 256, why: 'to Askeladden' },
         { note: 'Askeladden asks twice: the merchant-trial option, and then Yes to the 5,000gp.' },
         { note: 'What he hands over is viking_promissary_note2, which is what THORA wants - the' },
@@ -296,10 +293,7 @@ const m: Manifest = {
         { has: 'viking_promissary_note2' },
         ...(CHAIN.slice()
             .reverse()
-            .flatMap(([npc, at, approach]) => [
-                ...(approach ?? [{ go: [at[0], at[1]], r: 256, why: 'back to ' + npc }]),
-                { talk: npc, picks: [1], tries: 6, why: 'deliver' }
-            ]) as Step[]),
+            .flatMap(([npc, at, approach]) => [...(approach ?? [{ go: [at[0], at[1]], r: 256, why: 'back to ' + npc }]), { talk: npc, picks: [1], tries: 6, why: 'deliver' }]) as Step[]),
         { go: [SIGMUND[0], SIGMUND[1]], r: 256, why: 'back to Sigmund' },
         { talk: 'viking_sigmund', want: 'vote', why: 'the chain is closed' },
 

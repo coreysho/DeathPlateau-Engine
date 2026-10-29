@@ -20,10 +20,10 @@ const BURY: [number, number, number] = [2796, 3088, 0]; // inzone(0_43_48_42_15,
 
 // --- Ah Za Rhoon
 const MOUND: [number, number] = [2921, 2999]; // ahzarhoon_entrance
-const AZR_ARRIVE: [number, number, number] = [2898, 9401, 0];
+const _AZR_ARRIVEAZR_ARRIVE: [number, number, number] = [2898, 9401, 0];
 const SECRET_STONE: [number, number] = [2901, 9379]; // zqsecretstone, the plaque
 const RUBBLE_146: [number, number] = [2887, 9373]; // secretrubble, the cave-in
-const RUBBLE_145: [number, number] = [2886, 9283]; // its other side
+const _RUBBLE_145RUBBLE_145: [number, number] = [2886, 9283]; // its other side
 const RUBBLE_BOOK: [number, number] = [2885, 9317]; // secretrubblebook, the tattered scroll
 const SACKS: [number, number] = [2939, 9285]; // zqsacks, the crumpled scroll
 const GALLOWS: [number, number] = [2934, 9325]; // zqgallows, the Zadimus corpse
@@ -37,12 +37,12 @@ const HANDHOLDS: [number, number] = [2765, 9376]; // zqhandholds, the way out
 // --- the tomb of Rashiliyia
 const PALM: [number, number] = [2916, 3092]; // zqquest_hidytree
 const RASH_DOORS: [number, number] = [2917, 3090]; // hillsideclosedl, revealed by the palm
-const TOMB_ARRIVE: [number, number, number] = [2929, 9525, 0];
+const _TOMB_ARRIVETOMB_ARRIVE: [number, number, number] = [2929, 9525, 0];
 const GATE: [number, number] = [2929, 9516]; // zombiequeengateclosedr
 const TOMB_DOOR: [number, number] = [2892, 9480]; // thzq_tombrooml1
 const DOLMEN: [number, number] = [2892, 9487]; // zqrashdolmen, in Rashiliyia's tomb
 const CAIRN_DOLMEN: [number, number] = [2766, 9364]; // zqdolmen, under Cairn Isle
-const RASH_DOLMEN: [number, number] = [2892, 9487]; // zqrashdolmen
+const _RASH_DOLMENRASH_DOLMEN: [number, number] = [2892, 9487]; // zqrashdolmen
 
 const m: Manifest = {
     quest: 'SHILO VILLAGE',
@@ -68,13 +68,7 @@ const m: Manifest = {
         { setpos: MOSOL, why: 'to Mosol Rei' },
         {
             talk: 'mosol_rei',
-            picks: [
-                'Why do I need to run?',
-                'Rashiliyia? Who is she?',
-                'What can we do?',
-                "I'll go to see the Shaman.",
-                "Yes, I'm sure and I'll take the Wampum belt to Trufitus."
-            ],
+            picks: ['Why do I need to run?', 'Rashiliyia? Who is she?', 'What can we do?', "I'll go to see the Shaman.", "Yes, I'm sure and I'll take the Wampum belt to Trufitus."],
             want: 'Wampum belt',
             why: 'take the belt'
         },
@@ -85,12 +79,7 @@ const m: Manifest = {
         {
             useNpc: 'trufitus',
             obj: 'mosol_wampum_belt',
-            picks: [
-                'Mosol Rei said something about a legend?',
-                'Why was it called Ah Za Rhoon?',
-                'I am going to search for Ah Za Rhoon!',
-                "Yes, I will seriously look for Ah Za Rhoon and I'd appreciate your help."
-            ],
+            picks: ['Mosol Rei said something about a legend?', 'Why was it called Ah Za Rhoon?', 'I am going to search for Ah Za Rhoon!', "Yes, I will seriously look for Ah Za Rhoon and I'd appreciate your help."],
             want: 'good luck with your quest',
             why: 'commit to finding Ah Za Rhoon'
         },

@@ -33,11 +33,19 @@ import { drawn, onLoc } from './mapfloor.ts';
 
 await H.boot();
 
-const THIEVING = 17, STRENGTH = 2, HITPOINTS = 3;
-const BX = 30 * 64, BZ = 69 * 64;
+const THIEVING = 17,
+    STRENGTH = 2,
+    HITPOINTS = 3;
+const BX = 30 * 64,
+    BZ = 69 * 64;
 
 const standable = (x: number, z: number, level = 0): boolean => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -52,8 +60,14 @@ const reaches = (from: readonly [number, number], to: readonly [number, number])
     while (q.length) {
         const [x, z] = q.shift()!;
         if (x === to[0] && z === to[1]) return true;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx, nz = z + dz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = x + dx,
+                nz = z + dz;
             if (nx < BX || nx > BX + 63 || nz < BZ || nz > BZ + 63) continue;
             if (seen.has(key(nx, nz))) continue;
             if (!canTravel(0, x, z, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
@@ -74,7 +88,8 @@ const beside = (name: string, x: number, z: number): [number, number] | null => 
     const t = LocType.get(id) as unknown as { forceapproach: number };
     for (let dx = -2; dx <= 2; dx++) {
         for (let dz = -2; dz <= 2; dz++) {
-            const cx = x + dx, cz = z + dz;
+            const cx = x + dx,
+                cz = z + dz;
             if (!standable(cx, cz)) continue;
             if (reachedLoc(0, cx, cz, loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, t.forceapproach)) return [cx, cz];
         }
@@ -88,7 +103,10 @@ const pin = (v: number | null) => {
 };
 
 // Seed both squares so collision is measured rather than assumed.
-for (const [sx, sz, lv] of [[BX + 32, BZ + 32, 0], [3290, 2787, 0]] as const) {
+for (const [sx, sz, lv] of [
+    [BX + 32, BZ + 32, 0],
+    [3290, 2787, 0]
+] as const) {
     const p = H.makePlayer(`plunder_seed_${sx}`, sx, sz);
     p.teleport(sx, sz, lv);
     H.tick(2);
@@ -118,7 +136,10 @@ const placed: Row[] = [];
     const text = readFileSync('../content/maps/m30_69.jm2', 'utf8');
     let section = '';
     for (const line of text.split(/\r?\n/)) {
-        if (line.startsWith('====')) { section = line.replace(/=/g, '').trim(); continue; }
+        if (line.startsWith('====')) {
+            section = line.replace(/=/g, '').trim();
+            continue;
+        }
         if (section !== 'LOC') continue;
         const m = /^(\d+) (\d+) (\d+): (\d+) (\d+)(?: (\d+))?\s*$/.exec(line);
         if (!m || m[1] !== '0') continue;
@@ -131,8 +152,12 @@ const placed: Row[] = [];
 // ---------------------------------------------------------------------------------------------
 console.log('== the pyramid is placed, and the multilocs are varbits rather than loc_changes');
 {
-    for (const [nm, want] of [['plunder_chest', 8], ['plunder_sarcophagus', 8], ['plunder_speartrap', 32],
-        ['plunder_exit', 16]] as const) {
+    for (const [nm, want] of [
+        ['plunder_chest', 8],
+        ['plunder_sarcophagus', 8],
+        ['plunder_speartrap', 32],
+        ['plunder_exit', 16]
+    ] as const) {
         check(`${nm} x${want}`, placed.filter(r => r.name === nm).length, want);
     }
     const urns = placed.filter(r => /^plunder_urn_\d+$/.test(r.name));
@@ -172,7 +197,12 @@ console.log('== every tile a run stands on is a tile');
 // ---------------------------------------------------------------------------------------------
 console.log('== the way in: four doors in Sophanem, one of them real, and it moves');
 {
-    for (const [x, z] of [[3290, 2789], [3283, 2794], [3290, 2799], [3297, 2794]] as const) {
+    for (const [x, z] of [
+        [3290, 2789],
+        [3283, 2794],
+        [3290, 2799],
+        [3297, 2794]
+    ] as const) {
         const loc = World.getLoc(x, z, 0, LocType.getId('plunder_anon_door'));
         check(`a door at ${x},${z}`, loc !== null, true);
     }
@@ -190,7 +220,11 @@ console.log('== the way in: four doors in Sophanem, one of them real, and it mov
         (World as unknown as { currentTick: number }).currentTick = orig;
         return out;
     };
-    const a = clockOf(0), b = clockOf(2500), c = clockOf(5000), d = clockOf(7500), e = clockOf(10000);
+    const a = clockOf(0),
+        b = clockOf(2500),
+        c = clockOf(5000),
+        d = clockOf(7500),
+        e = clockOf(10000);
     check('four different doors over four quarters of an hour and a half', new Set([a, b, c, d]).size, 4);
     check('and then it comes round again', e, a);
     check('two players at the same moment agree', clockOf(1234), clockOf(1234));
@@ -224,7 +258,11 @@ console.log('== the Guardian mummy is in the lobby and starts the clock');
         H.opNpc(q, m2, 3);
         for (let i = 0; i < 8; i++) H.tick(1);
         check('level 20 is not let in', H.getVarBit(q, 'plunder_room'), 0);
-        check('and is told the level', H.ifaces.slice(mark).some(i => (i.text ?? '').includes('Thieving level of 21')), true);
+        check(
+            'and is told the level',
+            H.ifaces.slice(mark).some(i => (i.text ?? '').includes('Thieving level of 21')),
+            true
+        );
     }
 }
 
@@ -264,8 +302,7 @@ console.log('== a run through all eight rooms: the trap, the urns, the chest, th
             check(`room ${r.n}: and pays ten`, p.stats[THIEVING] - xp, 100);
 
             // An urn: check it, then search it.
-            const urn = placed.filter(u => /^plunder_urn_\d+$/.test(u.name))
-                .filter(u => Math.abs(u.x - r.inside[0]) <= 12 && Math.abs(u.z - r.inside[1]) <= 12)[0];
+            const urn = placed.filter(u => /^plunder_urn_\d+$/.test(u.name)).filter(u => Math.abs(u.x - r.inside[0]) <= 12 && Math.abs(u.z - r.inside[1]) <= 12)[0];
             check(`room ${r.n}: has urns`, urn !== undefined, true);
             if (urn) {
                 const slot = Number(urn.name.replace('plunder_urn_', ''));
@@ -278,27 +315,36 @@ console.log('== a run through all eight rooms: the trap, the urns, the chest, th
                 for (let i = 0; i < 6; i++) H.tick(1);
                 check(`room ${r.n}: checking says no snake`, H.getVarBit(p, `plunder_urn_${slot}_state`), 1);
                 xp = p.stats[THIEVING];
-                const had = H.invCount(p, 'plunder_stone_statuette') + H.invCount(p, 'plunder_stone_seal')
-                    + H.invCount(p, 'plunder_stone_scarab') + H.invCount(p, 'plunder_gold_seal')
-                    + H.invCount(p, 'plunder_golden_scarab') + H.invCount(p, 'plunder_golden_statuette')
-                    + H.invCount(p, 'plunder_ivory_comb') + H.invCount(p, 'plunder_pottery_scarab')
-                    + H.invCount(p, 'plunder_pottery_statuette');
+                const had =
+                    H.invCount(p, 'plunder_stone_statuette') +
+                    H.invCount(p, 'plunder_stone_seal') +
+                    H.invCount(p, 'plunder_stone_scarab') +
+                    H.invCount(p, 'plunder_gold_seal') +
+                    H.invCount(p, 'plunder_golden_scarab') +
+                    H.invCount(p, 'plunder_golden_statuette') +
+                    H.invCount(p, 'plunder_ivory_comb') +
+                    H.invCount(p, 'plunder_pottery_scarab') +
+                    H.invCount(p, 'plunder_pottery_statuette');
                 H.opLoc(p, urn.x, urn.z, urn.name, 1);
                 for (let i = 0; i < 6; i++) H.tick(1);
                 check(`room ${r.n}: the urn pays ${URN_XP[r.n - 1] / 10}`, p.stats[THIEVING] - xp, URN_XP[r.n - 1]);
                 check(`room ${r.n}: and is emptied`, H.getVarBit(p, `plunder_urn_${slot}_state`), 3);
-                const now = H.invCount(p, 'plunder_stone_statuette') + H.invCount(p, 'plunder_stone_seal')
-                    + H.invCount(p, 'plunder_stone_scarab') + H.invCount(p, 'plunder_gold_seal')
-                    + H.invCount(p, 'plunder_golden_scarab') + H.invCount(p, 'plunder_golden_statuette')
-                    + H.invCount(p, 'plunder_ivory_comb') + H.invCount(p, 'plunder_pottery_scarab')
-                    + H.invCount(p, 'plunder_pottery_statuette');
+                const now =
+                    H.invCount(p, 'plunder_stone_statuette') +
+                    H.invCount(p, 'plunder_stone_seal') +
+                    H.invCount(p, 'plunder_stone_scarab') +
+                    H.invCount(p, 'plunder_gold_seal') +
+                    H.invCount(p, 'plunder_golden_scarab') +
+                    H.invCount(p, 'plunder_golden_statuette') +
+                    H.invCount(p, 'plunder_ivory_comb') +
+                    H.invCount(p, 'plunder_pottery_scarab') +
+                    H.invCount(p, 'plunder_pottery_statuette');
                 check(`room ${r.n}: and gives an artefact`, now - had, 1);
                 artefacts += now - had;
             }
 
             // The chest.
-            const chest = placed.filter(c => c.name === 'plunder_chest')
-                .filter(c => Math.abs(c.x - r.inside[0]) <= 12 && Math.abs(c.z - r.inside[1]) <= 12)[0];
+            const chest = placed.filter(c => c.name === 'plunder_chest').filter(c => Math.abs(c.x - r.inside[0]) <= 12 && Math.abs(c.z - r.inside[1]) <= 12)[0];
             if (chest) {
                 const cat = beside('plunder_chest', chest.x, chest.z)!;
                 p.teleport(cat[0], cat[1], 0);
@@ -311,8 +357,7 @@ console.log('== a run through all eight rooms: the trap, the urns, the chest, th
             }
 
             // The sarcophagus, which pays STRENGTH rather than Thieving.
-            const sarc = placed.filter(c => c.name === 'plunder_sarcophagus')
-                .filter(c => Math.abs(c.x - r.inside[0]) <= 12 && Math.abs(c.z - r.inside[1]) <= 12)[0];
+            const sarc = placed.filter(c => c.name === 'plunder_sarcophagus').filter(c => Math.abs(c.x - r.inside[0]) <= 12 && Math.abs(c.z - r.inside[1]) <= 12)[0];
             if (sarc) {
                 const sat = beside('plunder_sarcophagus', sarc.x, sarc.z);
                 check(`room ${r.n}: the sarcophagus can be reached`, sat !== null, true);
@@ -332,8 +377,7 @@ console.log('== a run through all eight rooms: the trap, the urns, the chest, th
 
             // The way on. The run rolls which of the four it is, so ask the varbit rather than guess.
             const want = H.getVarBit(p, 'plunder_correct_door');
-            const door = placed.filter(d => d.name === `plunder_door_${want}`)
-                .filter(d => Math.abs(d.x - r.inside[0]) <= 14 && Math.abs(d.z - r.inside[1]) <= 14)[0];
+            const door = placed.filter(d => d.name === `plunder_door_${want}`).filter(d => Math.abs(d.x - r.inside[0]) <= 14 && Math.abs(d.z - r.inside[1]) <= 14)[0];
             check(`room ${r.n}: the right door is placed in it`, door !== undefined, true);
             if (!door) break;
             const at = beside(door.name, door.x, door.z);
@@ -374,7 +418,11 @@ console.log('== the trap is a gate: the corridors join up, and it will not let y
     H.opLoc(p, ROOMS[7].trap[0], ROOMS[7].trap[1], 'plunder_speartrap', 1);
     for (let i = 0; i < 8; i++) H.tick(1);
     check('room 8 stays shut', [p.x, p.z], [ROOMS[7].arrive[0], ROOMS[7].arrive[1]]);
-    check('and says why', H.mesgs.slice(mark).some(m => m.text.includes('no business')), true);
+    check(
+        'and says why',
+        H.mesgs.slice(mark).some(m => m.text.includes('no business')),
+        true
+    );
 
     // And the level is checked too: a level 21 thief sent to room 2 is refused on the level.
     const q = player('plunder_lowroom', 1927, 4425);
@@ -389,7 +437,11 @@ console.log('== the trap is a gate: the corridors join up, and it will not let y
     const mark2 = H.ifaces.length;
     H.opLoc(q, ROOMS[1].trap[0], ROOMS[1].trap[1], 'plunder_speartrap', 1);
     for (let i = 0; i < 8; i++) H.tick(1);
-    check('room 2 wants 31 Thieving', H.ifaces.slice(mark2).some(i => (i.text ?? '').includes('Thieving level of 31')), true);
+    check(
+        'room 2 wants 31 Thieving',
+        H.ifaces.slice(mark2).some(i => (i.text ?? '').includes('Thieving level of 31')),
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -405,14 +457,13 @@ console.log('== the urn with a snake in it, and the charm that gets it out');
     H.tick(1);
     H.opNpc(p, H.npcNear('plunder_guardian_mummy', 1926, 4425, 0)!, 3);
     for (let i = 0; i < 8; i++) H.tick(1);
-    const urn = placed.filter(u => /^plunder_urn_\d+$/.test(u.name))
-        .filter(u => Math.abs(u.x - 1926) <= 12 && Math.abs(u.z - 4429) <= 12)[0];
+    const urn = placed.filter(u => /^plunder_urn_\d+$/.test(u.name)).filter(u => Math.abs(u.x - 1926) <= 12 && Math.abs(u.z - 4429) <= 12)[0];
     const slot = Number(urn.name.replace('plunder_urn_', ''));
     const uat = beside(urn.name, urn.x, urn.z)!;
     p.teleport(uat[0], uat[1], 0);
     H.tick(1);
 
-    pin(0.999);                                  // a snake every time
+    pin(0.999); // a snake every time
     try {
         H.opLoc(p, urn.x, urn.z, urn.name, 2);
         for (let i = 0; i < 6; i++) H.tick(1);
@@ -433,7 +484,11 @@ console.log('== the urn with a snake in it, and the charm that gets it out');
     const mark = H.mesgs.length;
     H.opLoc(p, urn.x, urn.z, urn.name, 3);
     for (let i = 0; i < 6; i++) H.tick(1);
-    check('no charm, no charming', H.mesgs.slice(mark).some(m => m.text.includes('snake charm')), true);
+    check(
+        'no charm, no charming',
+        H.mesgs.slice(mark).some(m => m.text.includes('snake charm')),
+        true
+    );
     H.give(p, 'plunder_snake_charm');
     H.opLoc(p, urn.x, urn.z, urn.name, 3);
     for (let i = 0; i < 6; i++) H.tick(1);
@@ -444,7 +499,11 @@ console.log('== the urn with a snake in it, and the charm that gets it out');
     const mark2 = H.mesgs.length;
     H.opLoc(p, urn.x, urn.z, urn.name, 1);
     for (let i = 0; i < 6; i++) H.tick(1);
-    check('an emptied urn says so', H.mesgs.slice(mark2).some(m => m.text.includes('already emptied')), true);
+    check(
+        'an emptied urn says so',
+        H.mesgs.slice(mark2).some(m => m.text.includes('already emptied')),
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -463,8 +522,7 @@ console.log('== three wrong doors and the fourth always opens');
     pin(0);
     try {
         // The same wrong door, three times over: the mask remembers doors, not attempts.
-        const d = placed.filter(r => r.name === `plunder_door_${wrong[0]}`)
-            .filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
+        const d = placed.filter(r => r.name === `plunder_door_${wrong[0]}`).filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
         const standAt = beside(d.name, d.x, d.z)!;
         for (let i = 0; i < 3; i++) {
             p.teleport(standAt[0], standAt[1], 0);
@@ -476,19 +534,20 @@ console.log('== three wrong doors and the fourth always opens');
         check('and it is still shut', H.getVarBit(p, `plunder_door_${wrong[0]}_state`), 0);
         // Three DIFFERENT wrong doors, and the fourth opens whichever it is.
         for (const w of wrong.slice(1)) {
-            const e = placed.filter(r => r.name === `plunder_door_${w}`)
-                .filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
+            const e = placed.filter(r => r.name === `plunder_door_${w}`).filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
             const eat = beside(e.name, e.x, e.z)!;
             p.teleport(eat[0], eat[1], 0);
             H.tick(1);
             H.opLoc(p, e.x, e.z, e.name, 1);
             for (let t = 0; t < 6; t++) H.tick(1);
         }
-        check('three wrong doors are remembered', H.getVarBit(p, 'plunder_doors_tried'),
-            wrong.reduce((m, w) => m | (1 << (w - 1)), 0));
+        check(
+            'three wrong doors are remembered',
+            H.getVarBit(p, 'plunder_doors_tried'),
+            wrong.reduce((m, w) => m | (1 << (w - 1)), 0)
+        );
         // The right one was never touched, so it is the fourth - and it opens.
-        const r4 = placed.filter(r => r.name === `plunder_door_${want}`)
-            .filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
+        const r4 = placed.filter(r => r.name === `plunder_door_${want}`).filter(r => Math.abs(r.x - 1926) <= 14 && Math.abs(r.z - 4429) <= 14)[0];
         const r4at = beside(r4.name, r4.x, r4.z)!;
         p.teleport(r4at[0], r4at[1], 0);
         H.tick(1);
@@ -512,16 +571,15 @@ console.log('== the sceptre ends the run, and the mummy fills it again');
     for (let i = 0; i < 8; i++) H.tick(1);
     p.teleport(1926, 4429, 0);
     H.tick(1);
-    const sarc = placed.filter(c => c.name === 'plunder_sarcophagus')
-        .filter(c => Math.abs(c.x - 1926) <= 12 && Math.abs(c.z - 4429) <= 12)[0];
+    const sarc = placed.filter(c => c.name === 'plunder_sarcophagus').filter(c => Math.abs(c.x - 1926) <= 12 && Math.abs(c.z - 4429) <= 12)[0];
     const sat = beside('plunder_sarcophagus', sarc.x, sarc.z)!;
     p.teleport(sat[0], sat[1], 0);
     H.tick(1);
     pin(0);
     try {
-        H.opLoc(p, sarc.x, sarc.z, 'plunder_sarcophagus', 1);     // open it
+        H.opLoc(p, sarc.x, sarc.z, 'plunder_sarcophagus', 1); // open it
         for (let i = 0; i < 12; i++) H.tick(1);
-        H.opLoc(p, sarc.x, sarc.z, 'plunder_sarcophagus', 1);     // and search it - the roll is pinned to hit
+        H.opLoc(p, sarc.x, sarc.z, 'plunder_sarcophagus', 1); // and search it - the roll is pinned to hit
         for (let i = 0; i < 10; i++) H.tick(1);
     } finally {
         pin(null);
@@ -531,8 +589,11 @@ console.log('== the sceptre ends the run, and the mummy fills it again');
     check('the run is over', H.getVarBit(p, 'plunder_room'), 0);
 
     // Three charges, spent one at a time, and each one takes you back to the lobby.
-    for (const [held, next, left] of [['pharaohs_sceptre', 'pharaohs_sceptre_2', 2],
-        ['pharaohs_sceptre_2', 'pharaohs_sceptre_1', 1], ['pharaohs_sceptre_1', 'pharaohs_sceptre_0', 0]] as const) {
+    for (const [held, next, _leftleft] of [
+        ['pharaohs_sceptre', 'pharaohs_sceptre_2', 2],
+        ['pharaohs_sceptre_2', 'pharaohs_sceptre_1', 1],
+        ['pharaohs_sceptre_1', 'pharaohs_sceptre_0', 0]
+    ] as const) {
         H.opheld(p, held, 1);
         for (let i = 0; i < 10; i++) H.tick(1);
         check(`${held} -> ${next}`, H.invCount(p, next), 1);
@@ -543,7 +604,11 @@ console.log('== the sceptre ends the run, and the mummy fills it again');
     const mark = H.mesgs.length;
     H.opheld(p, 'pharaohs_sceptre_0', 1);
     for (let i = 0; i < 6; i++) H.tick(1);
-    check('a spent sceptre takes you nowhere', H.mesgs.slice(mark).some(m => m.text.includes('spent')), true);
+    check(
+        'a spent sceptre takes you nowhere',
+        H.mesgs.slice(mark).some(m => m.text.includes('spent')),
+        true
+    );
 
     // The mummy fills it, one artefact a charge, and takes the cheapest one.
     H.give(p, 'plunder_golden_statuette');
@@ -576,16 +641,26 @@ console.log('== five minutes, and then the pyramid puts you out');
     for (let i = 0; i < 510; i++) H.tick(1);
     check('the run has ended', H.getVarBit(p, 'plunder_room'), 0);
     check('and you are outside', [p.x, p.z], [3290, 2787]);
-    check('with a minute of warning on the way', H.mesgs.slice(mark).some(m => m.text.includes('minute left')), true);
+    check(
+        'with a minute of warning on the way',
+        H.mesgs.slice(mark).some(m => m.text.includes('minute left')),
+        true
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
 console.log('== the artefacts, and what they are worth');
 {
     const VALUE: Record<string, number> = {
-        plunder_ivory_comb: 50, plunder_pottery_scarab: 75, plunder_pottery_statuette: 100,
-        plunder_stone_seal: 150, plunder_stone_scarab: 175, plunder_stone_statuette: 200,
-        plunder_gold_seal: 750, plunder_golden_scarab: 1000, plunder_golden_statuette: 1250
+        plunder_ivory_comb: 50,
+        plunder_pottery_scarab: 75,
+        plunder_pottery_statuette: 100,
+        plunder_stone_seal: 150,
+        plunder_stone_scarab: 175,
+        plunder_stone_statuette: 200,
+        plunder_gold_seal: 750,
+        plunder_golden_scarab: 1000,
+        plunder_golden_statuette: 1250
     };
     for (const [nm, cost] of Object.entries(VALUE)) {
         const o = ObjType.get(ObjType.getId(nm));

@@ -66,7 +66,7 @@ const m: Manifest = {
         { hasnt: 'bucket_milk' },
         { hasnt: 'pot_flour' },
 
-        { note: "the reward: the Cook-o-matic, which he would not let you near before the quest" },
+        { note: 'the reward: the Cook-o-matic, which he would not let you near before the quest' },
         { give: 'raw_beef' },
         { useLoc: 'cooksquestrange', at: [3212, 3215], obj: 'raw_beef', why: 'cook on his range' },
         { hasnt: 'raw_beef' }

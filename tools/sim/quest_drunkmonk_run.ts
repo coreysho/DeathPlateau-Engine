@@ -12,14 +12,14 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const OMAD: [number, number, number] = [2605, 3211, 0];
+const _OMADOMAD: [number, number, number] = [2605, 3211, 0];
 const CEDRIC: [number, number, number] = [2614, 3261, 0];
 
 const m: Manifest = {
     quest: "MONK'S FRIEND",
     source: 'oldschool.runescape.wiki/w/Monk%27s_Friend',
     stageVar: 'drunkmonkquest',
-    done: 80,   // ^drunkmonk_complete
+    done: 80, // ^drunkmonk_complete
     start: [2605, 3211, 0],
     steps: [
         { note: 'wiki: a jug of water and some logs, both carried from elsewhere' },

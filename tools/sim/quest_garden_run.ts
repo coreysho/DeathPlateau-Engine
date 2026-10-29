@@ -104,7 +104,12 @@ const m: Manifest = {
         { note: 'of them right, and the diplomatic answer is the conciliatory one every time. He was' },
         { note: 'placed nowhere at all until now, which is why this half of the quest did not exist.' },
         { setpos: [3089, 3251, 0], why: 'to Draynor' },
-        { talk: 'wise_old_man', picks: ['Why not have a range?', 'Take it and thank him.', 'I love every minute of it.', 'Go on then.', 'PKMaster0036, obviously.', 'Could I ask you something in return?', 'No, but I will keep an eye out.'], want: 'ring is unlocked', why: 'all seven right' },
+        {
+            talk: 'wise_old_man',
+            picks: ['Why not have a range?', 'Take it and thank him.', 'I love every minute of it.', 'Go on then.', 'PKMaster0036, obviously.', 'Could I ask you something in return?', 'No, but I will keep an eye out.'],
+            want: 'ring is unlocked',
+            why: 'all seven right'
+        },
         { has: 'ring_of_charos_unlocked' },
 
         { note: 'wiki step 4: the five gardeners. Each wants a bucket of compost rather than the' },
@@ -115,7 +120,7 @@ const m: Manifest = {
         ...gardener('dantaera', DANTAERA, 'garden_orchid_pink_seed'),
         ...gardener('brother_althric', ALTHRIC, 'garden_white_tree_shoot'),
 
-        { note: "Bernald is the odd one out: his vinery is diseased and curing it is the favour" },
+        { note: 'Bernald is the odd one out: his vinery is diseased and curing it is the favour' },
         { setpos: BERNALD, why: 'to the Toad and Chicken' },
         { go: [VINES[0], VINES[1] - 1], exact: true, r: 20, why: 'to the vines' },
         { useLoc: 'garden_burthorpe_vines', at: VINES, obj: 'plant_cure', want: 'work the cure into the roots', why: 'the cure' },

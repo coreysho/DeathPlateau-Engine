@@ -11,7 +11,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const REEN_ALKHARID: [number, number, number] = [3272, 3158, 0];
+const _REEN_ALKHARIDREEN_ALKHARID: [number, number, number] = [3272, 3158, 0];
 const DAVE_CELLAR: [number, number, number] = [3080, 9890, 0];
 const UZER_PRIESTS: [number, number, number] = [3483, 3092, 0];
 const GOLEM: [number, number, number] = [3487, 3090, 0];
@@ -21,7 +21,7 @@ const m: Manifest = {
     quest: 'SHADOW OF THE STORM',
     source: 'oldschool.runescape.wiki/w/Shadow_of_the_Storm/Quick_guide',
     stageVar: 'agrith_quest',
-    done: 125,   // ^agrith_complete
+    done: 125, // ^agrith_complete
     start: [3272, 3158, 0],
     steps: [
         { note: 'requirements: Demon Slayer, which is where Silverlight comes from, and The Golem,' },

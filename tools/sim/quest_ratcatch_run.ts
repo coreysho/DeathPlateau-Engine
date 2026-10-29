@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const GERTRUDE: [number, number, number] = [3152, 3409, 0];
+const _GERTRUDEGERTRUDE: [number, number, number] = [3152, 3409, 0];
 const PHINGSPET: [number, number, number] = [3249, 9869, 0];
 const GRIMESQUIT: [number, number, number] = [3239, 9868, 0];
 const JIMMY: [number, number, number] = [2563, 3321, 0];
@@ -35,7 +35,7 @@ const m: Manifest = {
     quest: 'RAT CATCHERS',
     source: 'oldschool.runescape.wiki/w/Ratcatchers',
     stageVar: 'ratcatch_var',
-    done: 60,   // ^ratcatch_complete
+    done: 60, // ^ratcatch_complete
     start: [3152, 3409, 0],
     steps: [
         { note: 'requirements: Gertrude’s Cat, Icthlarin’s Little Helper, and The Giant Dwarf' },

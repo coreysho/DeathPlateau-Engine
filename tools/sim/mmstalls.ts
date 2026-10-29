@@ -32,7 +32,8 @@ await H.boot();
 const R = { ok: 0, bad: 0 };
 const check = (what: string, got: unknown, want: unknown) => {
     const pass = JSON.stringify(got) === JSON.stringify(want);
-    if (pass) R.ok++; else R.bad++;
+    if (pass) R.ok++;
+    else R.bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
 };
 
@@ -54,7 +55,10 @@ const STALLS: Stall[] = [
 function settle(p: Player, max = 60) {
     for (let g = 0; g < max; g++) {
         const s = p.activeScript;
-        if (s && s.execution === ScriptState.PAUSEBUTTON) { p.executeScript(s, true, true); continue; }
+        if (s && s.execution === ScriptState.PAUSEBUTTON) {
+            p.executeScript(s, true, true);
+            continue;
+        }
         H.tick(1);
         if (!p.activeScript && !p.target && !p.delayed && p.queue.head() === null) break;
     }
@@ -81,22 +85,28 @@ H.tick(2);
 p.closeModal();
 
 const heard = (fn: () => void): string => {
-    const m = H.mesgs.length, f = H.ifaces.length;
+    const m = H.mesgs.length,
+        f = H.ifaces.length;
     fn();
-    return H.ifaces.slice(f).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
-        .concat(H.mesgs.slice(m).map(x => x.text)).join(' ');
+    return H.ifaces
+        .slice(f)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .concat(H.mesgs.slice(m).map(x => x.text))
+        .join(' ');
 };
-const steal = (loc: any): string => heard(() => {
-    const t = LocType.get(loc.type);
-    // PathingEntity.teleport is (x, z, level) - mmtraps.ts and seedstall.ts disagree about this and
-    // only one of them is right. A level of 2775 is a very long pathfind.
-    p.teleport(loc.x, loc.z + 1, 0);
-    H.tick(1);
-    p.clearPendingAction();
-    p.queueWaypoints(findPathToLoc(0, p.x, p.z, loc.x, loc.z, p.width, t.width, t.length, loc.angle, loc.shape, t.forceapproach));
-    p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOC2);
-    settle(p);
-});
+const steal = (loc: any): string =>
+    heard(() => {
+        const t = LocType.get(loc.type);
+        // PathingEntity.teleport is (x, z, level) - mmtraps.ts and seedstall.ts disagree about this and
+        // only one of them is right. A level of 2775 is a very long pathfind.
+        p.teleport(loc.x, loc.z + 1, 0);
+        H.tick(1);
+        p.clearPendingAction();
+        p.queueWaypoints(findPathToLoc(0, p.x, p.z, loc.x, loc.z, p.width, t.width, t.length, loc.angle, loc.shape, t.forceapproach));
+        p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOC2);
+        settle(p);
+    });
 
 console.log('\nWHAT THE CACHE HAD, AND WHAT ANSWERS IT NOW');
 for (const s of STALLS) {
@@ -104,16 +114,18 @@ for (const s of STALLS) {
     const t: any = LocType.get(LocType.getId(name));
     const twin: any = LocType.get(LocType.getId(name + '_stolen'));
     check(`  ${name.padEnd(18)} says "Steal from"`, (t.op ?? [])[1], 'Steal from');
-    check(`  ${''.padEnd(18)} and something answers it`,
-          ScriptProvider.getByTrigger(ServerTriggerType.OPLOC2, t.id, t.category) !== null, true);
+    check(`  ${''.padEnd(18)} and something answers it`, ScriptProvider.getByTrigger(ServerTriggerType.OPLOC2, t.id, t.category) !== null, true);
     check(`  ${''.padEnd(18)} names its picked-over twin`, t.params?.get(NEXT_STAGE), twin.id);
     check(`  ${''.padEnd(18)} and the twin cannot be robbed again`, (twin.op ?? [])[1] ?? null, null);
-    check(`  ${''.padEnd(18)} its loot all exists`, s.loot.every(o => ObjType.getId(o) !== -1), true);
+    check(
+        `  ${''.padEnd(18)} its loot all exists`,
+        s.loot.every(o => ObjType.getId(o) !== -1),
+        true
+    );
 }
 
 console.log('\nAND NOTHING ELSE CHANGED: the seven that were already here still become `market`');
-for (const name of ['tea_stall', 'silk_stall_stealing', 'bakers_stall_stealing', 'gem_stall_stealing',
-                    'fur_stall_stealing', 'spice_stall_stealing', 'silver_stall_stealing', 'seed_stall']) {
+for (const name of ['tea_stall', 'silk_stall_stealing', 'bakers_stall_stealing', 'gem_stall_stealing', 'fur_stall_stealing', 'spice_stall_stealing', 'silver_stall_stealing', 'seed_stall']) {
     const t: any = LocType.get(LocType.getId(name));
     check(`  ${name.padEnd(22)} names no twin`, t.params?.get(NEXT_STAGE) ?? null, null);
 }
@@ -124,8 +136,7 @@ for (const s of STALLS) {
     p.setLevel(THIEVING, s.level - 1);
     H.tick(1);
     const said = steal(loc);
-    check(`  ${s.key.padEnd(9)} refuses at ${s.level - 1}`,
-          [said.includes(String(s.level)), s.loot.some(o => H.invCount(p, o) > 0)], [true, false]);
+    check(`  ${s.key.padEnd(9)} refuses at ${s.level - 1}`, [said.includes(String(s.level)), s.loot.some(o => H.invCount(p, o) > 0)], [true, false]);
     H.clearInv(p);
     H.tick(20);
 }
@@ -143,14 +154,18 @@ for (const s of STALLS) {
     H.clearInv(p);
     H.tick(2);
     const xp0 = p.stats[THIEVING];
-    let got = 0, emptied = false;
+    let got = 0,
+        emptied = false;
     const seen = new Set<string>();
     for (let tries = 0; tries < 8 && got < 4; tries++) {
         const before = s.loot.map(o => H.invCount(p, o));
         steal(loc);
         s.loot.forEach((o, n) => {
             const d = H.invCount(p, o) - before[n];
-            if (d > 0) { got += d; seen.add(o); }
+            if (d > 0) {
+                got += d;
+                seen.add(o);
+            }
         });
         if (!emptied) emptied = World.getLoc(loc.x, loc.z, 0, twin) !== null;
         H.tick(s.restock + 4);
@@ -158,11 +173,13 @@ for (const s of STALLS) {
     const paid = (p.stats[THIEVING] - xp0) / 10;
     check(`  ${s.key.padEnd(9)} pays out (${got} in 8 attempts)`, got > 0, true);
     check(`  ${''.padEnd(9)} at ${s.xp} experience a time`, got === 0 ? 0 : paid / got, s.xp);
-    check(`  ${''.padEnd(9)} off its own table`, [...seen].every(o => s.loot.includes(o)), true);
-    check(`  ${''.padEnd(9)} empties into its twin, not a Varrock stall`,
-          [emptied, World.getLoc(loc.x, loc.z, 0, LocType.getId('market'))], [true, null]);
-    check(`  ${''.padEnd(9)} and is a stall again afterwards`,
-          World.getLoc(loc.x, loc.z, 0, LocType.getId('mm_stall_' + s.key)) !== null, true);
+    check(
+        `  ${''.padEnd(9)} off its own table`,
+        [...seen].every(o => s.loot.includes(o)),
+        true
+    );
+    check(`  ${''.padEnd(9)} empties into its twin, not a Varrock stall`, [emptied, World.getLoc(loc.x, loc.z, 0, LocType.getId('market'))], [true, null]);
+    check(`  ${''.padEnd(9)} and is a stall again afterwards`, World.getLoc(loc.x, loc.z, 0, LocType.getId('mm_stall_' + s.key)) !== null, true);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

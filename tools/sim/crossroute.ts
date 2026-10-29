@@ -106,7 +106,12 @@ const byTile = new Map<number, Obst[]>();
 for (const o of obstacles) {
     for (let x = o.x; x <= o.x1; x++) {
         for (let z = o.z; z <= o.z1; z++) {
-            for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as [number, number][]) {
+            for (const [dx, dz] of [
+                [0, 1],
+                [0, -1],
+                [1, 0],
+                [-1, 0]
+            ] as [number, number][]) {
                 const nx = x + dx;
                 const nz = z + dz;
                 if (nx >= o.x && nx <= o.x1 && nz >= o.z && nz <= o.z1) continue;
@@ -173,7 +178,18 @@ if (!from.has(key(bx, bz))) {
             const t = LocType.get(loc.type);
             if (!(t.op ?? []).filter(Boolean).length) continue;
             const nm = t.debugname ?? 'loc_' + loc.type;
-            everything.push({ name: nm + ' [' + (t.op ?? []).filter(Boolean).join('/') + ']', x: loc.x, z: loc.z });
+            // The footprint, as the loop above works it out: landing() reads x1/z1, so a push
+            // without them measured the jump from undefined.
+            const odd = (loc.angle & 0x1) === 1;
+            const sx = odd ? t.length : t.width;
+            const sz = odd ? t.width : t.length;
+            everything.push({
+                name: nm + ' [' + (t.op ?? []).filter(Boolean).join('/') + ']',
+                x: loc.x,
+                z: loc.z,
+                x1: loc.x + sx - 1,
+                z1: loc.z + sz - 1
+            });
         }
     }
     for (const o of everything) {

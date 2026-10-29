@@ -14,7 +14,7 @@ const m: Manifest = {
     quest: 'VAMPIRE SLAYER',
     source: 'oldschool.runescape.wiki/w/Vampyre_Slayer',
     stageVar: 'vampire',
-    done: 3,   // ^vampire_complete
+    done: 3, // ^vampire_complete
     start: [3098, 3271, 0],
     steps: [
         { note: 'wiki: a hammer (1 coin in the Varrock general store) and 2 coins for the beer.' },
@@ -22,7 +22,7 @@ const m: Manifest = {
         { give: 'hammer' },
         { give: 'coins', n: 2 },
 
-        { note: "wiki step 1: Morgan, in his house in Draynor Village" },
+        { note: 'wiki step 1: Morgan, in his house in Draynor Village' },
         { loc: 'loc_1530', at: [3098, 3270], why: "Morgan's front door" },
         { talk: 'morgan', picks: ['up for an adventure'], why: 'he sends you to Dr Harlow' },
         { stage: 1 },

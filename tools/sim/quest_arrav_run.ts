@@ -18,10 +18,10 @@ const m: Manifest = {
     quest: 'SHIELD OF ARRAV (PHOENIX GANG)',
     source: 'oldschool.runescape.wiki/w/Shield_of_Arrav',
     stageVar: 'phoenixgang',
-    done: 10,   // ^phoenixgang_complete
+    done: 10, // ^phoenixgang_complete
     start: [3211, 3493, 0],
     steps: [
-        { note: "wiki: twenty coins for Baraek, and something to kill Jonny the Beard with" },
+        { note: 'wiki: twenty coins for Baraek, and something to kill Jonny the Beard with' },
         { give: 'coins', n: 50 },
         { give: 'rune_scimitar' },
         { held: 'rune_scimitar', op: 2, why: 'wield it' },
@@ -64,7 +64,7 @@ const m: Manifest = {
         { stage: 9 },
         { hasnt: 'intelligence_report' },
 
-        { note: "wiki step 8: the chest in the hideout, and half the shield in it" },
+        { note: 'wiki step 8: the chest in the hideout, and half the shield in it' },
         { setpos: [3236, 9761, 0], why: 'west through the hideout to the chest room' },
         { loc: 'phoenixshutchest', at: [3235, 9761], why: 'open the chest' },
         { wait: 4, why: 'opening it is its own action' },

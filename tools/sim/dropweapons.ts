@@ -33,21 +33,21 @@ const param = (objName: string, paramName: string): unknown => {
     const o = ObjType.get(ObjType.getId(objName)) as unknown as { params?: Map<number, unknown> };
     return o.params?.get(ParamType.getId(paramName));
 };
-const ATTACK = 0, STRENGTH = 2, SMITHING = 13, HITPOINTS = 3, DEFENCE = 1;
+const ATTACK = 0,
+    STRENGTH = 2,
+    SMITHING = 13,
+    _HITPOINTS = 3,
+    DEFENCE = 1;
 
 // ---------------------------------------------------------------------------------------------
 // Every one of these is the OSRS item table's own number (objs 20756, 31248, 13576, 21009).
-console.log('== the four weapons carry the cache\'s numbers, not a neighbour\'s');
+console.log("== the four weapons carry the cache's numbers, not a neighbour's");
 {
     const WANT: Record<string, Record<string, number>> = {
-        hill_giant_club: { stabattack: -4, slashattack: 50, crushattack: 65, magicattack: -4,
-            rangedefence: -1, strengthbonus: 70, attackrate: 7 },
-        belles_folly: { stabattack: 100, slashattack: 78, crushattack: -3, stabdefence: 20,
-            slashdefence: 15, crushdefence: -9, strengthbonus: 102, attackrate: 5 },
-        dragon_warhammer: { stabattack: -4, slashattack: -4, crushattack: 95, magicattack: -4,
-            strengthbonus: 85, attackrate: 6 },
-        dragon_sword: { stabattack: 65, slashattack: 55, crushattack: -2, slashdefence: 2,
-            crushdefence: 1, strengthbonus: 63, attackrate: 4 }
+        hill_giant_club: { stabattack: -4, slashattack: 50, crushattack: 65, magicattack: -4, rangedefence: -1, strengthbonus: 70, attackrate: 7 },
+        belles_folly: { stabattack: 100, slashattack: 78, crushattack: -3, stabdefence: 20, slashdefence: 15, crushdefence: -9, strengthbonus: 102, attackrate: 5 },
+        dragon_warhammer: { stabattack: -4, slashattack: -4, crushattack: 95, magicattack: -4, strengthbonus: 85, attackrate: 6 },
+        dragon_sword: { stabattack: 65, slashattack: 55, crushattack: -2, slashdefence: 2, crushdefence: 1, strengthbonus: 63, attackrate: 4 }
     };
     for (const [obj, bonuses] of Object.entries(WANT)) {
         check(`${obj} exists`, ObjType.getId(obj) !== -1, true);
@@ -60,7 +60,7 @@ console.log('== the four weapons carry the cache\'s numbers, not a neighbour\'s'
     }
     // Belle's folly is the one with no special attack - Old School calls it the only one of its
     // family without one.
-    check('Belle\'s folly claims no special', param('belles_folly', 'specwep'), undefined);
+    check("Belle's folly claims no special", param('belles_folly', 'specwep'), undefined);
     check('the club claims no special', param('hill_giant_club', 'specwep'), undefined);
     check('the warhammer is a spec weapon', param('dragon_warhammer', 'specwep'), 1);
     check('Smash costs 50%', param('dragon_warhammer', 'sa_energy'), 500);
@@ -157,7 +157,7 @@ console.log('== Smash takes 30% of what is left, and does it again');
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('== Belle\'s folly comes off the dragons tarnished, and a hammer finishes it');
+console.log("== Belle's folly comes off the dragons tarnished, and a hammer finishes it");
 {
     const t = ObjType.get(ObjType.getId('belles_folly_tarnished'));
     check('the tarnished blade cannot be worn', t.wearpos, -1);
@@ -195,7 +195,11 @@ console.log('== Belle\'s folly comes off the dragons tarnished, and a hammer fin
         const from = mark();
         H.opheld(p, 'belles_folly_tarnished', 1);
         H.tick(1);
-        check('Inspect says what it needs', mesSince(p, from).some(m => m.includes('70')), true);
+        check(
+            'Inspect says what it needs',
+            mesSince(p, from).some(m => m.includes('70')),
+            true
+        );
     }
 }
 
@@ -204,8 +208,7 @@ console.log('== and every drop is where it was asked for');
 {
     const src = Environment.BUILD_SRC_DIR;
     const read = (f: string) => fs.readFileSync(`${src}/scripts/drop_tables/scripts/${f}.rs2`, 'ascii');
-    const DRAGONS = ['black_dragon', 'blue_dragon', 'bronze_dragon', 'green_dragon', 'iron_dragon',
-        'king_black_dragon', 'lava_dragon', 'red_dragon', 'steel_dragon'];
+    const DRAGONS = ['black_dragon', 'blue_dragon', 'bronze_dragon', 'green_dragon', 'iron_dragon', 'king_black_dragon', 'lava_dragon', 'red_dragon', 'steel_dragon'];
     for (const d of DRAGONS) {
         check(`${d} rolls the dragon sword`, read(d).includes('~dragon_sword_roll;'), true);
     }
@@ -221,9 +224,12 @@ console.log('== and every drop is where it was asked for');
     const consts = fs.readFileSync(`${src}/scripts/drop_tables/configs/drop_weapons.constant`, 'ascii');
     const rate = (n: string) => Number(consts.match(new RegExp(`\\^dsword_rate_${n} = (\\d+)`))![1]);
     const ladder = ['green', 'blue', 'bronze', 'red', 'black', 'iron', 'steel', 'lava', 'kbd'].map(rate);
-    check('the ladder never gets worse as the dragon gets harder',
-        ladder.every((v, i) => i === 0 || v <= ladder[i - 1]), true);
-    check('and the top of it is Old School\'s own 1/2000', rate('kbd'), 2000);
+    check(
+        'the ladder never gets worse as the dragon gets harder',
+        ladder.every((v, i) => i === 0 || v <= ladder[i - 1]),
+        true
+    );
+    check("and the top of it is Old School's own 1/2000", rate('kbd'), 2000);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);

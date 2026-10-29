@@ -35,7 +35,7 @@ const OLIVE_CLOTH = 8741;
 const OLIVE_SHADOW = 4888;
 
 const recol = (name: string) => {
-    const t: { recol_s?: Int32Array | null; recol_d?: Int32Array | null } = ObjType.get(ObjType.getId(name));
+    const t: { recol_s?: Uint16Array | null; recol_d?: Uint16Array | null } = ObjType.get(ObjType.getId(name));
     if (!t.recol_s || !t.recol_d) return [] as [number, number][];
     return [...t.recol_s].map((s, i) => [s, t.recol_d![i]] as [number, number]);
 };

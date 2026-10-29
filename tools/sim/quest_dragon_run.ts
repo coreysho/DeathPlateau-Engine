@@ -19,12 +19,12 @@ const m: Manifest = {
     quest: 'DRAGON SLAYER',
     source: 'oldschool.runescape.wiki/w/Dragon_Slayer_I',
     stageVar: 'dragonquest',
-    done: 10,   // ^dragon_complete
-    start: [3191, 3365, 0],   // OUTSIDE the guild: 3191,3362 is already in it
+    done: 10, // ^dragon_complete
+    start: [3191, 3365, 0], // OUTSIDE the guild: 3191,3362 is already in it
     steps: [
         { note: 'wiki: 32 quest points to get in the door, and then a shopping list - silk, an' },
         { note: "unfired bowl, a lobster pot and a wizard's mind bomb for Thalzar's door, 10,000" },
-        { note: "coins for Wormbrain, 2,000 for the ship, and a hammer, 3 planks and 90 steel nails" },
+        { note: 'coins for Wormbrain, 2,000 for the ship, and a hammer, 3 planks and 90 steel nails' },
         { note: 'to patch it. The anti-dragon shield comes from the Duke.' },
         { setvar: 'qp', to: 32, why: 'the 32 quest points are thirty-two other quests, not this one' },
         { give: 'coins', n: 12000 },
@@ -42,7 +42,7 @@ const m: Manifest = {
         { worn: 'rune_scimitar' },
 
         { note: "wiki step 1: the Guild Master, in the Champions' Guild south of Varrock" },
-        { loc: 'championdoor', at: [3191, 3363], why: "the guild door, which wants 32 quest points" },
+        { loc: 'championdoor', at: [3191, 3363], why: 'the guild door, which wants 32 quest points' },
         { wait: 4, why: 'the door greets you with a chat window of its own, and a click on a busy player is binned' },
         { go: [3191, 3360], why: 'in out of the doorway' },
         { talk: 'guildmaster', picks: ['Rune Plate mail body'], tries: 3, why: 'he points you at Oziach' },
@@ -51,7 +51,11 @@ const m: Manifest = {
         { note: 'wiki step 2: Oziach, in his hut west of Edgeville. In 2006 he is the one who sets' },
         { note: 'the task AND tells you where all three map pieces are, and hands over the maze key.' },
         { setpos: [3069, 3516, 0], why: 'the road north-west out of Varrock to Edgeville' },
-        { talk: 'oziach', picks: ['sell me some Rune plate mail', 'guildmaster of the', 'how am I meant to prove', 'will I need anything', 'where can I find this dragon', 'first piece', 'second piece', 'third piece', "I'll try and get everything together"], why: 'the task, the three pieces and the maze key' },
+        {
+            talk: 'oziach',
+            picks: ['sell me some Rune plate mail', 'guildmaster of the', 'how am I meant to prove', 'will I need anything', 'where can I find this dragon', 'first piece', 'second piece', 'third piece', "I'll try and get everything together"],
+            why: 'the task, the three pieces and the maze key'
+        },
         { stage: 2 },
         { has: 'melzarkey' },
         { varis: 'dragon_oracle', to: 1 },
