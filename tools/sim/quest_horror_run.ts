@@ -33,7 +33,7 @@ const BRIDGE_W: [number, number] = [2596, 3608]; // horror_broken_bridge_left_sp
 const DOOR: [number, number] = [2509, 3636]; // horror_lighthouse_doorway, real lighthouse
 
 // --- the attacked copy, m38_71 (the real lighthouse's tiles minus 64 x, plus 960 z)
-const C_ARRIVE: [number, number, number] = [2445, 4596, 0];
+const _C_ARRIVEC_ARRIVE: [number, number, number] = [2445, 4596, 0];
 const C_STAIRS_BASE: [number, number] = [2442, 4600];
 const C_STAIRS_MID: [number, number] = [2442, 4600]; // same tile, plane 1
 const C_STAIRS_TOP: [number, number] = [2442, 4601];
@@ -42,7 +42,7 @@ const C_COG: [number, number] = [2443, 4599];
 const C_LADDER: [number, number] = [2445, 4604];
 
 // --- the basement and Jossik's cave, m39_72
-const BASEMENT: [number, number, number] = [2519, 4619, 1];
+const _BASEMENTBASEMENT: [number, number, number] = [2519, 4619, 1];
 const WALL_PANEL: [number, number] = [2514, 4627]; // horror_mid_left_door, studied and used on
 const WALL_DOOR: [number, number] = [2516, 4627]; // horror_far_right_door, the hinged one
 const LADDER_DOWN: [number, number] = [2515, 4630]; // horror_ladder_top2
@@ -50,18 +50,11 @@ const JOSSIK: [number, number, number] = [2518, 4633, 0];
 const LADDER_UP: [number, number] = [2519, 4618]; // horror_ladder_base, back to the lighthouse
 
 // --- the real lighthouse again, after she is dead
-const R_ARRIVE: [number, number, number] = [2510, 3644, 0];
+const _R_ARRIVER_ARRIVE: [number, number, number] = [2510, 3644, 0];
 const R_STAIRS_BASE: [number, number] = [2506, 3640];
-const R_JOSSIK: [number, number, number] = [2509, 3639, 1];
+const _R_JOSSIKR_JOSSIK: [number, number, number] = [2509, 3639, 1];
 
-const MOTHER = [
-    'horror_dagganoth_air',
-    'horror_dagganoth_water',
-    'horror_dagganoth_melee',
-    'horror_dagganoth_earth',
-    'horror_dagganoth_fire',
-    'horror_dagganoth_ranged'
-];
+const MOTHER = ['horror_dagganoth_air', 'horror_dagganoth_water', 'horror_dagganoth_melee', 'horror_dagganoth_earth', 'horror_dagganoth_fire', 'horror_dagganoth_ranged'];
 
 const m: Manifest = {
     quest: 'HORROR FROM THE DEEP',
@@ -70,7 +63,7 @@ const m: Manifest = {
     done: 6, // ^horror_complete
     start: LARRISSA,
     steps: [
-        { note: 'requirement: Alfred Grimhand\'s Barcrawl (the 35 Agility is the Barbarian Outpost' },
+        { note: "requirement: Alfred Grimhand's Barcrawl (the 35 Agility is the Barbarian Outpost" },
         { note: 'pipe between the player and Gunnjorn, which barbarian_course.rs2 enforces itself).' },
         { setvar: 'barcrawl', to: 2, why: '^barcrawl_complete' },
         { note: 'items: a hammer, 60 steel nails and 2 planks for the bridge; swamp tar, a tinderbox' },
@@ -102,7 +95,7 @@ const m: Manifest = {
         { note: 'wiki step 2: her cousin Gunnjorn has the spare key - he is the agility arena guard' },
         { note: 'at the Barbarian Outpost, not behind the broken bridge at all.' },
         { setpos: GUNNJORN, why: 'to the Barbarian Outpost' },
-        { talk: 'gunnjorn', want: 'Here you go', why: 'ask for Larrissa\'s key' },
+        { talk: 'gunnjorn', want: 'Here you go', why: "ask for Larrissa's key" },
         { has: 'horror_key' },
 
         { note: 'wiki steps 3-4: a plank on the span you are standing on, then jump the gap and do' },
@@ -124,7 +117,7 @@ const m: Manifest = {
         { note: 'and the player is now in the attacked copy of the building, 64 west and 960 north' },
 
         { note: 'wiki step 6 (optional, and the only place the puzzles are explained): the bookcase' },
-        { note: 'on the middle floor holds the manual, Silas\'s diary and Jossik\'s journal.' },
+        { note: "on the middle floor holds the manual, Silas's diary and Jossik's journal." },
         { loc: 'horror_lighthouse_spiralstairs_base', at: C_STAIRS_BASE, why: 'up to the middle floor' },
         { loc: 'horror_bookcase', at: C_BOOKCASE, picks: ['Take all three books.'], why: 'search the bookcase' },
         { has: 'horror_diary1' },
@@ -132,7 +125,7 @@ const m: Manifest = {
         { has: 'horror_diary3' },
         { held: 'horror_diary3', op: 1, want: 'molten glass', why: 'the manual says how the light is mended' },
         { close: true },
-        { held: 'horror_diary2', op: 1, want: 'warrior\'s sword', why: 'and the diary how the wall is opened' },
+        { held: 'horror_diary2', op: 1, want: "warrior's sword", why: 'and the diary how the wall is opened' },
         { close: true },
 
         { note: 'wiki step 7: swamp tar, a tinderbox and molten glass on the mechanism, any order' },
@@ -193,7 +186,7 @@ const m: Manifest = {
         { has: 'horror_casket' },
 
         { note: 'wiki step 13: back up into the real lighthouse - the copy is gone now - and up to' },
-        { note: 'Jossik\'s library, where he reads the casket with you' },
+        { note: "Jossik's library, where he reads the casket with you" },
         { loc: 'horror_ladder_base', at: LADDER_UP, want: 'climb up', why: 'up out of the basement' },
         { loc: 'horror_lighthouse_spiralstairs_base', at: R_STAIRS_BASE, why: 'up to the library' },
         { note: 'he asks what the casket says twice and will not open it until the answer matches.' },

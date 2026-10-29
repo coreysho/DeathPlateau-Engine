@@ -20,14 +20,14 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const ACHIETTIES: [number, number, number] = [2904, 3510, 0];
+const _ACHIETTIESACHIETTIES: [number, number, number] = [2904, 3510, 0];
 const FIRE: [number, number] = [2890, 9768];
 
 const m: Manifest = {
     quest: "HEROES' QUEST (solo part)",
     source: 'oldschool.runescape.wiki/w/Heroes%27_Quest',
     stageVar: 'heroquest',
-    done: 11,   // ^hero_blackarm_id_papers_given, as far as one player goes
+    done: 11, // ^hero_blackarm_id_papers_given, as far as one player goes
     start: [2904, 3510, 0],
     steps: [
         { note: 'requirements: 55 quest points, Shield of Arrav, Lost City, Merlin’s Crystal and' },

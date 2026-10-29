@@ -16,7 +16,6 @@
 //
 //   npx tsx tools/sim/mmaggro.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import { check, R, player } from './a1lib.ts';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -62,9 +61,7 @@ function hunts(npc: any, p: any, ticks = 10): boolean {
 // ---------------------------------------------------------------- the island's guards
 console.log('\nAPE ATOLL, TO A HUMAN');
 const guards: [string, number, number][] = [];
-for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', 'mm_ravine_archer',
-                    'mm_religious_guard', 'mm_oipuis', 'mm_ouhai', 'mm_uodai', 'mm_uyoro',
-                    'mm_zombie_monkey_small', 'mm_zombie_monkey_large', 'mm_skeleton']) {
+for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', 'mm_ravine_archer', 'mm_religious_guard', 'mm_oipuis', 'mm_ouhai', 'mm_uodai', 'mm_uyoro', 'mm_zombie_monkey_small', 'mm_zombie_monkey_large', 'mm_skeleton']) {
     const id = NpcType.getId(name);
     let found: any = null;
     for (const npc of World.npcs) {
@@ -113,7 +110,7 @@ for (const [name, x, z] of guards) {
     const sz2 = NpcType.get(npc.type).size ?? 1;
     const p: any = player('monkey_' + name.slice(3, 13), x + sz2, z, npc.level);
     H.setVar(p, 'tutorial', 1000);
-    H.equip(p, { rhand: greegree });    // the quest makes you wield it, and worn is what the hunt reads
+    H.equip(p, { rhand: greegree }); // the quest makes you wield it, and worn is what the hunt reads
     H.tick(2);
     const on = (() => {
         const inv = p.getInventory(InvType.WORN);

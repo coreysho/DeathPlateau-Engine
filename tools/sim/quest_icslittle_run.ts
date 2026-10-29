@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const WANDERER: [number, number, number] = [3317, 2849, 0];
+const _WANDERERWANDERER: [number, number, number] = [3317, 2849, 0];
 const ROCKS: [number, number] = [3323, 2857];
 const POND: [number, number] = [3289, 2845];
 const SUNTRAP: [number, number] = [3305, 2756];
@@ -32,7 +32,7 @@ const m: Manifest = {
     quest: "ICTHLARIN'S LITTLE HELPER",
     source: 'oldschool.runescape.wiki/w/Icthlarin%27s_Little_Helper/Quick_guide',
     stageVar: 'ics_little_var',
-    done: 26,   // ^icslittle_complete
+    done: 26, // ^icslittle_complete
     start: [3317, 2849, 0],
     steps: [
         { note: 'requirement: Gertrude’s Cat, which the High Priest never checked, and a cat, which' },

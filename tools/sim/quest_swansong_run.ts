@@ -75,15 +75,15 @@ const m: Manifest = {
         { go: [GATE[0], GATE[1]], exact: true, r: 40, why: 'the inner gate' },
         { loc: 'loc_14931', at: GATE, why: 'through it' },
 
-        { note: "Franklin Caranos and his press. He hands over the tinderbox and the hammer." },
+        { note: 'Franklin Caranos and his press. He hands over the tinderbox and the hammer.' },
         { go: [FRANKLIN[0] + 1, FRANKLIN[1]], r: 40, why: 'to Franklin' },
         { talk: 'swan_franklin', want: 'press in the workshop', why: 'he asks for five sheets' },
         { has: 'tinderbox' },
         { has: 'hammer' },
         { varis: 'swansong_franklin', to: 1 },
 
-        { note: 'logs in the firebox at the press\'s east end, then a tinderbox, then the bars' },
-        { go: [SHOP_DOOR[0], SHOP_DOOR[1]], exact: true, r: 40, why: "the workshop door" },
+        { note: "logs in the firebox at the press's east end, then a tinderbox, then the bars" },
+        { go: [SHOP_DOOR[0], SHOP_DOOR[1]], exact: true, r: 40, why: 'the workshop door' },
         { loc: 'loc_14923', at: SHOP_DOOR, soft: true, why: 'open it' },
         { go: [FIREBOX[0], FIREBOX[1] - 1], r: 40, why: 'to the firebox' },
         { useLoc: 'loc_14955', at: FIREBOX, obj: 'logs', want: 'logs in the firebox', why: 'fuel' },
@@ -140,7 +140,7 @@ const m: Manifest = {
         { talk: 'swan_multioutside', want: 'letter goes out', why: 'fed, and the letter' },
         { stage: 20 },
 
-        { note: "wiki step 2: the man the letter is addressed to, who is in Draynor pretending to" },
+        { note: 'wiki step 2: the man the letter is addressed to, who is in Draynor pretending to' },
         { note: 'be a pensioner. He was placed nowhere at all until now, which is why this step used' },
         { note: 'to happen by itself in a mesbox; he wants the ten mist, ten lava and five blood the' },
         { note: "wiki's item list wants." },
@@ -160,8 +160,8 @@ const m: Manifest = {
         { talk: 'swan_multioutside', want: 'not waking up', why: 'the ambush' },
         { stage: 65 },
 
-        { note: 'wiki step 5 as the cache allows it: Arnold has Herman\'s book and the packet of' },
-        { note: 'bone seeds that was in the old man\'s hand, and the book wants seven bones' },
+        { note: "wiki step 5 as the cache allows it: Arnold has Herman's book and the packet of" },
+        { note: "bone seeds that was in the old man's hand, and the book wants seven bones" },
         { go: [HOLE_OUT[0], HOLE_OUT[1] - 1], exact: true, why: 'south of the hole' },
         { loc: 'loc_14922', at: HOLE_OUT, want: 'crawl through the hole', soft: true, why: 'in' },
         { go: [GATE[0], GATE[1]], exact: true, r: 40, why: 'the inner gate' },

@@ -13,8 +13,8 @@ await H.boot();
 
 // --- the Legends' Guild, east of Ardougne
 const GUARD: [number, number, number] = [2724, 3351, 0];
-const GUILD_GATE: [number, number] = [2728, 3349];
-const GUILD_DOOR: [number, number] = [2728, 3373];
+const _GUILD_GATEGUILD_GATE: [number, number] = [2728, 3349];
+const _GUILD_DOORGUILD_DOOR: [number, number] = [2728, 3373];
 const RADIMUS: [number, number, number] = [2726, 3367, 0];
 const STUDY_DOOR: [number, number] = [2726, 3368];
 const CUPBOARD: [number, number] = [2724, 3370];
@@ -32,7 +32,7 @@ const TOTEM: [number, number] = [2793, 2908]; // lg_ord_totem_pole
 const SHAMAN_ROCKS: [number, number] = [2781, 2936]; // lgshamancaverock1, the mossy rock
 
 // --- Ungadulu's cave, under the jungle
-const UNGADULU: [number, number, number] = [2791, 9328, 0];
+const _UNGADULUUNGADULU: [number, number, number] = [2791, 9328, 0];
 const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the west face of the octagram
 // and the plain west wall two tiles north of it, which is the one to cross. ~legends_fire_wall_walk
 // reads the player's own coord against the loc's to decide which side to put you on, and for a
@@ -41,7 +41,7 @@ const FIREWALL_W: [number, number] = [2787, 9328]; // lqfirewall_diagonal, the w
 // z throws you out onto the ring instead, where the shaman is out of spell range.
 const FIREWALL_CROSS: [number, number] = [2788, 9331]; // lqfirewall_straight, angle east
 const FIREWALL_CROSS_OUT: [number, number] = [2787, 9331]; // stand here to cross in
-const FIREWALL_CROSS_IN: [number, number] = [2789, 9331]; // and here to cross back
+const _FIREWALL_CROSS_INFIREWALL_CROSS_IN: [number, number] = [2789, 9331]; // and here to cross back
 const CAVE_EXIT: [number, number] = [2772, 9342]; // shaman_entrance_cavel
 const REEDS: [number, number] = [2836, 2916];
 const POOL: [number, number] = [2837, 2915]; // sacred_water
@@ -68,7 +68,7 @@ const WINCH: [number, number] = [2759, 9329]; // lg_winchdown_norope, over the h
 // --- the Viyeldi caves, at the bottom of the hole. The rope drops you on an eleven-tile ledge and
 //     the cave proper is 1458 tiles away across six climbs, every one of them a teleport: walkgraph
 //     finds 1032 regions down here and six edges, none of which are these.
-const VIYELDI_IN: [number, number] = [2377, 4712]; // where the rope lands you
+const _VIYELDI_INVIYELDI_IN: [number, number] = [2377, 4712]; // where the rope lands you
 const CLIMBS: [string, [number, number], [number, number], string][] = [
     ['rocky_ledge', [2377, 4717], [2378, 4717], 'nothing more exciting'],
     ['rocky_ledge1', [2377, 4728], [2377, 4727], 'nothing more exciting'],
@@ -90,7 +90,7 @@ const CLIMBS_BACK: [string, [number, number], [number, number]][] = [
     ['rocky_ledge1', [2377, 4728], [2378, 4728]],
     ['rocky_ledge', [2377, 4717], [2376, 4717]]
 ];
-const VIYELDI_HAT: [number, number] = [2379, 4712]; // the only viyeldihat on the map
+const _VIYELDI_HATVIYELDI_HAT: [number, number] = [2379, 4712]; // the only viyeldihat on the map
 const FURNACE: [number, number] = [2426, 4726]; // furnace_legendsquest
 const DRAGONS_EYE: [number, number] = [2410, 4715]; // dragons_eye_rock
 const HEART_RECESS: [number, number] = [2422, 4691]; // heart_recess_empty
@@ -210,7 +210,13 @@ const m: Manifest = {
         { rng: null },
         { note: 'and Gujuo opens with a menu of his own, straight off the bullroarer - five more' },
         { note: 'to the point where he asks you to free Ungadulu' },
-        { talk: 'gujuo', tries: 3, picks: ['attract the attention', 'friendly relations', 'get your people together', 'What can we do instead', 'How do we make the totem pole', 'I will release Ungadulu'], want: 'triangular shape', why: 'hear him out' },
+        {
+            talk: 'gujuo',
+            tries: 3,
+            picks: ['attract the attention', 'friendly relations', 'get your people together', 'What can we do instead', 'How do we make the totem pole', 'I will release Ungadulu'],
+            want: 'triangular shape',
+            why: 'hear him out'
+        },
         { stage: 5 },
 
         { note: 'wiki step 9: the mossy rock in the north-west, and 50 Agility to crawl inside' },
@@ -376,10 +382,7 @@ const m: Manifest = {
 
         { note: 'wiki step 24: seven stalagmites and seven gems. Each rock takes one gem and no' },
         { note: 'other - "But nothing happens" is the wrong rock, not the wrong order.' },
-        ...(GEM_ROCKS.flatMap(([gem, at]) => [
-            { give: gem },
-            { useLoc: 'lg_gemplacerock', at, obj: gem, want: 'glows and starts spinning', why: 'the ' + gem.split('_').join(' ') + ' rock' }
-        ]) as Step[]),
+        ...(GEM_ROCKS.flatMap(([gem, at]) => [{ give: gem }, { useLoc: 'lg_gemplacerock', at, obj: gem, want: 'glows and starts spinning', why: 'the ' + gem.split('_').join(' ') + ' rock' }]) as Step[]),
         { note: 'and the seventh blows you into the middle of the room, where the book lands - but' },
         { note: 'not at once: ~check_gem_puzzle_complete is thirteen world_delays of shooting stars' },
         { note: 'from the seven rocks before the obj_add, on top of the exactmove that carries you' },
@@ -449,24 +452,7 @@ const m: Manifest = {
         { note: 'reads exactly like a cast the engine never delivered. Twenty-eight slots is a' },
         { note: 'real constraint on a quest this long, and the trials above are finished with.' },
         {
-            drop: [
-                'papyrus',
-                'charcoal',
-                'rune_axe',
-                'lockpick',
-                'rune_pickaxe',
-                'soulrune',
-                'mindrune',
-                'lawrune',
-                'thkaramjamap',
-                'swamprocks1',
-                'bodyrune',
-                'waterrune',
-                'vial_empty',
-                'scrawled_note1',
-                'scrawled_note2',
-                'scrawled_note3'
-            ],
+            drop: ['papyrus', 'charcoal', 'rune_axe', 'lockpick', 'rune_pickaxe', 'soulrune', 'mindrune', 'lawrune', 'thkaramjamap', 'swamprocks1', 'bodyrune', 'waterrune', 'vial_empty', 'scrawled_note1', 'scrawled_note2', 'scrawled_note3'],
             why: 'the spent trial kit'
         },
 
@@ -503,11 +489,7 @@ const m: Manifest = {
         { note: 'loc with its own wording and its own idea of which side you came from, and each' },
         { note: 'is a teleport rather than a walk, so the ledges between them are tiny pockets.' },
         { rng: 0, why: 'stat_random true: no slips on the ledges' },
-        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [
-            { go: from, r: 64, why: 'to ' + loc },
-            { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' },
-            { level: 0 }
-        ]) as Step[]),
+        ...(CLIMBS.flatMap(([loc, at, from, pick]) => [{ go: from, r: 64, why: 'to ' + loc }, { loc, at, picks: [pick], hop: true, soft: true, why: 'climb it' }, { level: 0 }]) as Step[]),
         { rng: null },
 
         { note: 'and the pack has to have room before the heroes: each of the three inv_adds a' },

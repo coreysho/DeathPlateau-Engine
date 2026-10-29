@@ -42,9 +42,9 @@ const DOOR_C: [number, number] = [2506, 3851]; // the lobby -> the staircase roo
 const STAIRS: [number, number] = [2505, 3848]; // loc_1742, up to the first floor
 const DOOR_D: [number, number] = [2506, 3851]; // first floor: the landing -> the ante-room
 const THRONE_S: [number, number] = [2506, 3857]; // the guarded throne-room door
-const THRONE_N: [number, number] = [2506, 3863]; // and the north one, to Astrid's side
+const _THRONE_NTHRONE_N: [number, number] = [2506, 3863]; // and the north one, to Astrid's side
 const DOOR_BRAND: [number, number] = [2504, 3853]; // the ante-room -> Prince Brand
-const DOOR_ASTRID: [number, number] = [2504, 3867]; // the north room -> Princess Astrid
+const _DOOR_ASTRIDDOOR_ASTRID: [number, number] = [2504, 3867]; // the north room -> Princess Astrid
 const VARGAS: [number, number, number] = [2503, 3857, 1];
 const GHRIM: [number, number, number] = [2501, 3860, 1];
 const BRAND: [number, number, number] = [2503, 3851, 1];
@@ -71,10 +71,9 @@ const WEEDS: [string, number, number, number, number][] = [
 
 // A courting round asks one of nine questions at random and each has its own flattering answer, so
 // the pick is the whole list and a1lib takes whichever of them is on the menu.
-const FLATTER =
-    'Be still, my heart||understand your poetry||greatest bard||How poetic||How inspiring||nobler pursuit||touched||presume to have the skill||glad to hear it';
+const FLATTER = 'Be still, my heart||understand your poetry||greatest bard||How poetic||How inspiring||nobler pursuit||touched||presume to have the skill||glad to hear it';
 
-const TO_THRONE_ROOM: Step[] = [
+const _TO_THRONE_ROOMTO_THRONE_ROOM: Step[] = [
     { go: [2509, 3859], r: 192, why: 'to the castle hall door' },
     { loc: 'loc_1512', at: DOOR_A, soft: true, why: 'open it' },
     { go: [2504, 3859], why: 'through, to the next door' },

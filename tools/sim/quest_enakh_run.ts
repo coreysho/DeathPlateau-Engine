@@ -27,7 +27,7 @@ const LAZIM: [number, number, number] = [3191, 2927, 0];
 const ROCK: [number, number] = [3173, 2918];
 const STATUE: [number, number] = [3189, 2925];
 const BOULDER_S: [number, number] = [3189, 2888];
-const LAND_SE: [number, number, number] = [3127, 9330, 0];
+const _LAND_SELAND_SE: [number, number, number] = [3127, 9330, 0];
 const FALLEN: [number, number] = [3129, 9325];
 const SIGIL_M: [number, number] = [3128, 9319];
 const DOOR_RLEG: [number, number] = [3129, 9290];
@@ -170,7 +170,7 @@ const m: Manifest = {
         { varis: 'enakh_shadow_room', to: 1 },
 
         { note: 'and blood is Pentyn, who has been running the ward for four thousand years' },
-        { setpos: PRISON, why: "to the light prison" },
+        { setpos: PRISON, why: 'to the light prison' },
         { talk: 'enakh_pentyn', want: 'anchored', why: 'he says where to hit it' },
         { useLoc: 'enakh_light_prison', at: [PRISON[0], PRISON[1] - 1], obj: 'enakh_chisel', want: 'light goes out', why: 'put the chisel through the anchor' },
         { varis: 'enakh_blood_room', to: 1 },

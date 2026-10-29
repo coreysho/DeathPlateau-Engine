@@ -173,15 +173,7 @@ function approachSide(type: LocType, angle: number): [number, number] | null {
  * The direction of travel is forceapproach's opposite - the side you may stand on is the side you
  * come FROM - and where any side will do, it is the heading towards the next obstacle.
  */
-function farSide(
-    ox: number,
-    oz: number,
-    foot: [number, number],
-    level: number,
-    side: [number, number] | null,
-    from: [number, number],
-    next: { x: number; z: number; level: number } | null
-): { at: [number, number]; span: number; why: string } | null {
+function farSide(ox: number, oz: number, foot: [number, number], level: number, side: [number, number] | null, from: [number, number], next: { x: number; z: number; level: number } | null): { at: [number, number]; span: number; why: string } | null {
     const dirs: [number, number][] = [];
     if (side) {
         dirs.push([-side[0], -side[1]]);
@@ -244,14 +236,7 @@ function farSide(
                 // because it is a hole over the street. Both are legitimate; a long run of holes
                 // is not, because it means the walk has left the course and found another roof.
                 if (holes > 6) break;
-                const why =
-                    span && holes
-                        ? `${span} of span and ${holes} of gap crossed`
-                        : span
-                          ? `${span} tiles of span crossed`
-                          : holes
-                            ? `${holes} tiles of gap crossed`
-                            : 'the tile past it';
+                const why = span && holes ? `${span} of span and ${holes} of gap crossed` : span ? `${span} tiles of span crossed` : holes ? `${holes} tiles of gap crossed` : 'the tile past it';
                 return { at: [x, z], span, why };
             }
             if (thinAir(x, z, level)) {
@@ -278,12 +263,7 @@ function farSide(
  * drawn on it. So the same idea, filtered: the closest tile to the next obstacle that is drawn, open
  * and stood upon, preferring one it can actually be clicked from.
  */
-function atNext(
-    next: { name: string; loc: string; x: number; z: number; level: number },
-    level: number,
-    fromX: number,
-    fromZ: number
-): [number, number] | null {
+function atNext(next: { name: string; loc: string; x: number; z: number; level: number }, level: number, fromX: number, fromZ: number): [number, number] | null {
     let best: [number, number] | null = null;
     let bestScore = -1e9;
     for (let dx = -4; dx <= 4; dx++) {
@@ -313,8 +293,7 @@ function atNext(
             const onIt = onLoc(x, z, level);
             if (next.level === level && !clickable(level, x, z, next.loc, next.x, next.z) && !(onIt && d <= 2)) continue;
             // close to the obstacle, and on the side the player is coming from
-            const sameSide =
-                Math.sign(fromX - next.x) === Math.sign(dx) || Math.sign(fromZ - next.z) === Math.sign(dz);
+            const sameSide = Math.sign(fromX - next.x) === Math.sign(dx) || Math.sign(fromZ - next.z) === Math.sign(dz);
             const score = -d * 4 + (sameSide ? 3 : 0) + (d === 1 ? 2 : 0);
             if (score > bestScore) {
                 bestScore = score;
@@ -340,19 +319,7 @@ function clickable(level: number, x: number, z: number, name: string, lx: number
     const found = placed(name, lx, lz, level);
     if (!found) return false;
     const type = LocType.get(id);
-    return reachedLoc(
-        level,
-        x,
-        z,
-        found.loc.x,
-        found.loc.z,
-        found.loc.width,
-        found.loc.length,
-        1,
-        found.angle,
-        found.shape,
-        (type as unknown as { forceapproach?: number }).forceapproach ?? 0
-    );
+    return reachedLoc(level, x, z, found.loc.x, found.loc.z, found.loc.width, found.loc.length, 1, found.angle, found.shape, (type as unknown as { forceapproach?: number }).forceapproach ?? 0);
 }
 
 /** Can a player walk from here to a tile beside that obstacle? */
@@ -379,26 +346,19 @@ let stranded = 0;
 for (const course of COURSES) {
     if (only && only !== course.key) continue;
     console.log(`\n================ ${course.title}`);
-    console.log(
-        '  ' +
-            'obstacle'.padEnd(15) +
-            'placed'.padEnd(18) +
-            'faces'.padEnd(7) +
-            'landing now'.padEnd(17) +
-            'map says'
-    );
+    console.log('  ' + 'obstacle'.padEnd(15) + 'placed'.padEnd(18) + 'faces'.padEnd(7) + 'landing now'.padEnd(17) + 'map says');
     let from: [number, number] = [course.start[0], course.start[1]];
     for (let i = 0; i < course.obstacles.length; i++) {
         const o = course.obstacles[i];
         const p = placed(o.loc, o.x, o.z, o.level);
         const land = C[o.land];
         let desc = 'UNPLACED';
-        let foot = '?';
+        let _foot = '?';
         let faces = '-';
         if (p) {
             const type = LocType.get(p.loc.type);
             const [fw, fl] = footprint(type, p.angle);
-            foot = `${fw}x${fl}`;
+            _foot = `${fw}x${fl}`;
             const side = approachSide(type, p.angle);
             faces = side ? DIRS[[-1, 0].toString() === side.toString() ? 0 : [0, 1].toString() === side.toString() ? 1 : [1, 0].toString() === side.toString() ? 2 : 3] : 'any';
             desc = `${p.x},${p.z} s${p.shape} a${p.angle}`;
@@ -449,14 +409,7 @@ for (const course of COURSES) {
             }
             verdict = bits.length ? bits.join(', ') : 'floor, open' + (land[2] === o.level ? '' : ', changes plane');
         }
-        console.log(
-            '  ' +
-                o.name.padEnd(15) +
-                desc.padEnd(18) +
-                faces.padEnd(7) +
-                (land ? `${land[0]},${land[1]} L${land[2]}` : '-').padEnd(17) +
-                verdict
-        );
+        console.log('  ' + o.name.padEnd(15) + desc.padEnd(18) + faces.padEnd(7) + (land ? `${land[0]},${land[1]} L${land[2]}` : '-').padEnd(17) + verdict);
         // AND WHERE THE OBSTACLE ITSELF SAYS THE CROSSING ENDS. Derived for every obstacle, not
         // only the broken ones, because a derivation that agrees with the constant everywhere it
         // is sound is the only reason to believe it where it disagrees.
@@ -470,11 +423,7 @@ for (const course of COURSES) {
             // course plays anyway.
             const far = farSide(p.x, p.z, footprint(type, p.angle), land[2], side, from, nextOb);
             let got: { at: [number, number]; why: string } | null = null;
-            const farUsable =
-                far &&
-                (!nextOb ||
-                    walksOnTo(far.at[0], far.at[1], land[2], nextOb) ||
-                    (nextOb.level === land[2] && clickable(land[2], far.at[0], far.at[1], nextOb.loc, nextOb.x, nextOb.z)));
+            const farUsable = far && (!nextOb || walksOnTo(far.at[0], far.at[1], land[2], nextOb) || (nextOb.level === land[2] && clickable(land[2], far.at[0], far.at[1], nextOb.loc, nextOb.x, nextOb.z)));
             if (far && farUsable) {
                 got = { at: far.at, why: far.why + ', and walkable on from there' };
             } else if (nextOb) {
@@ -482,9 +431,7 @@ for (const course of COURSES) {
                 if (near) {
                     got = {
                         at: near,
-                        why: far
-                            ? `the far side is ${far.at[0]},${far.at[1]} but nothing walks on from it - so the tile at ${nextOb.name}`
-                            : `the tile at ${nextOb.name}`
+                        why: far ? `the far side is ${far.at[0]},${far.at[1]} but nothing walks on from it - so the tile at ${nextOb.name}` : `the tile at ${nextOb.name}`
                     };
                 }
             } else if (far) {
@@ -498,10 +445,7 @@ for (const course of COURSES) {
             } else {
                 const line = `^${o.land} = ${land[2]}_${got.at[0] >> 6}_${got.at[1] >> 6}_${got.at[0] & 63}_${got.at[1] & 63}`;
                 const d = Math.max(Math.abs(land[0] - got.at[0]), Math.abs(land[1] - got.at[1]));
-                console.log(
-                    `  ${''.padEnd(15)}derived: ${got.at[0]},${got.at[1]} L${land[2]} (${got.why}), ${d} tiles off` +
-                        (fatal ? '   <- AND THE CONSTANT IS IMPOSSIBLE' : '')
-                );
+                console.log(`  ${''.padEnd(15)}derived: ${got.at[0]},${got.at[1]} L${land[2]} (${got.why}), ${d} tiles off` + (fatal ? '   <- AND THE CONSTANT IS IMPOSSIBLE' : ''));
                 if (fatal) proposals.push(`${course.key}\t${o.land}\t${land[0]},${land[1]}\t${got.at[0]},${got.at[1]}\t${line}`);
             }
         }

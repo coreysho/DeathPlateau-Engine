@@ -12,7 +12,7 @@
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_upass_run.ts
 import * as H from './harness.js';
-import { play, Manifest, Step } from './questrun.js';
+import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
@@ -35,7 +35,7 @@ const WELL: [number, number] = [2416, 9674]; // cave_well -> 2423,9660
 const UNICORN_CAGE: [number, number] = [2371, 9603];
 const RAILING: [number, number] = [2397, 9605]; // cave_railings3
 const BOULDER: [number, number, number] = [2396, 9596, 0]; // boulder_upass, an npc
-const PALADINS: [number, number, number] = [2424, 9720, 0];
+const _PALADINSPALADINS: [number, number, number] = [2424, 9720, 0];
 const BLOOD_WELL: [number, number] = [2373, 9718]; // bloodwell_upass
 const UNICORN_DOOR: [number, number] = [2368, 9717]; // cavetempledoor2l
 
@@ -48,7 +48,7 @@ const IBAN_TOMB: [number, number] = [2356, 9800]; // ibantomb_left
 const WITCH_CAT: [number, number, number] = [2131, 4603, 1];
 const WITCH_DOOR: [number, number] = [2158, 4566]; // cavewitch_door, L1
 const WITCH_CHEST: [number, number] = [2157, 4564]; // cavewitchchest, L1
-const DEMONS: [number, number, number] = [2128, 4560, 1];
+const _DEMONSDEMONS: [number, number, number] = [2128, 4560, 1];
 const DEMON_CHEST: [number, number] = [2136, 4578]; // upassshutchest1, L1
 const KALRAG: [number, number, number] = [2356, 9910, 0];
 const DOVE_CAGE: [number, number] = [2134, 4702]; // upass_cage_dummy, L1

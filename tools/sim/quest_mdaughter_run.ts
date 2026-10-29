@@ -106,7 +106,7 @@ const m: Manifest = {
         { go: GUARD, exact: true, r: 40, why: 'to the guard inside the slide' },
         { talk: 'mdaughter_rockslide_guard', want: 'determined or stupid', why: 'he lets you past' },
 
-        { note: "wiki step 2: Hamal is in the longhouse at the east end, behind a tent door" },
+        { note: 'wiki step 2: Hamal is in the longhouse at the east end, behind a tent door' },
         { go: [TENT_DOOR[0] - 1, TENT_DOOR[1]], exact: true, r: 90, why: "to the chieftain's tent" },
         { loc: 'mdaughter_tent_door', at: TENT_DOOR, soft: true, why: 'open the flap' },
         { go: HAMAL, r: 20, why: 'inside' },

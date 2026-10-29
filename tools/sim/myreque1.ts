@@ -50,17 +50,39 @@ for (const n of World.npcs) {
     if (!nm.startsWith('route_') && nm !== 'multi_vanstrom_stranger_entity' && nm !== 'skeleton_hellhound') continue;
     console.log(`  ${nm.padEnd(38)} id ${String(n.type).padStart(5)}  L${n.level} ${n.x},${n.z}  size ${t.size}  lvl ${t.vislevel}`);
 }
-for (const nm of ['route_cyreg_paddlehorn', 'route_curpile_fyod', 'route_veliaf_hurtz', 'route_sani_piliu',
-    'route_harold_evans', 'route_radigad_ponfit', 'route_polmafi_ferdygris', 'route_ivan_strom',
-    'route_vanstrom_klause_sitting', 'route_vanstrom_klause_normal', 'route_vanstrom_klause_vamp',
-    'route_vanstrom_klause_vamp_misty', 'route_vanstrom_klause_vamp_wingsgrow', 'canafis_stranger',
-    'multi_vanstrom_stranger_entity', 'skeleton_hellhound']) {
-    try { console.log(`  type ${nm.padEnd(40)} = ${NpcType.getId(nm)}`); } catch (e) { console.log(`  type ${nm} MISSING`); }
+for (const nm of [
+    'route_cyreg_paddlehorn',
+    'route_curpile_fyod',
+    'route_veliaf_hurtz',
+    'route_sani_piliu',
+    'route_harold_evans',
+    'route_radigad_ponfit',
+    'route_polmafi_ferdygris',
+    'route_ivan_strom',
+    'route_vanstrom_klause_sitting',
+    'route_vanstrom_klause_normal',
+    'route_vanstrom_klause_vamp',
+    'route_vanstrom_klause_vamp_misty',
+    'route_vanstrom_klause_vamp_wingsgrow',
+    'canafis_stranger',
+    'multi_vanstrom_stranger_entity',
+    'skeleton_hellhound'
+]) {
+    try {
+        console.log(`  type ${nm.padEnd(40)} = ${NpcType.getId(nm)}`);
+    } catch {
+        console.log(`  type ${nm} MISSING`);
+    }
 }
 
 // ---- the hideout, plane by plane
 const open = (l: number, x: number, z: number) =>
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+    [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
 for (const l of [0, 1, 2, 3]) {
     console.log('');
     console.log(`=== cave plane ${l}, 3490..3519 x 9826..9855`);

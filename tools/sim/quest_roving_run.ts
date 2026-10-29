@@ -12,13 +12,13 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 const ISLWYN: [number, number, number] = [2294, 3145, 0];
-const CHALICE: [number, number] = [2603, 9910];
+const _CHALICECHALICE: [number, number] = [2603, 9910];
 
 const m: Manifest = {
     quest: 'ROVING ELVES',
     source: 'oldschool.runescape.wiki/w/Roving_Elves',
     stageVar: 'roving_elves_quest',
-    done: 10,   // ^roving_elves_complete
+    done: 10, // ^roving_elves_complete
     start: [2294, 3145, 0],
     steps: [
         { note: 'requirements: Regicide and Waterfall Quest, both finished. Waterfall is walked in' },

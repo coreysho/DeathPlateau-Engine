@@ -11,7 +11,7 @@
 //
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_desertrescue_run.ts
 import * as H from './harness.js';
-import { play, Manifest, Step } from './questrun.js';
+import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
@@ -40,7 +40,7 @@ const CART_DRIVER: [number, number, number] = [3284, 3021, 0];
 // --- Captain Siad's room, one floor up in the jail
 const BOOKCASE: [number, number] = [3284, 3032];
 const CHEST: [number, number] = [3292, 3033];
-const SIAD: [number, number, number] = [3292, 3031, 1];
+const _SIADSIAD: [number, number, number] = [3292, 3031, 1];
 
 // --- the Bedabin camp, west
 const AL_SHABIM: [number, number, number] = [3172, 3024, 0];
@@ -141,7 +141,7 @@ const m: Manifest = {
         { loc: 'miningcampgateclosedr', at: GATE, hop: true, why: 'out of the camp' },
 
         { note: 'wiki step 8: Al Shabim of the Bedabin, a hundred squares west, will trade a' },
-        { note: 'pineapple for the technical plans in Captain Siad\'s chest - and hands over a copy' },
+        { note: "pineapple for the technical plans in Captain Siad's chest - and hands over a copy" },
         { note: 'of the key for it' },
         { go: [AL_SHABIM[0], AL_SHABIM[1]], r: 256, why: 'west to the Bedabin camp' },
         { talk: 'al_shabim', picks: [1, 1], want: 'copy of the key', why: 'take the deal' },
