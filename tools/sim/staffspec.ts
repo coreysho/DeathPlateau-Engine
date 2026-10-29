@@ -36,7 +36,7 @@ import { readFileSync, readdirSync } from 'fs';
 await H.boot();
 
 // What the content constant says, so a change there has to come through here too.
-const GFX_HEIGHT = 96;
+const GFX_HEIGHT = 280;
 
 /** model.pack id -> name, for turning a spotanim's model id back into a file on disk. */
 const MODEL_NAMES = new Map<number, string>(
@@ -212,15 +212,13 @@ console.log('\n== each staff plays ITS OWN special, on itself, standing clear of
         check(`${s}: at ${GFX_HEIGHT}`, onPlayer.height, GFX_HEIGHT);
 
         // AND THE HEIGHT IS CHECKED AGAINST THE MODEL, not just against itself. "Height 0" was a
-        // number too, and it sat in this file passing for as long as the special existed: what
-        // makes a height right is where the MESH is, and model 6737 hangs from its origin. Below
-        // is how much of it ends up under the floor; above is what a player can see. More under
-        // than over is the bug the owner photographed - a smudge around the shins and nothing else.
+        // number too, and it sat in this file passing for as long as the special existed; 96
+        // replaced it and was wrong the same way, because both were chosen rather than measured.
+        // What makes a height right is where the MESH is, and model 6737 hangs from its origin, so
+        // the whole of it has to be lifted past its own drop or part of the spirit is underground.
         const span = modelSpan(gfx);
-        const above = onPlayer.height - span.min; // y is negative upward, so this is the visible part
-        const below = span.max - onPlayer.height;
         check(`${s}: ${gfx} hangs below its origin`, span.max > 0, true);
-        check(`${s}: more of it is above the floor than below`, above > below, true);
+        check(`${s}: and every bit of it clears the floor`, onPlayer.height >= span.max, true);
     }
     // ...and the two are genuinely different animations, not one name twice
     check("the staff of light's special is not the dead's", SeqType.getId('osrs_sol_spec') === SeqType.getId('osrs_sotd_spec'), false);
