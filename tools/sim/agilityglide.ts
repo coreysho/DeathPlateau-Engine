@@ -116,13 +116,7 @@ function callsTo(src: string, name: string): string[][] {
 const KNOWN: Record<string, string> = {
     'human_doublepipesqueeze|30|30|126': '16 cycles - a third of a second as the player clears the pipe',
     'human_doublepipesqueeze|30|30|158': '48 cycles - the long gnome-course crawl, worth a look in game',
-    'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl',
-    // Falador's hand holds and its five ledges. A sidestep is a WALK animation with no loop point,
-    // so played as a one-shot it runs 30 cycles against the roof window's 50 and the last 20 are
-    // an idle pose. Fixing it is a choice, not a correction: a 30-cycle window makes six obstacles
-    // faster, and crossing with a walk bas the way the tightropes do moves a tile a tick and makes
-    // them a great deal slower. Either changes what a lap is worth, so it is the owner's call.
-    'human_walk_sidestep|0|0|50': '20 cycles x6 on Falador - the roof window suits the 48-cycle log balance, not a 30-cycle sidestep'
+    'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl'
 };
 
 type Site = { file: string; anim: string; animDelay: number; start: number; end: number };
@@ -151,41 +145,40 @@ function scan(dir: string) {
 }
 scan(path.join(CONTENT, 'scripts'));
 
-// ---------------------------------------------------------------- the rooftop chain
+// ---------------------------------------------------------------- the forwarding chain
 //
-// ~agility_roof_move(xp, end, anim, dir) hardcodes the window: p_exactmove runs 0->50 for every
-// obstacle it is given, whatever that obstacle is. So any proc that takes a `seq` and hands it
-// straight to that one is a 0->50 site, and so is every call to such a proc. Without this the
-// nine rooftop courses - 73 obstacles, every gap jump in the game - are invisible to this tool.
-const ROOF_START = 0;
-const ROOF_END = 50;
+// Hardly any obstacle calls p_exactmove itself. They go through a chain of procs - ~falador_move
+// hands its seq to ~agility_roof_move, which hands it to ~agility_exactmove with a window of 0->50
+// written into the proc; ~agility_roof_shuffle hands over the window as well. So the animation, and
+// sometimes the window, is a variable at the only call site a text scan can see, and all 73 rooftop
+// obstacles sat in the "cannot be read statically" count while a single direct call in
+// varrock_course.rs2 carried a conclusion about every gap jump in the game.
+//
+// A forwarder is therefore recorded as: which parameter is the seq, and where each of the two
+// cycles comes from - a literal written into the proc, or a parameter resolved at the call site.
+// Found by fixed point, so a new wrapper is picked up without being listed here.
+type Spec = { lit: number } | { param: number };
+type Fwd = { seqArg: number; animDelay: Spec; start: Spec; end: Spec };
 
-/** procs that forward a seq parameter into ~agility_roof_move, and which argument it is */
-function roofForwarders(): Map<string, number> {
-    const out = new Map<string, number>([['agility_roof_move', 2]]);
-    let grew = true;
-    while (grew) {
-        grew = false;
-        for (const fn of allScripts()) {
-            const src2 = fs.readFileSync(fn, 'utf8');
-            for (const m of src2.matchAll(/\[proc,(\w+)\]\(([^)]*)\)([\s\S]*?)(?=\n\[|$)/g)) {
-                const name = m[1];
-                if (out.has(name)) continue;
-                const params = m[2].split(',').map(s => s.trim()).filter(Boolean);
-                const body = m[3];
-                for (const [callee, argIdx] of out) {
-                    for (const args of callsTo(body, callee)) {
-                        const passed = args[argIdx];
-                        if (!passed || !passed.startsWith('$')) continue;
-                        const pos = params.findIndex(p => p.startsWith('seq ') && p.split(/\s+/)[1] === passed);
-                        if (pos >= 0) { out.set(name, pos); grew = true; }
-                    }
+/** ^some_constant -> its number, from every .constant file in the content */
+function readConstants(): Map<string, number> {
+    const out = new Map<string, number>();
+    (function walk(dir: string) {
+        for (const fn of fs.readdirSync(dir)) {
+            const p = path.join(dir, fn);
+            if (fs.statSync(p).isDirectory()) walk(p);
+            else if (fn.endsWith('.constant')) {
+                for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+                    const m = line.match(/^\s*(\^\w+)\s*=\s*(-?\d+)\s*(?:\/\/.*)?$/);
+                    if (m) out.set(m[1], Number(m[2]));
                 }
             }
         }
-    }
+    })(path.join(CONTENT, 'scripts'));
     return out;
 }
+
+const CONSTS = readConstants();
 
 function allScripts(): string[] {
     const out: string[] = [];
@@ -199,23 +192,94 @@ function allScripts(): string[] {
     return out;
 }
 
-const forwarders = roofForwarders();
-let roofSites = 0;
+/** a number written literally, or via a ^constant */
+function literal(text: string | undefined): number | null {
+    if (text === undefined) return null;
+    const t = text.trim();
+    if (/^-?\d+$/.test(t)) return Number(t);
+    if (CONSTS.has(t)) return CONSTS.get(t)!;
+    return null;
+}
+
+/** where an argument's value comes from, as seen from inside a proc with these params */
+function specOf(text: string | undefined, params: string[]): Spec | null {
+    const lit = literal(text);
+    if (lit !== null) return { lit };
+    const t = (text ?? '').trim();
+    if (!t.startsWith('$')) return null;
+    const pos = params.findIndex(p => p.split(/\s+/)[1] === t);
+    return pos >= 0 ? { param: pos } : null;
+}
+
+function resolve(spec: Spec, args: string[]): number | null {
+    return 'lit' in spec ? spec.lit : literal(args[spec.param]);
+}
+
+const PROC_RE = /\[proc,(\w+)\]\(([^)]*)\)([\s\S]*?)(?=\n\[|$)/g;
+
+function forwarders(): Map<string, Fwd> {
+    // the root: ~agility_exactmove(anim, anim_delay, move_delay, start, end, start_cycle, end_cycle, ...)
+    const out = new Map<string, Fwd>();
+    const seeds: Array<[string, Fwd]> = [['agility_exactmove',
+        { seqArg: 0, animDelay: { param: 1 }, start: { param: 5 }, end: { param: 6 } }]];
+    for (const [k, v] of seeds) out.set(k, v);
+    let grew = true;
+    while (grew) {
+        grew = false;
+        for (const fn of allScripts()) {
+            const body0 = fs.readFileSync(fn, 'utf8');
+            PROC_RE.lastIndex = 0;
+            for (const m of body0.matchAll(PROC_RE)) {
+                const name = m[1];
+                if (out.has(name)) continue;
+                const params = m[2].split(',').map(s => s.trim()).filter(Boolean);
+                const body = m[3];
+                for (const [callee, fwd] of [...out]) {
+                    for (const args of callsTo(body, callee)) {
+                        const passed = (args[fwd.seqArg] ?? '').trim();
+                        if (!passed.startsWith('$')) continue;
+                        const seqPos = params.findIndex(
+                            p => p.startsWith('seq ') && p.split(/\s+/)[1] === passed);
+                        if (seqPos < 0) continue;
+                        // the window, as seen from THIS proc
+                        const pin = (s: Spec): Spec | null =>
+                            'lit' in s ? s : specOf(args[s.param], params);
+                        const aD = pin(fwd.animDelay), st = pin(fwd.start), en = pin(fwd.end);
+                        if (!aD || !st || !en) continue;
+                        out.set(name, { seqArg: seqPos, animDelay: aD, start: st, end: en });
+                        grew = true;
+                    }
+                }
+            }
+        }
+    }
+    out.delete('agility_exactmove');   // its own direct call sites are already scanned above
+    return out;
+}
+
+const FWD = forwarders();
+let chained = 0;
 for (const fn of allScripts()) {
     const body = fs.readFileSync(fn, 'utf8');
     const rel = path.relative(CONTENT, fn);
-    for (const [name, argIdx] of forwarders) {
+    for (const [name, fwd] of FWD) {
         for (const args of callsTo(body, name)) {
-            const anim = args[argIdx];
+            const anim = (args[fwd.seqArg] ?? '').trim();
             if (!anim || anim.startsWith('$')) continue;
-            sites.push({ file: rel, anim, animDelay: 0, start: ROOF_START, end: ROOF_END });
-            roofSites++;
+            const aD = resolve(fwd.animDelay, args);
+            const st = resolve(fwd.start, args);
+            const en = resolve(fwd.end, args);
+            if (aD === null || st === null || en === null) {
+                skipped.push(`${rel}: ${name}(${anim}) - window not readable`);
+                continue;
+            }
+            sites.push({ file: rel, anim, animDelay: aD, start: st, end: en });
+            chained++;
         }
     }
 }
-console.log(`
-   (${roofSites} obstacle(s) reach p_exactmove through ${forwarders.size} forwarding proc(s)`
-    + ` - ${[...forwarders.keys()].join(', ')} - and glide ${ROOF_START}->${ROOF_END})`);
+console.log(`\n   (${chained} obstacle(s) reach p_exactmove through ${FWD.size} forwarding proc(s):`
+    + ` ${[...FWD.keys()].sort().join(', ')})`);
 
 console.log(`\n== ${sites.length} exactmove call sites: the glide window against the animation ==\n`);
 console.log('   ' + 'animation'.padEnd(28) + 'anim@'.padStart(7) + 'glide'.padStart(11) + 'lasts'.padStart(8) + '   verdict');
