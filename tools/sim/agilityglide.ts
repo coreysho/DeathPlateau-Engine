@@ -138,11 +138,6 @@ function callsTo(src: string, name: string): string[][] {
 // crawls three tiles west over 128 cycles with an 80-cycle animation, which is a second of sliding.
 // Drop an entry from here the moment it is either fixed or confirmed fine, and the check will say so.
 const KNOWN: Record<string, string> = {
-    'human_doublepipesqueeze|30|30|126':
-        '16 cycles x10 - Yanille, Underground Pass, the barbarian and wilderness courses and Elena' +
-        " sewer. A different sum from the gnome course's: those run move_delay 3, so the leg is 90" +
-        ' cycles and the 80-cycle crawl starting at 30 does not finish until 110 - the animation is' +
-        ' cut short there, not outrun. Wants its own look rather than the same window.',
     'human_crawling|30|30|94': '24 cycles at the end of a shortcut crawl'
 };
 
