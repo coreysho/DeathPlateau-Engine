@@ -30,15 +30,52 @@ import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import World from '#/engine/World.js';
 import Npc from '#/engine/entity/Npc.js';
 import Player from '#/engine/entity/Player.js';
+import Model from '#/cache/graphics/Model.js';
+import { readFileSync, readdirSync } from 'fs';
 
 await H.boot();
 
-const param = (obj: string, key: string): unknown =>
-    (ObjType.get(ObjType.getId(obj)) as unknown as { params?: Map<number, unknown> }).params?.get(ParamType.getId(key));
+// What the content constant says, so a change there has to come through here too.
+const GFX_HEIGHT = 96;
+
+/** model.pack id -> name, for turning a spotanim's model id back into a file on disk. */
+const MODEL_NAMES = new Map<number, string>(
+    readFileSync('../content/pack/model.pack', 'utf8')
+        .split('\n')
+        .filter(l => l.includes('='))
+        .map(l => [Number(l.slice(0, l.indexOf('='))), l.slice(l.indexOf('=') + 1).trim()] as [number, string])
+);
+
+/**
+ * The vertical span of the model a spotanim draws, read with the engine's own .ob2 reader. y is
+ * NEGATIVE UPWARD, so min is the highest point and max the lowest: a max above zero is a mesh that
+ * hangs below the point it is drawn from, and is the whole reason a height exists.
+ */
+function modelSpan(gfx: string): { min: number; max: number } {
+    const id = SpotanimType.get(SpotanimType.getId(gfx)).model;
+    const name = MODEL_NAMES.get(id);
+    if (!name) throw new Error(`model.pack has no name for model ${id} (${gfx})`);
+    const dirs = readdirSync('../content/models', { withFileTypes: true }).filter(d => d.isDirectory());
+    for (const d of dirs) {
+        let raw;
+        try {
+            raw = readFileSync(`../content/models/${d.name}/${name}.ob2`);
+        } catch {
+            continue;
+        }
+        // id 0 is a scratch slot: nothing in a sim draws, so nothing else reads it back
+        Model.unpack(0, new Uint8Array(raw));
+        const m = Model.fromId(0);
+        const ys = m.vertexY!;
+        return { min: Math.min(...ys), max: Math.max(...ys) };
+    }
+    throw new Error(`no ${name}.ob2 under content/models`);
+}
+
+const param = (obj: string, key: string): unknown => (ObjType.get(ObjType.getId(obj)) as unknown as { params?: Map<number, unknown> }).params?.get(ParamType.getId(key));
 // All four: the staff of the dead, the staff of light, and the toxic staff of the dead charged
 // and uncharged - a fang on a staff of the dead takes neither its blade nor its special off it.
-const STAVES = ['staff_of_the_dead', 'staff_of_light',
-                'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
+const STAVES = ['staff_of_the_dead', 'staff_of_light', 'toxic_staff_of_the_dead', 'toxic_staff_uncharged'];
 
 /** The npc->player melee funnel, with the protected pointer it needs to write %npc_action_delay. */
 const hitPlayer = (npc: Npc, p: Player, damage: number, maxhit: number) => {
@@ -68,14 +105,13 @@ console.log('== both staves are special attack weapons');
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('\n== the staves\' tab has a bar, and it is the same one every other tab has');
+console.log("\n== the staves' tab has a bar, and it is the same one every other tab has");
 {
     // THE DEFECT: no staff tab had either of these, so there was nothing to show and nothing to
     // click. combat_bladed_staff is the tab the two staves are shown now (they moved to
     // weapon_bladed_staff for Jab/Swipe/Fend - see bladedstaff.ts); combat_staff_2 keeps a bar of
     // its own, wired to the same handler, for the day a plain staff gets a special.
-    for (const com of ['combat_bladed_staff:specbar_layer', 'combat_bladed_staff:specbar',
-                       'combat_staff_2:specbar_layer', 'combat_staff_2:specbar']) {
+    for (const com of ['combat_bladed_staff:specbar_layer', 'combat_bladed_staff:specbar', 'combat_staff_2:specbar_layer', 'combat_staff_2:specbar']) {
         check(`${com} is on the tab`, Component.getId(com) !== -1, true);
     }
     const mine = Component.getId('combat_bladed_staff:specbar_layer');
@@ -85,14 +121,13 @@ console.log('\n== the staves\' tab has a bar, and it is the same one every other
         const b = Component.get(theirs);
         // transplanted from combat_blunt.if, so it is the blunt tab's bar to the pixel (x and y
         // do not survive Component's parse, so its size is as close as this can get)
-        check('the blunt tab\'s size', [a.width, a.height], [b.width, b.height]);
+        check("the blunt tab's size", [a.width, a.height], [b.width, b.height]);
         // hidden by default: ~weapon_category_tab_attack unhides it only for a specwep weapon
         check('hidden until a special weapon is held', a.hide, true);
     }
     // and both clicks have a handler, which ifButton will not find if a trigger is missing
     for (const tab of ['combat_bladed_staff', 'combat_staff_2']) {
-        check(`${tab}'s bar has an if_button`,
-            ScriptProvider.getByName(`[if_button,${tab}:specbar]`) !== null, true);
+        check(`${tab}'s bar has an if_button`, ScriptProvider.getByName(`[if_button,${tab}:specbar]`) !== null, true);
     }
 }
 
@@ -103,7 +138,7 @@ console.log('\n== clicking it spends the whole bar and starts the minute');
         const p = player(`spec_${s}`, 3250, 3250);
         H.clearInv(p);
         H.give(p, s);
-        H.opheld(p, s, 2);                       // wield
+        H.opheld(p, s, 2); // wield
         H.tick(1);
         check(`${s}: wielded`, H.invCount(p, s), 0);
 
@@ -118,13 +153,20 @@ console.log('\n== clicking it spends the whole bar and starts the minute');
         // one minute, measured the way %action_delay is
         check(`${s}: the minute is running`, H.getVar(p, 'sotd_spec') > at, true);
         check(`${s}: ...and it is 100 ticks`, H.getVar(p, 'sotd_spec') - at, 100);
-        const said = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
-        check(`${s}: says so`, said.some(t => t.includes('Spirits of deceased evildoers')), true);
+        const said = H.mesgs
+            .slice(mark)
+            .filter(m => m.who === p.username)
+            .map(m => m.text);
+        check(
+            `${s}: says so`,
+            said.some(t => t.includes('Spirits of deceased evildoers')),
+            true
+        );
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('\n== each staff plays ITS OWN special, on itself, at ground height');
+console.log('\n== each staff plays ITS OWN special, on itself, standing clear of the floor');
 {
     // THE HALF THAT WAS REPORTED. Everything below this was already asserted - the energy, the
     // clock, the halving - and none of it says what the special looks like, which is the only
@@ -160,15 +202,28 @@ console.log('\n== each staff plays ITS OWN special, on itself, at ground height'
         const onPlayer = { id: p.spotanimId, height: p.spotanimHeight };
         H.tick(1);
 
-        const played = H.anims.slice(mark).filter(a => a.who === p.username).map(a => seqName(a.seq));
+        const played = H.anims
+            .slice(mark)
+            .filter(a => a.who === p.username)
+            .map(a => seqName(a.seq));
         check(`${s}: plays ${anim}`, played.includes(anim), true);
-        check(`${s}: throws ${gfx}`, onPlayer.id, SpotanimType.getId(gfx));
         // on the player: the dump says plain "gfx", not "enemy entity gfx", and this is a self-buff
-        check(`${s}: at ground height`, onPlayer.height, 0);
+        check(`${s}: throws ${gfx}`, onPlayer.id, SpotanimType.getId(gfx));
+        check(`${s}: at ${GFX_HEIGHT}`, onPlayer.height, GFX_HEIGHT);
+
+        // AND THE HEIGHT IS CHECKED AGAINST THE MODEL, not just against itself. "Height 0" was a
+        // number too, and it sat in this file passing for as long as the special existed: what
+        // makes a height right is where the MESH is, and model 6737 hangs from its origin. Below
+        // is how much of it ends up under the floor; above is what a player can see. More under
+        // than over is the bug the owner photographed - a smudge around the shins and nothing else.
+        const span = modelSpan(gfx);
+        const above = onPlayer.height - span.min; // y is negative upward, so this is the visible part
+        const below = span.max - onPlayer.height;
+        check(`${s}: ${gfx} hangs below its origin`, span.max > 0, true);
+        check(`${s}: more of it is above the floor than below`, above > below, true);
     }
     // ...and the two are genuinely different animations, not one name twice
-    check('the staff of light\'s special is not the dead\'s',
-        SeqType.getId('osrs_sol_spec') === SeqType.getId('osrs_sotd_spec'), false);
+    check("the staff of light's special is not the dead's", SeqType.getId('osrs_sol_spec') === SeqType.getId('osrs_sotd_spec'), false);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -189,11 +244,21 @@ console.log('\n== and it says so when the minute runs out');
     const mark = H.mesgs.length;
     H.ifButton(p, 'combat_bladed_staff:specbar');
     H.tick(5);
-    const early = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
-    check('nothing fades five ticks in', early.some(t => t.includes('fades away')), false);
+    const early = H.mesgs
+        .slice(mark)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
+    check(
+        'nothing fades five ticks in',
+        early.some(t => t.includes('fades away')),
+        false
+    );
 
     H.tick(100);
-    const late = H.mesgs.slice(mark).filter(m => m.who === p.username).map(m => m.text);
+    const late = H.mesgs
+        .slice(mark)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
     check('it fades at the minute', late.filter(t => t.includes('fades away')).length, 1);
     check('and the clock is cleared', H.getVar(p, 'sotd_spec'), 0);
 }
@@ -256,24 +321,24 @@ console.log('\n== and the PvP half reads it off the DEFENDER');
     // of mistake that works perfectly in every test where both players have the staff.
     const atk = player('sotd_atk', 3260, 3260);
     const def = player('sotd_def', 3261, 3260);
-    for (const q of [atk, def]) { H.clearInv(q); }
+    for (const q of [atk, def]) {
+        H.clearInv(q);
+    }
     H.equip(def, { rhand: 'staff_of_the_dead' });
     H.tick(1);
 
     H.setVar(def, 'sotd_spec', 0);
     H.setVar(atk, 'sotd_spec', World.currentTick + 100);
-    check('the attacker\'s own minute does not protect the defender',
-        H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 0);
+    check("the attacker's own minute does not protect the defender", H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 0);
 
     H.setVar(def, 'sotd_spec', World.currentTick + 100);
-    check('the defender\'s does', H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 1);
+    check("the defender's does", H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 1);
 
     // and it wants the staff in the defender's hand, not the attacker's
     H.equip(def, { rhand: 'rune_scimitar' });
     H.equip(atk, { rhand: 'staff_of_the_dead' });
     H.tick(1);
-    check('...and only while the defender holds the staff',
-        H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 0);
+    check('...and only while the defender holds the staff', H.runProc(atk, '[proc,.sotd_spec_active]', [], def)[0], 0);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);
