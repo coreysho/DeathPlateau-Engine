@@ -69,20 +69,29 @@ function _walk(from: [number, number, number], to: [number, number, number]) {
 }
 
 /**
- * THE TWO LANDINGS THAT ARE IN THE AIR AND HAVE TO STAY THERE, for now.
+ * THE TWO LANDINGS THAT READ AS THIN AIR AND ARE CORRECT. Asked and answered - do not reopen.
  *
- * Pollnivneach's course is climbed across market furniture, and at these two points there is
- * nothing under the player at all: no overlay, no underlay and no loc, at 3355,2978 on plane 1 and
- * 3362,3000 on plane 2. Their own comments call them "an island on purpose", which was about
- * collision rather than about what is drawn.
+ * Pollnivneach's course is climbed across market furniture, and at these two points thinAir() is
+ * true: no overlay, no underlay and no loc on the tile, at 3355,2978 on plane 1 and 3362,3000 on
+ * plane 2. This used to end "what this needs is a decision about Pollnivneach's market roofs -
+ * probably floor added to the map". It needs nothing, and floor added to the map would be a bug.
  *
- * MOVING THEM WAS TRIED AND IS WORSE. One tile away, 3355,2977 and 3362,3001, are canopy tiles -
- * something to stand on - and from 3355,2977 the engine will not let the player click the banner at
- * all: the lap stops there, "banner: ended at 3355,2977, expected 3362,2977". A visual fault with a
- * course that works beats a solid tile with a course that does not.
+ * OLD SCHOOL HAS EXACTLY WHAT WE HAVE. Both tiles read " f1" - flagged, no overlay, no underlay -
+ * in the rev236 cache AND in the newest one, and the ring of locs around each matches ours tile
+ * for tile (their 26587 is our 18964; their 14937, the banner, is our 19069 at 28,34). So the
+ * terrain is faithful and adding floor would make this square diverge from the thing it was
+ * grafted from.
  *
- * What this needs is a decision about Pollnivneach's market roofs - probably floor added to the map
- * rather than a different constant - so it is named here rather than asserted away.
+ * AND THE RENDERER SAYS IT LOOKS RIGHT. The course cam photographs both landings - shots
+ * pollnivneach_2c_after and _8c_after - and in each the player is standing on the white roof of
+ * the building next door, not hanging over the street. thinAir() asks whether anything is drawn
+ * ON the tile; it cannot see a neighbouring loc whose MODEL overhangs it, which is what carries
+ * the player here. That is a false positive of the predicate, not a fault in the map.
+ *
+ * MOVING THEM WAS TRIED AND IS WORSE, which is still true and still the second reason to leave
+ * them: one tile away, 3355,2977 and 3362,3001, are canopy tiles, and from 3355,2977 the engine
+ * will not let the player click the banner at all - "banner: ended at 3355,2977, expected
+ * 3362,2977".
  */
 const AIRBORNE_ON_PURPOSE = new Set(['pollnivneach_land_stall', 'pollnivneach_land_tree2']);
 

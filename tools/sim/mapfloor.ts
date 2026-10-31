@@ -116,7 +116,21 @@ export function onLoc(x: number, z: number, level: number): boolean {
     return isFlagged(x, z, level, CollisionFlag.LOC);
 }
 
-/** Nothing is drawn and no loc is there: a player put here is in the air. */
+/**
+ * Nothing is drawn and no loc is there: a player put here is PROBABLY in the air.
+ *
+ * NOT ALWAYS, AND THE EXCEPTION IS REAL. This asks what is drawn ON the tile. A loc on the tile
+ * NEXT DOOR whose model overhangs it carries the player just as well, and nothing here can see
+ * that - the loc's footprint says which tiles it occupies, not how far its geometry reaches.
+ * Pollnivneach's market stall and second tree land on two such tiles: thinAir is true, Old School's
+ * own cache has the same empty terrain at both, and the course cam's photographs show the player
+ * standing squarely on the roof of the building next door.
+ *
+ * So treat a hit as "go and look", not as a fault. The renderer settles it - see
+ * javaclient/tools/clienttests/CourseCam.java, which answers the same question from the client's
+ * own Square list and takes a picture. Nineteen rooftop landings WERE genuinely in the air and
+ * this is how they were found; two more are not, and were nearly "fixed" into diverging from OSRS.
+ */
 export function thinAir(x: number, z: number, level: number): boolean {
     return !drawn(x, z, level) && !onLoc(x, z, level);
 }
