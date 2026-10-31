@@ -25,8 +25,20 @@ import { check, R, player } from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
 import { isFlagged } from '#/engine/GameMap.js';
+import JavaRandom from '#/util/JavaRandom.js';
 
 await H.boot();
+
+// EVERY ATTEMPT SUCCEEDS WHILE A LAP IS BEING WALKED. stat_random's roll is
+// floor(nextDouble() * 256) and success is `value > roll`, so a pinned 0 passes everything. Eleven
+// rooftop obstacles can now be failed, and they are at their most failable at the entry level,
+// which is the level these laps run at - so an unpinned lap would lose a landing, its experience
+// and its counter to a one-in-eight roll several runs in ten. tools/sim/roofall.ts pins it the
+// other way and tests the fall on purpose.
+const origNextDouble = JavaRandom.nextDouble.bind(JavaRandom);
+const alwaysPass = (on: boolean) => {
+    (JavaRandom as unknown as { nextDouble: () => number }).nextDouble = on ? () => 0 : origNextDouble;
+};
 
 // ---------------------------------------------------------------- the constant files
 const K: Record<string, number> = {};
@@ -189,6 +201,7 @@ for (const course of COURSES) {
     check("    and the level gate is the wiki's", K[`${course.key}_level`], course.level);
 
     console.log('  a full lap');
+    alwaysPass(true);
     const p: any = player(`run_${course.key}`, course.start[0], course.start[1], course.start[2]);
     H.setVar(p, 'tutorial', 1000);
     p.baseLevels[16] = course.level;
@@ -223,6 +236,7 @@ for (const course of COURSES) {
         check('    and the counter reset', prog(), 0);
     }
     H.despawn(p);
+    alwaysPass(false);
 
     console.log('  and it is shut to anyone under the level');
     const q: any = player(`low_${course.key}`, course.start[0], course.start[1], course.start[2]);

@@ -18,8 +18,20 @@ import { check, R, player } from './a1lib.ts';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CollisionFlag } from '#/engine/routefinder/index.js';
 import { isFlagged } from '#/engine/GameMap.js';
+import JavaRandom from '#/util/JavaRandom.js';
 
 await H.boot();
+
+// EVERY ATTEMPT SUCCEEDS WHILE A LAP IS BEING WALKED. stat_random's roll is
+// floor(nextDouble() * 256) and success is `value > roll`, so a pinned 0 passes everything. Eleven
+// rooftop obstacles can now be failed, and they are at their most failable at the entry level,
+// which is the level these laps run at - so an unpinned lap would lose a landing, its experience
+// and its counter to a one-in-eight roll several runs in ten. tools/sim/roofall.ts pins it the
+// other way and tests the fall on purpose.
+const origNextDouble = JavaRandom.nextDouble.bind(JavaRandom);
+const alwaysPass = (on: boolean) => {
+    (JavaRandom as unknown as { nextDouble: () => number }).nextDouble = on ? () => 0 : origNextDouble;
+};
 
 // ---------------------------------------------------------------- the roof, read off the map
 // A tile is floor if it carries an overlay. The course deck is greyroof; the spans under a rope
@@ -195,6 +207,7 @@ console.log('\nTHE TROPICAL TREE');
     H.despawn(q);
 }
 
+alwaysPass(true);
 console.log('\nA LAP, AS FAR AS THE TREE');
 const p: any = player('kharid', 3273, 3196);
 H.setVar(p, 'tutorial', 1000);
@@ -222,6 +235,7 @@ check('  the first four put the player where the constant says', ok, true);
 // tenths of a point: stat_advance takes xp * 10
 check('  and paid 12 + 36 + 48 + 48 experience', agil() - before, 1440);
 check('  with the lap counter four in', prog(), 4);
+alwaysPass(false);
 
 console.log('\nAND IT IS SHUT TO ANYONE UNDER 20');
 {
