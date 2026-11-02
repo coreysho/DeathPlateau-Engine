@@ -10,6 +10,10 @@ interface LoginResponse {
     save: Uint8Array | null;
     account_id: number;
     members: boolean;
+    // custom (2026-11-02) - a freshly issued saved-login token, when the client asked for one and
+    // the password was right. Only ever set on the login that minted it; World hands it straight
+    // to the player, and nothing reads it back from here.
+    token?: string;
     messageCount?: number;
     remaining?: number;
 }
@@ -27,7 +31,16 @@ interface ChangePasswordResponse {
     result: 'ok' | 'wrong' | 'error';
 }
 
-export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse;
+// custom (2026-11-02) - the answer to ::forgetlogins. `count` is how many saved logins there were
+// to cancel, so the player is told whether anything happened.
+interface ForgetLoginsResponse {
+    type: string;
+    username: string;
+    count: number;
+    ok: boolean;
+}
+
+export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse | ForgetLoginsResponse;
 
 export function isPlayerLoginResponse(response: GenericLoginThreadResponse): response is LoginResponse {
     return response.type === 'player_login';
@@ -39,4 +52,8 @@ export function isPlayerLogoutResponse(response: GenericLoginThreadResponse): re
 
 export function isChangePasswordResponse(response: GenericLoginThreadResponse): response is ChangePasswordResponse {
     return response.type === 'player_change_password';
+}
+
+export function isForgetLoginsResponse(response: GenericLoginThreadResponse): response is ForgetLoginsResponse {
+    return response.type === 'player_forget_logins';
 }

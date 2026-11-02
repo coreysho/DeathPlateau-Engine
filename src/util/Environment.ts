@@ -40,7 +40,7 @@ export default {
     // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
     // without a rebuild, if a cutover has to be rolled back in a hurry. (Not across 380: the
     // old clients' key is gone, so rolling back past it also means LOGIN_RSA_KEY_PATH=the old pem.)
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 381),
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 382),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),

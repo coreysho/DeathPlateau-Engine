@@ -56,6 +56,7 @@ import PlayerInfoEncoder from '#/network/game/server/codec/PlayerInfoEncoder.js'
 import RebuildNormalEncoder from '#/network/game/server/codec/RebuildNormalEncoder.js';
 import RebuildRegionEncoder from '#/network/game/server/codec/RebuildRegionEncoder.js';
 import ResetAnimsEncoder from '#/network/game/server/codec/ResetAnimsEncoder.js';
+import SetLoginTokenEncoder from '#/network/game/server/codec/SetLoginTokenEncoder.js';
 import ResetClientVarCacheEncoder from '#/network/game/server/codec/ResetClientVarCacheEncoder.js';
 import SetMultiwayEncoder from '#/network/game/server/codec/SetMultiwayEncoder.js';
 import SynthSoundEncoder from '#/network/game/server/codec/SynthSoundEncoder.js';
@@ -130,6 +131,7 @@ import PlayerInfo from '#/network/game/server/model/PlayerInfo.js';
 import RebuildNormal from '#/network/game/server/model/RebuildNormal.js';
 import RebuildRegion from '#/network/game/server/model/RebuildRegion.js';
 import ResetAnims from '#/network/game/server/model/ResetAnims.js';
+import SetLoginToken from '#/network/game/server/model/SetLoginToken.js';
 import ResetClientVarCache from '#/network/game/server/model/ResetClientVarCache.js';
 import SetMultiway from '#/network/game/server/model/SetMultiway.js';
 import SynthSound from '#/network/game/server/model/SynthSound.js';
@@ -243,6 +245,7 @@ class ServerGameProtRepository {
         this.bind(RebuildNormal, new RebuildNormalEncoder());
         this.bind(RebuildRegion, new RebuildRegionEncoder());
         this.bind(ResetAnims, new ResetAnimsEncoder());
+        this.bind(SetLoginToken, new SetLoginTokenEncoder());
         this.bind(ResetClientVarCache, new ResetClientVarCacheEncoder());
         this.bind(SetMultiway, new SetMultiwayEncoder());
         this.bind(SynthSound, new SynthSoundEncoder());

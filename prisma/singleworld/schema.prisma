@@ -31,6 +31,36 @@ model account {
     members       Boolean @default(false)
 }
 
+// custom (2026-11-02) - A SAVED LOGIN ON ONE COMPUTER. The client used to keep the player's own
+// password in ~/.deathplateau/profiles.properties, encrypted with a key any program on that
+// machine can read; the file's own header said to treat a leak as a leaked password. This is the
+// replacement: the server issues a token, the client stores that instead, and a leak costs
+// something that can be cancelled.
+//
+// One row per computer, so one can be dropped without touching the others, and so a player can
+// be told what is signed in where. Deleting the row is the revocation - there is no flag to get
+// out of step with.
+model account_token {
+    id Int @id @default(autoincrement())
+
+    account_id Int
+
+    // sha256 of the token, hex. A password needs bcrypt because people choose it; a token is 103
+    // bits of randomness, so there is nothing to brute-force, and a plain digest can be looked up
+    // by value in one indexed query instead of compared against every row.
+    token_hash String @unique
+
+    created   DateTime @default(now())
+    last_used DateTime @default(now())
+    expires   DateTime
+
+    // What signlink.uid said, kept so a list of saved logins can say which computer each is.
+    uid        Int?
+    created_ip String?
+
+    @@index([account_id])
+}
+
 model account_login {
     account_id Int
     profile    String

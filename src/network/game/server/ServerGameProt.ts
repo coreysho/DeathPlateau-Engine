@@ -73,6 +73,7 @@ export default class ServerGameProt {
     static readonly UPDATE_STAT = new ServerGameProt(49, 6);
     static readonly UPDATE_RUNENERGY = new ServerGameProt(125, 1);
     static readonly RESET_ANIMS = new ServerGameProt(13, 0);
+    static readonly SET_LOGIN_TOKEN = new ServerGameProt(14, -1); // custom (2026-11-02) - SERVERPROT_LENGTH[14] = -1 in the client
     static readonly UPDATE_PID = new ServerGameProt(126, 3);
     static readonly LAST_LOGIN_INFO = new ServerGameProt(76, 23);
     static readonly LOGOUT = new ServerGameProt(5, 0);
