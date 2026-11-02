@@ -45,6 +45,20 @@ export const enum ClanRank {
 const MAX_MEMBERS = 100;
 const KICK_BAN_MS = 60 * 60 * 1000;
 
+// THE HELP CHANNEL. A channel like any other - a row in `channel` - except that nobody owns it and
+// everybody starts in it. The owner key is the name players TYPE to join, so it has to be the plain
+// word: "help" is what goes in the Join Chat box, and a key that could not be typed (a '#help' that
+// base37 cannot hold) would leave anyone who left with no way back in.
+//
+// Nothing logs in as `help`, so rankOf never returns OWNER for it: entering and talking are open to
+// anyone and kicking falls to staff, which is what a help channel wants.
+//
+// THE NAME IS WORTH RESERVING AT REGISTRATION. A player who manages to register the username "help"
+// becomes this channel's owner and can rename or close it. That is a one-line check wherever names
+// are vetted, and is not done here because this file does not own that list.
+const HELP_OWNER = 'help';
+const HELP_NAME = 'Help';
+
 type Channel = {
     owner: string;
     name: string;
@@ -104,6 +118,18 @@ class ClanChatService {
             if (!columns.some(c => c.name === 'ranks')) {
                 this.dbHandle.exec("ALTER TABLE channel ADD COLUMN ranks TEXT NOT NULL DEFAULT ''");
             }
+            // WHO HAS ALREADY BEEN PUT IN THE HELP CHANNEL, which is a different question from who is
+            // in it now and cannot be answered by last_channel: an explicit leave DELETES that row, so
+            // "no row" means both "never joined anything" and "left on purpose". Without somewhere to
+            // write it down, leaving Help would put you straight back in on your next login.
+            this.dbHandle.exec(`
+                CREATE TABLE IF NOT EXISTS help_seeded (
+                    player TEXT PRIMARY KEY
+                );
+            `);
+            // The channel itself, created once and then left alone - OR IGNORE so a rename or a
+            // settings change made in game survives every restart after it.
+            this.dbHandle.prepare('INSERT OR IGNORE INTO channel (owner, name, enter, talk, kick, friends, ranks) VALUES (?, ?, -1, -1, 7, ?, ?)').run(HELP_OWNER, HELP_NAME, '', '');
         }
         return this.dbHandle;
     }
@@ -265,7 +291,17 @@ class ClanChatService {
         const last = this.db.prepare('SELECT owner FROM last_channel WHERE player = ?').get(player.username) as { owner: string } | undefined;
         if (last) {
             this.join(player, last.owner, true);
+            return;
         }
+        // Nobody's channel to go back to. That is a new player on their first login - put them in
+        // Help - or somebody who left one on purpose, who stays out. help_seeded is what tells the
+        // two apart, and it is written BEFORE the join so a channel that is full or missing still
+        // counts as having been offered: the alternative is retrying it at every login forever.
+        if (this.db.prepare('SELECT player FROM help_seeded WHERE player = ?').get(player.username)) {
+            return;
+        }
+        this.db.prepare('INSERT OR IGNORE INTO help_seeded (player) VALUES (?)').run(player.username);
+        this.join(player, HELP_OWNER, true);
     }
 
     onLogout(player: Player): void {
