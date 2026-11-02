@@ -66,9 +66,7 @@ function rate(p: any, course: string, req: number, penalty: boolean, n: number):
     return got;
 }
 
-const band = (got: number, n: number, want: number, slack = 0.05) =>
-    `${got}/${n} (${(got / n).toFixed(3)}, wanted ~${want.toFixed(3)})` +
-    (Math.abs(got / n - want) <= slack ? '' : '  <- OUTSIDE ' + slack);
+const band = (got: number, n: number, want: number, slack = 0.05) => `${got}/${n} (${(got / n).toFixed(3)}, wanted ~${want.toFixed(3)})` + (Math.abs(got / n - want) <= slack ? '' : '  <- OUTSIDE ' + slack);
 
 const N = 4000;
 const p: any = player('marks', 3221, 3416, 0);
@@ -106,13 +104,8 @@ for (const c of COURSES) {
     const got = rate(p, c.key, req, !exempt, N);
     const full = exempt || unreachable;
     const want = full ? num / den : num / (den * K.mark_grace_penalty);
-    const why = exempt
-        ? '  - exempt, the Canifis coding error'
-        : unreachable
-          ? `  - full rate: the penalty needs ${req + K.mark_grace_over}, which is past 99`
-          : '';
-    check(`  ${c.key.padEnd(13)} at ${String(at).padStart(2)} (${req} + 20)  ${band(got, N, want)}${why}`,
-        Math.abs(got / N - want) <= 0.05, true);
+    const why = exempt ? '  - exempt, the Canifis coding error' : unreachable ? `  - full rate: the penalty needs ${req + K.mark_grace_over}, which is past 99` : '';
+    check(`  ${c.key.padEnd(13)} at ${String(at).padStart(2)} (${req} + 20)  ${band(got, N, want)}${why}`, Math.abs(got / N - want) <= 0.05, true);
 }
 
 console.log('\n================ ONE LEVEL SHORT OF THE THRESHOLD IS STILL FULL RATE');
