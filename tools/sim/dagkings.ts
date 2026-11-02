@@ -11,6 +11,7 @@
 // and this file's first run proved exactly that while the bug was live. So what is asserted here is
 // the PRIORITY RELATION the client arbitrates on, against the convention the rest of the cache
 // already follows.
+import fs from 'fs';
 import * as H from './harness.js';
 import { check, R, player } from './a1lib.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -110,6 +111,70 @@ console.log("\n== and each king swings with its own animation, not another one's
         const foreign = [...new Set(H.npcAnims.filter(a => a.who === nm).map(a => a.seq))].filter(s => s !== SeqType.getId(anim) && s !== SeqType.getId('dagannoth_meganoth_defend')).map(s => SeqType.get(s)?.debugname ?? s);
         check('  and plays nothing but that and its block', foreign, []);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// WHAT THEY ACTUALLY HIT FOR, measured through each king's own attack path rather than read off a
+// proc. ~npc_melee_maxhit and ~npc_ranged_maxhit derive a max hit from the npc's strength or ranged
+// level and its bonus, and for these two that gives 131 against the 26 and 30 Old School publishes:
+// Rex has strength 255 and a strength bonus of 255 because those are Jagex's numbers, and no pair
+// of stats gives both 255/255 and 26. Old School does not derive a monster's max hit at all.
+//
+// Prime was right all along because it was the only one not deriving it. All three read the
+// max_hit param now, so there is one place to look.
+console.log('\n== and each king hits for what Old School says it hits for');
+{
+    const WANT: [string, string, number][] = [
+        ['dagcave_melee_boss', 'Rex', 26],
+        ['dagcave_magic_boss', 'Prime', 50],
+        ['dagcave_ranged_boss', 'Supreme', 30]
+    ];
+    for (const [nm, who, published] of WANT) {
+        const p: any = player('dkhit' + who, 2900, 4449, 0);
+        H.maxOut(p);
+        const taken: number[] = [];
+        // Immortal and recording: the point is the number, and all three kings share a room.
+        p.applyDamage = (damage: number) => {
+            taken.push(damage);
+            p.levels[3] = 99;
+        };
+        const npc: any = H.npcNear(nm, p.x, p.z, 0);
+        if (!npc) {
+            check(`${who} is in the cave`, false, true);
+            continue;
+        }
+        p.teleport(npc.x + 2, npc.z, npc.level);
+        H.tick(1);
+        H.clearLogs();
+        H.attackNpc(p, npc);
+        for (let t = 0; t < 600; t++) {
+            H.tick(1);
+            p.levels[3] = 99;
+            if (npc.levels[3] < 200) npc.levels[3] = 255;
+        }
+        const hits = taken.filter(d => d > 0);
+        const biggest = Math.max(0, ...hits);
+        check(`${who} landed enough hits to judge by`, hits.length > 40, true);
+        // Over a hundred-odd uniform rolls the top one sits on the cap; what this is really
+        // guarding against is the cap being five times too high, which is what shipped.
+        check(`  its biggest hit is ${published}, not more`, biggest <= published, true);
+        check('  and it reaches it', biggest > published - 6, true);
+    }
+}
+
+console.log('\n== Prime casts Water Wave rather than throwing a spine');
+{
+    // "Its projectile resembles Water Wave" - oldschool.runescape.wiki/w/Dagannoth_Prime. The spine
+    // it used to throw belongs to the Spinolyp, whose internal name is dagannoth_water_creature,
+    // which is how it got picked by mistake.
+    const src = fs.readFileSync('../content/scripts/areas/area_waterbirth/scripts/dagannoth_kings.rs2', 'utf8');
+    check('the cast graphic is water wave', /spotanim_npc\(waterwave_casting,/.test(src), true);
+    check('  and so is the projectile', /player_projectile\([^)]*waterwave_travel/.test(src), true);
+    // The CODE, not the commentary: the comment there names the spine on purpose, so the next
+    // person knows what it used to throw and why that was wrong.
+    const code = src.replace(/\/\/[^\n]*/g, '');
+    check('  no dagannoth spine is thrown by the magic king', /dagannoth_spine/.test(code), false);
+    check('  and its max hit is read off the npc, not written twice', /return\(npc_param\(max_hit\)\);/.test(src), true);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

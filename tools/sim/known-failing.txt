@@ -17,7 +17,40 @@
 # SQLite files under data/ and because '../content' pointed at an empty directory skeleton on
 # the machine doing the measuring. Only the 37 that failed both times are here.
 #
-# So the real state is 266 of 303 passing.
+# So the real state was 266 of 303 passing. That figure is from the unseeded baseline and has not
+# been re-taken in full since; the entry count below is the number that is trusted.
+
+# THE DICE ARE FIXED NOW, AND THIS LIST HAS BEEN RE-MEASURED AGAINST THEM. Everything above was
+# measured with the suite rolling a fresh dice each run, which is why it would not settle: the
+# fourth CI run had droprate, gwdskirmish, rdreach and fremtrials2 each fail TWICE IN A ROW while
+# all four passed on a laptop, so retry-once could not absorb it. The cause was not state leaking
+# between sims - each one is its own process - it was two unseeded generators: the module-global
+# JavaRandom behind the content's `random` op, and the engine's own direct Math.random calls for
+# npc wander steps and hunt targets. gwdskirmish counted 52 npcs in the god chamber on one run and
+# 50 on the next for exactly that reason. Both are seeded from tools/sim/harness.ts now.
+#
+# THE FIFTH RUN WAS THE FIRST SEEDED ONE, and it is the measurement this list now records:
+#
+#   - ZERO flaky sims across all eight shards. The retry is still in the job and never fired once.
+#     That is the thing to watch: it is an instrument now, and a FLAKY line means something STILL
+#     varies between two runs of one commit.
+#   - CI AND THIS MACHINE AGREE, six for six. templetrek and trollromance fail in both;
+#     droprate, gwdskirmish, rdreach and fremtrials2 pass in both. The disagreement that made this
+#     file worthless for a week is gone.
+#   - Five entries came off: fletching, quest_rag_run, randomevents, quest_myreque2_run,
+#     quest_druidspirit_run.
+#
+# AND A FIXED DICE DOES NOT ONLY REVEAL BUGS - IT ALSO PINS DOWN FRAGILE CHECKS, which is the
+# honest way to read the two new entries. templetrek and trollromance pass three times out of
+# three on a free dice and fail every time on seed 1. They are not bugs the seed uncovered; they
+# are assertions that depend on the roll, and they would have failed some nights anyway. Seed 1 is
+# deliberately NOT shopped around for a kinder number: a seed chosen to make the suite look good
+# is a measurement tuned to flatter itself. A sim that loses on seed 1 is fragile, full stop, and
+# the fix is to make the check roll-independent the way gwdskirmish's startX check already was.
+#
+# To re-measure one entry: SIM_SEED=random for the old free-running behaviour, SIM_SEED=<n> for a
+# different dice. Several seeds failing means the sim is broken; one seed failing means the check
+# depends on the roll. Both belong here; they are different debts.
 
 # ---- CHECKS THAT ACTUALLY FAIL. The interesting ones. A count means the sim ran and disagreed
 # with the engine; a message means it could not get far enough to try.
@@ -26,15 +59,25 @@ audit4               # 39 ok, 8 FAIL
 audit5               # Error: unexpected menu: multi2
 audit6               # Error: unexpected menu: multi3
 audit7               # Error: not carrying deal_blindweed
-fletching            # 1 ok, 10 FAIL
 gwdstaves            # Error: menus not reached: 2
 lunar                # no option "Can we sail to Lunar Isle" in multi2
 myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
 slayerbuilt          # 24 ok, 1 FAIL
+brutalarrows         # and it NEVER passed on this machine, whatever this file used to say: 0 of
+                     # 3 free-dice runs pass, and seed 1 fails too. It sat for a week under
+                     # "passes here, fails on a runner" - a claim nobody had checked.
 
-# ---- SIMS AHEAD OF THE CONTENT. These read configuration that is on no branch here, so they
-# cannot pass until the content catches up - or until somebody decides they were abandoned.
-randomevents         # TypeError: Cannot read properties of null (reading 'x')
+# ---- CHECKS THAT DEPEND ON THE ROLL. These pass on most dice and fail on seed 1, measured
+# rather than assumed. A fixed dice did not break them; it stopped them hiding. Each one is a
+# single assertion resting on where a wandering npc happened to be, or on which branch a roll
+# took, and each is fixable inside its own sim without touching the content.
+mmaggro              # 2 of 3 free-dice runs pass, seed 1 fails - a genuine one-in-three
+templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named checks go with it:
+                     # the trek lands you at 1952,4764 instead of Burgh de Rott at 3480,3243, the
+                     # escort survives, and the pack is not emptied
+trollromance         # 3 of 3 free-dice runs pass, seed 1 fails: "menus not reached:
+                     # Trollweiss,What would I need" - and it THROWS rather than failing a named
+                     # check, so the sim reports a stack trace instead of a verdict
 
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
 blastfurnace
@@ -54,12 +97,37 @@ dpick
 gwdanims
 gwdguards
 
-# ---- FOUND BY THE FIRST CI RUN, not by the machine that built this list. Each of these passes
-# here and fails on a GitHub runner; none of them has been diagnosed.
-brutalarrows
+# ---- A GENUINE MACHINE DIFFERENCE, and now the only one. This section held seven sims that
+# "pass here and fail on a GitHub runner", none of them diagnosed. With the dice fixed, six of
+# those seven turned out to be nothing of the kind:
+#
+#   quest_druidspirit_run, quest_myreque2_run, quest_rag_run  pass on a runner now - off the list
+#   brutalarrows                                              never passed here either - moved up
+#   mmaggro                                                   the roll, not the machine - moved up
+#   quest_ikov_run                                            the roll, and diagnosed below
+#
+# changepassword is the one that survives: it passes here on seed 1 and still failed on a runner
+# in the fifth run, on that same seed. Same engine, same content, same dice, different answer - so
+# whatever it is, it is the environment and not the game. Nobody has looked yet, and it is now a
+# single sim rather than a crowd to hide in.
 changepassword
-mmaggro
-quest_druidspirit_run
+
+# quest_ikov_run: DIAGNOSED, and it is the sim's manifest that is wrong, not the content.
+#
+# Step 93 clicks Take on the staff of Armadyl and the staff stays on the table. The manifest
+# assumes the lift always works and puts "a Guardian objects" AFTER it. The content does the
+# opposite: [opobj3,ikov_staffofarmardyl] runs npc_huntall(coord, 5, 1) first and, if any
+# guardian_of_armadyl is within five tiles WITH LINE OF SIGHT, it says "That is not thine to
+# take!", sets opplayer2 on that npc and returns without giving you anything. The guardians in
+# that room all have a wanderrange, so whether one is inside five tiles at the moment of the
+# click is the dice - which is why this sim looked like a runner-only failure for a week.
+#
+# PROVEN, not guessed: with that npc_huntall block commented out of the content and the content
+# repacked, all four seeds that fail (1, 2, 7, 42) pass; seed 3 passes either way. The content
+# was put straight back afterwards - the block is the game's rule, not a bug.
+#
+# The fix is in tools/sim/quest_ikov_run.ts: deal with the objecting Guardian BEFORE expecting
+# the staff, the way a player has to. Left undone because the ordering needs a measurement of
+# how many guardians can reach the table and how fast they come back, and a probe that ticks the
+# live world 200 times to find out does not finish inside the 180s a sim gets.
 quest_ikov_run
-quest_myreque2_run
-quest_rag_run

@@ -61,6 +61,7 @@ export type VoteRow = {
     tickets: number;
     cast_at: number; // unix ms, when the site says the vote happened
     credited: number; // unix ms, when this row was written
+    ready_at: number | null; // unix ms, when the SITE says this player may vote again - null if it never said
 };
 
 export const enum CreditResult {
@@ -101,6 +102,9 @@ export default class VoteBook {
                 tickets  INTEGER NOT NULL,
                 cast_at  INTEGER NOT NULL,
                 credited INTEGER NOT NULL,
+                -- When the site says this player may vote here again. Null for every site that does not
+                -- say, which is most of them; see nextVote.
+                ready_at INTEGER,
                 UNIQUE (site, ref)
             );
             CREATE INDEX IF NOT EXISTS vote_who ON vote (username, site, cast_at);
@@ -112,6 +116,14 @@ export default class VoteBook {
                 tickets  INTEGER NOT NULL
             );
         `);
+
+        // ready_at ARRIVED AFTER THE LEDGER DID (2 November), and the live one has months of rows
+        // in it, so CREATE TABLE IF NOT EXISTS above does nothing for it. Added here instead.
+        // Cheap, and idempotent: a fresh ledger already has the column and this does nothing.
+        const columns = this.db.prepare('PRAGMA table_info(vote)').all() as unknown as { name: string }[];
+        if (!columns.some(column => column.name === 'ready_at')) {
+            this.db.exec('ALTER TABLE vote ADD COLUMN ready_at INTEGER');
+        }
     }
 
     close() {
@@ -126,7 +138,7 @@ export default class VoteBook {
      * has already decided the vote counts, and second-guessing it with our own clock is how a
      * genuine vote gets refused because the two machines disagree about the time.
      */
-    credit(site: string, ref: string, username: string, tickets: number, castAt: number, cooldownMs = 0): CreditResult {
+    credit(site: string, ref: string, username: string, tickets: number, castAt: number, cooldownMs = 0, readyAt = 0): CreditResult {
         const who = username.toLowerCase();
         this.db.exec('BEGIN IMMEDIATE');
         try {
@@ -138,7 +150,7 @@ export default class VoteBook {
                 }
             }
             const now = Date.now();
-            const ins = this.db.prepare('INSERT OR IGNORE INTO vote (site, ref, username, tickets, cast_at, credited) VALUES (?, ?, ?, ?, ?, ?)').run(site, ref, who, tickets, castAt, now);
+            const ins = this.db.prepare('INSERT OR IGNORE INTO vote (site, ref, username, tickets, cast_at, credited, ready_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(site, ref, who, tickets, castAt, now, readyAt > 0 ? readyAt : null);
             if (ins.changes === 0) {
                 this.db.exec('ROLLBACK');
                 return CreditResult.DUPLICATE;
@@ -192,6 +204,18 @@ export default class VoteBook {
     lastVote(site: string, username: string): number {
         const row = this.db.prepare('SELECT MAX(cast_at) AS cast_at FROM vote WHERE site = ? AND username = ?').get(site, username.toLowerCase()) as { cast_at: number | null } | undefined;
         return row?.cast_at ?? 0;
+    }
+
+    /**
+     * When the SITE said this player may vote here again, or 0 if it never said.
+     *
+     * THE NEWEST VOTE'S ANSWER WINS, including when the newest vote has none and an older one
+     * does: a site that has stopped sending it has stopped, and the stale figure from last week
+     * is not better than falling back to cooldownHours.
+     */
+    nextVote(site: string, username: string): number {
+        const row = this.db.prepare('SELECT ready_at FROM vote WHERE site = ? AND username = ? ORDER BY cast_at DESC LIMIT 1').get(site, username.toLowerCase()) as { ready_at: number | null } | undefined;
+        return row?.ready_at ?? 0;
     }
 
     /** Every credited vote for a player, newest first. For a staff lookup, and for the tests. */
