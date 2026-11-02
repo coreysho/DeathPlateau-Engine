@@ -64,6 +64,14 @@ jobs:
         BUILD_VERIFY: 'false'
       run: npx tsx tools/pack/Build.ts
 
+    # EVERY SIM BOOTS A WORLD, and World refuses to start without a login key. It is a secret,
+    # so it is gitignored and a fresh checkout has none - which is why the first run of this
+    # job died in forty seconds with all 300-odd sims "failing" for one reason. A throwaway
+    # key per run is right: nothing here signs anything a player will ever see.
+    - name: A login key for this run
+      working-directory: engine
+      run: npx tsx tools/server/rsa.ts
+
     - name: Run this shard
       working-directory: engine
       run: |
