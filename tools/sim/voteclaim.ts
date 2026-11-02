@@ -22,6 +22,7 @@
 //   - a LEDGER THAT WILL NOT OPEN is not allowed to take [login,_] down with it
 import fs from 'fs';
 import http from 'http';
+import { DatabaseSync } from 'node:sqlite';
 import { AddressInfo } from 'net';
 import os from 'os';
 import path from 'path';
@@ -249,6 +250,69 @@ console.log('\nAND A playerUrl THAT COULD NEVER NAME ANYBODY IS A CONFIGURATION 
     fs.rmSync(dir, { recursive: true, force: true });
 }
 
+console.log('\nA SITE THAT SAYS WHEN THE NEXT VOTE IS ALLOWED IS BELIEVED OVER OUR OWN CLOCK');
+{
+    // RSPS LIST'S WINDOW IS NOT A ROLLING TWELVE HOURS. Their own docs call the reset "either next
+    // noon or midnight", so a vote at 11:55 is followed by another at noon - five minutes later,
+    // where cooldownHours says twelve hours. They send the real answer with every callback, and
+    // until 2 November it was read and thrown away.
+    const telling: VoteSite = { ...CALLBACK_SITE, callback: { ...CALLBACK_SITE.callback!, resetParam: 'reset' } };
+    const minutes = (ms: number) => Math.round(ms / 60_000);
+
+    reset([telling]);
+    const soon = Math.floor((Date.now() + 5 * 60_000) / 1000); // unix SECONDS, which is how most send it
+    VoteService.fromCallback('pushy', { key: 'hunter2', player: 'early', voteid: 'r1', reset: String(soon) });
+    check('  five minutes is five minutes, not twelve hours', minutes(VoteService.readyIn(telling, 'early')), 5);
+
+    // And the other direction, because a site may be slower than our guess as easily as quicker.
+    reset([telling]);
+    const later = Date.now() + 20 * 3600_000; // unix MILLISECONDS, told apart from seconds by size
+    VoteService.fromCallback('pushy', { key: 'hunter2', player: 'late', voteid: 'r2', reset: String(later) });
+    check('  and twenty hours is not cut short to twelve', minutes(VoteService.readyIn(telling, 'late')), 20 * 60);
+
+    // ANYTHING WE CANNOT READ IS NOT A REASON TO REFUSE A VOTE. It is credited like any other and
+    // readiness falls back to cooldownHours, which is what every site that says nothing gets. The
+    // four: not a time at all, zero, a time already gone, and one over a week out - that last one
+    // would otherwise shut a player out of a site for good on a single bad callback.
+    const nonsense = ['tomorrow-ish', '0', String(Math.floor((Date.now() - 3600_000) / 1000)), String(Date.now() + 400 * 24 * 3600_000)];
+    for (const junk of nonsense) {
+        reset([telling]);
+        const res = VoteService.fromCallback('pushy', { key: 'hunter2', player: 'junky', voteid: 'j-' + junk, reset: junk });
+        check(`  "${junk.slice(0, 13)}" is still paid`, res.body, 'ok');
+        check('    and the cooldown falls back to ours', minutes(VoteService.readyIn(telling, 'junky')), 12 * 60);
+    }
+
+    // A site with no resetParam is exactly as it was, whatever it happens to send.
+    reset([CALLBACK_SITE]);
+    VoteService.fromCallback('pushy', { key: 'hunter2', player: 'quiet', voteid: 'q1', reset: String(soon) });
+    check('  a site we never asked for a reset is unaffected', minutes(VoteService.readyIn(CALLBACK_SITE, 'quiet')), 12 * 60);
+}
+
+console.log('\nAND A LEDGER WRITTEN BEFORE ready_at EXISTED IS UPGRADED, NOT ABANDONED');
+{
+    // The live ledger has months of rows in it, and CREATE TABLE IF NOT EXISTS does nothing for a
+    // table that is already there - so the column is added on open instead. This builds one the
+    // way it was before 2 November and then opens it the way the engine does.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'voteold-'));
+    const file = path.join(dir, 'old.sqlite');
+    const cast = Date.now() - 3600_000;
+    const before = new DatabaseSync(file);
+    before.exec(`
+        CREATE TABLE vote (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, ref TEXT NOT NULL, username TEXT NOT NULL, tickets INTEGER NOT NULL, cast_at INTEGER NOT NULL, credited INTEGER NOT NULL, UNIQUE (site, ref));
+        CREATE TABLE owed (username TEXT PRIMARY KEY, tickets INTEGER NOT NULL);
+        INSERT INTO vote (site, ref, username, tickets, cast_at, credited) VALUES ('pushy', 'old1', 'veteran', 1, ${cast}, ${cast});
+    `);
+    before.close();
+
+    const book = new VoteBook(file);
+    check('  the rows that were there are still there', book.history('veteran').length, 1);
+    check('    with no next-vote time, so readiness stays ours', book.nextVote('pushy', 'veteran'), 0);
+    book.credit('pushy', 'new1', 'veteran', 1, Date.now(), 0, Date.now() + 3600_000);
+    check('    and a vote credited after the upgrade can carry one', book.nextVote('pushy', 'veteran') > Date.now(), true);
+    book.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log('\nA VOTE CREDITED WHILE YOU ARE OFFLINE IS WAITING AT YOUR NEXT LOGIN');
 {
     reset([CALLBACK_SITE]);
@@ -332,11 +396,19 @@ console.log('\nAND THE CLERK IS HOW A PLAYER ASKS FOR ANY OF IT');
     H.clearInv(p);
     H.tick(2);
 
-    // "Where can I vote?" - the list, with the site's own name and address in it. The 1 answers
-    // the reminder question that follows it ("Thanks.").
+    // "Where can I vote?" - the list, with each site's name and when it can next be voted on.
+    // The 1 answers the reminder question that follows it ("Thanks.").
     const where = A.talk(p, 'vote_clerk', [3, 1]);
     check('  she names the site', A.saw(where, 'Asky Toplist'), true);
-    check('    and where to go', A.saw(where, 'example.invalid'), true);
+    check('    and says it can be voted on now', A.saw(where, 'ready now'), true);
+
+    // THE ADDRESS SHE GIVES IS THE ONE THAT CAN PAY. She used to print the site's own url, which
+    // carries nobody's name - a vote from it counted toward the ranking and could never reach a
+    // ticket - and which no player can click in this client anyway. She names the vote page
+    // instead, which puts their name into every link at once. Both halves are asserted, because
+    // the old address coming back would be the old bug coming back.
+    check('    and sends them where the links carry their name', A.saw(where, 'deathplateau.com/vote'), true);
+    check('    not to the site raw, which could never pay them', A.saw(where, 'example.invalid'), false);
 
     // "I've voted - can you check?" - she starts a claim and says so. The result is a game message
     // a moment later, because a script cannot wait for a web request.

@@ -41,7 +41,9 @@ const VoteOps: CommandHandlers = {
 
     // vote_cooldown(int $index)(int): seconds until the active player can be paid for this site
     // again, 0 if they can be paid now. Reads the ledger, so it is right whether the last vote came
-    // from a callback or a claim.
+    // from a callback or a claim - and takes the site's own word for when that is, where it gave
+    // one, rather than our cooldownHours guess. All of that is VoteService.readyIn, which the claim
+    // path uses too, so this countdown cannot promise what the claim then refuses.
     [ScriptOpcode.VOTE_COOLDOWN]: state => {
         const index = state.popInt();
         const site = VoteSites.all()[index];
@@ -49,11 +51,7 @@ const VoteOps: CommandHandlers = {
             state.pushInt(0);
             return;
         }
-        const cooldown = VoteSites.cooldownMs(site);
-        // No ledger, no record of a last vote, so nothing is on cooldown. Reading a balance must
-        // not throw into a script - see VoteService.ledgerOrNull.
-        const last = VoteService.ledgerOrNull()?.lastVote(site.id, state.activePlayer.username) ?? 0;
-        const left = last === 0 || cooldown === 0 ? 0 : cooldown - (Date.now() - last);
+        const left = VoteService.readyIn(site, state.activePlayer.username);
         state.pushInt(left > 0 ? Math.ceil(left / 1000) : 0);
     },
 
