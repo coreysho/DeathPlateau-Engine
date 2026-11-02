@@ -43,6 +43,7 @@ export const CHEATS: Cheat[] = [
     // ANYBODY. Players use these; they are not staff tools and most of them are ours, not Jagex's.
     { name: 'home', what: 'teleport to Edgeville - not in combat, not from the Wilderness', rank: 0 },
     { name: 'changepassword', args: '<current> <new> <new again>', what: 'change your password, all lowercase', rank: 0 },
+    { name: 'forgetlogins', what: 'cancel every saved login for your account, on every computer', rank: 0 },
     { name: 'discord', args: '[unlink]', what: 'a code to link this account to our Discord, for trading post alerts', rank: 0 },
     { name: 'bug', args: '<what went wrong>', what: 'report a bug from where it happened - it reaches the staff', rank: 0 },
     { name: 'yell', args: '<message>', what: 'a line to every player on the world, once every 10 seconds', rank: 0 },
