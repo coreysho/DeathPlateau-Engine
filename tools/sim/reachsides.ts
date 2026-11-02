@@ -41,9 +41,6 @@ for (const [label, sx, sz, wall] of sides) {
     const wallThere = isFlagged(sx, sz, level, wall);
     const withMask = reachedLoc(level, sx, sz, loc.x, loc.z, t.width, t.length, 1, loc.angle, loc.shape, mask);
     const without = reachedLoc(level, sx, sz, loc.x, loc.z, t.width, t.length, 1, loc.angle, loc.shape, 0);
-    console.log(
-        `  ${label} ${sx},${sz}  tile ${blocked ? 'BLOCKED' : 'clear'}  wall toward the loc ${wallThere ? 'YES' : 'no'}  ` +
-            `reach with mask ${withMask ? 'yes' : 'NO'}  reach with no mask ${without ? 'yes' : 'NO'}`
-    );
+    console.log(`  ${label} ${sx},${sz}  tile ${blocked ? 'BLOCKED' : 'clear'}  wall toward the loc ${wallThere ? 'YES' : 'no'}  ` + `reach with mask ${withMask ? 'yes' : 'NO'}  reach with no mask ${without ? 'yes' : 'NO'}`);
 }
 process.exit(0);

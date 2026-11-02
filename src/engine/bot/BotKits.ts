@@ -581,7 +581,18 @@ export const BOT_KITS: BotKit[] = [
         bracket: 'max',
         kinds: ['pker'],
         stats: { [A]: 99, [S]: 99, [D]: 99, [H]: 99, [R]: 99, [M]: 99, [P]: 52 },
-        worn: ['barrows_torag_head', 'tzhaar_cape_fire', 'enchanted_onyx_amulet', 'barrows_ahrim_body', 'barrows_ahrim_legs', 'hundred_gauntlets_level_10', 'magictraining_infinityboots', 'seer_ring', 'magictraining_bookofmagic', 'magictraining_wand_master'],
+        worn: [
+            'barrows_torag_head',
+            'tzhaar_cape_fire',
+            'enchanted_onyx_amulet',
+            'barrows_ahrim_body',
+            'barrows_ahrim_legs',
+            'hundred_gauntlets_level_10',
+            'magictraining_infinityboots',
+            'seer_ring',
+            'magictraining_bookofmagic',
+            'magictraining_wand_master'
+        ],
         wornAmmo: ['rune_arrow', 500],
         inv: [
             ['armadyl_godsword', 1],

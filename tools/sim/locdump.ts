@@ -14,11 +14,24 @@ for (let x = x1 & ~7; x <= x2; x += 8) {
             if (lc.x < x1 || lc.x > x2 || lc.z < z1 || lc.z > z2) continue;
             const t = LocType.get(lc.type);
             const k =
-                lc.x + ',' + lc.z + '  ' + (t.debugname ?? 'loc_' + t.id) +
-                '  s' + lc.shape + 'a' + lc.angle + ' ' + t.width + 'x' + t.length +
-                (t.blockwalk ? ' BLOCK' : '') + (t.blockrange ? '' : ' norange') +
+                lc.x +
+                ',' +
+                lc.z +
+                '  ' +
+                (t.debugname ?? 'loc_' + t.id) +
+                '  s' +
+                lc.shape +
+                'a' +
+                lc.angle +
+                ' ' +
+                t.width +
+                'x' +
+                t.length +
+                (t.blockwalk ? ' BLOCK' : '') +
+                (t.blockrange ? '' : ' norange') +
                 (t.forceapproach ? ' approach=' + t.forceapproach : '') +
-                '  ' + (t.op ?? []).filter(Boolean).join('/');
+                '  ' +
+                (t.op ?? []).filter(Boolean).join('/');
             if (!seen.has(k)) {
                 seen.add(k);
                 console.log(k);

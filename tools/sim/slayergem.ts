@@ -13,7 +13,7 @@ import ObjType from '#/cache/config/ObjType.js';
 
 await H.boot();
 
-const SLAYER_RAT = 3;                                   // ^slayer_rat, configs/slayer.constant
+const SLAYER_RAT = 3; // ^slayer_rat, configs/slayer.constant
 
 // ---------------------------------------------------------------------------------------------
 console.log('== the gem carries the option');
@@ -39,9 +39,21 @@ console.log('== with a task, it reads the count back');
     H.tick(1);
     const said = mesSince(p, from);
     console.log('   ', JSON.stringify(said));
-    check('names the task', said.some(m => m.includes('rats')), true);
-    check('and the count', said.some(m => m.includes('27 more to go')), true);
-    check('and the points and streak', said.some(m => m.includes('40 Slayer points') && m.includes('streak of 5')), true);
+    check(
+        'names the task',
+        said.some(m => m.includes('rats')),
+        true
+    );
+    check(
+        'and the count',
+        said.some(m => m.includes('27 more to go')),
+        true
+    );
+    check(
+        'and the points and streak',
+        said.some(m => m.includes('40 Slayer points') && m.includes('streak of 5')),
+        true
+    );
     check('the gem is not consumed', H.invCount(p, 'slayer_gem'), 1);
 }
 
@@ -73,7 +85,11 @@ console.log('== and the equip global never sees the click');
     const from = mark();
     H.opheld(p, 'slayer_gem', 2);
     H.tick(1);
-    check('no wearpos debug line', mesSince(p, from).some(m => m.includes('wearpos')), false);
+    check(
+        'no wearpos debug line',
+        mesSince(p, from).some(m => m.includes('wearpos')),
+        false
+    );
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);

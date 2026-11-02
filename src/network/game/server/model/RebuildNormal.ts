@@ -4,7 +4,7 @@ export default class RebuildNormal extends ServerGameMessage {
     constructor(
         readonly zoneX: number,
         readonly zoneZ: number,
-        readonly mapsquares: Set<number>,
+        readonly mapsquares: Set<number>
     ) {
         super();
     }

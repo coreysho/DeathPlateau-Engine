@@ -14,13 +14,13 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const PATCH: [number, number] = [2919, 3562];   // the one patch tile with open garden beside it
+const PATCH: [number, number] = [2919, 3562]; // the one patch tile with open garden beside it
 
 const m: Manifest = {
     quest: 'A TAIL OF TWO CATS',
     source: 'oldschool.runescape.wiki/w/A_Tail_of_Two_Cats',
     stageVar: 'twocats_quest',
-    done: 80,   // ^twocats_complete
+    done: 80, // ^twocats_complete
     start: [2920, 3558, 0],
     steps: [
         { note: 'requirements: Gertrude’s Cat and Icthlarin’s Little Helper, both finished,' },

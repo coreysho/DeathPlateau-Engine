@@ -73,7 +73,13 @@ console.log('PORT SARIM -> CATHERBY');
     H.tick(1);
     check('coins after', coins(p), 500);
     check('landed on', at(p), '2792,3417,1');
-    console.log('  messages:', H.mesgs.slice(m0).filter(m => m.who === 'sailor').map(m => m.text));
+    console.log(
+        '  messages:',
+        H.mesgs
+            .slice(m0)
+            .filter(m => m.who === 'sailor')
+            .map(m => m.text)
+    );
     check('the voyage showed sarim and catherby only', ['sarim', 'catherby', 'brimhaven', 'khazard'].map(shown), [true, true, false, false]);
     check('...and nothing to click', [hidden.get('charter:catherby'), hidden.get('charter:close_frame')], [true, true]);
     cont(p);
@@ -108,8 +114,15 @@ console.log('NOT ENOUGH COINS');
     const s0 = H.ifaces.length;
     H.choose(p, 'multi3:com_1');
     H.tick(3);
-    const said = H.ifaces.slice(s0).filter(i => i.kind === 'text').map(i => i.text);
-    check('refused', said.some(t => (t ?? '').includes('enough coins')), true);
+    const said = H.ifaces
+        .slice(s0)
+        .filter(i => i.kind === 'text')
+        .map(i => i.text);
+    check(
+        'refused',
+        said.some(t => (t ?? '').includes('enough coins')),
+        true
+    );
     check('coins kept', coins(p), 999);
     check('still in Port Sarim', [p.level, p.z < 3200], [0, true]);
     H.despawn(p);
@@ -148,13 +161,20 @@ console.log('TALK AND RULES');
     H.tick(1);
     H.choose(p, 'multi3:com_2');
     H.tick(1);
-    for (let i = 0; i < 4 && !isOpen(p, 'charter'); i++) { cont(p); H.tick(1); }
+    for (let i = 0; i < 4 && !isOpen(p, 'charter'); i++) {
+        cont(p);
+        H.tick(1);
+    }
     check('Talk-To, charter: "Certainly, sir" and the map', [texts().some(t => t.startsWith('Certainly, sir.')), isOpen(p, 'charter')], [true, true]);
     // the port you are at
     H.clearLogs();
     H.ifButton(p, 'charter:sarim');
     H.tick(1);
-    check('choosing Port Sarim at Port Sarim', texts().some(t => t.includes('Why do you want to travel')), true);
+    check(
+        'choosing Port Sarim at Port Sarim',
+        texts().some(t => t.includes('Why do you want to travel')),
+        true
+    );
     cont(p);
     H.tick(1);
     H.choose(p, 'multi2:com_1');
@@ -164,7 +184,11 @@ console.log('TALK AND RULES');
     H.clearLogs();
     H.ifButton(p, 'charter:crandor');
     H.tick(1);
-    check('Crandor', texts().some(t => t.startsWith('Crandor? Are you crazy?')), true);
+    check(
+        'Crandor',
+        texts().some(t => t.startsWith('Crandor? Are you crazy?')),
+        true
+    );
     cont(p);
     H.tick(2);
     // a quest port's button pressed without the quest (the harness presses it even though the map
@@ -221,7 +245,7 @@ const PORTS: [string, number, string, number, number, number, number][] = [
     ['khazard', 5, 'trader_crewmember_6', 2673, 3144, 2665, 3151],
     ['phasmatys', 6, 'trader_crewmember_4', 3701, 3502, 3690, 3497],
     ['shipyard', 7, 'trader_crewmember_1', 3001, 3033, 3000, 3049],
-    ['tyras', 8, 'trader_crewmember_5', 2145, 3122, 2173, 3150],
+    ['tyras', 8, 'trader_crewmember_5', 2145, 3122, 2173, 3150]
 ];
 for (const [key, id, npc, cx, cz, ix, iz] of PORTS) {
     const crew = H.npcNear(npc, cx, cz);
@@ -236,7 +260,9 @@ for (const [key, id, npc, cx, cz, ix, iz] of PORTS) {
     H.tick(1);
     H.maxOut(p);
     const arrive = H.runProc(p, '[proc,charter_arrive]', [id])[0];
-    const ax = (arrive >> 14) & 0x3fff, az = arrive & 0x3fff, al = (arrive >>> 28) & 3;
+    const ax = (arrive >> 14) & 0x3fff,
+        az = arrive & 0x3fff,
+        al = (arrive >>> 28) & 3;
     p.teleport(ax, az, al);
     H.tick(2);
     const plankOff = LocType.getId('charter_gangplank_off');
@@ -262,7 +288,12 @@ for (const [key, id, npc, cx, cz, ix, iz] of PORTS) {
     if (crew) {
         H.clearLogs();
         // stand on a free pier tile beside the crewmember
-        const free = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dz]) => !isMapBlocked(crew.x + dx, crew.z + dz, 0))!;
+        const free = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ].find(([dx, dz]) => !isMapBlocked(crew.x + dx, crew.z + dz, 0))!;
         p.teleport(crew.x + free[0], crew.z + free[1], 0);
         H.tick(1);
         openCharter(p, crew, 4);

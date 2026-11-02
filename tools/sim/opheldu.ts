@@ -105,15 +105,20 @@ console.log('THE TWO SHAPES OF THE BUG, ON THE REAL HANDLER');
 
     // 1. BOTH HALVES CARRY A TRIGGER: the chisel's own case list decides, and the visage was not on
     //    it. Use chisel -> visage carves the helm; use visage -> chisel used to say nothing.
-    for (const [a, b] of [['chisel', 'serpentine_visage'], ['serpentine_visage', 'chisel']] as const) {
+    for (const [a, b] of [
+        ['chisel', 'serpentine_visage'],
+        ['serpentine_visage', 'chisel']
+    ] as const) {
         const o = tryUse(p, a, b);
         check(`  ${a} on ${b} does something`, o.handled ? 'yes' : o.why, 'yes');
     }
 
     // 2. NEITHER HALF CARRIES ONE: the pairing is on category ornament_kit. Both ways round reached
     //    the trigger with last_item set to the SCIMITAR, so the script could not find the pairing.
-    for (const [a, b] of [['rune_scimitar', 'rune_scimitar_ornament_kit_guthix'],
-        ['rune_scimitar_ornament_kit_guthix', 'rune_scimitar']] as const) {
+    for (const [a, b] of [
+        ['rune_scimitar', 'rune_scimitar_ornament_kit_guthix'],
+        ['rune_scimitar_ornament_kit_guthix', 'rune_scimitar']
+    ] as const) {
         const o = tryUse(p, a, b);
         check(`  ${a} on ${b} does something`, o.handled ? 'yes' : o.why, 'yes');
     }
@@ -121,7 +126,10 @@ console.log('THE TWO SHAPES OF THE BUG, ON THE REAL HANDLER');
     // both ways round reached [opheldu,_ornament_kit] with the scimitar as last_item and both ways
     // round said "those two don't go together" - so a sweep for asymmetry could never have seen them.
     // A refusal is a message like any other; only the result tells you.
-    for (const [a, b] of [['chisel', 'serpentine_visage'], ['serpentine_visage', 'chisel']] as const) {
+    for (const [a, b] of [
+        ['chisel', 'serpentine_visage'],
+        ['serpentine_visage', 'chisel']
+    ] as const) {
         H.clearInv(p);
         H.give(p, 'chisel', 1);
         H.give(p, 'serpentine_visage', 1);
@@ -191,7 +199,8 @@ if (SWEEP) {
     for (const x of declared) {
         for (const y of declared) {
             if (x >= y) continue;
-            const nx = name(x), ny = name(y);
+            const nx = name(x),
+                ny = name(y);
             pairs++;
             const forward = tryUse(p, nx, ny);
             const back = tryUse(p, ny, nx);

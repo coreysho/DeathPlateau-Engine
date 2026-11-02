@@ -39,11 +39,9 @@ for (let t = 1; t <= 14; t++) {
     H.tick(1);
     const n: any = find();
     console.log(
-        '  tick ' + String(t).padStart(2) + '  ' +
-            (n
-                ? 'present at ' + n.x + ',' + n.z + ' L' + n.level +
-                  '  active=' + n.isActive + ' hp=' + (n.levels ? n.levels[3] : '?') + ' mode=' + n.mode +
-                  ' lifecycle=' + n.lifecycle + ' tele=' + n.lifecycleTick
-                : 'GONE')
+        '  tick ' +
+            String(t).padStart(2) +
+            '  ' +
+            (n ? 'present at ' + n.x + ',' + n.z + ' L' + n.level + '  active=' + n.isActive + ' hp=' + (n.levels ? n.levels[3] : '?') + ' mode=' + n.mode + ' lifecycle=' + n.lifecycle + ' tele=' + n.lifecycleTick : 'GONE')
     );
 }

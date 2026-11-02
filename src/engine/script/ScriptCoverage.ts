@@ -152,7 +152,13 @@ class ScriptCoverageTracker {
             }
             const { total, executed } = this.summary();
             const never = this.never();
-            const lines = [`# script trigger coverage, ${new Date().toISOString()}`, `# ${executed}/${total} triggers have run (${((executed / Math.max(1, total)) * 100).toFixed(1)}%)`, `# ${never.length} below have never run in this process`, '', ...never];
+            const lines = [
+                `# script trigger coverage, ${new Date().toISOString()}`,
+                `# ${executed}/${total} triggers have run (${((executed / Math.max(1, total)) * 100).toFixed(1)}%)`,
+                `# ${never.length} below have never run in this process`,
+                '',
+                ...never
+            ];
             fs.writeFileSync(file, lines.join('\n') + '\n', 'utf8');
             return file;
         } catch (err) {

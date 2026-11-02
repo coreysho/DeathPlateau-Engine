@@ -98,7 +98,7 @@ const m: Manifest = {
 
         { note: 'the mining channel is behind the grey golem' },
         { note: 'all three golem doors are wall-straight, so the only tiles that can click one are' },
-        { note: 'the two it separates - and each room is on the far side, which is what the golem\'s' },
+        { note: "the two it separates - and each room is on the far side, which is what the golem's" },
         { note: 'own spawn coord says. opfrom.ts prints which tiles a loc will take a click from.' },
         { setpos: [3373, 9547, 0], why: 'to the grey golem’s door' },
         { loc: 'elid_greygolem_door', at: GREY_DOOR, want: 'door swings to behind you', why: 'open it' },

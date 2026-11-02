@@ -44,7 +44,7 @@ const m: Manifest = {
     done: 70,
     start: [MINE_TOP[0], MINE_TOP[1] + 1, 0],
     steps: [
-        { note: 'requirements are Lunar Diplomacy, Eadgar\'s Ruse and combat level 85, and no skills.' },
+        { note: "requirements are Lunar Diplomacy, Eadgar's Ruse and combat level 85, and no skills." },
         { note: 'Everyone on Lunar Isle wants the seal of passage, Cyrisus included - he is a' },
         { note: 'mainlander lying in the Moon Clan mine, but Jack and the Oneiromancer are not.' },
         { setvar: 'lunar_quest', to: 150, why: 'Lunar Diplomacy complete' },
@@ -152,7 +152,7 @@ const m: Manifest = {
         { talk: 'cyrisus', picks: ["Let's go."], want: 'does not come down', why: 'into the dream' },
         { stage: 50 },
 
-        { note: 'wiki steps 17-20: the four fears, one after another, in the arena on 474\'s m28_80.' },
+        { note: "wiki steps 17-20: the four fears, one after another, in the arena on 474's m28_80." },
         { note: 'All four have zero magic defence, which is what makes this a magic fight for a real' },
         { note: 'player; a maxed sim player does it with its hands. %dm_boss is the proof each time,' },
         { note: 'because only the death trigger moves it on.' },

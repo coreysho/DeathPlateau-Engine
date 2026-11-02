@@ -41,13 +41,18 @@ for (let i = 0; i < LocType.count; i++) {
 
 console.log('');
 console.log('=== the ones the walkthrough names');
-for (const nm of ['gertrude', 'apothecary', 'ali_the_snake_charmer', 'feud_ali_the_snake_charmer',
-    'feud_badir_the_snake_charmer', 'king_rat', 'vc_the_beast', 'vc_pox', 'vc_pox_inwarehouse']) {
+for (const nm of ['gertrude', 'apothecary', 'ali_the_snake_charmer', 'feud_ali_the_snake_charmer', 'feud_badir_the_snake_charmer', 'king_rat', 'vc_the_beast', 'vc_pox', 'vc_pox_inwarehouse']) {
     try {
         const id = NpcType.getId(nm);
         const t = NpcType.get(id);
         let where = 'not placed';
-        for (const n of World.npcs) if (n.type === id) { where = `L${n.level} ${n.x},${n.z}`; break; }
+        for (const n of World.npcs)
+            if (n.type === id) {
+                where = `L${n.level} ${n.x},${n.z}`;
+                break;
+            }
         console.log(`  ${nm.padEnd(40)} lvl ${t.vislevel} ops [${(t.op ?? []).filter(Boolean).join('/')}] ${where}`);
-    } catch { console.log(`  ${nm.padEnd(40)} MISSING`); }
+    } catch {
+        console.log(`  ${nm.padEnd(40)} MISSING`);
+    }
 }

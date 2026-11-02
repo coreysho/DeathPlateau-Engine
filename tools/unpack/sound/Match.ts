@@ -22,7 +22,7 @@ for (let id = 0; id < newSynth.max; id++) {
         } else if (newCrcs.has(crc)) {
             // newCrcs.delete(crc);
             newDuplicates.add(crc);
-            const names = newDuplicateNames.get(crc) ?? [ newCrcs.get(crc)! ];
+            const names = newDuplicateNames.get(crc) ?? [newCrcs.get(crc)!];
             names.push(name);
             newDuplicateNames.set(crc, names);
             // console.error(`synth: duplicate exists ${name}=${newCrcs.get(crc)}`);
@@ -56,7 +56,7 @@ for (let id = 0; id < oldSynth.max; id++) {
         } else if (oldCrcs.has(crc)) {
             // oldCrcs.delete(crc);
             oldDuplicates.add(crc);
-            const names = oldDuplicateNames.get(crc) ?? [ oldCrcs.get(crc)! ];
+            const names = oldDuplicateNames.get(crc) ?? [oldCrcs.get(crc)!];
             names.push(name);
             oldDuplicateNames.set(crc, names);
             // console.error(`synth: duplicate exists ${name}=${oldCrcs.get(crc)}`);

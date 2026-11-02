@@ -52,7 +52,10 @@ const origType = (Npc.prototype as any).changeType;
 };
 
 const p: any = H.makePlayer('redraw', 34 * 64 + 36, 47 * 64 + 48, 260);
-H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000);
+H.tick(2);
+H.maxOut(p);
+H.clearInv(p);
+H.setVar(p, 'tutorial', 1000);
 H.setVar(p, 'regicide_quest', 15);
 H.setVar(p, 'zulrah_volunteered', 1);
 H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });

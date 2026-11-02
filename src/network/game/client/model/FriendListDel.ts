@@ -4,9 +4,7 @@ import ClientGameMessage from '#/network/game/client/ClientGameMessage.js';
 export default class FriendListDel extends ClientGameMessage {
     category = ClientGameProtCategory.USER_EVENT;
 
-    constructor(
-        readonly username: bigint
-    ) {
+    constructor(readonly username: bigint) {
         super();
     }
 }

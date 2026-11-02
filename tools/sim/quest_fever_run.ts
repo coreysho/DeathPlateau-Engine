@@ -117,7 +117,7 @@ const m: Manifest = {
         { stage: 5 },
         { varis: 'fever_enemy_cannon', to: 1 },
 
-        { note: 'wiki step 22: two hours with a shortened mast, and then Mos Le\'Harmless' },
+        { note: "wiki step 22: two hours with a shortened mast, and then Mos Le'Harmless" },
         { talk: 'fever_quest_ship_teach', want: 'off its mounting', why: 'she is done' },
         { stage: 6 },
         { talk: 'fever_harmless_teach', want: 'crew list', why: 'the crew list' },

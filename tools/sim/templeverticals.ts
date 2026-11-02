@@ -44,7 +44,7 @@ function settle(p: Player, picks: number[] = [], max = 200) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -106,12 +106,10 @@ H.give(p, 'mourning_mirror', 6);
 p.teleport(...T(59, 6), 2);
 H.tick(1);
 useOn('mourning_mirror', ...T(59, 5), 'mourning_temple_pillar_3_16');
-check('flat in the entry pillar, and the beam goes west along the top floor',
-    [seg('3_15_16'), H.invCount(p, 'mourning_mirror')], [7, 5]);
+check('flat in the entry pillar, and the beam goes west along the top floor', [seg('3_15_16'), H.invCount(p, 'mourning_mirror')], [7, 5]);
 // Search it: the menu offers a quarter turn, a tilt up, a tilt down, or taking it out
-opLoc(...T(59, 5), 'mourning_temple_pillar_3_16', 1, [3, 3]);   // tilt it: the beam travelling south goes down
-check('tilted so the beam travelling south goes DOWN: the top-floor corridor goes dark',
-    seg('3_15_16'), 0);
+opLoc(...T(59, 5), 'mourning_temple_pillar_3_16', 1, [3, 3]); // tilt it: the beam travelling south goes down
+check('tilted so the beam travelling south goes DOWN: the top-floor corridor goes dark', seg('3_15_16'), 0);
 check('  and the vertical beam under room 16 is lit instead', v(p, 'mourning_light_temple_3_16_up'), 7);
 check('  which is the floor 2 pillar, two rooms down the same shaft', v(p, 'mourning_light_temple_2_16_up'), 7);
 check('  and it carries on into floor 1 room 16', v(p, 'mourning_light_temple_1_16_up'), 7);
@@ -128,13 +126,10 @@ H.tick(1);
 useOn('mourning_mirror', ...T(59, 5), 'mourning_temple_pillar_1_16');
 check('a mirror into the pillar at the bottom of the shaft', H.invCount(p, 'mourning_mirror'), 4);
 opLoc(...T(59, 5), 'mourning_temple_pillar_1_16', 1, [1]);
-check('  flat, it does nothing with a beam from above: the bottom corridor stays dark',
-    [seg('1_16_west'), seg('1_14_east')], [0, 0]);
-opLoc(...T(59, 5), 'mourning_temple_pillar_1_16', 1, [2, 2]);   // tilt up, the beam travelling east
-check('  tilted, the falling beam leaves west along the bottom floor',
-    [seg('1_16_west'), seg('1_14_east')], [7, 7]);
-check('  and that is three floors of one puzzle: entry on floor 3, out along floor 1',
-    [v(p, 'mourning_light_temple_3_16_up'), v(p, 'mourning_light_temple_1_16_up'), seg('1_16_west')], [7, 7, 7]);
+check('  flat, it does nothing with a beam from above: the bottom corridor stays dark', [seg('1_16_west'), seg('1_14_east')], [0, 0]);
+opLoc(...T(59, 5), 'mourning_temple_pillar_1_16', 1, [2, 2]); // tilt up, the beam travelling east
+check('  tilted, the falling beam leaves west along the bottom floor', [seg('1_16_west'), seg('1_14_east')], [7, 7]);
+check('  and that is three floors of one puzzle: entry on floor 3, out along floor 1', [v(p, 'mourning_light_temple_3_16_up'), v(p, 'mourning_light_temple_1_16_up'), seg('1_16_west')], [7, 7, 7]);
 
 // ------------------------------------------------------------------ the reachability question
 console.log('');
@@ -149,8 +144,7 @@ const dark = () => {
     H.runProc(p, '[proc,m2_dark]', [], undefined, true);
     H.runProc(p, '[proc,m2_pillars_dark]', [], undefined, true);
 };
-const edge = (pid: number, d: number, colour: number) =>
-    H.runProc(p, '[proc,m2_edge]', [pid, d, colour], undefined, true)[0];
+const edge = (pid: number, d: number, colour: number) => H.runProc(p, '[proc,m2_edge]', [pid, d, colour], undefined, true)[0];
 
 const reachedPillars = new Set<number>([35]);
 const walked: [number, number][] = [];

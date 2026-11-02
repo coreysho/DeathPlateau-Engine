@@ -139,9 +139,11 @@ inWorld(false, () => {
     runDeath(p, '[proc,player_death_lose_items]');
     check('  an ordinary player keeps the lot', carrying(p), [5, 1]);
     check('  nothing is dropped, not even the bones', onTheFloor(p), []);
-    check('  and they are told why, so it does not look like a bug',
+    check(
+        '  and they are told why, so it does not look like a bug',
         H.mesgs.filter(m => m.who === p.username).map(m => m.text),
-        ['Your items came with you - this is a development world.']);
+        ['Your items came with you - this is a development world.']
+    );
     H.despawn(p);
 });
 

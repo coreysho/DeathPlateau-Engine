@@ -6,14 +6,14 @@ import Environment from '#/util/Environment.js';
 type Synth = {
     id: number;
     name: string;
-}
+};
 
 type SynthDirectory = {
     name: string;
     parentDirectory: string | null;
     synths: Synth[];
     childDirectories: SynthDirectory[];
-}
+};
 
 const tree = JSON.parse(fs.readFileSync('data/pack/synths.json', 'utf-8')) as SynthDirectory;
 

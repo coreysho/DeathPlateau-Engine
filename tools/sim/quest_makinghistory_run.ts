@@ -28,7 +28,7 @@ const m: Manifest = {
     quest: 'MAKING HISTORY',
     source: 'oldschool.runescape.wiki/w/Making_History',
     stageVar: 'makinghistory_prog',
-    done: 4,   // ^mh_complete
+    done: 4, // ^mh_complete
     start: [2435, 3349, 0],
     steps: [
         { note: 'requirements: Priest in Peril, for the Salve, and The Restless Ghost, for the' },

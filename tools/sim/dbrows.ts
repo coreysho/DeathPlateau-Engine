@@ -34,7 +34,7 @@ check('  the index and the data agree on how many rows there are', count, n);
 let desync = '';
 for (let id = 0; id < count && !desync; id++) {
     if (dat.pos !== starts[id]) desync = `row ${id}: the reader is at ${dat.pos}, the index says ${starts[id]}`;
-    else (new (DbRowType as any)(id)).decodeType(dat);
+    else new (DbRowType as any)(id).decodeType(dat);
 }
 check('  every row begins where the one before it ended', desync || 'yes', 'yes');
 check('  and the last row ends at the last byte', dat.pos, dat.data.length);

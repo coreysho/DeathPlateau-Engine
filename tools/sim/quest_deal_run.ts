@@ -97,7 +97,7 @@ const m: Manifest = {
         { useLoc: 'deal_hopper', at: HOPPER, obj: 'deal_blindweed', want: 'In it goes', why: 'first of the five' },
         { stage: 2 },
 
-        { note: 'wiki step 7: back to Braindeath for a bucket, then 50% Luke\'s gate and the lake' },
+        { note: "wiki step 7: back to Braindeath for a bucket, then 50% Luke's gate and the lake" },
         { loc: 'deal_laddertop', at: UP_LADDER, why: 'back down to the brewery floor' },
         { go: [BRAINDEATH[0] + 1, BRAINDEATH[1]], why: 'to Braindeath' },
         { talk: 'deal_captian_braindeath', want: 'stagnant lake', why: 'he hands over a bucket' },

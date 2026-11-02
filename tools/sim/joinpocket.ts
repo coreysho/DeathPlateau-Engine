@@ -22,7 +22,12 @@ const flood = (x: number, z: number) => {
     const q: [number, number][] = [[x, z]];
     while (q.length && seen.size < cap) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const k = `${cx + dx},${cz + dz}`;
             if (!seen.has(k) && canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
                 seen.add(k);
@@ -56,13 +61,20 @@ const seen = new Set<string>();
 let n = 0;
 for (const key of A) {
     const [x, z] = key.split(',').map(Number);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (!B.has(`${x + dx},${z + dz}`)) continue;
         n++;
         // WHICH TILE IS THE LOC ON. Printing the two tiles' locs in one list cost a run on Dwarf
         // Cannon: the camp gate came back as loc_1557 on a line starting 2567,3458 and it is
         // loc_1558 that stands there.
-        const here = locsAt(x, z).map(l => `${x},${z}: ${l}`).concat(locsAt(x + dx, z + dz).map(l => `${x + dx},${z + dz}: ${l}`));
+        const here = locsAt(x, z)
+            .map(l => `${x},${z}: ${l}`)
+            .concat(locsAt(x + dx, z + dz).map(l => `${x + dx},${z + dz}: ${l}`));
         const line = `  ${x},${z} -> ${x + dx},${z + dz}   ${here.join('  |  ') || '(no locs on either tile)'}`;
         if (!seen.has(line)) {
             seen.add(line);

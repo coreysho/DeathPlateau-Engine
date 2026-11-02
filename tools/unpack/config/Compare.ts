@@ -3,7 +3,7 @@ import Jagfile from '#/io/Jagfile.js';
 import Packet from '#/io/Packet.js';
 import { printInfo, printWarning } from '#/util/Logger.js';
 
-function readConfigIdx(idx: Packet): { pos: number[], len: number[] } {
+function readConfigIdx(idx: Packet): { pos: number[]; len: number[] } {
     const count = idx.g2();
 
     const pos: number[] = [];
@@ -18,7 +18,7 @@ function readConfigIdx(idx: Packet): { pos: number[], len: number[] } {
     return { pos, len };
 }
 
-function compareDat(idx1: { pos: number[], len: number[] }, idx2: { pos: number[], len: number[] }, dat1: Packet, dat2: Packet) {
+function compareDat(idx1: { pos: number[]; len: number[] }, idx2: { pos: number[]; len: number[] }, dat1: Packet, dat2: Packet) {
     if (idx1.pos.length !== idx2.pos.length) {
         printWarning(`different config sizes, ${idx1.pos.length} != ${idx2.pos.length}`);
     }

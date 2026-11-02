@@ -11,13 +11,13 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const FIRE: [number, number] = [2719, 3306];   // a clear tile by Holgart's boat to cook the paste on
+const FIRE: [number, number] = [2719, 3306]; // a clear tile by Holgart's boat to cook the paste on
 
 const m: Manifest = {
     quest: 'SEA SLUG',
     source: 'oldschool.runescape.wiki/w/Sea_Slug',
     stageVar: 'seaslugquest',
-    done: 12,   // ^seaslug_complete
+    done: 12, // ^seaslug_complete
     start: [2717, 3302, 0],
     steps: [
         { note: 'requirement: 30 Firemaking, to rub the sticks together. The tar comes from the' },

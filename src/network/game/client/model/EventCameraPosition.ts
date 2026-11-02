@@ -5,7 +5,8 @@ export default class EventCameraPosition extends ClientGameMessage {
     category = ClientGameProtCategory.CLIENT_EVENT;
 
     constructor(
-        readonly pitch: number, readonly yaw: number
+        readonly pitch: number,
+        readonly yaw: number
     ) {
         super();
     }

@@ -17,7 +17,7 @@ const m: Manifest = {
     quest: 'DRUIDIC RITUAL',
     source: 'oldschool.runescape.wiki/w/Druidic_Ritual',
     stageVar: 'druidquest',
-    done: 4,   // ^druid_complete
+    done: 4, // ^druid_complete
     start: [2923, 3489, 0],
     steps: [
         { note: 'wiki: raw beef, raw rat meat, raw bear meat and raw chicken' },

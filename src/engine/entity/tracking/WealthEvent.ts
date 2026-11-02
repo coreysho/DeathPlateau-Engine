@@ -2,7 +2,7 @@ export type WealthEventItem = {
     id: number | undefined;
     name: string | null;
     count: number;
-}
+};
 
 export type WealthEventParams = {
     event_type: number;
@@ -20,6 +20,6 @@ export type WealthEvent = WealthEventParams & {
     session_uuid: string;
 };
 
-export type WealthTransactionEvent =  WealthEvent & { 
-    timestamp: number; 
+export type WealthTransactionEvent = WealthEvent & {
+    timestamp: number;
 };

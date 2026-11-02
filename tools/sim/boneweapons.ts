@@ -33,20 +33,18 @@ const param = (objName: string, paramName: string): unknown => {
     const o = ObjType.get(ObjType.getId(objName)) as unknown as { params?: Map<number, unknown> };
     return o.params?.get(ParamType.getId(paramName));
 };
-const HITPOINTS = 3, DEFENCE = 1;
+const HITPOINTS = 3,
+    DEFENCE = 1;
 
 // ---------------------------------------------------------------------------------------------
 console.log('== all five exist, and the two old ones finally have numbers');
 {
     const WANT: Record<string, Record<string, number>> = {
         // OSRS objs 5016 and 5018: in the 377 cache all along, with nothing on them.
-        cave_goblin_bone_spear: { stabattack: 11, slashattack: 11, crushattack: 11,
-            stabdefence: 1, slashdefence: 1, strengthbonus: 13, attackrate: 6 },
-        cave_goblin_bone_club: { stabattack: -4, slashattack: -4, crushattack: 16,
-            magicattack: -4, strengthbonus: 15, attackrate: 6 },
+        cave_goblin_bone_spear: { stabattack: 11, slashattack: 11, crushattack: 11, stabdefence: 1, slashdefence: 1, strengthbonus: 13, attackrate: 6 },
+        cave_goblin_bone_club: { stabattack: -4, slashattack: -4, crushattack: 16, magicattack: -4, strengthbonus: 15, attackrate: 6 },
         // OSRS obj 8872, and NOT bronze_dagger's 4/2/-4.
-        bone_dagger: { stabattack: 5, slashattack: 3, crushattack: -4, magicattack: 1,
-            magicdefence: 1, strengthbonus: 4, attackrate: 4 },
+        bone_dagger: { stabattack: 5, slashattack: 3, crushattack: -4, magicattack: 1, magicdefence: 1, strengthbonus: 4, attackrate: 4 },
         dorgeshuun_crossbow: { rangeattack: 42, levelrequire: 28, attackrate: 5, attackrange: 7 },
         bone_bolts: { rangebonus: 49, levelrequire: 28 }
     };
@@ -54,25 +52,20 @@ console.log('== all five exist, and the two old ones finally have numbers');
         check(`${obj} exists`, ObjType.getId(obj) !== -1, true);
         for (const [p, v] of Object.entries(bonuses)) check(`${obj} ${p}`, param(obj, p), v);
     }
-    check('the spear is a spear', ObjType.get(ObjType.getId('cave_goblin_bone_spear')).category,
-        ObjType.get(ObjType.getId('zamorakian_spear')).category);
-    check('the crossbow is a crossbow', ObjType.get(ObjType.getId('dorgeshuun_crossbow')).category,
-        ObjType.get(ObjType.getId('bronze_crossbow')).category);
-    check('the bolts are bolts', ObjType.get(ObjType.getId('bone_bolts')).category,
-        ObjType.get(ObjType.getId('mithril_bolts')).category);
+    check('the spear is a spear', ObjType.get(ObjType.getId('cave_goblin_bone_spear')).category, ObjType.get(ObjType.getId('zamorakian_spear')).category);
+    check('the crossbow is a crossbow', ObjType.get(ObjType.getId('dorgeshuun_crossbow')).category, ObjType.get(ObjType.getId('bronze_crossbow')).category);
+    check('the bolts are bolts', ObjType.get(ObjType.getId('bone_bolts')).category, ObjType.get(ObjType.getId('mithril_bolts')).category);
     check('the bolts stack', ObjType.get(ObjType.getId('bone_bolts')).stackable, true);
 }
 
 // ---------------------------------------------------------------------------------------------
 // The bone dagger is not a bronze dagger wearing a hat.
-console.log('== and the dagger is not carrying bronze\'s poison chain');
+console.log("== and the dagger is not carrying bronze's poison chain");
 {
-    for (const p of ['weapon_poisoned', 'weapon_poisoned_plus', 'weapon_poisoned_plusplus',
-        'weapon_poisoned_message']) {
+    for (const p of ['weapon_poisoned', 'weapon_poisoned_plus', 'weapon_poisoned_plusplus', 'weapon_poisoned_message']) {
         check(`bone_dagger has no ${p}`, param('bone_dagger', p), undefined);
     }
-    check('and its bonuses are not bronze\'s',
-        param('bone_dagger', 'stabattack') !== param('bronze_dagger', 'stabattack'), true);
+    check("and its bonuses are not bronze's", param('bone_dagger', 'stabattack') !== param('bronze_dagger', 'stabattack'), true);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -110,8 +103,10 @@ console.log('== they cannot miss on a monster nobody has hurt, and drain it once
         return [p, npc];
     };
 
-    const SPECS = [['bone_dagger', '[label,pvm_bone_dagger_sa]'],
-        ['dorgeshuun_crossbow', '[label,pvm_dorgeshuun_crossbow_sa]']] as const;
+    const SPECS = [
+        ['bone_dagger', '[label,pvm_bone_dagger_sa]'],
+        ['dorgeshuun_crossbow', '[label,pvm_dorgeshuun_crossbow_sa]']
+    ] as const;
 
     // CANNOT MISS is tested against the King Black Dragon on purpose. Its 240 Defence beats a
     // maxed player's attack roll even with the roll pinned as high as it goes - the dragon
@@ -165,8 +160,7 @@ console.log('== and the guards drop all five, which they never dropped anything 
     for (const npc of ['cave_goblin_guard1', 'cave_goblin_guard2']) {
         check(`${npc} has a table`, rs2.includes(`[ai_queue3,${npc}]`), true);
     }
-    for (const obj of ['cave_goblin_bone_spear', 'cave_goblin_bone_club', 'bone_bolts',
-        'bone_dagger', 'dorgeshuun_crossbow']) {
+    for (const obj of ['cave_goblin_bone_spear', 'cave_goblin_bone_club', 'bone_bolts', 'bone_dagger', 'dorgeshuun_crossbow']) {
         check(`the table gives ${obj}`, rs2.includes(obj), true);
     }
     // The bolts come in a handful. Ammunition that drops one at a time is not ammunition.

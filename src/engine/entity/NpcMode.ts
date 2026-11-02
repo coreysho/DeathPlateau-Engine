@@ -143,7 +143,7 @@ export const NpcModeMap: Map<string, number> = new Map([
     ['APNPC2', NpcMode.APNPC2],
     ['APNPC3', NpcMode.APNPC3],
     ['APNPC4', NpcMode.APNPC4],
-    ['APNPC5', NpcMode.APNPC5],
+    ['APNPC5', NpcMode.APNPC5]
     // TODO: these are not used?
     // ['QUEUE1', NpcMode.QUEUE1],
     // ['QUEUE2', NpcMode.QUEUE2],

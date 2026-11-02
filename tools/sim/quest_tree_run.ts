@@ -18,7 +18,7 @@ const m: Manifest = {
     quest: 'TREE GNOME VILLAGE',
     source: 'oldschool.runescape.wiki/w/Tree_Gnome_Village',
     stageVar: 'treequest',
-    done: 9,   // ^tree_complete
+    done: 9, // ^tree_complete
     start: [2503, 3189, 0],
     steps: [
         { note: 'six loads of logs for the battlements, and a weapon for the warlord' },

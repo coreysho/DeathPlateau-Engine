@@ -82,7 +82,8 @@ console.log('\nTHE OTHER ELEVEN ANSWER AT ALL, OR DO NOT');
     const had = H.invCount(other, 'coins');
     cheat(admin, 'giveother victimsim coins 7');
     const gave = H.invCount(other, 'coins') > had;
-    if (gave) answered.push('giveother'); else silent.push('giveother');
+    if (gave) answered.push('giveother');
+    else silent.push('giveother');
     if (expected) {
         check(`  all ${probes.length} answer`, silent.length ? silent.join(',') : 'yes', 'yes');
     } else {

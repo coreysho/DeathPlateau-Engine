@@ -73,7 +73,7 @@ const m: Manifest = {
         { go: [IMPLEMENT[0], IMPLEMENT[1]], r: 60, why: 'to the far corner' },
         { take: 'golem_golemkey', r: 6, why: 'the strange implement' },
 
-        { note: 'wiki steps 10-13: Elissa at the Digsite, her husband\'s notes in the Exam Centre,' },
+        { note: "wiki steps 10-13: Elissa at the Digsite, her husband's notes in the Exam Centre," },
         { note: 'and back to Elissa' },
         { go: [STAIRS_BASE_SIDE[0], STAIRS_BASE_SIDE[1]], exact: true, r: 60, why: 'back to the stairs' },
         { loc: 'golem_insidestairs_base', at: STAIRS_BASE, why: 'up' },

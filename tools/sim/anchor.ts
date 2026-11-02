@@ -20,7 +20,7 @@ const param = (objName: string, paramName: string): unknown => {
 
 // ---------------------------------------------------------------------------------------------
 // https://oldschool.runescape.wiki/w/Barrelchest_anchor
-console.log('== the bonuses are the wiki\'s');
+console.log("== the bonuses are the wiki's");
 check('exists', ObjType.getId('barrelchest_anchor') !== -1, true);
 check('stab attack', param('barrelchest_anchor', 'stabattack'), -2);
 check('slash attack', param('barrelchest_anchor', 'slashattack'), 10);
@@ -43,7 +43,8 @@ console.log('== 60 Attack and 40 Strength, and both halves are checked');
 // a1lib's player() maxes every stat, so each of these is a maxed player turned back DOWN - which is
 // also the only way to be sure the requirement reads the base level rather than a boosted one.
 {
-    const ATTACK = 0, STRENGTH = 2;
+    const ATTACK = 0,
+        STRENGTH = 2;
     const wields = (name: string, att: number, str: number): boolean => {
         const p = player(name, 3250, 3250);
         H.clearInv(p);
@@ -52,13 +53,12 @@ console.log('== 60 Attack and 40 Strength, and both halves are checked');
         H.give(p, 'barrelchest_anchor');
         H.opheld(p, 'barrelchest_anchor', 2);
         H.tick(1);
-        return H.invCount(p, 'barrelchest_anchor') === 0;      // it left the pack, so it went on
+        return H.invCount(p, 'barrelchest_anchor') === 0; // it left the pack, so it went on
     };
     check('59 Attack is refused', wields('anchor_att59', 59, 99), false);
     check('39 Strength is refused', wields('anchor_str39', 99, 39), false);
     check('60 and 40 wields it', wields('anchor_both', 60, 40), true);
 }
-
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);
 process.exit(R.bad ? 1 : 0);

@@ -12,7 +12,7 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 const ARTHUR: [number, number, number] = [2764, 3514, 0];
-const SYMBOL: [number, number] = [2780, 3515];   // ^camelot_magic_symbol
+const SYMBOL: [number, number] = [2780, 3515]; // ^camelot_magic_symbol
 const CRYSTAL: [number, number] = [2767, 3493];
 const ALTAR: [number, number] = [3259, 3381];
 const JEWELLER: [number, number] = [3016, 3246];
@@ -21,7 +21,7 @@ const m: Manifest = {
     quest: "MERLIN'S CRYSTAL",
     source: 'oldschool.runescape.wiki/w/Merlin%27s_Crystal',
     stageVar: 'arthur',
-    done: 7,   // ^arthur_complete
+    done: 7, // ^arthur_complete
     start: [2764, 3514, 0],
     steps: [
         { note: 'bats’ bones for the summoning, a bucket of wax for the candle the candle maker' },

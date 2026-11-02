@@ -16,7 +16,7 @@ const StructOps: CommandHandlers = {
         } else {
             state.pushInt(ParamHelper.getIntParam(paramType.id, structType, paramType.defaultInt));
         }
-    },
+    }
 };
 
 export default StructOps;

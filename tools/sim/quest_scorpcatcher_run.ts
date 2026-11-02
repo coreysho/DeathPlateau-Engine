@@ -19,7 +19,7 @@ const m: Manifest = {
     quest: 'SCORPION CATCHER',
     source: 'oldschool.runescape.wiki/w/Scorpion_Catcher',
     stageVar: 'scorpcatcher',
-    done: 6,   // ^scorpcatcher_complete
+    done: 6, // ^scorpcatcher_complete
     start: [2702, 3408, 3],
     steps: [
         { note: 'requirements: 31 Prayer for the monastery, and Alfred Grimhand’s Barcrawl for' },

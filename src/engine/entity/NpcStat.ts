@@ -13,5 +13,5 @@ export const NpcStatMap: Map<string, number> = new Map([
     ['STRENGTH', NpcStat.STRENGTH],
     ['HITPOINTS', NpcStat.HITPOINTS],
     ['RANGED', NpcStat.RANGED],
-    ['MAGIC', NpcStat.MAGIC],
+    ['MAGIC', NpcStat.MAGIC]
 ]);

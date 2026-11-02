@@ -47,7 +47,7 @@ function settle(p: Player, picks: number[] = [], max = 250) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -97,8 +97,12 @@ const heard = (fn: () => void): string => {
     const mark = H.mesgs.length;
     const faces = H.ifaces.length;
     fn();
-    return H.ifaces.slice(faces).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
-        .concat(H.mesgs.slice(mark).map(m => m.text)).join(' ');
+    return H.ifaces
+        .slice(faces)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .concat(H.mesgs.slice(mark).map(m => m.text))
+        .join(' ');
 };
 
 const talkToAurel = (picks: number[] = []): string => {
@@ -130,10 +134,13 @@ const FOOD = ['', 'raw_mackerel', 'snail_corpse1'];
 console.log('');
 console.log('WHAT THE CACHE HAD ALL ALONG');
 check('the crate is an obj', ObjType.getId('burgh_generalstore_crate') !== -1, true);
-check('and its only inventory option is Search',
-    [ObjType.get(ObjType.getId('burgh_generalstore_crate')).iop[0], ObjType.get(ObjType.getId('burgh_generalstore_crate')).iop[4]],
-    ['Search', 'Destroy']);
-for (const [name, bits] of [['burgh_axes_crate', 4], ['burgh_food_crate', 4], ['burgh_tinderbox_crate', 2], ['burgh_food_type', 2]] as [string, number][]) {
+check('and its only inventory option is Search', [ObjType.get(ObjType.getId('burgh_generalstore_crate')).iop[0], ObjType.get(ObjType.getId('burgh_generalstore_crate')).iop[4]], ['Search', 'Destroy']);
+for (const [name, bits] of [
+    ['burgh_axes_crate', 4],
+    ['burgh_food_crate', 4],
+    ['burgh_tinderbox_crate', 2],
+    ['burgh_food_type', 2]
+] as [string, number][]) {
     const b = VarBitType.getByName(name)!;
     check(`${name} is ${bits} bits`, b.endbit - b.startbit + 1, bits);
 }
@@ -142,8 +149,7 @@ set(p, 'burgh_axes_crate', 10);
 set(p, 'burgh_food_crate', 10);
 set(p, 'burgh_tinderbox_crate', 3);
 check('and the counters hold what he asks for', counts(), [10, 10, 3]);
-check('  with the three of them readable as one number, which is what burgh_crate_overseer is',
-    v(p, 'burgh_crate_overseer'), 10 + (10 << 4) + (3 << 8));
+check('  with the three of them readable as one number, which is what burgh_crate_overseer is', v(p, 'burgh_crate_overseer'), 10 + (10 << 4) + (3 << 8));
 set(p, 'burgh_axes_crate', 0);
 set(p, 'burgh_food_crate', 0);
 set(p, 'burgh_tinderbox_crate', 0);
@@ -151,14 +157,13 @@ set(p, 'burgh_tinderbox_crate', 0);
 // ------------------------------------------------------------------ asking for it
 console.log('');
 console.log('AUREL ASKS, AND WALKING AWAY RE-ROLLS');
-set(p, 'myreque_2_quest', 20);          // ^m2_arrived
+set(p, 'myreque_2_quest', 20); // ^m2_arrived
 set(p, 'burgh_store_roof', 0);
 set(p, 'burgh_store_wall', 0);
 set(p, 'burgh_store_stocked', 0);
 set(p, 'burgh_food_type', 0);
 let said = talkToAurel();
-check('with the roof still open he talks about the roof, not the stock',
-    [said.includes('roof is up the ladder'), v(p, 'burgh_food_type')], [true, 0]);
+check('with the roof still open he talks about the roof, not the stock', [said.includes('roof is up the ladder'), v(p, 'burgh_food_type')], [true, 0]);
 set(p, 'burgh_store_roof', 1);
 said = talkToAurel();
 check('with the wall still out, the wall', said.includes('open to the street'), true);
@@ -168,7 +173,7 @@ set(p, 'burgh_store_wall', 1);
 const rolled = new Set<number>();
 let namedRight = 0;
 for (let i = 0; i < 20; i++) {
-    const text = talkToAurel([2]);               // "That is a lot. I will come back."
+    const text = talkToAurel([2]); // "That is a lot. I will come back."
     const t = v(p, 'burgh_food_type');
     rolled.add(t);
     const name = t === 2 ? 'snails' : 'raw mackerel';
@@ -176,18 +181,15 @@ for (let i = 0; i < 20; i++) {
     if (H.invCount(p, 'burgh_generalstore_crate') !== 0) throw new Error('he handed the crate over to a refusal');
 }
 check('he asks for ten axes, three tinderboxes and ten of a food, every time', namedRight, 20);
-check('  and the food is rolled fresh each time: both come up, and nothing else does',
-    [...rolled].sort(), [1, 2]);
-check('  a refusal leaves you without a crate, which is the re-roll',
-    H.invCount(p, 'burgh_generalstore_crate'), 0);
+check('  and the food is rolled fresh each time: both come up, and nothing else does', [...rolled].sort(), [1, 2]);
+check('  a refusal leaves you without a crate, which is the re-roll', H.invCount(p, 'burgh_generalstore_crate'), 0);
 
 H.fillInv(p);
 said = talkToAurel([1]);
-check('with no room he says to come back with a hand free',
-    [said.includes('hand free'), H.invCount(p, 'burgh_generalstore_crate')], [true, 0]);
+check('with no room he says to come back with a hand free', [said.includes('hand free'), H.invCount(p, 'burgh_generalstore_crate')], [true, 0]);
 H.clearInv(p);
 H.tick(1);
-said = talkToAurel([1]);                          // "I will fetch all that."
+said = talkToAurel([1]); // "I will fetch all that."
 check('accept, and the crate is yours', H.invCount(p, 'burgh_generalstore_crate'), 1);
 const want = v(p, 'burgh_food_type');
 const food = FOOD[want];
@@ -207,12 +209,10 @@ check('nor the other food', [counts(), said.includes('not that')], [[0, 0, 0], t
 
 H.give(p, 'bronze_axe', 4);
 said = useOnCrate('bronze_axe');
-check('four axes go in as four, and it says what is still missing',
-    [counts(), H.invCount(p, 'bronze_axe'), said.includes('4 of ten axes')], [[4, 0, 0], 0, true]);
+check('four axes go in as four, and it says what is still missing', [counts(), H.invCount(p, 'bronze_axe'), said.includes('4 of ten axes')], [[4, 0, 0], 0, true]);
 H.give(p, 'bronze_axe', 12);
 said = useOnCrate('bronze_axe');
-check('twelve more top it up at ten and leave the rest in your hands',
-    [counts(), H.invCount(p, 'bronze_axe')], [[10, 0, 0], 6]);
+check('twelve more top it up at ten and leave the rest in your hands', [counts(), H.invCount(p, 'bronze_axe')], [[10, 0, 0], 6]);
 said = useOnCrate('bronze_axe');
 check('and it will not take an eleventh', [counts(), said.includes('all the axes')], [[10, 0, 0], true]);
 
@@ -248,8 +248,7 @@ console.log('');
 console.log('AND THE SHELVES');
 const xp = p.stats[2];
 said = talkToAurel();
-check('he takes the crate, and the shop has stock',
-    [v(p, 'burgh_store_stocked'), H.invCount(p, 'burgh_generalstore_crate'), counts()], [1, 0, [0, 0, 0]]);
+check('he takes the crate, and the shop has stock', [v(p, 'burgh_store_stocked'), H.invCount(p, 'burgh_generalstore_crate'), counts()], [1, 0, [0, 0, 0]]);
 check('  which is 500 Strength xp, as the wiki has it', (p.stats[2] - xp) / 10, 500);
 said = talkToAurel();
 check('afterwards he names the three things his shop sells', said.includes('It is not much of a range'), true);
@@ -257,12 +256,15 @@ check('afterwards he names the three things his shop sells', said.includes('It i
 // ------------------------------------------------------------------ the locs that read the bit
 console.log('');
 console.log('THE SIX LOCS THAT WERE WAITING ON THAT BIT');
-check('burgh_store_stocked is a one-bit varbit', (() => {
-    const b = VarBitType.getByName('burgh_store_stocked')!;
-    return b.endbit - b.startbit + 1;
-})(), 1);
-check('and the town is only done when all three repairs are',
-    H.runProc(p, '[proc,m2_town_done]')[0], 0);     // the bank and the furnace are still broken
+check(
+    'burgh_store_stocked is a one-bit varbit',
+    (() => {
+        const b = VarBitType.getByName('burgh_store_stocked')!;
+        return b.endbit - b.startbit + 1;
+    })(),
+    1
+);
+check('and the town is only done when all three repairs are', H.runProc(p, '[proc,m2_town_done]')[0], 0); // the bank and the furnace are still broken
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

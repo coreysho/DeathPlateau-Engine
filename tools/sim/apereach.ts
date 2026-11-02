@@ -28,7 +28,12 @@ const LOCS: [string, number, number, number, string][] = [
 ];
 
 const standable = (x: number, z: number, level: number): boolean => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -45,7 +50,8 @@ for (const [nm, x, z, level, what] of LOCS) {
     const from: string[] = [];
     for (let dx = -3; dx <= 3; dx++) {
         for (let dz = -3; dz <= 3; dz++) {
-            const cx = x + dx, cz = z + dz;
+            const cx = x + dx,
+                cz = z + dz;
             if (!standable(cx, cz, level)) continue;
             // the engine's own question, asked directly rather than through a walk
             if (reachedLoc(level, cx, cz, loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, t.forceapproach)) {

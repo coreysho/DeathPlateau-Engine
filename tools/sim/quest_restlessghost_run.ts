@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'THE RESTLESS GHOST',
     source: 'oldschool.runescape.wiki/w/The_Restless_Ghost',
     stageVar: 'prieststart',
-    done: 5,   // ^priest_complete
+    done: 5, // ^priest_complete
     start: [3243, 3206, 0],
     steps: [
         { note: 'wiki: no requirements and no items.' },

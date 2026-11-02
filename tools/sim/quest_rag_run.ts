@@ -12,7 +12,7 @@ import { play, Manifest, Step } from './questrun.js';
 await H.boot();
 
 const OLDMAN: [number, number, number] = [3359, 3506, 0];
-const FIRE: [number, number] = [3360, 3507];   // clear ground beside the bone pile - the pile itself blocks
+const FIRE: [number, number] = [3360, 3507]; // clear ground beside the bone pile - the pile itself blocks
 
 // beast, a tile beside a cluster of them, the bone it drops, the pot it steeps in, the clean bone
 const BEASTS: [string, [number, number], string, string, string][] = [
@@ -27,7 +27,7 @@ const m: Manifest = {
     quest: 'RAG AND BONE MAN',
     source: 'oldschool.runescape.wiki/w/Rag_and_Bone_Man',
     stageVar: 'rag_quest',
-    done: 2,   // ^rag_complete
+    done: 2, // ^rag_complete
     start: [3359, 3507, 0],
     steps: [
         { note: 'five pots and five jugs of vinegar - Fortunato’s stall in Draynor sells the' },

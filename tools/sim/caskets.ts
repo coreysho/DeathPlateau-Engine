@@ -36,7 +36,7 @@ for (const [tier, box] of TIERS) {
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('== a tier casket and the cache\'s own are the same category, so one trigger opens both');
+console.log("== a tier casket and the cache's own are the same category, so one trigger opens both");
 for (const [, box, old] of TIERS) {
     const a = ObjType.get(ObjType.getId(box));
     const b = ObjType.get(ObjType.getId(old));
@@ -90,7 +90,7 @@ console.log('== the tier lookup the dig uses answers the right box');
 // ---------------------------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------------------------
-console.log('== the 103 in people\'s banks still open');
+console.log("== the 103 in people's banks still open");
 for (const [, , old] of TIERS) {
     const p = player(`old_${old}`, 3250, 3250);
     H.clearInv(p);

@@ -23,7 +23,6 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
 
-
 await H.boot();
 
 const MINING_TABLE = DbTableType.getId('mining_table');
@@ -131,7 +130,12 @@ function mineOne(x: number, z: number, locName: string, level: number) {
     // Try each neighbouring tile in turn. Several of these rocks sit in a row or against a wall,
     // so the first tile picked is often one the player cannot stand on or cannot reach from.
     let last = '';
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         const p = miner(x + dx, z + dz, level);
         const from = H.mesgs.length;
         const before = Object.fromEntries(inv(p));
@@ -143,7 +147,11 @@ function mineOne(x: number, z: number, locName: string, level: number) {
         }
         const gained = inv(p).filter(([o, c]) => (before[o] ?? 0) !== c);
         const gone = !World.getLoc(x, z, level, id);
-        const msgs = H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text).filter((s, i, a) => a.indexOf(s) === i);
+        const msgs = H.mesgs
+            .slice(from)
+            .filter(m => m.who === p.username)
+            .map(m => m.text)
+            .filter((s, i, a) => a.indexOf(s) === i);
         H.despawn(p);
         H.tick(1);
         if (gained.length || gone) {

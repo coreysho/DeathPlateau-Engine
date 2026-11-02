@@ -853,8 +853,7 @@ export class BotBrain {
         if (this.hpPercent() > (kit.lowHpPercent ?? 35)) return;
         if (this.invCount(kit.lowHpWeapon) < 1) return;
         const bot = this.bot;
-        this.later('lowhp-switch', () =>
-            Input.heldOp(bot, kit.lowHpWeapon!, Input.heldOpNamed(kit.lowHpWeapon!, 'Wield', 'Wear') || 2));
+        this.later('lowhp-switch', () => Input.heldOp(bot, kit.lowHpWeapon!, Input.heldOpNamed(kit.lowHpWeapon!, 'Wield', 'Wear') || 2));
     }
 
     private manageSpec(t: Player, d: number): void {

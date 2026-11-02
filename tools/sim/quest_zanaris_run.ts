@@ -19,7 +19,7 @@ const m: Manifest = {
     quest: 'LOST CITY',
     source: 'oldschool.runescape.wiki/w/Lost_City',
     stageVar: 'zanaris',
-    done: 6,   // ^zanaris_complete
+    done: 6, // ^zanaris_complete
     start: [3145, 3206, 0],
     steps: [
         { note: 'requirements: 31 Crafting to carve the staff, 36 Woodcutting to cut the branch.' },
@@ -29,7 +29,12 @@ const m: Manifest = {
         { give: 'knife' },
 
         { note: 'wiki step 1: the warrior in the swamp camp, who gives it away by denying it' },
-        { talk: 'warrioradventurerpg', picks: ['What are you camped here for', "What makes you think it's out here", "If it's hidden how are you planning to find it", "Looks like you don't know either"], want: 'leprechaun', why: 'he admits there is a leprechaun' },
+        {
+            talk: 'warrioradventurerpg',
+            picks: ['What are you camped here for', "What makes you think it's out here", "If it's hidden how are you planning to find it", "Looks like you don't know either"],
+            want: 'leprechaun',
+            why: 'he admits there is a leprechaun'
+        },
         { stage: 1 },
 
         { note: 'wiki step 2: chop at the trees until the leprechaun comes out of one. The op needs' },

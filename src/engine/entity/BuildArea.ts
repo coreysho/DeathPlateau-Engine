@@ -12,7 +12,7 @@ export default class BuildArea {
     readonly loadedZones: Set<number>;
     readonly activeZones: Set<number>;
     readonly mapsquares: Set<number>;
-    
+
     lastBuild: number = -1;
     // Instanced regions (custom, 2026-09-11): which instance (slot) and template version the client's
     // current scene was built from; -1 = a normal map scene. A change either way forces a rebuild, since

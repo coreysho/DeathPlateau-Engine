@@ -17,7 +17,7 @@ const m: Manifest = {
     quest: "PIRATE'S TREASURE",
     source: 'oldschool.runescape.wiki/w/Pirate%27s_Treasure',
     stageVar: 'hunt',
-    done: 4,   // ^hunt_complete
+    done: 4, // ^hunt_complete
     start: [3054, 3249, 0],
     steps: [
         { note: 'wiki: 60 coins for the boat both ways, 30 for the rum, a white apron and a spade' },

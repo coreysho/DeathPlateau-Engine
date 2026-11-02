@@ -18,7 +18,7 @@ const m: Manifest = {
     quest: "WITCH'S HOUSE",
     source: 'oldschool.runescape.wiki/w/Witch%27s_House',
     stageVar: 'ballquest',
-    done: 7,   // ^ball_complete
+    done: 7, // ^ball_complete
     start: [2927, 3456, 0],
     steps: [
         { note: 'leather gloves for the electrified gate (the wiki says to search the cellar boxes' },

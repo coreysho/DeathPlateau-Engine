@@ -81,7 +81,7 @@ function unpackConfigNames(type: string, config: Jagfile) {
     pack.save();
 }
 
-function reorderUnpacked(config: string[], settings: { moveName: boolean, moveDesc: boolean, moveRecol: boolean, moveModel: boolean }) {
+function reorderUnpacked(config: string[], settings: { moveName: boolean; moveDesc: boolean; moveRecol: boolean; moveModel: boolean }) {
     const debugname: string[] = [];
     const others: string[] = [];
 

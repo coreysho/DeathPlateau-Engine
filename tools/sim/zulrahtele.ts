@@ -31,7 +31,13 @@ import InstanceMap from '#/engine/InstanceMap.js';
 await H.boot();
 
 const ids = new Set(['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => NpcType.getId(x)));
-const seqName = (id: number) => { try { return (SeqType.get(id) as any)?.debugname ?? String(id); } catch { return String(id); } };
+const seqName = (id: number) => {
+    try {
+        return (SeqType.get(id) as any)?.debugname ?? String(id);
+    } catch {
+        return String(id);
+    }
+};
 
 // what Zulrah was told to play, per tick
 const animOf = new Map<number, number[]>();
@@ -56,7 +62,10 @@ const origReset = (PathingEntity.prototype as any).resetPathingEntity;
 };
 
 const p: any = H.makePlayer('ztele', 34 * 64 + 36, 47 * 64 + 48, 262);
-H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000);
+H.tick(2);
+H.maxOut(p);
+H.clearInv(p);
+H.setVar(p, 'tutorial', 1000);
 H.setVar(p, 'regicide_quest', 15);
 H.setVar(p, 'zulrah_volunteered', 1);
 H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });

@@ -47,30 +47,61 @@ const GATED: string[] = [
     'rune_defender_t',
     'third_age_platebody',
     // the rest of 3rd age - twenty-three pieces, none of which asked for anything
-    'third_age_full_helmet', 'third_age_platelegs', 'third_age_plateskirt', 'third_age_kiteshield',
-    'third_age_longsword', 'third_age_mage_hat', 'third_age_robe_top', 'third_age_robe',
-    'third_age_amulet', 'third_age_wand', 'third_age_range_coif', 'third_age_range_top',
-    'third_age_range_legs', 'third_age_vambraces', 'third_age_bow',
-    'third_age_druidic_robe_top', 'third_age_druidic_robe_bottoms', 'third_age_druidic_cloak',
-    'third_age_druidic_staff', 'third_age_cloak', 'third_age_axe', 'third_age_pickaxe',
+    'third_age_full_helmet',
+    'third_age_platelegs',
+    'third_age_plateskirt',
+    'third_age_kiteshield',
+    'third_age_longsword',
+    'third_age_mage_hat',
+    'third_age_robe_top',
+    'third_age_robe',
+    'third_age_amulet',
+    'third_age_wand',
+    'third_age_range_coif',
+    'third_age_range_top',
+    'third_age_range_legs',
+    'third_age_vambraces',
+    'third_age_bow',
+    'third_age_druidic_robe_top',
+    'third_age_druidic_robe_bottoms',
+    'third_age_druidic_cloak',
+    'third_age_druidic_staff',
+    'third_age_cloak',
+    'third_age_axe',
+    'third_age_pickaxe',
     // repaints of rune, found by tools/wearreq.py
-    'rune_platebody_h1', 'rune_platebody_goldplate', 'rune_scimitar_guthix',
-    'rune_full_helm_goldplate', 'rune_kiteshield_goldplate',
-    'saradomin_platebody', 'ancient_platelegs', 'armadyl_full_helm', 'bandos_kiteshield',
-    'gilded_scimitar', 'gilded_2h_sword', 'gilded_chainbody', 'gilded_dhide_body',
-    'dragon_defender_t', 'dragon_chainbody_g', 'dragon_boots_g',
-    'black_platebody_h1', 'black_dhide_body_t', 'red_dhide_body_g',
-    'mithril_platebody_t', 'steel_platebody_g', 'adamant_platebody_h3',
-    'studded_body_trim_gold', 'dark_infinity_top', 'light_infinity_hat', 'tzhaar_ket_om_t'
+    'rune_platebody_h1',
+    'rune_platebody_goldplate',
+    'rune_scimitar_guthix',
+    'rune_full_helm_goldplate',
+    'rune_kiteshield_goldplate',
+    'saradomin_platebody',
+    'ancient_platelegs',
+    'armadyl_full_helm',
+    'bandos_kiteshield',
+    'gilded_scimitar',
+    'gilded_2h_sword',
+    'gilded_chainbody',
+    'gilded_dhide_body',
+    'dragon_defender_t',
+    'dragon_chainbody_g',
+    'dragon_boots_g',
+    'black_platebody_h1',
+    'black_dhide_body_t',
+    'red_dhide_body_g',
+    'mithril_platebody_t',
+    'steel_platebody_g',
+    'adamant_platebody_h3',
+    'studded_body_trim_gold',
+    'dark_infinity_top',
+    'light_infinity_hat',
+    'tzhaar_ket_om_t'
 ];
 
 // DELIBERATELY WEARABLE AT ONE. The owner wants the black mask and every slayer helmet wearable
 // from the start, and both requirement lines are commented out in tier10/tier20 saying so. This
 // is here so that a later sweep putting them "right" trips a test instead of shipping.
-const FREE: string[] = [
-    'black_mask', 'black_mask_i', 'slayer_helm', 'slayer_helm_i',
-    'slayer_helm_black', 'slayer_helm_red', 'slayer_helm_purple'
-];
+const FREE: string[] = ['black_mask', 'black_mask_i', 'slayer_helm', 'slayer_helm_i', 'slayer_helm_black', 'slayer_helm_red', 'slayer_helm_purple'];
 
 // NOT a1lib's player(), which maxes every stat on the way in. The whole test is being level 1.
 const p: any = H.makePlayer('wearreq', 3222, 3222, 1);
@@ -80,7 +111,10 @@ console.log('');
 console.log('A LEVEL 1 CANNOT PUT THESE ON');
 const worn1: string[] = [];
 for (const obj of GATED) {
-    if (ObjType.getId(obj) === -1) { console.log(`  ??   no such obj: ${obj}`); continue; }
+    if (ObjType.getId(obj) === -1) {
+        console.log(`  ??   no such obj: ${obj}`);
+        continue;
+    }
     if (canWear(p, obj)) worn1.push(obj);
     strip(p);
 }
@@ -108,7 +142,10 @@ const q: any = H.makePlayer('wearfree', 3226, 3222, 2);
 H.tick(1);
 const blocked: string[] = [];
 for (const obj of FREE) {
-    if (ObjType.getId(obj) === -1) { console.log(`  ??   no such obj: ${obj}`); continue; }
+    if (ObjType.getId(obj) === -1) {
+        console.log(`  ??   no such obj: ${obj}`);
+        continue;
+    }
     if (!canWear(q, obj)) blocked.push(obj);
     strip(q);
 }

@@ -17,7 +17,7 @@ const byCategory = new Map<number, number>();
 for (let id = 0; id < ObjType.count; id++) {
     const o = ObjType.get(id);
     if (!o || o.category < 0) continue;
-    if (o.wearpos !== 3) continue;               // right hand
+    if (o.wearpos !== 3) continue; // right hand
     if (!byCategory.has(o.category)) byCategory.set(o.category, id);
 }
 console.log(`${byCategory.size} right-hand categories in the cache`);
@@ -29,7 +29,8 @@ let tested = 0;
 for (const [cat, objId] of [...byCategory].sort((a, b) => a[0] - b[0])) {
     const o = ObjType.get(objId);
     H.equip(p, { rhand: o.debugname ?? String(objId) });
-    for (let mode = 0; mode <= 7; mode++) {      // the memory varbit is three bits: 0..7
+    for (let mode = 0; mode <= 7; mode++) {
+        // the memory varbit is three bits: 0..7
         H.setVar(p, 'com_mode', mode);
         H.runProc(p, '[proc,player_combat_stat]');
         const dt = H.getVar(p, 'damagetype');

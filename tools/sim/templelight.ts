@@ -47,7 +47,7 @@ function settle(p: Player, picks: number[] = [], max = 200) {
             // the pillar's Search is a chat menu now: a quarter turn, a tilt up, a tilt down or
             // take it out, and then which beam the tilt lifts
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -108,27 +108,23 @@ const seg = (n: string) => v(p, 'mourning_light_temple_' + n);
 // ----------------------------------------------------------------- the way in, and the fittings
 console.log('');
 console.log('THE WAY IN');
-set(p, 'mourning_quest', 20);          // Part I complete
-set(p, 'mourning_quest_main', 10);     // ^mt_arianwyn: he has explained the temple
+set(p, 'mourning_quest', 20); // Part I complete
+set(p, 'mourning_quest_main', 10); // ^mt_arianwyn: he has explained the temple
 p.teleport(2311, 9793, 0);
 H.tick(1);
 opLoc(2311, 9792, 'cavewalltunnel_to_temple');
-check('through the tunnel: the east corridor, standing on an open tile, stage inside',
-    [p.x - B[0], p.z - B[1], p.level, standing(p), v(p, 'mourning_quest_main')], [60, 31, 0, true, 20]);
+check('through the tunnel: the east corridor, standing on an open tile, stage inside', [p.x - B[0], p.z - B[1], p.level, standing(p), v(p, 'mourning_quest_main')], [60, 31, 0, true, 20]);
 
 console.log('');
 console.log('THE COLLECTOR, WHICH IS WHERE THE TEMPLE KEPT ITS OWN FITTINGS');
 // Every chest in the building is behind a door of light, so the first mirrors cannot be chest
 // mirrors: the cache's tray holds four of them and the orange crystal, which is the yellow one.
-check('the tray was seeded on the way in',
-    [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [4, 1]);
+check('the tray was seeded on the way in', [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [4, 1]);
 p.teleport(...T(56, 31), 1);
 H.tick(1);
 check('  there is a tile to stand on in front of them', standing(p), true);
 opLoc(...T(58, 31), 'mourning_temple_light_wall_collector');
-check('Collect hands over four mirrors, the yellow crystal and the colour wheel',
-    [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_yellow'), H.invCount(p, 'mourning_colour_wheel')],
-    [4, 1, 1]);
+check('Collect hands over four mirrors, the yellow crystal and the colour wheel', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_yellow'), H.invCount(p, 'mourning_colour_wheel')], [4, 1, 1]);
 check('  and the tray is empty', [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [0, 0]);
 opLoc(...T(58, 31), 'mourning_temple_light_wall_collector');
 check('  collecting again gives nothing', H.invCount(p, 'mourning_mirror'), 4);
@@ -142,11 +138,9 @@ console.log('THE CHESTS, AND THE CHAIN THE DOORS MAKE OF THEM');
 p.teleport(...T(24, 52), 0);
 H.tick(1);
 opLoc(...T(24, 51), 'mourning_temple_light_parts_5_closed');
-check('the chest in a yellow room opens (the loc swaps)',
-    World.getLoc(...T(24, 51), 0, LocType.getId('mourning_temple_light_parts_5_open')) !== null, true);
+check('the chest in a yellow room opens (the loc swaps)', World.getLoc(...T(24, 51), 0, LocType.getId('mourning_temple_light_parts_5_open')) !== null, true);
 opLoc(...T(24, 51), 'mourning_temple_light_parts_5_open');
-check('and pays out two mirrors and the CYAN crystal',
-    [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_cyan')], [6, 1]);
+check('and pays out two mirrors and the CYAN crystal', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_cyan')], [6, 1]);
 check('  the parts bit records that this chest is emptied', v(p, 'mourning_temple_parts_5'), 1);
 opLoc(...T(24, 51), 'mourning_temple_light_parts_5_open');
 check('  searching it again gives nothing', H.invCount(p, 'mourning_mirror'), 6);
@@ -155,14 +149,12 @@ p.teleport(...T(3, 5), 0);
 H.tick(1);
 opLoc(...T(2, 5), 'mourning_temple_light_parts_4_closed');
 opLoc(...T(2, 5), 'mourning_temple_light_parts_4_open');
-check('the cyan room: two more mirrors and the BLUE crystal',
-    [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_blue')], [8, 1]);
+check('the cyan room: two more mirrors and the BLUE crystal', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_blue')], [8, 1]);
 p.teleport(...T(60, 5), 1);
 H.tick(1);
 opLoc(...T(61, 5), 'mourning_temple_light_parts_2_closed');
 opLoc(...T(61, 5), 'mourning_temple_light_parts_2_open');
-check('the blue room: two more mirrors and the RED crystal',
-    [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_red')], [10, 1]);
+check('the blue room: two more mirrors and the RED crystal', [H.invCount(p, 'mourning_mirror'), H.invCount(p, 'mourning_crystal_red')], [10, 1]);
 
 // ----------------------------------------------------------------- the route out of the wall
 console.log('');
@@ -199,8 +191,7 @@ check('  north to room 8, where it turns east towards the shaft', [seg('3_8_13')
 tiltMirror(25, 31, 2, 'mourning_temple_pillar_3_a', true, 2);
 check('a TILTED mirror at the shaft head sends the beam down it', seg('1_b_east') >= 0, true);
 tiltMirror(25, 31, 0, 'mourning_temple_pillar_1_b', false, 2);
-check('and a tilted mirror at the foot sends it west, out of the hole: stage lit',
-    [v(p, 'mourning_quest_main'), seg('1_b_west'), seg('1_d_west')], [40, 7, 7]);
+check('and a tilted mirror at the foot sends it west, out of the hole: stage lit', [v(p, 'mourning_quest_main'), seg('1_b_west'), seg('1_d_west')], [40, 7, 7]);
 check('  five mirrors, and four left in hand', H.invCount(p, 'mourning_mirror'), 5);
 
 // ----------------------------------------------------------------- colour, along that route
@@ -213,8 +204,7 @@ p.teleport(...T(42, 6), 2);
 H.tick(1);
 useOn('mourning_crystal_yellow', ...T(42, 5), 'mourning_temple_pillar_3_15');
 check('the yellow crystal goes in the spare socket', H.invCount(p, 'mourning_crystal_yellow'), 0);
-check('  before it white, after it yellow, all the way out of the wall',
-    [seg('3_15_16'), seg('3_13_15'), seg('1_b_west')], [7, 2, 2]);
+check('  before it white, after it yellow, all the way out of the wall', [seg('3_15_16'), seg('3_13_15'), seg('1_b_west')], [7, 2, 2]);
 check('  and the light is still getting out', v(p, 'mourning_quest_main'), 40);
 
 console.log('');
@@ -224,11 +214,11 @@ console.log('TWO CRYSTALS: THE MIXING THE WALKTHROUGH DESCRIBES');
 // second pass-through - 34 and 28 - with a segment beyond both of them to read the colour off.
 p.teleport(...T(4, 32), 2);
 H.tick(1);
-opLoc(...T(4, 31), 'mourning_temple_pillar_3_8', 1, [4]);      // take the mirror back out
+opLoc(...T(4, 31), 'mourning_temple_pillar_3_8', 1, [4]); // take the mirror back out
 check('the mirror out of room 8: the beam runs straight north instead', seg('3_1_8'), 2);
 useOn('mourning_crystal_cyan', ...T(4, 31), 'mourning_temple_pillar_3_8');
 check('yellow and then cyan leaves GREEN', seg('3_1_8'), 3);
-opLoc(...T(4, 31), 'mourning_temple_pillar_3_8');               // Search: take the cyan back
+opLoc(...T(4, 31), 'mourning_temple_pillar_3_8'); // Search: take the cyan back
 useOn('mourning_crystal_blue', ...T(4, 31), 'mourning_temple_pillar_3_8');
 check('yellow and then BLUE leaves nothing at all: the beam dies at that pillar', seg('3_1_8'), 0);
 opLoc(...T(4, 31), 'mourning_temple_pillar_3_8');
@@ -255,8 +245,7 @@ check('  white light does not: a door of light wants its own colour', v(p, 'mour
 doors('2_16_north', 5);
 check('blue light opens the blue door on floor 2', v(p, 'mourning_door_2_16_north'), 1);
 doors('1_14_east', 6);
-check('magenta light would open the magenta door - and no crystal in this temple can make magenta',
-    v(p, 'mourning_door_1_16_west'), 1);
+check('magenta light would open the magenta door - and no crystal in this temple can make magenta', v(p, 'mourning_door_1_16_west'), 1);
 doors('1_d_west', 2);
 check('the black door to the Death Altar takes any light at all', v(p, 'mourning_door_1_c'), 1);
 doors('1_d_west', 0);
@@ -289,8 +278,7 @@ check('before the lever: six mirrors in hand, four in sockets, one crystal place
 p.teleport(...T(56, 31), 1);
 H.tick(1);
 opLoc(...T(57, 31), 'mourning_temple_light_wall_lever');
-check('Pull takes every fitting out of its socket and puts it in the tray',
-    [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [4, 1]);
+check('Pull takes every fitting out of its socket and puts it in the tray', [v(p, 'mourning_temple_mirrors_reset_tray'), v(p, 'mourning_temple_orange_crystal_reset_tray')], [4, 1]);
 check('  the temple goes dark', ['3_15_16', '3_13_15', '1_b_west'].map(seg), [0, 0, 0]);
 check('  and so do the doors', [v(p, 'mourning_door_1_13_east'), v(p, 'mourning_door_1_1_south')], [0, 0]);
 check('  nothing was handed back yet', held(), [6, 0, 1]);

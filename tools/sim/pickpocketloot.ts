@@ -38,29 +38,74 @@ function viaNpc(npcName: string, items: string[], tries: number) {
         let got = 0;
         for (const it of items) {
             const c = H.invCount(p, it);
-            if (c > 0) { got++; kinds.set(it, (kinds.get(it) ?? 0) + 1); }
+            if (c > 0) {
+                got++;
+                kinds.set(it, (kinds.get(it) ?? 0) + 1);
+            }
         }
-        if (got > 0) { successes++; counts.push(got); }
+        if (got > 0) {
+            successes++;
+            counts.push(got);
+        }
     }
     const mean = counts.length ? counts.reduce((a, b) => a + b, 0) / counts.length : 0;
     return { mean, max: counts.length ? Math.max(...counts) : 0, kinds, successes, paid: counts.length };
 }
 
-const HAM = ['coins', 'digsitebuttons', 'digsitearmour1', 'digsitesword', 'bronze_arrow',
-    'bronze_axe', 'bronze_dagger', 'bronze_pickaxe', 'iron_axe', 'iron_dagger', 'iron_pickaxe',
-    'leather_armour', 'feather', 'logs', 'thread', 'cow_hide', 'steel_arrow', 'steel_axe',
-    'steel_dagger', 'steel_pickaxe', 'knife', 'needle', 'raw_anchovies', 'raw_chicken',
-    'tinderbox', 'uncut_opal', 'uncut_jade', 'coal', 'iron_ore', 'ham_shirt', 'ham_robe',
-    'ham_gloves', 'ham_boots', 'ham_cloak', 'ham_badge', 'ham_hood'];
+const HAM = [
+    'coins',
+    'digsitebuttons',
+    'digsitearmour1',
+    'digsitesword',
+    'bronze_arrow',
+    'bronze_axe',
+    'bronze_dagger',
+    'bronze_pickaxe',
+    'iron_axe',
+    'iron_dagger',
+    'iron_pickaxe',
+    'leather_armour',
+    'feather',
+    'logs',
+    'thread',
+    'cow_hide',
+    'steel_arrow',
+    'steel_axe',
+    'steel_dagger',
+    'steel_pickaxe',
+    'knife',
+    'needle',
+    'raw_anchovies',
+    'raw_chicken',
+    'tinderbox',
+    'uncut_opal',
+    'uncut_jade',
+    'coal',
+    'iron_ore',
+    'ham_shirt',
+    'ham_robe',
+    'ham_gloves',
+    'ham_boots',
+    'ham_cloak',
+    'ham_badge',
+    'ham_hood'
+];
 
 console.log('=== A WEIGHTED TABLE PAYS ONE ROW');
 {
     const r = viaNpc('favour_male_ham_civilian', HAM, 400);
-    if (!r) { console.log('  no H.A.M. member spawned'); }
-    else {
+    if (!r) {
+        console.log('  no H.A.M. member spawned');
+    } else {
         console.log(`  ${r.paid} of 400 attempts paid something; mean kinds per paying pocket ${r.mean.toFixed(3)}, most ${r.max}`);
-        console.log('  the ten commonest:', [...r.kinds].sort((a, b) => b[1] - a[1]).slice(0, 10)
-            .map(([k, v]) => `${k} ${v}`).join(', '));
+        console.log(
+            '  the ten commonest:',
+            [...r.kinds]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([k, v]) => `${k} ${v}`)
+                .join(', ')
+        );
         check('a H.A.M. pocket never pays more than one kind of thing', r.max, 1);
         check('  ...and pays exactly one when it pays at all', r.mean, 1);
     }
@@ -70,8 +115,9 @@ console.log('\n=== GUARANTEED DROPS STILL PAY ALL OF THEM');
 {
     // the watchman: 60 coins AND a loaf of bread, both at weight 128
     const r = viaNpc('yanille_watchman', ['coins', 'bread'], 120);
-    if (!r) { console.log('  no watchman spawned'); }
-    else {
+    if (!r) {
+        console.log('  no watchman spawned');
+    } else {
         console.log(`  ${r.paid} of 120 paid; mean kinds ${r.mean.toFixed(3)}, most ${r.max}`);
         console.log('  what landed:', [...r.kinds].map(([k, v]) => `${k} ${v}`).join(', '));
         check('the watchman still pays the coins AND the bread', r.max, 2);

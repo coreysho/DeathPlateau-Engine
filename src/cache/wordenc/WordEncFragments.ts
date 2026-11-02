@@ -4,7 +4,7 @@ export default class WordEncFragments {
     readonly fragments: number[] = [];
 
     filter(chars: string[]): void {
-        for (let currentIndex = 0; currentIndex < chars.length; ) {
+        for (let currentIndex = 0; currentIndex < chars.length;) {
             const numberIndex = this.indexOfNumber(chars, currentIndex);
             if (numberIndex === -1) {
                 return;

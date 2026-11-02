@@ -28,8 +28,12 @@ const KILLS = Number(process.argv[2] ?? 6);
 let n = 0;
 /** One whole fight, boat to corpse. Returns how it ended. */
 function oneKill(): { died: boolean; ticks: number; lastHp: number; colour: string } {
-    const p: any = H.makePlayer('zk' + n, DOCK_BOAT[0] - 2, DOCK_BOAT[1], 200 + n); n++;
-    H.tick(2); H.maxOut(p); H.clearInv(p); H.setVar(p, 'tutorial', 1000);
+    const p: any = H.makePlayer('zk' + n, DOCK_BOAT[0] - 2, DOCK_BOAT[1], 200 + n);
+    n++;
+    H.tick(2);
+    H.maxOut(p);
+    H.clearInv(p);
+    H.setVar(p, 'tutorial', 1000);
     H.setVar(p, 'regicide_quest', REGICIDE_COMPLETE);
     H.setVar(p, 'zulrah_volunteered', 1);
     H.equip(p, { rhand: 'magic_shortbow', quiver: 'rune_arrow' });
@@ -43,19 +47,23 @@ function oneKill(): { died: boolean; ticks: number; lastHp: number; colour: stri
     const SLOT = InstanceMap.INSTANCE_ZONES * 8;
     const ids = new Set(['zulrah', 'zulrah_magma', 'zulrah_tanzanite'].map(x => NpcType.getId(x)));
     const mySnake = () => {
-        for (const s of (World as any).npcs)
-            if (s && s.isActive && ids.has(s.type) && s.x >= ix && s.x < ix + SLOT && s.z >= iz && s.z < iz + SLOT) return s;
+        for (const s of (World as any).npcs) if (s && s.isActive && ids.has(s.type) && s.x >= ix && s.x < ix + SLOT && s.z >= iz && s.z < iz + SLOT) return s;
         return null;
     };
 
-    let ticks = 0, died = false, last: any = null;
+    let ticks = 0,
+        died = false,
+        last: any = null;
     for (; ticks < 4000; ticks++) {
         const s = mySnake();
-        if (!s) { died = true; break; }
+        if (!s) {
+            died = true;
+            break;
+        }
         last = s;
         if (s.level === 0 && p.target !== s) H.attackNpc(p, s);
         H.tick(1);
-        p.levels[HP] = p.baseLevels[HP];        // the player, and ONLY the player
+        p.levels[HP] = p.baseLevels[HP]; // the player, and ONLY the player
         if (ticks % 64 === 0) H.clearLogs();
     }
     const colour = last ? (NpcType.get(last.type).debugname ?? '?') : '?';
@@ -70,8 +78,13 @@ let dead = 0;
 const survivors: string[] = [];
 for (let i = 0; i < KILLS; i++) {
     const r = oneKill();
-    if (r.died) { dead++; console.log(`  kill ${i + 1}: died after ${r.ticks} ticks`); }
-    else { survivors.push(`kill ${i + 1}: SURVIVED 4000 ticks on ${r.lastHp} hitpoints as ${r.colour}`); console.log('  ' + survivors.at(-1)); }
+    if (r.died) {
+        dead++;
+        console.log(`  kill ${i + 1}: died after ${r.ticks} ticks`);
+    } else {
+        survivors.push(`kill ${i + 1}: SURVIVED 4000 ticks on ${r.lastHp} hitpoints as ${r.colour}`);
+        console.log('  ' + survivors.at(-1));
+    }
 }
 console.log(`\n${dead}/${KILLS} died`);
 console.log(dead === KILLS ? '1 checks: 1 ok, 0 FAILED' : `1 checks: 0 ok, 1 FAILED\n  ${survivors.join('\n  ')}`);

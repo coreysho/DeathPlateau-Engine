@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'A FAIRY TALE PART I',
     source: 'oldschool.runescape.wiki/w/Fairytale_I_-_Growing_Pains',
     stageVar: 'fairy_farmers_quest',
-    done: 100,   // ^fairy_complete
+    done: 100, // ^fairy_complete
     start: [3074, 3263, 0],
     steps: [
         { note: 'wiki: a spade, an ordinary pair of secateurs, and three things that grew on this' },

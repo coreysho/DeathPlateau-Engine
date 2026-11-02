@@ -9,16 +9,9 @@ export const enum WealthEventType {
     SHOP_SELL,
     LOW_ALCHEMY,
     HIGH_ALCHEMY,
-    PARTY_ROOM,
-};
+    PARTY_ROOM
+}
 
-export const filteredEventTypes = [
-    WealthEventType.DROP,
-    WealthEventType.PICKUP
-];
+export const filteredEventTypes = [WealthEventType.DROP, WealthEventType.PICKUP];
 
-export const groupedEventTypes = [
-    WealthEventType.DEATH,
-    WealthEventType.PVP,
-    WealthEventType.PARTY_ROOM
-];
+export const groupedEventTypes = [WealthEventType.DEATH, WealthEventType.PVP, WealthEventType.PARTY_ROOM];

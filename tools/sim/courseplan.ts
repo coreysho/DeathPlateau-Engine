@@ -26,17 +26,31 @@ const free = (lv: number, x: number, z: number) => !isFlagged(x, z, lv, Collisio
 function component(lv: number, x: number, z: number, limit = 600): Set<string> {
     const seen = new Set<string>();
     const queue: [number, number][] = [];
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         const [sx, sz] = [x + dx, z + dz];
-        if (free(lv, sx, sz) && !seen.has(`${sx},${sz}`)) { seen.add(`${sx},${sz}`); queue.push([sx, sz]); }
+        if (free(lv, sx, sz) && !seen.has(`${sx},${sz}`)) {
+            seen.add(`${sx},${sz}`);
+            queue.push([sx, sz]);
+        }
     }
     while (queue.length && seen.size < limit) {
         const [cx, cz] = queue.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const [nx, nz] = [cx + dx, cz + dz];
             const k = `${nx},${nz}`;
             if (seen.has(k) || !free(lv, nx, nz)) continue;
-            seen.add(k); queue.push([nx, nz]);
+            seen.add(k);
+            queue.push([nx, nz]);
         }
     }
     return seen;
@@ -46,13 +60,24 @@ const obstacles = process.argv.slice(2).map(a => a.split(',').map(Number) as [nu
 for (let i = 0; i < obstacles.length; i++) {
     const [ox, oz, olv] = obstacles[i];
     const next = obstacles[i + 1];
-    if (!next) { console.log(`${i + 1}. ${ox},${oz} lv${olv} -> (last: the street, pick by hand)`); continue; }
+    if (!next) {
+        console.log(`${i + 1}. ${ox},${oz} lv${olv} -> (last: the street, pick by hand)`);
+        continue;
+    }
     const [nx, nz, nlv] = next;
     // the four tiles beside the next obstacle, best first: the one facing where you are coming from
-    const sides: [number, number][] = [[nx + 1, nz], [nx - 1, nz], [nx, nz + 1], [nx, nz - 1]];
-    sides.sort((a, b) => (Math.abs(a[0] - ox) + Math.abs(a[1] - oz)) - (Math.abs(b[0] - ox) + Math.abs(b[1] - oz)));
+    const sides: [number, number][] = [
+        [nx + 1, nz],
+        [nx - 1, nz],
+        [nx, nz + 1],
+        [nx, nz - 1]
+    ];
+    sides.sort((a, b) => Math.abs(a[0] - ox) + Math.abs(a[1] - oz) - (Math.abs(b[0] - ox) + Math.abs(b[1] - oz)));
     const pick = sides.find(([x, z]) => free(nlv, x, z));
-    if (!pick) { console.log(`${i + 1}. ${ox},${oz} lv${olv} -> NOTHING FREE beside ${nx},${nz} lv${nlv}`); continue; }
+    if (!pick) {
+        console.log(`${i + 1}. ${ox},${oz} lv${olv} -> NOTHING FREE beside ${nx},${nz} lv${nlv}`);
+        continue;
+    }
     const span = component(nlv, pick[0], pick[1], 400).size;
     console.log(`${i + 1}. ${ox},${oz} lv${olv} -> land ${pick[0]},${pick[1]} lv${nlv}   (${span} tiles around it)`);
 }

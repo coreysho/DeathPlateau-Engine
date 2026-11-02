@@ -514,14 +514,7 @@ const m: Manifest = {
         { note: 'in six to land her 190 hitpoints inside the lifetime she has. All six names go in' },
         { note: 'one fight step, because they are the same npc and killing her is one kill.' },
         {
-            fight: [
-                'hundred_minion5_air',
-                'hundred_minion5_water',
-                'hundred_minion5_fire',
-                'hundred_minion5_earth',
-                'hundred_minion5_melee',
-                'hundred_minion5_ranged'
-            ],
+            fight: ['hundred_minion5_air', 'hundred_minion5_water', 'hundred_minion5_fire', 'hundred_minion5_earth', 'hundred_minion5_melee', 'hundred_minion5_ranged'],
             untilvar: 'hundred_minionskilled_tally',
             to: 5,
             r: 16,

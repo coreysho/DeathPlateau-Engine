@@ -3,5 +3,5 @@ export const enum ModalState {
     MAIN = 0x1,
     CHAT = 0x2,
     SIDE = 0x4,
-    TUT = 0x8,
+    TUT = 0x8
 }

@@ -12,14 +12,14 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const GATE: [number, number, number, number] = [2592, 3360, 2594, 3363];   // sheepherder_pen_gate
+const GATE: [number, number, number, number] = [2592, 3360, 2594, 3363]; // sheepherder_pen_gate
 const FURNACE: [number, number] = [2605, 3360];
 
 const m: Manifest = {
     quest: 'SHEEP HERDER',
     source: 'oldschool.runescape.wiki/w/Sheep_Herder',
     stageVar: 'sheepherderquest',
-    done: 3,   // ^sheepherder_complete
+    done: 3, // ^sheepherder_complete
     start: [2618, 3299, 0],
     steps: [
         { note: 'wiki: 100 coins for the plague suit, which Halgrive pays back at the end' },

@@ -14,7 +14,7 @@ await H.boot();
 // bar, the bartender who signs for it, a tile beside them, and %barcrawl once they have
 const BARS: [string, string, [number, number, number], number, string[]][] = [
     ['the Blue Moon, Varrock', 'bluemoon_bartender', [3226, 3400, 0], 9, ['barcrawl']],
-    ['Blurberry’s, the Gnome Stronghold', 'blurberry', [2481, 3490, 1], 25, []],   // the barman sends you to Blurberry himself - he serves the Fire Toad Blast
+    ['Blurberry’s, the Gnome Stronghold', 'blurberry', [2481, 3490, 1], 25, []], // the barman sends you to Blurberry himself - he serves the Fire Toad Blast
     ['the Dead Man’s Chest, Brimhaven', 'deadmans_bartender', [2798, 3155, 0], 57, ['barcrawl']],
     ['the Dragon Inn, Yanille', 'dragon_bartender', [2555, 3077, 0], 121, ['barcrawl']],
     ['the Flying Horse Inn, Ardougne', 'flyinghorse_bartender', [2575, 3321, 0], 249, ['barcrawl']],
@@ -29,7 +29,7 @@ const m: Manifest = {
     quest: "ALFRED GRIMHAND'S BARCRAWL",
     source: 'oldschool.runescape.wiki/w/Alfred_Grimhand%27s_Barcrawl',
     stageVar: 'barcrawl',
-    done: 2,   // ^barcrawl_complete
+    done: 2, // ^barcrawl_complete
     start: [2544, 3569, 0],
     steps: [
         { note: 'the drinks are not free - about seventy coins a round, ten rounds' },
@@ -50,12 +50,7 @@ m.steps.push(
     { note: 'serves the Fire Toad Blast with no menu at all.' }
 );
 for (const [where, npc, at, after, picks] of BARS) {
-    m.steps.push(
-        { note: 'wiki: ' + where } as Step,
-        { setpos: at, why: 'to the bar' } as Step,
-        { talk: npc, picks, why: 'drink it and get signed' } as Step,
-        { varis: 'barcrawl', to: after } as Step
-    );
+    m.steps.push({ note: 'wiki: ' + where } as Step, { setpos: at, why: 'to the bar' } as Step, { talk: npc, picks, why: 'drink it and get signed' } as Step, { varis: 'barcrawl', to: after } as Step);
 }
 
 m.steps.push(

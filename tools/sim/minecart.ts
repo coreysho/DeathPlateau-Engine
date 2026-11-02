@@ -50,7 +50,11 @@ H.maxOut(p);
 
 // every cart is placed and carries a Ride
 console.log('THE THREE CARTS');
-for (const [nm, x, z] of [['keldagrim_train_cart', ...KELDA], ['icemountain_train_cart', ...ICE], ['whitewolfmountain_train_cart', ...WOLF]] as [string, number, number][]) {
+for (const [nm, x, z] of [
+    ['keldagrim_train_cart', ...KELDA],
+    ['icemountain_train_cart', ...ICE],
+    ['whitewolfmountain_train_cart', ...WOLF]
+] as [string, number, number][]) {
     const id = LocType.getId(nm);
     check(`${nm} is at ${x},${z}`, World.getLoc(x, z, 0, id) !== null, true);
 }
@@ -74,7 +78,10 @@ const ride = (what: string, stand: [number, number], at: [number, number], loc: 
     }
     for (let i = 0; i < 40 && (p.delayed || p.x !== land[0] || p.z !== land[1]); i++) H.tick(1);
     p.closeModal();
-    const said = H.mesgs.slice(mark).map((m: any) => m.text).join(' | ');
+    const said = H.mesgs
+        .slice(mark)
+        .map((m: any) => m.text)
+        .join(' | ');
     check(what, [sent, p.x, p.z, ticket ? H.invCount(p, ticket) : 0], [true, land[0], land[1], 0]);
     console.log(`        said: ${said.slice(0, 150) || '(nothing)'}`);
 };
@@ -144,7 +151,10 @@ const drive = (picks: number[] = []): string[] => {
             p.executeScript(sc, true, true);
         }
     }
-    return H.ifaces.slice(from).filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1).map((i: any) => i.text!);
+    return H.ifaces
+        .slice(from)
+        .filter((i: any) => i.who === p.username && i.kind === 'text' && i.text && i.text.length > 1)
+        .map((i: any) => i.text!);
 };
 
 console.log('\nTHE CONDUCTORS, who take the fare in coins instead');

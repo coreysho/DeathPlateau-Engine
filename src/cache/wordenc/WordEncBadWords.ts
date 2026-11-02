@@ -128,7 +128,7 @@ export default class WordEncBadWords {
         let hasNumber = false;
         let hasDigit = false;
 
-        for (; index < chars.length && !(hasNumber && hasDigit); ) {
+        for (; index < chars.length && !(hasNumber && hasDigit);) {
             if (index >= chars.length || (hasNumber && hasDigit)) {
                 break;
             }

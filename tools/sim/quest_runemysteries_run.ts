@@ -29,7 +29,7 @@ const m: Manifest = {
     quest: 'RUNE MYSTERIES',
     source: 'oldschool.runescape.wiki/w/Rune_Mysteries',
     stageVar: 'runemysteries',
-    done: 6,   // ^runemysteries_complete
+    done: 6, // ^runemysteries_complete
     start: [3222, 3218, 0],
     steps: [
         { note: 'wiki: no requirements and no items. Everything is handed over in the dialogue.' },

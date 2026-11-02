@@ -17,19 +17,31 @@ import { walkable } from './a1lib.js';
 await H.boot();
 const p: any = H.makePlayer('lad', 3609, 3542);
 H.tick(2);
-let bad = 0, ok = 0;
+let bad = 0,
+    ok = 0;
 const worked = new Set<string>();
 const scenery: string[] = [];
 const tests: [string, number, number, number][] = [
-    ['ahoy_ghostship_ladder', 3609, 3543, 0], ['ahoy_ghostship_ladder', 3613, 3543, 0],
-    ['ahoy_ghostship_ladder', 3615, 3541, 1], ['ahoy_ghostship_ladder', 3615, 3545, 1],
-    ['ahoy_ghostship_ladder', 3696, 3511, 0], ['ahoy_ghostship_ladder', 3696, 3516, 0],
-    ['ahoy_ghostship_laddertop', 3609, 3543, 1], ['ahoy_ghostship_laddertop', 3613, 3543, 1],
-    ['ahoy_ghostship_laddertop', 3615, 3541, 2], ['ahoy_ghostship_laddertop', 3615, 3545, 2],
-    ['ahoy_ghostship_laddertop', 3696, 3511, 1], ['ahoy_ghostship_laddertop', 3696, 3516, 1]
+    ['ahoy_ghostship_ladder', 3609, 3543, 0],
+    ['ahoy_ghostship_ladder', 3613, 3543, 0],
+    ['ahoy_ghostship_ladder', 3615, 3541, 1],
+    ['ahoy_ghostship_ladder', 3615, 3545, 1],
+    ['ahoy_ghostship_ladder', 3696, 3511, 0],
+    ['ahoy_ghostship_ladder', 3696, 3516, 0],
+    ['ahoy_ghostship_laddertop', 3609, 3543, 1],
+    ['ahoy_ghostship_laddertop', 3613, 3543, 1],
+    ['ahoy_ghostship_laddertop', 3615, 3541, 2],
+    ['ahoy_ghostship_laddertop', 3615, 3545, 2],
+    ['ahoy_ghostship_laddertop', 3696, 3511, 1],
+    ['ahoy_ghostship_laddertop', 3696, 3516, 1]
 ];
 for (const [name, lx, lz, lvl] of tests) {
-    const sides: [number, number, string][] = [[0, -1, 'S'], [0, 1, 'N'], [-1, 0, 'W'], [1, 0, 'E']];
+    const sides: [number, number, string][] = [
+        [0, -1, 'S'],
+        [0, 1, 'N'],
+        [-1, 0, 'W'],
+        [1, 0, 'E']
+    ];
     const results: string[] = [];
     for (const [dx, dz, side] of sides) {
         if (!walkable(lvl, lx + dx, lz + dz)) continue;
@@ -45,11 +57,11 @@ for (const [name, lx, lz, lvl] of tests) {
             ok++;
             worked.add(name.replace('ahoy_ghostship_', '') + ' ' + lx + ',' + lz + ' L' + lvl);
             results.push(side + ':L' + p.level + ' ' + p.x + ',' + p.z);
-        }
-        else {
+        } else {
             bad++;
             if (stuck) scenery.push(name + ' ' + lx + ',' + lz + ' from the ' + side + ' lands on ' + p.x + ',' + p.z + ', which is scenery');
-            results.push(side + ':no ' + (stuck ? 'LANDED IN SCENERY at ' + p.x + ',' + p.z : said || 'did not move')); }
+            results.push(side + ':no ' + (stuck ? 'LANDED IN SCENERY at ' + p.x + ',' + p.z : said || 'did not move'));
+        }
     }
     console.log('  ' + name.replace('ahoy_ghostship_', '') + ' ' + lx + ',' + lz + ' L' + lvl + '  ' + results.join('   '));
 }

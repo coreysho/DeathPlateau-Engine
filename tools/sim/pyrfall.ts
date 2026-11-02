@@ -16,7 +16,12 @@ import { drawn, onLoc } from './mapfloor.ts';
 await H.boot();
 
 const standable = (x: number, z: number, level: number): boolean => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -24,7 +29,10 @@ const standable = (x: number, z: number, level: number): boolean => {
 const real = (x: number, z: number, level: number): boolean => standable(x, z, level) && (drawn(x, z, level) || onLoc(x, z, level));
 
 // Seed every plane of both squares so the zones are measured rather than assumed.
-for (const [sx, sz] of [[3365, 2841], [3045, 4697]] as const) {
+for (const [sx, sz] of [
+    [3365, 2841],
+    [3045, 4697]
+] as const) {
     for (let level = 0; level < 4; level++) {
         const p = H.makePlayer(`fall_seed_${sx}_${level}`, sx, sz);
         p.teleport(sx, sz, level);
@@ -66,7 +74,8 @@ for (const r of ROWS) {
         for (let dx = -rad; dx <= rad; dx++) {
             for (let dz = -rad; dz <= rad; dz++) {
                 if (Math.max(Math.abs(dx), Math.abs(dz)) !== rad) continue;
-                const cx = r.x + dx, cz = r.z + dz;
+                const cx = r.x + dx,
+                    cz = r.z + dz;
                 if (!real(cx, cz, r.to)) continue;
                 const d = Math.abs(dx) + Math.abs(dz);
                 if (!best || d < best[2]) best = [cx, cz, d];
@@ -79,8 +88,12 @@ for (const r of ROWS) {
 // Storey 4 lives in the other map square and its own plane 1 is solid, so a fall from it has to
 // land on storey 3 - which is in m52_44. These are picked by hand and checked here.
 console.log('\nStorey 4 falls land on storey 3, in the other map square:');
-for (const [nm, x, z] of [['s4 gap jump (west)', 3358, 2847], ['s4 stone block (east)', 3371, 2847],
-    ['s4 gap jump (east)', 3370, 2840], ['s4 low wall (south)', 3362, 2835]] as const) {
+for (const [nm, x, z] of [
+    ['s4 gap jump (west)', 3358, 2847],
+    ['s4 stone block (east)', 3371, 2847],
+    ['s4 gap jump (east)', 3370, 2840],
+    ['s4 low wall (south)', 3362, 2835]
+] as const) {
     console.log(`  ${nm}: ${x},${z} L3 standable=${standable(x, z, 3)} drawn=${drawn(x, z, 3)} onLoc=${onLoc(x, z, 3)}`);
 }
 process.exit(0);

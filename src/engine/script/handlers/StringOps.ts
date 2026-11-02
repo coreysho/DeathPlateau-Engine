@@ -129,7 +129,7 @@ const StringOps: CommandHandlers = {
         }
 
         state.pushInt(check(state.splitMesanim, MesanimValid).len[state.splitPages[page].length - 1]);
-    },
+    }
 };
 
 function javaStringCompare(a: string, b: string): number {

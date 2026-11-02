@@ -208,8 +208,16 @@ const m: Manifest = {
         { go: [3658, 3503], r: 160, why: 'Gravingas' },
         { talk: 'ahoy_ghost_protestor', why: 'he hands over the petition' },
         { has: 'ahoy_petition' },
-        ...sign(), ...sign(), ...sign(), ...sign(), ...sign(),
-        ...sign(), ...sign(), ...sign(), ...sign(), ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
+        ...sign(),
         { varis: 'ahoy_signaturecounter', to: 10 },
         { go: [3658, 3503], r: 160, why: 'back to Gravingas' },
         { talk: 'ahoy_ghost_protestor', why: 'ten names' },
@@ -287,8 +295,7 @@ if (H.invCount(p, 'ahoy_translation_manual') > 0 && H.invCount(p, 'ahoy_book_of_
         if (p.activeScript) p.activeScript = null;
     }
     const gained = (xp() - before) / 10;
-    console.log('  re-reading the manual onto the book five more times: ' + gained + ' Prayer xp'
-        + (gained > 0 ? '   *** REPEATABLE ***' : '   (nothing, correctly)'));
+    console.log('  re-reading the manual onto the book five more times: ' + gained + ' Prayer xp' + (gained > 0 ? '   *** REPEATABLE ***' : '   (nothing, correctly)'));
 }
 
 if (bad.length) {

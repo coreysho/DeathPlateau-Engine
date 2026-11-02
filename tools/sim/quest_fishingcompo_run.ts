@@ -18,7 +18,7 @@ const m: Manifest = {
     quest: 'FISHING CONTEST',
     source: 'oldschool.runescape.wiki/w/Fishing_Contest',
     stageVar: 'fishingcompo',
-    done: 5,   // ^fishingcompo_complete
+    done: 5, // ^fishingcompo_complete
     start: [2878, 3485, 0],
     steps: [
         { note: 'requirement: 10 Fishing. A rod, three red vine worms from McGrubor’s Wood, a' },
