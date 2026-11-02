@@ -45,25 +45,50 @@ for (const s of seen) console.log(s);
 
 console.log('');
 console.log('=== the ones that matter, placed or not');
-for (const nm of ['burgh_gadderanks_multinpc', 'burgh_gadderanks', 'burgh_gadderanks_attackable',
-    'burgh_gadderanks_wounded', 'burgh_juve1_multinpc', 'burgh_juve2_multinpc',
-    'burgh_villager_tithe_multinpc', 'burgh_vilager_leader', 'burgh_general_store_owner',
-    'burgh_potential_bank_teller_multinpc', 'burgh_actual_bank_teller_multinpc',
-    'burgh_rescue_veliaf_hurtz_talk', 'burgh_ivan_strom_temple_ambush']) {
+for (const nm of [
+    'burgh_gadderanks_multinpc',
+    'burgh_gadderanks',
+    'burgh_gadderanks_attackable',
+    'burgh_gadderanks_wounded',
+    'burgh_juve1_multinpc',
+    'burgh_juve2_multinpc',
+    'burgh_villager_tithe_multinpc',
+    'burgh_vilager_leader',
+    'burgh_general_store_owner',
+    'burgh_potential_bank_teller_multinpc',
+    'burgh_actual_bank_teller_multinpc',
+    'burgh_rescue_veliaf_hurtz_talk',
+    'burgh_ivan_strom_temple_ambush'
+]) {
     try {
         const id = NpcType.getId(nm);
         const t = NpcType.get(id);
         let where = 'not placed';
-        for (const n of World.npcs) if (n.type === id) { where = `L${n.level} ${n.x},${n.z}`; break; }
+        for (const n of World.npcs)
+            if (n.type === id) {
+                where = `L${n.level} ${n.x},${n.z}`;
+                break;
+            }
         console.log(`  ${nm.padEnd(44)} id ${String(id).padStart(5)}  lvl ${t.vislevel}  hp ${(t as any).hitpoints ?? '-'}  ops [${(t.op ?? []).filter(Boolean).join('/')}]  ${where}`);
-    } catch { console.log(`  ${nm} MISSING`); }
+    } catch {
+        console.log(`  ${nm} MISSING`);
+    }
 }
 
 console.log('');
 console.log('=== the rubble locs, wherever they are');
-for (const want of ['burgh_inn_rubble_rock', 'burgh_inn_rubble_pile', 'burgh_outside_rubble_pile',
-    'burgh_rubble_a_1', 'burgh_rubble_a_2', 'burgh_rubble_a_3', 'burgh_rubble_a_4',
-    'burgh_inn_crumble_wall_rubble', 'burgh_inn_colapsed_wall_multiloc', 'burgh_well']) {
+for (const want of [
+    'burgh_inn_rubble_rock',
+    'burgh_inn_rubble_pile',
+    'burgh_outside_rubble_pile',
+    'burgh_rubble_a_1',
+    'burgh_rubble_a_2',
+    'burgh_rubble_a_3',
+    'burgh_rubble_a_4',
+    'burgh_inn_crumble_wall_rubble',
+    'burgh_inn_colapsed_wall_multiloc',
+    'burgh_well'
+]) {
     const hits: string[] = [];
     for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).values()) {
         for (const loc of zone.getAllLocsUnsafe()) {
@@ -72,6 +97,10 @@ for (const want of ['burgh_inn_rubble_rock', 'burgh_inn_rubble_pile', 'burgh_out
         }
     }
     let ops = '';
-    try { ops = (LocType.get(LocType.getId(want)).op ?? []).filter(Boolean).join('/'); } catch { ops = '?'; }
+    try {
+        ops = (LocType.get(LocType.getId(want)).op ?? []).filter(Boolean).join('/');
+    } catch {
+        ops = '?';
+    }
     console.log(`  ${want.padEnd(36)} [${ops}]  ${hits.length ? hits.join('  ') : '(none placed)'}`);
 }

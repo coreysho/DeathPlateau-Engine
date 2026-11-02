@@ -18,7 +18,7 @@ const m: Manifest = {
     quest: "THE KNIGHT'S SWORD",
     source: 'oldschool.runescape.wiki/w/The_Knight%27s_Sword',
     stageVar: 'squire',
-    done: 7,   // ^squire_complete
+    done: 7, // ^squire_complete
     start: [2980, 3343, 0],
     steps: [
         { note: 'wiki: a redberry pie, two iron bars and a pickaxe. 10 Mining for the blurite.' },

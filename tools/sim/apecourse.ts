@@ -47,7 +47,12 @@ H.runProc(p, '[proc,player_combat_stat]');
 const walkable = (x: number, z: number, level: number): boolean => {
     // "can anything step ONTO this tile", which is the question - canTravel from the tile itself
     // answers "can I step off it" and says yes for solid ground.
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -79,7 +84,10 @@ for (const [n, s] of STEPS.entries()) {
         continue;
     }
     for (let i = 0; i < 25 && (p.delayed || p.x !== s.land[0] || p.z !== s.land[1] || p.level !== s.land[2]); i++) H.tick(1);
-    const said = H.mesgs.slice(mark).map((m: any) => m.text).join(' | ');
+    const said = H.mesgs
+        .slice(mark)
+        .map((m: any) => m.text)
+        .join(' | ');
     const gained = (p.stats[AGILITY] - xp0) / 10;
     const landed = p.x === s.land[0] && p.z === s.land[1] && p.level === s.land[2];
     const standable = walkable(p.x, p.z, p.level);
@@ -87,11 +95,11 @@ for (const [n, s] of STEPS.entries()) {
     if (!ok) bad++;
     console.log(
         `${n + 1}. ${s.what} (${s.loc})  ${ok ? 'ok  ' : 'FAIL'}\n` +
-        `     clicked from ${stood}${sent ? '' : '  -- THE OP DID NOT RUN'}\n` +
-        `     landed  ${p.x},${p.z} L${p.level}  (want ${s.land[0]},${s.land[1]} L${s.land[2]})  ` +
-        `${standable ? 'walkable' : 'NOT WALKABLE - A PLAYER WOULD BE STRANDED HERE'}\n` +
-        `     xp ${gained} (want ${s.xp})   progress ${H.getVar(p, 'apeatoll_course_progress')}\n` +
-        `     said: ${said || '(nothing)'}`
+            `     clicked from ${stood}${sent ? '' : '  -- THE OP DID NOT RUN'}\n` +
+            `     landed  ${p.x},${p.z} L${p.level}  (want ${s.land[0]},${s.land[1]} L${s.land[2]})  ` +
+            `${standable ? 'walkable' : 'NOT WALKABLE - A PLAYER WOULD BE STRANDED HERE'}\n` +
+            `     xp ${gained} (want ${s.xp})   progress ${H.getVar(p, 'apeatoll_course_progress')}\n` +
+            `     said: ${said || '(nothing)'}`
     );
 }
 

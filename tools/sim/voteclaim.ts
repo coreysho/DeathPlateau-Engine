@@ -156,12 +156,97 @@ console.log('\nA CALLBACK THAT CANNOT PROVE WHO IT IS DOES NOTHING');
 {
     reset([CALLBACK_SITE]);
     const wrong = VoteService.fromCallback('pushy', { key: 'hunter3', player: 'voteon', voteid: 'x' });
-    check('  a wrong secret is refused', [wrong.status, wrong.body], [404, 'unknown']);
+    check('  a wrong secret is refused', [wrong.status, wrong.body], [200, 'unknown']);
     check('  and nothing was credited', VoteService.owed('voteon'), 0);
     const nosite = VoteService.fromCallback('nosuchsite', { key: 'hunter2', player: 'voteon' });
-    check('  an unknown site answers identically, so neither can be probed for', [nosite.status, nosite.body], [404, 'unknown']);
+    check('  an unknown site answers identically, so neither can be probed for', [nosite.status, nosite.body], [200, 'unknown']);
     const noplayer = VoteService.fromCallback('pushy', { key: 'hunter2', player: '' });
     check('  and a callback with no player is refused', noplayer.status, 400);
+}
+
+console.log('\nA CALLBACK THAT NAMES NOBODY PAYS NOBODY');
+{
+    // THIS HAPPENED. On 2 November the live world credited two tickets to a player called
+    // "Null" - RuneTopic sending its placeholder for a vote that carried no name - and they sat
+    // owed to an account nobody had registered yet, which anybody could then have registered.
+    // A toplist says "nobody" by sending a word, never by sending nothing.
+    reset([CALLBACK_SITE]);
+    for (const sentinel of ['Null', 'null', 'Guest', 'none', 'undefined', 'Unknown']) {
+        const res = VoteService.fromCallback('pushy', { key: 'hunter2', player: sentinel, voteid: 's-' + sentinel });
+        check(`  "${sentinel}" is a placeholder, not a player`, res.status, 400);
+        check('    and nothing is owed to it', VoteService.owed(sentinel.toLowerCase()), 0);
+    }
+
+    // The other way a vote goes to nobody. credit() only lowercases, so a name with a space in
+    // it would be filed under "lord fooby" while the account is "lord_fooby" - owed for ever,
+    // with a log line that reads like a success.
+    const spaced = VoteService.fromCallback('pushy', { key: 'hunter2', player: 'Lord Fooby', voteid: 'lf1' });
+    check('  a name with a space is still that player', spaced.body, 'ok');
+    check('    filed in the form the account table uses', VoteService.owed('lord_fooby'), 1);
+    check('    and not in the form the site sent', VoteService.owed('lord fooby'), 0);
+
+    // Anything that cannot be a name at all.
+    const junk = VoteService.fromCallback('pushy', { key: 'hunter2', player: '???', voteid: 'j1' });
+    check('  a name of nothing but punctuation is refused', junk.status, 400);
+    const long = VoteService.fromCallback('pushy', { key: 'hunter2', player: 'abcdefghijklmnop', voteid: 'j2' });
+    check('  and one too long for the game to hold', long.status, 400);
+}
+
+console.log('\nAND THE LINK THE CLERK HANDS OUT IS THE ONE THAT CAN BE PAID');
+{
+    // THE OTHER HALF OF THE SAME BUG. Refusing a vote that names nobody is half an answer while
+    // the link the player was handed could not name them either: until 2 November the Vote clerk
+    // printed the bare url, so a vote cast from in game counted toward the ranking and paid
+    // nobody - and on a site that substitutes its own placeholder for a missing name, it paid a
+    // player who does not exist.
+    const personal: VoteSite = { ...CALLBACK_SITE, playerUrl: 'https://example.invalid/vote/pushy?player={user}' };
+    reset([personal]);
+
+    check('  the clerk link carries the player', VoteSites.urlFor(personal, 'corey'), 'https://example.invalid/vote/pushy?player=corey');
+    check('  and a site with no personal form still gets its own url', VoteSites.urlFor(CALLBACK_SITE, 'corey'), CALLBACK_SITE.url);
+
+    // The name goes out in the form it has to come back in. A space is an underscore in the
+    // account table, so sending the display form files the vote under a player who cannot exist -
+    // the "lord fooby" failure above, arriving from the other direction.
+    check('  a display name goes out in the account own form', VoteSites.urlFor(personal, 'Lord Fooby'), 'https://example.invalid/vote/pushy?player=lord_fooby');
+
+    // A path segment rather than a parameter, which is how RuneTopic takes it.
+    const segment: VoteSite = { ...CALLBACK_SITE, playerUrl: 'https://example.invalid/vote/pushy/{user}' };
+    check('  and a path segment is substituted the same way', VoteSites.urlFor(segment, 'Lord Fooby'), 'https://example.invalid/vote/pushy/lord_fooby');
+
+    // END TO END, which is the part that proves anything: read the name back out of the link the
+    // clerk would have printed, hand it to the callback the way the site would, and the tickets
+    // land on the player who clicked it.
+    const link = new URL(VoteSites.urlFor(personal, 'Lord Fooby'));
+    const paid = VoteService.fromCallback('pushy', { key: 'hunter2', player: link.searchParams.get('player') ?? '', voteid: 'rt1' });
+    check('  a vote cast from that link is credited', paid.body, 'ok');
+    check('    to the player who clicked it', VoteService.owed('lord_fooby'), 1);
+}
+
+console.log('\nAND A playerUrl THAT COULD NEVER NAME ANYBODY IS A CONFIGURATION ERROR');
+{
+    // Not a shrug and a fallback: falling back to the nameless url is the bug put back silently,
+    // and the only person who can fix a typo in sites.json is the one reading the boot log.
+    process.env.VOTE_SIMKEY = 'hunter2';
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'votesites-'));
+    const file = path.join(dir, 'sites.json');
+    const entry = { id: 'pushy', name: 'Pushy', url: 'https://example.invalid/vote/pushy', tickets: 1, cooldownHours: 12, callback: { secret: 'env:VOTE_SIMKEY', userParam: 'player' } };
+    const write = (extra: object) => fs.writeFileSync(file, JSON.stringify([{ ...entry, ...extra }]));
+
+    write({ playerUrl: 'https://example.invalid/vote/pushy?player=corey' });
+    check('  a playerUrl with no {user} in it is refused', VoteSites.load(file).length, 0);
+    write({ playerUrl: '/vote?player={user}' });
+    check('  and one that is not an address at all', VoteSites.load(file).length, 0);
+    write({ playerUrl: 'https://example.invalid/vote/pushy?player={user}' });
+    check('  a good one loads', VoteSites.load(file).length, 1);
+
+    // Leaving it out is allowed - a site we can ASK does not need the name in the link, because
+    // the player names themselves by clicking Claim. A site that only ever calls us does need it,
+    // and is told so at boot.
+    write({});
+    check('  and leaving it out still loads the site', VoteSites.load(file).length, 1);
+
+    fs.rmSync(dir, { recursive: true, force: true });
 }
 
 console.log('\nA VOTE CREDITED WHILE YOU ARE OFFLINE IS WAITING AT YOUR NEXT LOGIN');
@@ -247,11 +332,19 @@ console.log('\nAND THE CLERK IS HOW A PLAYER ASKS FOR ANY OF IT');
     H.clearInv(p);
     H.tick(2);
 
-    // "Where can I vote?" - the list, with the site's own name and address in it. The 1 answers
-    // the reminder question that follows it ("Thanks.").
+    // "Where can I vote?" - the list, with each site's name and when it can next be voted on.
+    // The 1 answers the reminder question that follows it ("Thanks.").
     const where = A.talk(p, 'vote_clerk', [3, 1]);
     check('  she names the site', A.saw(where, 'Asky Toplist'), true);
-    check('    and where to go', A.saw(where, 'example.invalid'), true);
+    check('    and says it can be voted on now', A.saw(where, 'ready now'), true);
+
+    // THE ADDRESS SHE GIVES IS THE ONE THAT CAN PAY. She used to print the site's own url, which
+    // carries nobody's name - a vote from it counted toward the ranking and could never reach a
+    // ticket - and which no player can click in this client anyway. She names the vote page
+    // instead, which puts their name into every link at once. Both halves are asserted, because
+    // the old address coming back would be the old bug coming back.
+    check('    and sends them where the links carry their name', A.saw(where, 'deathplateau.com/vote'), true);
+    check('    not to the site raw, which could never pay them', A.saw(where, 'example.invalid'), false);
 
     // "I've voted - can you check?" - she starts a claim and says so. The result is a game message
     // a moment later, because a script cannot wait for a web request.

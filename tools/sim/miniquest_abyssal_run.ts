@@ -11,13 +11,13 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-const MAGE: [number, number, number] = [3263, 3381, 0];   // inside the Varrock Chaos Temple
+const MAGE: [number, number, number] = [3263, 3381, 0]; // inside the Varrock Chaos Temple
 
 const m: Manifest = {
     quest: 'ENTER THE ABYSS',
     source: 'oldschool.runescape.wiki/w/Enter_the_Abyss',
     stageVar: 'abyssal_miniquest',
-    done: 4,   // ^miniquest_abyssal_complete
+    done: 4, // ^miniquest_abyssal_complete
     start: [3263, 3381, 0],
     steps: [
         { note: 'requirement: Rune Mysteries, which quest_runemysteries_run.ts walks in full and' },

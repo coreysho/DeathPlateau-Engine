@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'CLOCK TOWER',
     source: 'oldschool.runescape.wiki/w/Clock_Tower',
     stageVar: 'cogquest',
-    done: 8,   // ^quest_cog_complete, read off bits 0-3
+    done: 8, // ^quest_cog_complete, read off bits 0-3
     start: [2568, 3252, 0],
     steps: [
         { note: 'wiki: ice gloves for the black cog, which is red hot from the flames' },

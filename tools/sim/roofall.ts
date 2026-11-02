@@ -88,8 +88,7 @@ function setAgility(p: any, level: number) {
 }
 
 /** What stat_random works out at this level, which is the pass chance out of 256. */
-const curve = (low: number, high: number, level: number) =>
-    Math.floor((low * (99 - level)) / 98) + Math.floor((high * (level - 1)) / 98) + 1;
+const curve = (low: number, high: number, level: number) => Math.floor((low * (99 - level)) / 98) + Math.floor((high * (level - 1)) / 98) + 1;
 
 /**
  * Put the player at the obstacle, by replaying the lap to it with every roll pinned to succeed.
@@ -125,10 +124,7 @@ for (const course of COURSES) {
 
     const [low, high] = course.failRoll!;
     const stop = course.failStop!;
-    console.log(
-        `\n================ ${course.title}  (agility ${course.level}, stops failing at ${stop}, ` +
-            `${curve(low, high, course.level)}/256 at the entry level)`
-    );
+    console.log(`\n================ ${course.title}  (agility ${course.level}, stops failing at ${stop}, ` + `${curve(low, high, course.level)}/256 at the entry level)`);
 
     // THE CURVE ITSELF, as arithmetic, before anybody runs anything. Two numbers in a constant file
     // are a claim about two levels, and this is that claim.
@@ -152,7 +148,7 @@ for (const course of COURSES) {
 
         if (!approach(p, course, i)) {
             pin(null);
-            check(`    the lap reaches it`, 'no', 'yes');
+            check('    the lap reaches it', 'no', 'yes');
             H.despawn(p);
             continue;
         }

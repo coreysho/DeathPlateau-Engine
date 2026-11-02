@@ -35,7 +35,7 @@ function settle(p: Player, picks: number[] = [], max = 150) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -62,9 +62,13 @@ const STATIONS: [string, string, number, number, number, number][] = [
     ['Barbarian Village', 'canoeing_canoestation_barbarianvillage', 3110, 3409, 3112, 3410],
     ['Edgeville', 'canoeing_canoestation_edgeville', 3130, 3508, 3132, 3510]
 ];
-const VARBITS = ['canoestation_state_lumbridge', 'canoestation_state_championsguild',
-    'canoestation_state_barbarianvillage', 'canoestation_state_edgeville'];
-const LAND: [number, number][] = [[3243, 3236], [3203, 3343], [3112, 3410], [3132, 3510]];
+const VARBITS = ['canoestation_state_lumbridge', 'canoestation_state_championsguild', 'canoestation_state_barbarianvillage', 'canoestation_state_edgeville'];
+const LAND: [number, number][] = [
+    [3243, 3236],
+    [3203, 3343],
+    [3112, 3410],
+    [3132, 3510]
+];
 const POND: [number, number] = [3144, 3792];
 
 const p: any = H.makePlayer('canoe', 3243, 3236);
@@ -78,8 +82,12 @@ const heard = (fn: () => void): string => {
     const mark = H.mesgs.length;
     const faces = H.ifaces.length;
     fn();
-    return H.ifaces.slice(faces).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
-        .concat(H.mesgs.slice(mark).map(m => m.text)).join(' ');
+    return H.ifaces
+        .slice(faces)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .concat(H.mesgs.slice(mark).map(m => m.text))
+        .join(' ');
 };
 const click = (station: number, picks: number[] = []): string => {
     const [, name, lx, lz, sx, sz] = STATIONS[station];
@@ -90,8 +98,7 @@ const click = (station: number, picks: number[] = []): string => {
         p.teleport(sx, sz, 0);
         H.tick(1);
         p.clearPendingAction();
-        p.queueWaypoints(findPathToLoc(0, p.x, p.z, loc.x, loc.z, p.width, t.width, t.length,
-            loc.angle, loc.shape, t.forceapproach));
+        p.queueWaypoints(findPathToLoc(0, p.x, p.z, loc.x, loc.z, p.width, t.width, t.length, loc.angle, loc.shape, t.forceapproach));
         p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOC1);
         settle(p, picks);
     });
@@ -110,27 +117,30 @@ console.log('ONE MULTILOC PER STATION, AND FIFTEEN INDICES OF STATE MACHINE');
 for (let i = 0; i < 4; i++) {
     const [who, name, lx, lz] = STATIONS[i];
     const loc = World.getLoc(lx, lz, 0, LocType.getId(name));
-    check(`${who} station is placed at ${lx},${lz} with Make-Canoe`,
-        [loc !== null, (LocType.get(LocType.getId(name)).op ?? [])[0]], [true, 'Make-Canoe']);
+    check(`${who} station is placed at ${lx},${lz} with Make-Canoe`, [loc !== null, (LocType.get(LocType.getId(name)).op ?? [])[0]], [true, 'Make-Canoe']);
 }
-check('the four experts are placed, with Talk-to',
+check(
+    'the four experts are placed, with Talk-to',
     ['canoeing_bill', 'canoeing_tarquin', 'canoeing_sigurd', 'canoeing_hari'].every(n => {
         const id = NpcType.getId(n);
         if (id === -1) return false;
         for (const npc of World.npcs) if (npc && npc.isActive && npc.type === id) return true;
         return false;
-    }), true);
-check('and both interfaces are in the pack',
-    [Component.getId('canoeing:com_25') !== -1, Component.getId('canoe_map:com_37') !== -1], [true, true]);
-check('with one carving animation per axe, eight of them',
-    ['bronze', 'iron', 'steel', 'black', 'mithril', 'adamant', 'rune', 'dragon']
-        .every(m => SeqType.getId(`human_canoeing_carve_${m}_axe`) !== -1), true);
+    }),
+    true
+);
+check('and both interfaces are in the pack', [Component.getId('canoeing:com_25') !== -1, Component.getId('canoe_map:com_37') !== -1], [true, true]);
+check(
+    'with one carving animation per axe, eight of them',
+    ['bronze', 'iron', 'steel', 'black', 'mithril', 'adamant', 'rune', 'dragon'].every(m => SeqType.getId(`human_canoeing_carve_${m}_axe`) !== -1),
+    true
+);
 
 // ------------------------------------------------------------------ chopping and shaping
 console.log('');
 console.log('CHOP, SHAPE, FLOAT, PADDLE');
 for (let i = 0; i < 4; i++) setState(i, 0);
-p.setLevel(8, 11);                       // 8 is Woodcutting
+p.setLevel(8, 11); // 8 is Woodcutting
 H.tick(1);
 let said = click(0);
 check('with no axe at all it says so', said.includes('need an axe'), true);
@@ -140,7 +150,7 @@ check('11 Woodcutting is not enough for a canoe', [said.includes('level of 12'),
 p.setLevel(8, 12);
 H.tick(1);
 click(0);
-check('12 is, and one click brings the tree down', state(0), 10);     // ^canoe_state_fallen
+check('12 is, and one click brings the tree down', state(0), 10); // ^canoe_state_fallen
 
 said = click(0);
 check('  and then the fallen tree opens the build panel', p.modalMain, Component.getId('canoeing'));
@@ -150,11 +160,10 @@ said = press('canoeing:com_28');
 check('a waka wants 57 Woodcutting', [said.includes('level of 57'), state(0)], [true, 10]);
 let xp = p.stats[8];
 said = press('canoeing:com_25');
-check('a log canoe at 12: 30 Woodcutting experience, and the station is a log',
-    [state(0), (p.stats[8] - xp) / 10], [1, 30]);
+check('a log canoe at 12: 30 Woodcutting experience, and the station is a log', [state(0), (p.stats[8] - xp) / 10], [1, 30]);
 
 said = click(0);
-check('push it in and it floats', state(0), 5);           // ^canoe_state_log_water
+check('push it in and it floats', state(0), 5); // ^canoe_state_log_water
 
 // ------------------------------------------------------------------ the map
 console.log('');
@@ -164,13 +173,11 @@ check('paddling opens the destination map', p.modalMain, Component.getId('canoe_
 p.closeModal();
 H.tick(1);
 said = press('canoe_map:com_36');
-check('a log will not reach the Barbarian Village, two stops away',
-    [said.includes('1 stops'), p.x], [true, 3243]);
+check('a log will not reach the Barbarian Village, two stops away', [said.includes('1 stops'), p.x], [true, 3243]);
 said = press('canoe_map:com_37');
 check('  and nothing but a waka goes into the Wilderness', said.includes('Only a waka'), true);
 said = press('canoe_map:com_35');
-check("one stop to the Champions' Guild, and the canoe sinks behind you",
-    [[p.x, p.z], state(0), H.getVarBit(p, 'canoe_type')], [LAND[1], 0, 0]);
+check("one stop to the Champions' Guild, and the canoe sinks behind you", [[p.x, p.z], state(0), H.getVarBit(p, 'canoe_type')], [LAND[1], 0, 0]);
 
 // a waka from Lumbridge to the pond
 p.setLevel(8, 57);
@@ -187,8 +194,7 @@ click(0);
 p.closeModal();
 H.tick(1);
 said = press('canoe_map:com_37');
-check('and a waka will take you to the Wilderness pond',
-    [[p.x, p.z], said.includes('no canoe trees up here')], [POND, true]);
+check('and a waka will take you to the Wilderness pond', [[p.x, p.z], said.includes('no canoe trees up here')], [POND, true]);
 
 // ------------------------------------------------------------------ one canoe at a time
 console.log('');
@@ -214,8 +220,7 @@ said = heard(() => {
     H.opNpc(p, bill, 1);
     settle(p, [1]);
 });
-check('Barfy Bill explains the four canoes and the one place nobody paddles to',
-    [said.includes('A log will take you one stop'), said.includes('Wilderness')], [true, true]);
+check('Barfy Bill explains the four canoes and the one place nobody paddles to', [said.includes('A log will take you one stop'), said.includes('Wilderness')], [true, true]);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

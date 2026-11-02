@@ -24,7 +24,12 @@ const flood = (level: number, x: number, z: number, cap = 120) => {
     const q: [number, number][] = [[x, z]];
     while (q.length && seen.size < cap) {
         const [cx, cz] = q.pop()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
             const k = `${cx + dx},${cz + dz}`;
             if (!seen.has(k) && canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) {
                 seen.add(k);

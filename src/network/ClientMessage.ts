@@ -1,2 +1,1 @@
-export default abstract class ClientMessage {
-}
+export default abstract class ClientMessage {}

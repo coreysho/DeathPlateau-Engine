@@ -25,7 +25,12 @@ if (!args.length) {
 }
 
 const standable = (x: number, z: number, level: number): boolean => {
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (canTravel(level, x + dx, z + dz, -dx, -dz, 1, 0, CollisionType.NORMAL)) return true;
     }
     return false;
@@ -33,7 +38,9 @@ const standable = (x: number, z: number, level: number): boolean => {
 
 for (const a of args) {
     const [nm, xs, zs, ls] = a.split(',');
-    const x = Number(xs), z = Number(zs), level = Number(ls ?? 0);
+    const x = Number(xs),
+        z = Number(zs),
+        level = Number(ls ?? 0);
     const id = LocType.getId(nm);
     if (id === -1) {
         console.log(`\n${nm}: NO SUCH LOC TYPE`);
@@ -48,7 +55,8 @@ for (const a of args) {
     const from: string[] = [];
     for (let dx = -3; dx <= 3; dx++) {
         for (let dz = -3; dz <= 3; dz++) {
-            const cx = x + dx, cz = z + dz;
+            const cx = x + dx,
+                cz = z + dz;
             if (!standable(cx, cz, level)) continue;
             if (reachedLoc(level, cx, cz, loc.x, loc.z, loc.width, loc.length, 1, loc.angle, loc.shape, t.forceapproach)) {
                 from.push(`${cx},${cz}`);

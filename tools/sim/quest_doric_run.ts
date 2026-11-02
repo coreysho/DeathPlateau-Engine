@@ -12,7 +12,7 @@ const m: Manifest = {
     quest: "DORIC'S QUEST",
     source: 'oldschool.runescape.wiki/w/Doric%27s_Quest',
     stageVar: 'doricquest',
-    done: 100,   // ^doric_complete
+    done: 100, // ^doric_complete
     start: [2952, 3451, 0],
     steps: [
         { note: 'wiki: 6 clay, 4 copper ore and 2 iron ore, all at once. Mining them is the Dwarven Mine' },

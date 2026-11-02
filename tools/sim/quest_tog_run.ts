@@ -60,7 +60,7 @@ const DONE: [string, number][] = [
     ['zanaris', 6]
 ];
 
-const ROCKS_TOP: [number, number] = [3240, 9498];   // beside the climb down to Juna's ledge
+const ROCKS_TOP: [number, number] = [3240, 9498]; // beside the climb down to Juna's ledge
 const CHASM_NORTH: [number, number] = [3226, 9527];
 const TEARS: [number, number] = [3259, 9517];
 const WALLS: [number, number][] = [
@@ -206,7 +206,10 @@ for (let t = 0; t < 140 && H.getVarBit(p, 'tog_minigame_collecting') === 1; t++)
     H.tick(2);
     drive(p, []);
 }
-const wallSaid = H.mesgs.slice(markWalls).filter(x => x.who === p.username).map(x => x.text);
+const wallSaid = H.mesgs
+    .slice(markWalls)
+    .filter(x => x.who === p.username)
+    .map(x => x.text);
 const caught = wallSaid.filter(t => t.includes('run into the bowl')).length;
 const spat = wallSaid.filter(t => t.includes('spits')).length;
 const dry = wallSaid.filter(t => t.includes('not weeping')).length;

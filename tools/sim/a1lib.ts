@@ -100,7 +100,10 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
                 // answer, so "the right option" is not a fixed string and not a fixed slot either -
                 // it is whichever of the nine happens to be on the menu. A single substring cannot
                 // say that; a list of them can, and every other use of a string pick is unaffected.
-                const wants = pick.split('||').map(w => w.trim().toLowerCase()).filter(Boolean);
+                const wants = pick
+                    .split('||')
+                    .map(w => w.trim().toLowerCase())
+                    .filter(Boolean);
                 const idx = opts.findIndex(o => wants.some(w => o.toLowerCase().includes(w)));
                 if (idx === -1) throw new Error(`no option "${pick}" in ${root}: ${opts.filter(Boolean).join(' | ')}`);
                 pick = idx + 1;

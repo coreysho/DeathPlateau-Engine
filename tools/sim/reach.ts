@@ -20,14 +20,24 @@ const seen = new Set<number>([key(sx, sz)]);
 let q: number[][] = [[sx, sz]];
 // Diagonals included, because the engine walks them: a doorway that only opens on the diagonal
 // reads as a sealed room without them.
-const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+const dirs = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1]
+];
 let n = 0;
 while (q.length && n < 200000) {
     const next: number[][] = [];
     for (const [x, z] of q) {
         n++;
         for (const [dx, dz] of dirs) {
-            const nx = x + dx, nz = z + dz;
+            const nx = x + dx,
+                nz = z + dz;
             if (nx < x1 - 4 || nx > x2 + 4 || nz < z1 - 4 || nz > z2 + 4) continue;
             if (seen.has(key(nx, nz))) continue;
             if (!canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL)) continue;

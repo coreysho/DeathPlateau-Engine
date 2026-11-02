@@ -28,7 +28,7 @@ const m: Manifest = {
     quest: 'HOLY GRAIL',
     source: 'oldschool.runescape.wiki/w/Holy_Grail',
     stageVar: 'grail',
-    done: 10,   // ^grail_complete
+    done: 10, // ^grail_complete
     start: [2764, 3515, 0],
     steps: [
         { note: 'requirement: Merlin’s Crystal, which was already the gate on King Arthur offering' },

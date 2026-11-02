@@ -26,7 +26,7 @@ const m: Manifest = {
     quest: 'TRIBAL TOTEM',
     source: 'oldschool.runescape.wiki/w/Tribal_Totem',
     stageVar: 'totemquest',
-    done: 5,   // ^totem_complete
+    done: 5, // ^totem_complete
     start: [2791, 3181, 0],
     steps: [
         { note: 'requirement: 21 Thieving, which is also what spots the trap on the stairs' },

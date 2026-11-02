@@ -43,7 +43,7 @@ function settle(p: Player, picks: number[] = [], max = 250) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -99,7 +99,10 @@ const talkTo = (npcName: string, picks: number[] = []) => {
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, best.x, best.z, p.width, best.width, best.length));
     p.setInteraction(Interaction.ENGINE, best, ServerTriggerType.APNPC1);
     settle(p, picks);
-    const said = H.ifaces.slice(faces).filter(i => i.kind === 'text' && i.text).map(i => i.text!)
+    const said = H.ifaces
+        .slice(faces)
+        .filter(i => i.kind === 'text' && i.text)
+        .map(i => i.text!)
         .concat(H.mesgs.slice(mark).map(m => m.text));
     return said.join(' ');
 };
@@ -128,29 +131,50 @@ const useOnLoc = (obj: string, x: number, z: number, name: string) => {
 console.log('');
 console.log('EVERY VILLAGER HAS A NAME, AND NOW A VOICE');
 const VILLAGERS: [string, string][] = [
-    ['burgh_villager_0', 'Sorin'], ['burgh_vilager_1', 'Luscion'], ['burgh_vilager_2', 'Sergiu'],
-    ['burgh_vilager_3', 'Radu'], ['burgh_vilager_4', 'Grigore'], ['burgh_vilager_5', 'Ileana'],
-    ['burgh_vilager_6', 'Valeria'], ['burgh_vilager_7', 'Emilia'], ['burgh_vilager_8', 'Florin'],
-    ['burgh_vilager_sit1', 'Calin'], ['burgh_vilager_sit2', 'Mihail'], ['burgh_vilager_sit3', 'Nicoleta'],
-    ['burgh_vilager_sit4', 'Simona'], ['burgh_vilager_rat_1', 'Vasile'], ['burgh_vilager_rat_2', 'Razvan'],
-    ['burgh_vilager_rat_3', 'Luminata'], ['burgh_villager_child1', 'Catalina'],
-    ['burgh_villager_child2', 'Ivan'], ['burgh_villager_child3', 'Victor'],
-    ['burgh_villager_child4', 'Helena'], ['burgh_farmer', 'Teodor'], ['burgh_bed_man', 'Marius'],
-    ['burgh_bed_man_wife', 'Gabriela'], ['burgh_donor_man', 'Vladimir'],
-    ['burgh_turned_vampyre_male_ben', 'Benjamin'], ['burgh_turned_vampyre_male_liam', 'Liam'],
-    ['burgh_turned_vampyre_male_miala', 'Miala'], ['burgh_turned_vampyre_male_verak', 'Verak']
+    ['burgh_villager_0', 'Sorin'],
+    ['burgh_vilager_1', 'Luscion'],
+    ['burgh_vilager_2', 'Sergiu'],
+    ['burgh_vilager_3', 'Radu'],
+    ['burgh_vilager_4', 'Grigore'],
+    ['burgh_vilager_5', 'Ileana'],
+    ['burgh_vilager_6', 'Valeria'],
+    ['burgh_vilager_7', 'Emilia'],
+    ['burgh_vilager_8', 'Florin'],
+    ['burgh_vilager_sit1', 'Calin'],
+    ['burgh_vilager_sit2', 'Mihail'],
+    ['burgh_vilager_sit3', 'Nicoleta'],
+    ['burgh_vilager_sit4', 'Simona'],
+    ['burgh_vilager_rat_1', 'Vasile'],
+    ['burgh_vilager_rat_2', 'Razvan'],
+    ['burgh_vilager_rat_3', 'Luminata'],
+    ['burgh_villager_child1', 'Catalina'],
+    ['burgh_villager_child2', 'Ivan'],
+    ['burgh_villager_child3', 'Victor'],
+    ['burgh_villager_child4', 'Helena'],
+    ['burgh_farmer', 'Teodor'],
+    ['burgh_bed_man', 'Marius'],
+    ['burgh_bed_man_wife', 'Gabriela'],
+    ['burgh_donor_man', 'Vladimir'],
+    ['burgh_turned_vampyre_male_ben', 'Benjamin'],
+    ['burgh_turned_vampyre_male_liam', 'Liam'],
+    ['burgh_turned_vampyre_male_miala', 'Miala'],
+    ['burgh_turned_vampyre_male_verak', 'Verak']
 ];
-check('all twenty-eight are npc types the cache names',
-    VILLAGERS.filter(([n]) => NpcType.getId(n) === -1).map(([n]) => n), []);
-check('and every one of them has a Talk-to trigger now',
-    VILLAGERS.filter(([n]) => !H.hasScript('[opnpc1,' + n + ']')).map(([n]) => n), []);
+check(
+    'all twenty-eight are npc types the cache names',
+    VILLAGERS.filter(([n]) => NpcType.getId(n) === -1).map(([n]) => n),
+    []
+);
+check(
+    'and every one of them has a Talk-to trigger now',
+    VILLAGERS.filter(([n]) => !H.hasScript('[opnpc1,' + n + ']')).map(([n]) => n),
+    []
+);
 const missing = VILLAGERS.filter(([n]) => ![...World.npcs].some(x => x && x.isActive && x.type === NpcType.getId(n)));
 console.log('  ' + (VILLAGERS.length - missing.length) + ' of ' + VILLAGERS.length + ' are standing in the village');
 // Marius is added by the quest when the gate opens - his wife is placed and he was not - and
 // Vladimir with the four turned villagers belong to the blood tithe, which is the next piece.
-check('the only ones not on a map square are Vladimir and the four who were turned',
-    missing.map(([, name]) => name).sort(),
-    ['Benjamin', 'Liam', 'Marius', 'Miala', 'Verak', 'Vladimir']);
+check('the only ones not on a map square are Vladimir and the four who were turned', missing.map(([, name]) => name).sort(), ['Benjamin', 'Liam', 'Marius', 'Miala', 'Verak', 'Vladimir']);
 
 // ------------------------------------------------------------------ Florin and the gate
 console.log('');
@@ -158,7 +182,7 @@ console.log('FLORIN, AND THE GATE HE WILL NOT OPEN');
 set(p, 'myreque_2_quest', 0);
 let said = talkTo('burgh_vilager_8');
 check('before Veliaf has sent you he tells you to go back up the road', said.includes('back up the road'), true);
-set(p, 'myreque_2_quest', 10);     // ^m2_sent
+set(p, 'myreque_2_quest', 10); // ^m2_sent
 p.teleport(GATE[0], GATE[1] + 2, 0);
 H.tick(1);
 opLoc(...GATE, 'burgh_fencegate_l');
@@ -166,9 +190,7 @@ opLoc(...GATE, 'burgh_fencegate_l');
 // up on - the village is to the north, so anything at the gate's own row or south of it is outside
 check('the gate is barred from the inside', p.z >= GATE[1], true);
 said = talkTo('burgh_vilager_8');
-check('he asks for something to eat, and a chest appears on your side of the fence',
-    [said.includes('Put something to eat'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_closed')) !== null],
-    [true, true]);
+check('he asks for something to eat, and a chest appears on your side of the fence', [said.includes('Put something to eat'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_closed')) !== null], [true, true]);
 p.teleport(CHEST[0], CHEST[1] + 1, 0);
 H.tick(1);
 opLoc(...CHEST, 'burgh_quest_food_chest_closed');
@@ -178,10 +200,7 @@ useOnLoc('tinderbox', ...CHEST, 'burgh_quest_food_chest_open');
 check('a tinderbox is not food', [H.invCount(p, 'tinderbox'), v(p, 'myreque_2_quest')], [1, 10]);
 H.give(p, 'bread', 1);
 useOnLoc('bread', ...CHEST, 'burgh_quest_food_chest_open');
-check('bread is: the boy takes it, the chest goes, and the gate opens',
-    [H.invCount(p, 'bread'), v(p, 'myreque_2_quest'),
-        World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null],
-    [0, 12, false]);
+check('bread is: the boy takes it, the chest goes, and the gate opens', [H.invCount(p, 'bread'), v(p, 'myreque_2_quest'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null], [0, 12, false]);
 p.teleport(GATE[0], GATE[1] + 2, 0);
 H.tick(1);
 opLoc(...GATE, 'burgh_fencegate_l');
@@ -190,13 +209,11 @@ check('and now it lets you through', p.z < GATE[1] + 2, true);
 // ------------------------------------------------------------------ what the village says
 console.log('');
 console.log('WHAT THEY SAY, AND WHEN');
-set(p, 'myreque_2_quest', 20);     // ^m2_arrived
+set(p, 'myreque_2_quest', 20); // ^m2_arrived
 said = talkTo('burgh_vilager_rat_1');
-check('Vasile asked them to take him instead of his wife and they laughed at him',
-    said.includes('laughed at me'), true);
+check('Vasile asked them to take him instead of his wife and they laughed at him', said.includes('laughed at me'), true);
 said = talkTo('burgh_vilager_rat_2');
-check('Razvan names the two quiet ways out of the village - the cellar and the temple road',
-    said.includes('inn cellar'), true);
+check('Razvan names the two quiet ways out of the village - the cellar and the temple road', said.includes('inn cellar'), true);
 said = talkTo('burgh_villager_child2');
 check('the child named Ivan wants to be a Myreque', said.includes('Myreque'), true);
 // LIAM AND THE OTHER THREE WHO WERE TURNED CANNOT BE DRIVEN AT ALL, and this is the honest place
@@ -206,17 +223,14 @@ check('the child named Ivan wants to be a Myreque', said.includes('Myreque'), tr
 // twenty-eight), and they will have something to say the moment the blood tithe puts them in the
 // village, which is the next piece of this rebuild.
 
-set(p, 'myreque_2_quest', 50);     // ^m2_tithe_broken
+set(p, 'myreque_2_quest', 50); // ^m2_tithe_broken
 said = talkTo('burgh_vilager_5');
-check('after the barrel is taken off Gadderanks, Ileana has a different line',
-    said.includes('not stopped shaking'), true);
+check('after the barrel is taken off Gadderanks, Ileana has a different line', said.includes('not stopped shaking'), true);
 said = talkTo('burgh_bed_man');
-check('Marius is in the room his wife talks about, and has been for two years',
-    said.includes('not been out of this bed'), true);
-set(p, 'myreque_2_quest', 60);     // ^m2_base
+check('Marius is in the room his wife talks about, and has been for two years', said.includes('not been out of this bed'), true);
+set(p, 'myreque_2_quest', 60); // ^m2_base
 said = talkTo('burgh_vilager_8');
-check('and Florin leaves the gate open in the daytime once the Myreque are in the cellar',
-    said.includes('gate open in the daytime'), true);
+check('and Florin leaves the gate open in the daytime once the Myreque are in the cellar', said.includes('gate open in the daytime'), true);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

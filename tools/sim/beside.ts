@@ -13,7 +13,12 @@ import { canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
-const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const DIRS: [number, number][] = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+];
 const names = process.argv.slice(2);
 if (!names.length) {
     console.log('usage: beside.ts <npc name> [<npc name> ...]');
@@ -25,16 +30,22 @@ function pocket(level: number, x: number, z: number, cap = 400) {
     while (q.length && seen.size < cap) {
         const [cx, cz] = q.shift()!;
         for (const [dx, dz] of DIRS) {
-            const k = (cx + dx) + ',' + (cz + dz);
+            const k = cx + dx + ',' + (cz + dz);
             if (seen.has(k) || !canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
-            seen.add(k); q.push([cx + dx, cz + dz]);
+            seen.add(k);
+            q.push([cx + dx, cz + dz]);
         }
     }
     return seen;
 }
 for (const nm of names) {
     let id = -1;
-    try { id = NpcType.getId(nm); } catch { console.log(nm + ': no such npc'); continue; }
+    try {
+        id = NpcType.getId(nm);
+    } catch {
+        console.log(nm + ': no such npc');
+        continue;
+    }
     let found = 0;
     for (const n of World.npcs) {
         if (!n || n.type !== id) continue;
@@ -42,7 +53,8 @@ for (const nm of names) {
         // the npc's own tile may be behind a counter, so the pocket is grown from each neighbour
         const beside: string[] = [];
         for (const [dx, dz] of DIRS) {
-            const x = n.x + dx, z = n.z + dz;
+            const x = n.x + dx,
+                z = n.z + dz;
             if (!DIRS.some(([bx, bz]) => canTravel(n.level, x - bx, z - bz, bx, bz, 1, 0, CollisionType.NORMAL))) continue;
             beside.push(`${x},${z} (pocket ${pocket(n.level, x, z).size})`);
         }

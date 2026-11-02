@@ -81,11 +81,16 @@ try {
         }
         if (type === 1) buf.pos += 3;
         if (type === 2) {
-            buf.g1(); buf.g1(); buf.g1(); buf.g1();
-            buf.g1(); buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
             for (let i = 0; i < 20; i++) {
                 if (buf.g1() === 1) {
-                    buf.g2(); buf.g2();
+                    buf.g2();
+                    buf.g2();
                     buf.gjstr();
                 }
             }
@@ -93,7 +98,9 @@ try {
         }
         if (type === 3) buf.g1();
         if (type === 4 || type === 1) {
-            buf.g1(); buf.g1(); buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
         }
         if (type === 4) {
             buf.gjstr();
@@ -101,7 +108,9 @@ try {
         }
         if (type === 1 || type === 3 || type === 4) buf.g4();
         if (type === 3 || type === 4) {
-            buf.g4(); buf.g4(); buf.g4();
+            buf.g4();
+            buf.g4();
+            buf.g4();
         }
         if (type === 5) {
             buf.gjstr();
@@ -112,12 +121,17 @@ try {
             if (buf.g1() !== 0) buf.g1();
             if (buf.g1() !== 0) buf.g1();
             if (buf.g1() !== 0) buf.g1();
-            buf.g2(); buf.g2(); buf.g2();
+            buf.g2();
+            buf.g2();
+            buf.g2();
         }
         if (type === 7) {
-            buf.g1(); buf.g1(); buf.g1();
+            buf.g1();
+            buf.g1();
+            buf.g1();
             buf.g4();
-            buf.g2(); buf.g2();
+            buf.g2();
+            buf.g2();
             buf.g1();
             for (let i = 0; i < 5; i++) buf.gjstr();
         }

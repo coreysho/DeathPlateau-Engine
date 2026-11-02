@@ -1,6 +1,7 @@
 import fs from 'fs';
 
 import Environment from '#/util/Environment.js';
+import { toSafeName } from '#/util/JString.js';
 import { printError, printInfo } from '#/util/Logger.js';
 
 // WHICH SITES THIS SERVER IS LISTED ON - configuration, not code, because the answer changes
@@ -37,8 +38,18 @@ export type VoteSite = {
     id: string;
     /** What the Vote clerk calls it. */
     name: string;
-    /** Where the player goes to vote. Shown in game. */
+    /** Where the player goes to vote with nobody's name in it. The fallback. */
     url: string;
+    /**
+     * The same page with the player's name in it, `{user}` marking where it goes. RuneTopic takes
+     * it as a path segment, `/vote/<server>/{user}`; RSPS List and RULOCUS take a query parameter.
+     *
+     * WITHOUT THIS, A VOTE CANNOT PAY ANYBODY. A toplist only tells us who voted if we told it
+     * first, so a callback for a nameless vote names nobody - or, on RuneTopic, names the
+     * placeholder it substitutes itself, which is how "Null" was credited two tickets on
+     * 2 November 2026. The vote still counts toward the ranking; it just cannot reach a ticket.
+     */
+    playerUrl?: string;
     /** Tickets one vote is worth. */
     tickets: number;
     /** How long before the same player can be paid for this site again. */
@@ -52,6 +63,14 @@ export type VoteSite = {
         userParam: string;
         /** Which parameter carries the site's own id for this vote, if it sends one. */
         refParam?: string;
+        /**
+         * Parameters that must arrive with these exact values or the vote is ignored.
+         *
+         * RSPS List sends voted=1 for a real vote and voted=0 for a failed or duplicated one, down
+         * the same callback - so without `{"voted": "1"}` a failed vote pays a ticket. A site that
+         * says nothing about success needs nothing here.
+         */
+        require?: Record<string, string>;
     };
     check?: {
         /** {user} and {key} are substituted. */
@@ -95,6 +114,12 @@ function faults(site: Partial<VoteSite>, index: number): string[] {
     if (typeof site.url !== 'string' || !/^https?:\/\//.test(site.url)) {
         out.push(`${at}.url must be the http(s) address a player votes at`);
     }
+    // A FAULT RATHER THAN A SHRUG. Falling back to the nameless url would be today's bug put
+    // back silently - every vote from in game counting for the ranking and paying nobody - and
+    // the only person who can fix a typo here is the one reading the boot log.
+    if (site.playerUrl !== undefined && (typeof site.playerUrl !== 'string' || !/^https?:\/\//.test(site.playerUrl) || !site.playerUrl.includes('{user}'))) {
+        out.push(`${at}.playerUrl must be the http(s) vote address with {user} where the player's name goes`);
+    }
     if (typeof site.tickets !== 'number' || !Number.isInteger(site.tickets) || site.tickets < 1) {
         out.push(`${at}.tickets must be a whole number of tickets, 1 or more`);
     }
@@ -112,6 +137,12 @@ function faults(site: Partial<VoteSite>, index: number): string[] {
     }
     if (site.callback && typeof site.callback.userParam !== 'string') {
         out.push(`${at}.callback.userParam must name the parameter the site puts the player's name in`);
+    }
+    if (site.callback?.require !== undefined) {
+        const bad = typeof site.callback.require !== 'object' || site.callback.require === null || Object.values(site.callback.require).some(v => typeof v !== 'string');
+        if (bad) {
+            out.push(`${at}.callback.require must be an object of parameter names to the exact string values required, e.g. {"voted": "1"}`);
+        }
     }
     return out;
 }
@@ -170,6 +201,12 @@ export default class VoteSites {
             if (full.check?.key) {
                 full.check = { ...full.check, key: resolveSecret(full.check.key, `sites[${i}].check.key`) };
             }
+            // A SITE THAT CALLS US AND CANNOT BE ASKED ANYTHING. There is nothing to go and ask it
+            // later, so the name has to be in the link the player clicked or that vote is anonymous
+            // for ever. Said at boot rather than discovered as votes that never pay.
+            if (full.callback && !full.check && !full.playerUrl) {
+                printError(`vote: ${full.id} reports by callback and has no playerUrl, so a vote from the in-game link cannot name the player and will pay nobody`);
+            }
             VoteSites.sites.push(full);
         }
 
@@ -202,5 +239,22 @@ export default class VoteSites {
 
     static cooldownMs(site: VoteSite): number {
         return Math.round(site.cooldownHours * 3600000);
+    }
+
+    /**
+     * The vote page for one player: `playerUrl` with their name in it, or the bare `url` where the
+     * site has no personal form.
+     *
+     * THE NAME GOES IN AS THE ACCOUNT'S OWN SAFE FORM, lowercase with underscores, because that is
+     * what has to come back: the callback is matched against the account table, so sending
+     * "Lord Fooby" and getting "Lord Fooby" back leaves the credit guessing between
+     * "lord fooby" and "lord_fooby". Encoded, because a name is going into a path segment on at
+     * least one site.
+     */
+    static urlFor(site: VoteSite, username: string): string {
+        if (!site.playerUrl) {
+            return site.url;
+        }
+        return site.playerUrl.replaceAll('{user}', encodeURIComponent(toSafeName(username)));
     }
 }

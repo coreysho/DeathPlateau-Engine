@@ -4,9 +4,7 @@ import ClientGameMessage from '#/network/game/client/ClientGameMessage.js';
 export default class EventAppletFocus extends ClientGameMessage {
     category = ClientGameProtCategory.CLIENT_EVENT;
 
-    constructor(
-        readonly focus: number
-    ) {
+    constructor(readonly focus: number) {
         super();
     }
 }

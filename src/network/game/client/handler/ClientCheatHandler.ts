@@ -128,6 +128,21 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             return true;
         }
 
+        if (cmd === 'forgetlogins') {
+            // custom (2026-11-02) - the saved logins on the login screen are server-issued tokens
+            // (LoginToken), so cancelling one is the server's job and not the client's. Handled
+            // before the staff session log below for the same reason ::changepassword is: it is a
+            // player's own account business, not a cheat anybody needs a record of.
+            //
+            // All of them, with no way to pick: a player reaching for this has lost track of where
+            // they are signed in, and "which of these four is the laptop I sold" is a question they
+            // cannot answer. Typing the password again is the cost, once per computer they keep.
+            if (!World.requestForgetLogins(player)) {
+                player.messageGame('Your last request is still being processed.');
+            }
+            return true;
+        }
+
         if (cmd === 'changepassword') {
             // custom (2026-09-27) - handled before the staff "Ran cheat" session log below, which would
             // otherwise write a moderator's passwords into the logs. Available to all players.

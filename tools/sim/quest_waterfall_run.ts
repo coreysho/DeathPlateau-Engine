@@ -33,7 +33,7 @@ const m: Manifest = {
     quest: 'WATERFALL QUEST',
     source: 'oldschool.runescape.wiki/w/Waterfall_Quest',
     stageVar: 'waterfall_quest',
-    done: 10,   // ^waterfall_complete
+    done: 10, // ^waterfall_complete
     start: [2523, 3497, 0],
     steps: [
         { note: 'two ropes, and six each of air, earth and water runes later on. The runes cannot be' },

@@ -96,7 +96,11 @@ console.log('== three kills give three different pieces, and the fourth may repe
     console.log('    four kills gave:', JSON.stringify(given));
     check('the first three are all different', new Set(given.slice(0, 3)).size, 3);
     check('and they are the three pieces', [...given.slice(0, 3)].sort(), [...PIECES].sort());
-    check('all three are in the log', PIECES.every(x => inLog(p, x)), true);
+    check(
+        'all three are in the log',
+        PIECES.every(x => inLog(p, x)),
+        true
+    );
     check('the fourth is a repeat, which is now allowed', given[3], '(repeat)');
 }
 
@@ -106,7 +110,7 @@ console.log('== and spending the pieces does not put them back in the pool');
     const p = player('bludgeon_join', 3250, 3250);
     H.clearInv(p);
     H.give(p, 'bludgeon_spine');
-    H.give(p, 'bludgeon_claw');                    // two of the three, and no axon
+    H.give(p, 'bludgeon_claw'); // two of the three, and no axon
     H.useHeldOn(p, 'bludgeon_spine', 'bludgeon_claw');
     check('two pieces are not enough', H.invCount(p, 'abyssal_bludgeon'), 0);
     check('and neither is consumed', H.invCount(p, 'bludgeon_spine'), 1);

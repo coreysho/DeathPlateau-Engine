@@ -31,7 +31,7 @@ const m: Manifest = {
     quest: "EADGAR'S RUSE",
     source: 'oldschool.runescape.wiki/w/Eadgar%27s_Ruse',
     stageVar: 'eadgar_quest',
-    done: 70,   // ^eadgar_complete
+    done: 70, // ^eadgar_complete
     start: [2899, 3425, 1],
     steps: [
         { note: 'requirements: Druidic Ritual, Troll Stronghold and 31 Herblore, all three checked,' },

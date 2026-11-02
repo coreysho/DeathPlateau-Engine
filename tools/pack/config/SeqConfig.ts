@@ -81,6 +81,14 @@ export function parseSeqConfig(key: string, value: string): ConfigValue | null |
         }
 
         return parsed;
+    } else if (key === 'crossskeleton') {
+        // which of the two animations survives when they stand on different skeletons
+        if (value === 'movement') {
+            return 0;
+        } else if (value === 'primary') {
+            return 1;
+        }
+        return null;
     } else if (key === 'walkmerge') {
         const parts = value.split(',');
 
@@ -208,6 +216,9 @@ export function packSeqConfigs(configs: Map<string, ConfigLine[]>): { client: Pa
                     client.p1(value as number);
                 } else if (key === 'duplicatebehaviour') {
                     client.p1(11);
+                    client.p1(value as number);
+                } else if (key === 'crossskeleton') {
+                    client.p1(13);
                     client.p1(value as number);
                 }
             }

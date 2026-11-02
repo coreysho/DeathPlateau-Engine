@@ -34,7 +34,7 @@ const m: Manifest = {
     done: 80,
     start: BERT,
     steps: [
-        { note: 'requirements: Thieving 17 for Sandy\'s pocket and Crafting 49 for the lantern lens.' },
+        { note: "requirements: Thieving 17 for Sandy's pocket and Crafting 49 for the lantern lens." },
         { note: 'Items: a beer, redberries, white berries, a lantern lens, two empty vials, five' },
         { note: 'earth runes, a bucket and about 150 coins.' },
         { setpos: BERT, why: "Bert's house by the Yanille sand pit" },

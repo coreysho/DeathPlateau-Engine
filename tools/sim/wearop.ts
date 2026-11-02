@@ -53,14 +53,18 @@ function settle(p: Player, n = 12) {
     }
     void p;
 }
-const mesSince = (p: Player, from: number) => H.mesgs.slice(from).filter(m => m.who === p.username).map(m => m.text);
+const mesSince = (p: Player, from: number) =>
+    H.mesgs
+        .slice(from)
+        .filter(m => m.who === p.username)
+        .map(m => m.text);
 /** Answer a p_choice menu with its option `pick` (1-based). */
 function pickMenu(p: Player, pick: number): boolean {
     for (let t = 0; t < 6; t++) {
         const s = p.activeScript;
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const iface = names.find((n: string) => n.startsWith(open + ':'))?.split(':')[0];
             return iface ? H.choose(p, `${iface}:com_${pick}`) : false;
         }
@@ -89,8 +93,16 @@ console.log('== the glory: Edgeville from the worn tab');
 {
     const p = player('wornglory');
     H.equip(p, { front: 'amulet_of_glory_4' });
-    check('glory(4) options', ObjType.get(ObjType.getId('amulet_of_glory_4')).wearop.filter(w => w), ['Edgeville', 'Karamja', 'Draynor Village', 'Al Kharid']);
-    check('uncharged glory has none', ObjType.get(ObjType.getId('amulet_of_glory')).wearop.filter(w => w), []);
+    check(
+        'glory(4) options',
+        ObjType.get(ObjType.getId('amulet_of_glory_4')).wearop.filter(w => w),
+        ['Edgeville', 'Karamja', 'Draynor Village', 'Al Kharid']
+    );
+    check(
+        'uncharged glory has none',
+        ObjType.get(ObjType.getId('amulet_of_glory')).wearop.filter(w => w),
+        []
+    );
     const from = H.mesgs.length;
     check('Edgeville accepted', wearop(p, 'front', 1), true);
     settle(p);
@@ -112,7 +124,11 @@ console.log('== refused');
 {
     const p = player('wornbad');
     H.equip(p, { front: 'amulet_of_glory_4', rhand: 'bronze_sword' });
-    check('bronze sword has no worn options', ObjType.get(ObjType.getId('bronze_sword')).wearop.filter(w => w), []);
+    check(
+        'bronze sword has no worn options',
+        ObjType.get(ObjType.getId('bronze_sword')).wearop.filter(w => w),
+        []
+    );
     check('op 1 on the sword', wearop(p, 'rhand', 1), false);
     check('op 5 on a glory (it has 4)', wearop(p, 'front', 5), false);
     check('op 0', wearop(p, 'front', 0), false);
@@ -157,7 +173,11 @@ console.log('== slayer ring: Teleport is the Rub menu');
     const from = H.mesgs.length;
     check('Check accepted', wearop(p, 'ring', 1), true);
     settle(p, 2);
-    check('Check says the task', mesSince(p, from).some(m => m.startsWith('You')), true);
+    check(
+        'Check says the task',
+        mesSince(p, from).some(m => m.startsWith('You')),
+        true
+    );
 }
 
 console.log('== checks and capes');
@@ -171,14 +191,22 @@ console.log('== checks and capes');
     from = H.mesgs.length;
     check('trident Check', wearop(p, 'rhand', 1), true);
     settle(p, 2);
-    check('  charges', mesSince(p, from).some(m => m.startsWith('Your trident has')), true);
+    check(
+        '  charges',
+        mesSince(p, from).some(m => m.startsWith('Your trident has')),
+        true
+    );
     check('strength cape Teleport', wearop(p, 'back', 1), true);
     settle(p);
-    check('  at the Warriors\' Guild', near(p, 2870, 3546, 3), true);
+    check("  at the Warriors' Guild", near(p, 2870, 3546, 3), true);
     check('  cape still worn', worn(p, 'back'), 'strength_cape');
 
     H.equip(p, { back: 'max_cape' });
-    check('max cape options', ObjType.get(ObjType.getId('max_cape')).wearop.filter(w => w), ["Warriors' Guild", 'Fishing Guild', 'Crafting Guild', 'Tele to POH', 'Spellbook', 'Features']);
+    check(
+        'max cape options',
+        ObjType.get(ObjType.getId('max_cape')).wearop.filter(w => w),
+        ["Warriors' Guild", 'Fishing Guild', 'Crafting Guild', 'Tele to POH', 'Spellbook', 'Features']
+    );
     check('max cape Crafting Guild', wearop(p, 'back', 3), true);
     settle(p);
     check('  at the Crafting Guild', near(p, 2933, 3284, 3), true);

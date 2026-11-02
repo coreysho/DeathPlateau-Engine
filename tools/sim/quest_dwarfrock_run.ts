@@ -17,7 +17,7 @@ const m: Manifest = {
     quest: 'BETWEEN A ROCK...',
     source: 'oldschool.runescape.wiki/w/Between_a_Rock...',
     stageVar: 'dwarfrock_quest',
-    done: 110,   // ^dwarfrock_complete
+    done: 110, // ^dwarfrock_complete
     start: [2825, 10168, 0],
     steps: [
         { note: 'wiki step 1: Dondakan, at the gold rock south of Keldagrim. He is placed as a' },

@@ -25,12 +25,17 @@ for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).va
 console.log(`${found.length} x ${want}`);
 for (const l of found) {
     let near = false;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ]) {
         if (A.reachLoc(l.level, l.x + dx, l.z + dz, want, l.x, l.z)) near = true;
     }
     const walk = A.reachLoc(from[0], from[1], from[2], want, l.x, l.z);
-    console.log(`  ${l.level},${l.x},${l.z} shape ${l.shape} angle ${l.angle}  ` +
-        `${near ? 'clickable from beside it' : 'NOT clickable'}; ` +
-        `${l.level === from[0] && walk ? 'walkable from ' + from.join(',') : 'no walk route from ' + from.join(',')}`);
+    console.log(
+        `  ${l.level},${l.x},${l.z} shape ${l.shape} angle ${l.angle}  ` + `${near ? 'clickable from beside it' : 'NOT clickable'}; ` + `${l.level === from[0] && walk ? 'walkable from ' + from.join(',') : 'no walk route from ' + from.join(',')}`
+    );
 }
 process.exit(0);

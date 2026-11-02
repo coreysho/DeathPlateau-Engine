@@ -52,7 +52,12 @@ const DOORS: [string, number, number, number][] = [
 const key = (x: number, z: number) => x * 20000 + z;
 const region = new Map<number, number>();
 let regions = 0;
-const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+const dirs = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0]
+];
 for (let sx = BOX[0]; sx <= BOX[2]; sx++) {
     for (let sz = BOX[1]; sz <= BOX[3]; sz++) {
         if (region.has(key(sx, sz))) continue;

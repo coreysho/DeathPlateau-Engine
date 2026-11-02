@@ -99,7 +99,7 @@ const DebugOps: CommandHandlers = {
 
         const fieldTable = (packed >> 12) & 0xffff;
         const fieldColumn = (packed >> 4) & 0x7f;
-        const tupleIndex = (packed & 0xF) - 1;
+        const tupleIndex = (packed & 0xf) - 1;
 
         const rowType: DbRowType = check(row, DbRowTypeValid);
         const tableType: DbTableType = check(fieldTable, DbTableTypeValid);
@@ -174,7 +174,7 @@ const DebugOps: CommandHandlers = {
 
     [ScriptOpcode.DB_GETROWTABLE]: state => {
         state.pushInt(check(state.popInt(), DbRowTypeValid).tableId);
-    },
+    }
 };
 
 export default DebugOps;

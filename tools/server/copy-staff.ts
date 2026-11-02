@@ -61,7 +61,7 @@ if (refreshSaves && !savesFrom) {
 }
 const savesTo = `data/players/${Environment.NODE_PROFILE}`;
 if (savesFrom && path.resolve(savesFrom) === path.resolve(savesTo)) {
-    fail('--saves is this world\'s own save folder');
+    fail("--saves is this world's own save folder");
 }
 if (Environment.DB_BACKEND !== 'sqlite') {
     fail(`DB_BACKEND is ${Environment.DB_BACKEND} - this copies between sqlite databases only`);
@@ -73,7 +73,7 @@ if (!fs.existsSync('db.sqlite')) {
     fail('no db.sqlite here - run it in the engine directory, after npm run sqlite:migrate');
 }
 if (path.resolve(source) === path.resolve('db.sqlite')) {
-    fail('the source is this world\'s own database');
+    fail("the source is this world's own database");
 }
 
 type Row = {

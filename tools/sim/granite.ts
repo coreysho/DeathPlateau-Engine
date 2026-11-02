@@ -34,7 +34,7 @@ const param = (objName: string, paramName: string): unknown => {
 
 // ---------------------------------------------------------------------------------------------
 // Both records are the OSRS cache's own (objs 21742 and 21646), read by fillosrsstats.py.
-console.log('== the hammer is the cache\'s hammer');
+console.log("== the hammer is the cache's hammer");
 {
     check('exists', ObjType.getId('granite_hammer') !== -1, true);
     check('crush attack', param('granite_hammer', 'crushattack'), 57);
@@ -50,7 +50,7 @@ console.log('== the hammer is the cache\'s hammer');
     check('tradeable', o.tradeable, true);
 }
 
-console.log('== and the longsword is the cache\'s longsword');
+console.log("== and the longsword is the cache's longsword");
 {
     check('exists', ObjType.getId('granite_longsword') !== -1, true);
     check('stab attack', param('granite_longsword', 'stabattack'), 56);
@@ -68,7 +68,8 @@ console.log('== and the longsword is the cache\'s longsword');
 // ---------------------------------------------------------------------------------------------
 console.log('== 50 Attack and 50 Strength, and both halves are checked, for both weapons');
 {
-    const ATTACK = 0, STRENGTH = 2;
+    const ATTACK = 0,
+        STRENGTH = 2;
     // a1lib's player() maxes every stat, so each of these is a maxed player turned back DOWN -
     // which is also the only way to be sure the gate reads the base level and not a boosted one.
     const wields = (weapon: string, name: string, att: number, str: number): boolean => {
@@ -79,7 +80,7 @@ console.log('== 50 Attack and 50 Strength, and both halves are checked, for both
         H.give(p, weapon);
         H.opheld(p, weapon, 2);
         H.tick(1);
-        return H.invCount(p, weapon) === 0;        // it left the pack, so it went on
+        return H.invCount(p, weapon) === 0; // it left the pack, so it went on
     };
     for (const w of ['granite_hammer', 'granite_longsword']) {
         check(`${w}: 49 Attack is refused`, wields(w, `${w}_a49`, 49, 99), false);
@@ -136,7 +137,7 @@ console.log('== the five lands whether the roll connects or not');
         } finally {
             pin(null);
         }
-        H.tick(3);                                  // npc_queue(2, damage, 0) lands on a later tick
+        H.tick(3); // npc_queue(2, damage, 0) lands on a later tick
         return before - npc.levels[HITPOINTS];
     };
 
@@ -165,8 +166,16 @@ console.log('== and the two drops are on the gargoyle, at the rates Old School g
     const rows = fs.readFileSync(`${src}/scripts/drop_tables/configs/npc_drops.dbrow`, 'ascii').split(/\r?\n/);
     const i = rows.indexOf('[npc_drops_slayer_gargoyle]');
     const block = rows.slice(i, rows.indexOf('', i + 60) + 1);
-    check('the browser lists the hammer', block.some(l => l.startsWith('data=drop,granite_hammer,')), true);
-    check('and the longsword', block.some(l => l.startsWith('data=drop,granite_longsword,')), true);
+    check(
+        'the browser lists the hammer',
+        block.some(l => l.startsWith('data=drop,granite_hammer,')),
+        true
+    );
+    check(
+        'and the longsword',
+        block.some(l => l.startsWith('data=drop,granite_longsword,')),
+        true
+    );
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);

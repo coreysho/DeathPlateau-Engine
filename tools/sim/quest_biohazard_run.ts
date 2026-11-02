@@ -183,11 +183,7 @@ const m: Manifest = {
         { loc: 'guidordoor', at: GUIDOR_DOOR, want: 'allows you to go in', why: 'and his wife lets a priest into the bedroom' },
         {
             talk: 'guidor',
-            picks: [
-                "I've come to ask your assistance in stopping a plague.",
-                "I've been sent by your old pupil Elena.",
-                'So what does that mean exactly?'
-            ],
+            picks: ["I've come to ask your assistance in stopping a plague.", "I've been sent by your old pupil Elena.", 'So what does that mean exactly?'],
             want: 'no Plague',
             why: 'and the touch paper stays white'
         },

@@ -2,6 +2,7 @@ import fs from 'fs';
 import { parentPort } from 'worker_threads';
 
 import { LoginClient } from '#/server/login/LoginClient.js';
+import LoginToken from '#/server/login/LoginToken.js';
 import { db, toDbDate } from '#/db/query.js';
 import * as bcrypt from 'bcrypt-ts';
 import Environment from '#/util/Environment.js';
@@ -62,10 +63,32 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
         case 'player_login': {
             const { socket, remoteAddress, username, password, uid, lowMemory, reconnecting, hasSave } = msg;
 
+            // custom (2026-11-02) - a saved login. `token` is what the client keeps instead of the
+            // player's password, and is the whole of what it sends; `remember` is a password login
+            // asking for one to keep. See LoginToken.
+            const token: string = typeof msg.token === 'string' ? msg.token : '';
+            const remember: boolean = msg.remember === true;
+            const saved = token.length > 0;
+            // Whether the client is new enough to carry those two fields at all, as World read it
+            // off the revision. Only used to say so in the log, where the difference between "did
+            // not ask" and "could not ask" is the whole diagnosis.
+            const sendsSavedLogin: boolean = msg.sendsToken === true;
+
             if (Environment.LOGIN_SERVER) {
+                // custom (2026-11-02) - the saved login goes with it. This branch used to refuse
+                // one outright, on the reasoning that a login server owns accounts and has never
+                // heard of a token; but it reads the same database the token store does, so it is
+                // the authority for both and the right place to decide. Whichever of the two the
+                // client sent, it is proved there and a new one comes back in the response - which
+                // is spread into the message to World below, carrying `token` with it exactly as
+                // the local path does.
+                //
+                // THAT REFUSAL WAS INVISIBLE, which is the worse half. It returned before any of
+                // the three log lines, so on the live world - LOGIN_SERVER=true - a login asking
+                // to be remembered read as a login that asked for nothing at all.
                 trackLoginAttempts.inc();
                 const stopTimer = trackLoginTime.startTimer();
-                const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave);
+                const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave, remember, token, sendsSavedLogin);
 
                 // A staff-only world (NODE_MIN_STAFF_LEVEL). Only a login the login server let in (0, 2, 4)
                 // is refused here - it has marked the account online on this world by now, so it is
@@ -102,6 +125,14 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                     break;
                 }
 
+                // A token can only ever match an account that already exists, so a name nobody
+                // has registered gets the same refusal as a wrong one. Registering from a saved
+                // login would mean a token minted anywhere could make its own account.
+                if (!account && saved) {
+                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 1, save: null, account_id: -1, members: false });
+                    break;
+                }
+
                 if (!account) {
                     try {
                         await db
@@ -125,7 +156,13 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 // custom (2026-09-27) - this path used to load any existing account and its save without
                 // ever looking at the password: anyone could log in as anyone by typing their name.
                 // Same checks and replies as LoginServer's player_login.
-                if (!account || !(await bcrypt.compare(password.toLowerCase(), account.password))) {
+                //
+                // custom (2026-11-02) - and a saved login proves itself with its token instead. One
+                // of the two, never either: a client that sends a token sends no password with it,
+                // and a token that is not this account's is refused exactly as a wrong password is,
+                // with nothing in the reply to say which of the two was wrong.
+                const proven = account ? (saved ? await LoginToken.accepts(account.id, token) : await bcrypt.compare(password.toLowerCase(), account.password)) : false;
+                if (!account || !proven) {
                     parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 1, save: null, account_id: -1, members: false });
                     break;
                 }
@@ -149,6 +186,30 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
 
                 const accountId = account ? account.id : 1;
 
+                // custom (2026-11-02) - the client asked to save this login and has just proved it
+                // knows the password, so it gets a token to keep in place of one. Not on a token
+                // login: that client already has one, and accepts() has just pushed its month out
+                // from today. A failure here is logged and dropped, because a login that works is
+                // worth more than a login that saves and the player can ask again.
+                let issued: string | undefined;
+                if (remember && !saved) {
+                    try {
+                        issued = await LoginToken.issue(accountId, typeof uid === 'number' ? uid : null, remoteAddress ?? null);
+                        console.log(`[Login]: issued a saved login for ${username}`);
+                    } catch (err) {
+                        console.error(`[Login]: could not save the login for ${username}: ${err instanceof Error ? err.message : err}`);
+                    }
+                } else if (saved) {
+                    console.log(`[Login]: ${username} signed in with a saved login`);
+                }
+
+                // The one that cost an evening of reading code: a login that asked for nothing.
+                // From here it is indistinguishable from a client that cannot ask, so say which it
+                // was - the revision gate is what decides whether those fields were even read.
+                if (!remember && !saved) {
+                    console.log(`[Login]: ${username} asked for no saved login (client sends them: ${sendsSavedLogin})`);
+                }
+
                 if (!fs.existsSync(`data/players/${profile}`)) {
                     fs.mkdirSync(`data/players/${profile}`, { recursive: true });
                 }
@@ -165,7 +226,8 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         muted_until: account.muted_until,
                         save: null,
                         account_id: accountId,
-                        members: Environment.NODE_MEMBERS
+                        members: Environment.NODE_MEMBERS,
+                        token: issued
                     });
                 } else {
                     parentPort.postMessage({
@@ -179,7 +241,8 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         muted_until: account.muted_until,
                         save: fs.readFileSync(`data/players/${profile}/${username}.sav`),
                         account_id: accountId,
-                        members: Environment.NODE_MEMBERS
+                        members: Environment.NODE_MEMBERS,
+                        token: issued
                     });
                 }
             }
@@ -277,12 +340,35 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 } else {
                     const hash = await bcrypt.hash(newPassword.toLowerCase(), 10);
                     await db.updateTable('account').set({ password: hash }).where('id', '=', account.id).execute();
+                    // custom (2026-11-02) - and every saved login goes with it. Somebody changing
+                    // their password because another person might know it has said everything about
+                    // what should happen to the logins saved under the old one.
+                    await LoginToken.revokeAll(account.id);
                     result = 'ok';
                 }
             } catch (err) {
                 console.error(err);
             }
             parentPort.postMessage({ type: 'player_change_password', username, result });
+            break;
+        }
+        case 'player_forget_logins': {
+            // custom (2026-11-02) - ::forgetlogins. Every saved login for this account, cancelled,
+            // including the one on the computer it was typed from - which is the point: a player
+            // who left a client signed in somewhere else has no other way to reach it.
+            const { username } = msg;
+            let count = 0;
+            let ok = false;
+            try {
+                const account = await db.selectFrom('account').select(['id']).where('username', '=', username).executeTakeFirst();
+                if (account) {
+                    count = await LoginToken.revokeAll(account.id);
+                    ok = true;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            parentPort.postMessage({ type: 'player_forget_logins', username, count, ok });
             break;
         }
         case 'world_heartbeat': {

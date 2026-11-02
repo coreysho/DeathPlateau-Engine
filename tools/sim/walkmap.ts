@@ -48,7 +48,12 @@ for (const spec of boxes) {
         }
     }
     const open = (x: number, z: number) =>
-        [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+        [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ].some(([dx, dz]) => canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
     console.log('');
     console.log(`=== L${level}  ${x0},${z0} .. ${x1},${z1}`);
     let hdr = '      ';

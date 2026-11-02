@@ -1,0 +1,65 @@
+# The sims that were already failing when the nightly job was switched on.
+#
+# .github/workflows/sims.yml goes red only for a sim that fails and is NOT listed here, so this
+# file is what makes the job readable rather than red every night. It is a record of a debt, not
+# a list of things that are fine. The job also reports any sim here that starts passing, so the
+# entry can come off - otherwise the list rots into an excuse.
+#
+# CI IS THE AUTHORITY, NOT A LAPTOP. This list was first built from a local run and the first
+# CI run disagreed with it in both directions: fourteen entries passed on a runner and seven
+# sims that pass locally failed on one. Most of that was a content checkout twenty-three
+# commits stale - marksofgrace was listed here as wanting a varp that "exists nowhere in the
+# content", and the varp was in rooftop.varp all along. The list now says what CI saw.
+#
+# HOW IT WAS MEASURED. All 303 sims that exit non-zero on failure were run (2.8 hours), then
+# every failure was run AGAIN one at a time. That second pass matters: 48 of the 85 that failed
+# in the parallel run passed when run alone, because four shards were sharing the engine's
+# SQLite files under data/ and because '../content' pointed at an empty directory skeleton on
+# the machine doing the measuring. Only the 37 that failed both times are here.
+#
+# So the real state is 266 of 303 passing.
+
+# ---- CHECKS THAT ACTUALLY FAIL. The interesting ones. A count means the sim ran and disagreed
+# with the engine; a message means it could not get far enough to try.
+audit0               # 108 ok, 1 FAIL
+audit4               # 39 ok, 8 FAIL
+audit5               # Error: unexpected menu: multi2
+audit6               # Error: unexpected menu: multi3
+audit7               # Error: not carrying deal_blindweed
+fletching            # 1 ok, 10 FAIL
+gwdstaves            # Error: menus not reached: 2
+lunar                # no option "Can we sail to Lunar Isle" in multi2
+myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
+slayerbuilt          # 24 ok, 1 FAIL
+
+# ---- SIMS AHEAD OF THE CONTENT. These read configuration that is on no branch here, so they
+# cannot pass until the content catches up - or until somebody decides they were abandoned.
+randomevents         # TypeError: Cannot read properties of null (reading 'x')
+
+# ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
+blastfurnace
+chatchars
+quest_ball_run
+quest_garden_run
+quest_hundred_run
+quest_swansong_run
+securityfixes
+staffrules
+
+# ---- LONGER THAN THE 180 SECOND CAP. Not known to be broken - known to be slower than the job
+# is willing to wait. If one of these is worth running, it needs its own timeout rather than a
+# bigger cap for all 303.
+audit1
+dpick
+gwdanims
+gwdguards
+
+# ---- FOUND BY THE FIRST CI RUN, not by the machine that built this list. Each of these passes
+# here and fails on a GitHub runner; none of them has been diagnosed.
+brutalarrows
+changepassword
+mmaggro
+quest_druidspirit_run
+quest_ikov_run
+quest_myreque2_run
+quest_rag_run

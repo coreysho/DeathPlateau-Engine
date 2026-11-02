@@ -32,7 +32,7 @@ class Wave {
                 if (crcs.get(crc)) {
                     printWarning(`${file} has CRC collision with ${crcs.get(crc)}`);
                 }
-            
+
                 crcs.set(crc, path.basename(file));
             }
         }
@@ -229,7 +229,7 @@ class Filter {
     unpack(buf: Packet, envelope: Envelope) {
         const count = buf.g1();
         this.pairs[0] = count >> 4;
-        this.pairs[1] = count & 0xF;
+        this.pairs[1] = count & 0xf;
 
         if (count !== 0) {
             this.unities[0] = buf.g2();
@@ -258,7 +258,7 @@ class Filter {
 
             for (let direction = 0; direction < 2; direction++) {
                 for (let pair = 0; pair < this.pairs[direction]; pair++) {
-                    if ((migration & (1 << (direction * 4) << pair)) !== 0) {
+                    if ((migration & ((1 << (direction * 4)) << pair)) !== 0) {
                         this.frequencies[direction][1][pair] = buf.g2();
                         this.ranges[direction][1][pair] = buf.g2();
                     } else {

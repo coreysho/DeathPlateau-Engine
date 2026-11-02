@@ -41,7 +41,14 @@ function talk(p: any, npcName: string, picks: number[], show = true): string[] {
     let started = false;
     // Stand next to the npc and click Talk-to. A wandering npc can leave the chosen tile behind a
     // counter or wall, so try each side until the dialogue opens.
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [-1, -1]
+    ]) {
         p.teleport(npc.x + dx, npc.z + dz, npc.level);
         H.tick(1);
         H.opNpc(p, npc, 1);
@@ -58,7 +65,7 @@ function talk(p: any, npcName: string, picks: number[], show = true): string[] {
         started = true;
         // A menu is the multiN chat interface; any other chat page is a click-to-continue.
         const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-        const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+        const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
         const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
         if (multi) {
             const pick = picks.shift();

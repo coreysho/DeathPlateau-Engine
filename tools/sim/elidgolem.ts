@@ -10,9 +10,13 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 
-const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-const standable = (l: number, x: number, z: number) =>
-    DIRS.some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+const DIRS: [number, number][] = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+];
+const standable = (l: number, x: number, z: number) => DIRS.some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
 
 const spots: [string, number, number][] = [
     ['grey old 3375,9547', 3375, 9547],

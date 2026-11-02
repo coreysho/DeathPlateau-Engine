@@ -5,14 +5,14 @@ import fs from 'fs';
 type Synth = {
     id: number;
     name: string;
-}
+};
 
 type SynthDirectory = {
     name: string;
     parentDirectory: string | null;
     synths: Synth[];
     childDirectories: SynthDirectory[];
-}
+};
 
 const lookup = new Map<string, string>();
 function scanDirectory(dir: SynthDirectory, fullPath: string = '') {

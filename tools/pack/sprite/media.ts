@@ -18,7 +18,7 @@ export async function packClientMedia(cache: FileStream) {
     sprites.sort((a, b) => {
         const aExists = fileExists(`${Environment.BUILD_SRC_DIR}/sprites/meta/${path.basename(a, path.extname(a))}.opt`);
         const bExists = fileExists(`${Environment.BUILD_SRC_DIR}/sprites/meta/${path.basename(b, path.extname(b))}.opt`);
-        return aExists === bExists ? 0 : (aExists && !bExists ? 1 : -1);
+        return aExists === bExists ? 0 : aExists && !bExists ? 1 : -1;
     });
 
     const all = new Map();
@@ -26,7 +26,7 @@ export async function packClientMedia(cache: FileStream) {
         const safeName = path.basename(name, path.extname(name));
         all.set(safeName, await convertImage(index, `${Environment.BUILD_SRC_DIR}/sprites`, safeName));
     }
-    
+
     const media = Jagfile.new();
     media.write('index.dat', index);
     for (const [name, sprite] of all) {

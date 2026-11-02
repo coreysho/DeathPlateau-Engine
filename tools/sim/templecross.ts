@@ -44,7 +44,7 @@ function settle(p: Player, picks: number[] = [], max = 200) {
         if (s && s.execution === ScriptState.PAUSEBUTTON) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
-            const open = p.modalChat === -1 ? '' : Component.get(p.modalChat).comName ?? '';
+            const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -106,9 +106,9 @@ console.log('WHAT HAPPENS WHERE TWO BEAMS CROSS');
 // each block is the cache's own numbering, 1 red to 7 white.
 proc('[proc,m2_dark]');
 check('a crossing starts dark', cross('3_14'), 0);
-proc('[proc,m2_cross_3_14]', [0, 1]);              // north-south, red
+proc('[proc,m2_cross_3_14]', [0, 1]); // north-south, red
 check('a red beam north to south: state 1', cross('3_14'), 1);
-const out = proc('[proc,m2_cross_3_14]', [7, 5]);   // east-west, blue
+const out = proc('[proc,m2_cross_3_14]', [7, 5]); // east-west, blue
 check('a blue beam east to west across it: CROSSED, and 21 + magenta is 27', cross('3_14'), 27);
 check('  and the beam carries magenta out of the crossing', out[0], 6);
 proc('[proc,m2_dark]');
@@ -128,9 +128,9 @@ const putMirror = (lx: number, lz: number, lvl: number, name: string, turns: num
     useOn('mourning_mirror', ...T(lx, lz), name);
     for (let i = 0; i < turns; i++) useOn('mourning_mirror', ...T(lx, lz), name);
 };
-putMirror(59, 5, 2, 'mourning_temple_pillar_3_16', 0);     // south -> west, along the top floor
+putMirror(59, 5, 2, 'mourning_temple_pillar_3_16', 0); // south -> west, along the top floor
 check('the top-floor corridor is lit white', seg('3_15_16'), 7);
-putMirror(4, 5, 2, 'mourning_temple_pillar_3_13', 1);      // west -> north
+putMirror(4, 5, 2, 'mourning_temple_pillar_3_13', 1); // west -> north
 check('and the corridor from room 15 to room 13 runs over the crossing at room 14', seg('3_13_15'), 7);
 check('  which now draws an east-west beam in white: 7 + 7 is 14', cross('3_14'), 14);
 
@@ -157,14 +157,12 @@ p.teleport(...T(60, 5), 1);
 H.tick(1);
 opLoc(...T(61, 5), 'mourning_temple_light_parts_2_closed');
 opLoc(...T(61, 5), 'mourning_temple_light_parts_2_open');
-check('the chest behind the blue door: the red crystal AND the first fractured one',
-    [H.invCount(p, 'mourning_crystal_red'), H.invCount(p, 'mourning_fractured_crystal_1')], [1, 1]);
+check('the chest behind the blue door: the red crystal AND the first fractured one', [H.invCount(p, 'mourning_crystal_red'), H.invCount(p, 'mourning_fractured_crystal_1')], [1, 1]);
 p.teleport(...T(60, 57), 1);
 H.tick(1);
 opLoc(...T(61, 57), 'mourning_temple_light_parts_3_closed');
 opLoc(...T(61, 57), 'mourning_temple_light_parts_3_open');
-check('the chest behind the magenta door: the second fractured crystal',
-    H.invCount(p, 'mourning_fractured_crystal_2'), 1);
+check('the chest behind the magenta door: the second fractured crystal', H.invCount(p, 'mourning_fractured_crystal_2'), 1);
 
 // ------------------------------------------------------------------ and magenta opens its door
 console.log('');

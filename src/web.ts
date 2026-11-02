@@ -173,8 +173,20 @@ const WEB_CLIENT_HEIGHT = 503;
 // The title bar is 20 pixels here and 30 in the browser this was reported from, because its height
 // comes from CheerpJ's own CSS and that follows the reader's font. A constant was wrong twice. So
 // the page starts with far more room than any title bar could need - the window packs against
-// THAT, which is what matters, because it only packs once - and then measures the bar it actually
-// got and trims the display to exactly the client plus that bar.
+// THAT, which is what matters, because it only packs once - and then finds where the game actually
+// ended up inside that room and slides the display so it lands in the hole.
+//
+// AND A THIRD TIME, BY NAME (2026-11-02). The sliding used to look for CheerpJ's title bar by its
+// CSS class, '.cjWindow .cjTitleBar'. CheerpJ 4.3 has no such element - the whole runtime bundle
+// contains no cjWindow and no cjTitleBar, only cjStatus, cjBordered and cjResizer - so the selector
+// returned null, the slide never ran, and the display sat 160 pixels taller than the hole it is
+// seen through. AWT centres the game in the room it was given, which put 80 pixels of nothing above
+// the client and took 80 off the bottom: the reported "web client is still cutting off the bottom".
+//
+// So nothing is found by name any more. The game is a CANVAS of known size, and the page measures
+// where that canvas is and slides the display by exactly that much. That is true whether the
+// runtime draws a title bar, draws none, top-aligns the window or centres it - which is the point,
+// because the answer has now changed twice under us.
 const WEB_CLIENT_ROOM = 160;
 
 const LAUNCHER_URL = 'https://github.com/coreysho/DeathPlateau-Client/releases/latest/download/Death-Plateau-Launcher.jar';
@@ -305,31 +317,57 @@ const natives = {
 
 const display = document.getElementById('display');
 
-// THE DISPLAY, ONCE THERE IS A WINDOW TO MEASURE. Shrinking it before the client has packed its
-// window would shrink the window with it - that is how the bottom row of tabs went missing - so
-// this only ever runs once a title bar exists, and only sets the one height that fits: the client
-// plus that bar. The negative margin then slides the bar up out of #screen, which is the client's
-// size exactly. CheerpJ reads mouse positions off the canvas's own rectangle, so the game is
-// clicked where it is drawn, and a click at the top left of the page arrives as 0,0 in the client.
-let cropped = 0;
+// THE DISPLAY, ONCE THERE IS A GAME TO MEASURE. The display is created taller than the client on
+// purpose so that whatever chrome the runtime wants has room, and the window packs against THAT -
+// shrinking it first would shrink the window with it, which is how the bottom row of tabs went
+// missing in the first place. What this does is find where the game actually landed inside that
+// room and slide the whole display by exactly that much, so the game's top-left corner sits in the
+// top-left of #screen.
+//
+// IT FINDS THE GAME BY ITS SIZE, NOT BY A CLASS NAME. The previous version looked for
+// '.cjWindow .cjTitleBar'; CheerpJ 4.3 has no such element and the slide silently never ran. A
+// canvas of the client's own dimensions is what the game IS, and that cannot be renamed.
+//
+// CheerpJ reads mouse positions off the canvas's own rectangle, so moving it moves the clicks with
+// it and a click at the top left of the page still arrives as 0,0 in the client.
+let slidX = -1;
+let slidY = -1;
+let looked = 0;
+function gameCanvas() {
+    const canvases = display.getElementsByTagName('canvas');
+    for (let i = 0; i < canvases.length; i++) {
+        const r = canvases[i].getBoundingClientRect();
+        // Within a pixel of the client's own size: the game surface, not a cursor or an overlay.
+        if (Math.abs(r.width - ${WEB_CLIENT_WIDTH}) <= 2 && Math.abs(r.height - ${WEB_CLIENT_HEIGHT}) <= 2) {
+            return canvases[i];
+        }
+    }
+    return null;
+}
 function fitWindow() {
-    const bar = display.querySelector('.cjWindow .cjTitleBar');
-    if (bar === null) {
+    const canvas = gameCanvas();
+    if (canvas === null) {
+        // NEVER LEAVE THE BOTTOM HIDDEN. If the game cannot be found at all - a runtime that draws
+        // it some other way, a size we did not expect - then showing the chrome is wrong but
+        // survivable, and hiding the chat tabs is not. After ten seconds of looking, open the hole
+        // to the full height of the display so nothing is cut off.
+        if (++looked === 10) {
+            document.getElementById('screen').style.height = (${WEB_CLIENT_HEIGHT + WEB_CLIENT_ROOM}) + 'px';
+        }
         return;
     }
-    const height = Math.round(bar.getBoundingClientRect().height);
-    // Nothing, or something absurd: leave the generous display alone rather than crop by a number
-    // that would take the top off the game.
-    if (height <= 0 || height > 64 || height === cropped) {
+    const d = display.getBoundingClientRect();
+    const r = canvas.getBoundingClientRect();
+    const x = Math.round(r.left - d.left);
+    const y = Math.round(r.top - d.top);
+    if (x === slidX && y === slidY) {
         return;
     }
-    cropped = height;
-    display.style.height = (${WEB_CLIENT_HEIGHT} + height) + 'px';
-    const inner = document.getElementById('cheerpjDisplay');
-    if (inner !== null) {
-        inner.style.height = (${WEB_CLIENT_HEIGHT} + height) + 'px';
-    }
-    display.style.marginTop = '-' + height + 'px';
+    slidX = x;
+    slidY = y;
+    document.getElementById('screen').style.height = ${WEB_CLIENT_HEIGHT} + 'px';
+    display.style.marginTop = -y + 'px';
+    display.style.marginLeft = -x + 'px';
 }
 new MutationObserver(fitWindow).observe(display, { childList: true, subtree: true });
 setInterval(fitWindow, 1000);

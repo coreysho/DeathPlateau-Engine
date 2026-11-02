@@ -89,11 +89,12 @@ for (const e of EVENTS) {
 // square out there with locs in it is a room somebody built; naming the three commonest locs is
 // usually enough to recognise which one.
 console.log('\n== off-world squares with scenery in them (z >= 4096), three commonest locs each');
-const rows = [...locsBySquare.entries()]
-    .filter(([k]) => Number(k.split('_')[1]) >= 64)
-    .sort((a, b) => a[0].localeCompare(b[0]));
+const rows = [...locsBySquare.entries()].filter(([k]) => Number(k.split('_')[1]) >= 64).sort((a, b) => a[0].localeCompare(b[0]));
 for (const [key, bag] of rows) {
-    const top = [...bag].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, c]) => `${n} x${c}`);
+    const top = [...bag]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([n, c]) => `${n} x${c}`);
     const [sx, sz] = key.split('_').map(Number);
     console.log(`   ${key} (${sx * 64}-${sx * 64 + 63}, ${sz * 64}-${sz * 64 + 63})  ${[...bag.values()].reduce((a, b) => a + b, 0)} locs: ${top.join(', ')}`);
 }

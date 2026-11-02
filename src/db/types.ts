@@ -21,6 +21,16 @@ export type account_login = {
     logged_out: Generated<number>;
     logout_time: string | null;
 };
+export type account_token = {
+    id: Generated<number>;
+    account_id: number;
+    token_hash: string;
+    created: Generated<string>;
+    last_used: Generated<string>;
+    expires: string;
+    uid: number | null;
+    created_ip: string | null;
+};
 export type friendlist = {
     account_id: number;
     friend_username: string;
@@ -114,6 +124,7 @@ export type session_wealth = {
 export type DB = {
     account: account;
     account_login: account_login;
+    account_token: account_token;
     friendlist: friendlist;
     hiscore: hiscore;
     hiscore_large: hiscore_large;

@@ -31,7 +31,7 @@ const m: Manifest = {
     quest: 'FORGETTABLE TALE OF A DRUNKEN DWARF',
     source: 'oldschool.runescape.wiki/w/Forgettable_Tale...',
     stageVar: 'forget_quest',
-    done: 70,   // ^forget_complete
+    done: 70, // ^forget_complete
     start: [2828, 10205, 1],
     steps: [
         { note: 'requirements: The Giant Dwarf, which was checked, and Fishing Contest, which was' },

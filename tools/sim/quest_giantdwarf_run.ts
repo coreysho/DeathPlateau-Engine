@@ -15,7 +15,7 @@ const m: Manifest = {
     quest: 'THE GIANT DWARF',
     source: 'oldschool.runescape.wiki/w/The_Giant_Dwarf',
     stageVar: 'giantdwarf_quest',
-    done: 60,   // ^gd_complete
+    done: 60, // ^gd_complete
     start: [2966, 9811, 0],
     steps: [
         { note: 'wiki step 1: Hammerspike Stoutbeard, in the tunnels between the dwarven mine and' },

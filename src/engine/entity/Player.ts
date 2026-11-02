@@ -55,6 +55,7 @@ import MidiJingle from '#/network/game/server/model/MidiJingle.js';
 import MidiSong from '#/network/game/server/model/MidiSong.js';
 import ResetAnims from '#/network/game/server/model/ResetAnims.js';
 import ResetClientVarCache from '#/network/game/server/model/ResetClientVarCache.js';
+import SetLoginToken from '#/network/game/server/model/SetLoginToken.js';
 import TutOpen from '#/network/game/server/model/TutOpen.js';
 import UnsetMapFlag from '#/network/game/server/model/UnsetMapFlag.js';
 import UpdateInvStopTransmit from '#/network/game/server/model/UpdateInvStopTransmit.js';
@@ -416,6 +417,11 @@ export default class Player extends PathingEntity {
     members: boolean = true;
     messageCount: number = 0;
 
+    // custom (2026-11-02) - a saved-login token this login minted, waiting to be handed to the
+    // client. Set by World.onLoginMessage and cleared the moment it is written: it belongs to the
+    // login, not to the player, and nothing saves it anywhere on this side.
+    loginToken: string | null = null;
+
     socialProtect: boolean = false; // social packet spam protection
     reportAbuseProtect: boolean = false; // social packet spam protection
 
@@ -532,6 +538,13 @@ export default class Player extends PathingEntity {
 
         this.buildArea.rebuildNormal();
         this.write(new ChatFilterSettings(this.publicChat, this.privateChat, this.tradeDuel));
+
+        // custom (2026-11-02) - the saved login the client asked for, if it earned one. Cleared as
+        // it goes out, so a reconnect in this same session cannot send it twice.
+        if (this.loginToken !== null) {
+            this.write(new SetLoginToken(this.loginToken));
+            this.loginToken = null;
+        }
 
         // todo: exact order
         if (Environment.FRIEND_SERVER) {

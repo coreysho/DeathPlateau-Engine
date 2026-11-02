@@ -30,10 +30,13 @@ const VoteOps: CommandHandlers = {
         state.pushString(VoteSites.all()[index]?.name ?? '');
     },
 
-    // vote_siteurl(int $index)(string)
+    // vote_siteurl(int $index)(string): the page the ACTIVE PLAYER votes at, with their name
+    // already in it wherever the site takes one. A link with no name in it still counts toward
+    // the server's ranking but can never pay a ticket - see VoteSites.playerUrl.
     [ScriptOpcode.VOTE_SITEURL]: state => {
         const index = state.popInt();
-        state.pushString(VoteSites.all()[index]?.url ?? '');
+        const site = VoteSites.all()[index];
+        state.pushString(site ? VoteSites.urlFor(site, state.activePlayer.username) : '');
     },
 
     // vote_cooldown(int $index)(int): seconds until the active player can be paid for this site

@@ -19,7 +19,7 @@ const m: Manifest = {
     quest: 'DEVIOUS MINDS',
     source: 'oldschool.runescape.wiki/w/Devious_Minds',
     stageVar: 'devious_main',
-    done: 70,   // ^devious_complete
+    done: 70, // ^devious_complete
     start: [3406, 3495, 0],
     steps: [
         { note: 'the wiki lists Wanted!, Troll Stronghold and Doric’s Quest as requirements; the' },

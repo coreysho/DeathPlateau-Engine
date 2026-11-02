@@ -164,11 +164,7 @@ for (const course of COURSES) {
         }
         const line = `^${o.fail!.land} = 0_${got.x >> 6}_${got.z >> 6}_${got.x & 63}_${got.z & 63}`;
         const note = why.length ? `, past ${why.length} tile(s) not joined to the start` : '';
-        console.log(
-            `  ${o.name.padEnd(15)} falls to ${String(got.x) + ',' + got.z} L0  ` +
-                `${got.r} tile(s) from the obstacle at ${o.x},${o.z} L${o.level}  ` +
-                `dmg ${o.fail!.dmg[0]}-${o.fail!.dmg[1]}${note}`
-        );
+        console.log(`  ${o.name.padEnd(15)} falls to ${String(got.x) + ',' + got.z} L0  ` + `${got.r} tile(s) from the obstacle at ${o.x},${o.z} L${o.level}  ` + `dmg ${o.fail!.dmg[0]}-${o.fail!.dmg[1]}${note}`);
         proposals.push({ course: course.key, name: o.fail!.land, line });
     }
 }

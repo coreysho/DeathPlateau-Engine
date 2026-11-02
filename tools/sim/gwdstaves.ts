@@ -28,7 +28,7 @@ const param = (objName: string, paramName: string): unknown => {
 
 // ---------------------------------------------------------------------------------------------
 // Both staves are OSRS objs 11791 and 22296, read by fillosrsstats.py out of the item table.
-console.log('== the two staves carry the cache\'s own numbers');
+console.log("== the two staves carry the cache's own numbers");
 for (const staff of ['staff_of_the_dead', 'staff_of_light']) {
     check(`${staff} exists`, ObjType.getId(staff) !== -1, true);
     check(`${staff} stab`, param(staff, 'stabattack'), 55);
@@ -38,8 +38,7 @@ for (const staff of ['staff_of_the_dead', 'staff_of_light']) {
     check(`${staff} strength`, param(staff, 'strengthbonus'), 72);
     check(`${staff} four ticks`, param(staff, 'attackrate'), 4);
     const o = ObjType.get(ObjType.getId(staff));
-    check(`${staff} is a staff, so it autocasts`, o.category,
-        ObjType.get(ObjType.getId('battlestaff')).category);
+    check(`${staff} is a staff, so it autocasts`, o.category, ObjType.get(ObjType.getId('battlestaff')).category);
     check(`${staff} one-handed`, [o.wearpos, o.wearpos2], [3 /* righthand */, -1]);
     // Power of Death is not built, so the bar must not claim it.
     check(`${staff} claims no special attack`, param(staff, 'specwep'), undefined);
@@ -48,14 +47,14 @@ for (const staff of ['staff_of_the_dead', 'staff_of_light']) {
 // ---------------------------------------------------------------------------------------------
 console.log('== the God Wars alignment, which is the reason to make one');
 {
-    check('the staff of the dead is Zamorak\'s', param('staff_of_the_dead', 'gwd_prot_zamorak'), 1);
-    check('and only Zamorak\'s', param('staff_of_the_dead', 'gwd_prot_saradomin'), undefined);
-    check('the staff of light is Zamorak\'s', param('staff_of_light', 'gwd_prot_zamorak'), 1);
-    check('AND Saradomin\'s', param('staff_of_light', 'gwd_prot_saradomin'), 1);
+    check("the staff of the dead is Zamorak's", param('staff_of_the_dead', 'gwd_prot_zamorak'), 1);
+    check("and only Zamorak's", param('staff_of_the_dead', 'gwd_prot_saradomin'), undefined);
+    check("the staff of light is Zamorak's", param('staff_of_light', 'gwd_prot_zamorak'), 1);
+    check("AND Saradomin's", param('staff_of_light', 'gwd_prot_saradomin'), 1);
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('== Saradomin\'s light is not a weapon and has no dead options');
+console.log("== Saradomin's light is not a weapon and has no dead options");
 {
     const id = ObjType.getId('saradomins_light');
     check('it exists', id !== -1, true);
@@ -70,7 +69,8 @@ console.log('== Saradomin\'s light is not a weapon and has no dead options');
 // ---------------------------------------------------------------------------------------------
 console.log('== 75 Magic and 75 Attack, and both halves are checked, for both staves');
 {
-    const ATTACK = 0, MAGIC = 6;
+    const ATTACK = 0,
+        MAGIC = 6;
     const wields = (staff: string, name: string, att: number, mag: number): boolean => {
         const p = player(name, 2900, 3700);
         H.clearInv(p);
@@ -79,7 +79,7 @@ console.log('== 75 Magic and 75 Attack, and both halves are checked, for both st
         H.give(p, staff);
         H.opheld(p, staff, 2);
         H.tick(1);
-        return H.invCount(p, staff) === 0;         // it left the pack, so it went on
+        return H.invCount(p, staff) === 0; // it left the pack, so it went on
     };
     for (const staff of ['staff_of_the_dead', 'staff_of_light']) {
         check(`${staff}: 74 Attack is refused`, wields(staff, `${staff}_a74`, 74, 99), false);
@@ -95,7 +95,7 @@ console.log('== the combine, and the way out of it');
     H.clearInv(p);
     H.give(p, 'saradomins_light');
     H.give(p, 'staff_of_the_dead');
-    useHeld(p, 'saradomins_light', 'staff_of_the_dead', [2]);   // "No, leave them as they are."
+    useHeld(p, 'saradomins_light', 'staff_of_the_dead', [2]); // "No, leave them as they are."
     check('saying no keeps the light', H.invCount(p, 'saradomins_light'), 1);
     check('and the staff', H.invCount(p, 'staff_of_the_dead'), 1);
     check('and makes nothing', H.invCount(p, 'staff_of_light'), 0);
@@ -105,7 +105,7 @@ console.log('== the combine, and the way out of it');
     H.clearInv(p);
     H.give(p, 'saradomins_light');
     H.give(p, 'staff_of_the_dead');
-    useHeld(p, 'saradomins_light', 'staff_of_the_dead', [1]);   // "Combine them?"
+    useHeld(p, 'saradomins_light', 'staff_of_the_dead', [1]); // "Combine them?"
     check('saying yes consumes the light', H.invCount(p, 'saradomins_light'), 0);
     check('and the staff', H.invCount(p, 'staff_of_the_dead'), 0);
     check('and gives the staff of light', H.invCount(p, 'staff_of_light'), 1);
@@ -123,16 +123,24 @@ console.log('== the combine, and the way out of it');
     const from = mark();
     useHeld(p, 'saradomins_light', 'zamorakian_spear');
     check('the light refuses anything else', H.invCount(p, 'saradomins_light'), 1);
-    check('and says why', mesSince(p, from).some(m => m.includes('staff of the dead')), true);
+    check(
+        'and says why',
+        mesSince(p, from).some(m => m.includes('staff of the dead')),
+        true
+    );
 }
 {
     // Irreversible: there is no Revert and nothing turns it back.
     const o = ObjType.get(ObjType.getId('staff_of_light'));
-    check('the staff of light has no Revert', o.iop.some(x => x === 'Revert'), false);
+    check(
+        'the staff of light has no Revert',
+        o.iop.some(x => x === 'Revert'),
+        false
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log('== and both are on the right boss, at Old School\'s rates');
+console.log("== and both are on the right boss, at Old School's rates");
 {
     const rs2 = fs.readFileSync(`${Environment.BUILD_SRC_DIR}/scripts/bosses/godwars/scripts/gwd_drops.rs2`, 'ascii');
     const kril = rs2.slice(rs2.indexOf('[proc,gwd_unique_roll_kril]'), rs2.indexOf('[proc,gwd_unique_roll_zilyana]'));
@@ -144,15 +152,10 @@ console.log('== and both are on the right boss, at Old School\'s rates');
     //
     // `$drop = null` appears twice in each proc - the declaration and the `if ($drop = null)`
     // comparison, since `=` is a comparison inside an if - so it is filtered out here.
-    const drops = (proc: string) => (proc.match(/\$drop = (\w+)/g) ?? [])
-        .map(m => m.slice('$drop = '.length)).filter(n => n !== 'null');
-    check("K'ril's uniques, in band order", drops(kril),
-        ['zamorakian_spear', 'zamorak_hilt', 'godsword_shard_1', 'godsword_shard_2',
-            'godsword_shard_3', 'staff_of_the_dead']);
+    const drops = (proc: string) => (proc.match(/\$drop = (\w+)/g) ?? []).map(m => m.slice('$drop = '.length)).filter(n => n !== 'null');
+    check("K'ril's uniques, in band order", drops(kril), ['zamorakian_spear', 'zamorak_hilt', 'godsword_shard_1', 'godsword_shard_2', 'godsword_shard_3', 'staff_of_the_dead']);
     check('the staff of the dead is the 1/508 band', /\$random < 24\)[^}]*staff_of_the_dead/.test(kril), true);
-    check("Zilyana's uniques, in band order", drops(zil),
-        ['saradomin_sword', 'saradomin_hilt', 'godsword_shard_1', 'godsword_shard_2',
-            'godsword_shard_3', 'armadyl_crossbow', 'saradomins_light']);
+    check("Zilyana's uniques, in band order", drops(zil), ['saradomin_sword', 'saradomin_hilt', 'godsword_shard_1', 'godsword_shard_2', 'godsword_shard_3', 'armadyl_crossbow', 'saradomins_light']);
     check("Saradomin's light is the 1/254 band", /\$random < 30\)[^}]*saradomins_light/.test(zil), true);
     check('neither is on the other boss', kril.includes('saradomins_light') || zil.includes('staff_of_the_dead'), false);
 }

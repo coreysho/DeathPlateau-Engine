@@ -4,9 +4,7 @@ import ClientGameMessage from '#/network/game/client/ClientGameMessage.js';
 export default class TutClickSide extends ClientGameMessage {
     category = ClientGameProtCategory.USER_EVENT;
 
-    constructor(
-        readonly tab: number
-    ) {
+    constructor(readonly tab: number) {
         super();
     }
 }

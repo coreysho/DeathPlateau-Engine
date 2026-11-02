@@ -3,7 +3,6 @@ import fs from 'fs';
 import { ConfigType } from '#/cache/config/ConfigType.js';
 import Packet from '#/io/Packet.js';
 
-
 export default class InvType extends ConfigType {
     private static configNames = new Map<string, number>();
     private static configs: InvType[] = [];

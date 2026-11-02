@@ -21,8 +21,7 @@ await H.boot();
 const SEAM_SRC = 24;
 const nameOf = (id: number) => (id < 0 ? 'null' : (LocType.get(id).debugname ?? String(id)));
 const hasMine = (t: LocType) => (t.op ?? []).some(o => o === 'Mine');
-const wired = (id: number) => !!(ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPLOC1, id, -1) ||
-    ScriptProvider.getByTrigger(ServerTriggerType.OPLOC1, id, LocType.get(id).category));
+const wired = (id: number) => !!(ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPLOC1, id, -1) || ScriptProvider.getByTrigger(ServerTriggerType.OPLOC1, id, LocType.get(id).category));
 
 /** The seam colour this rock's ore is painted with, or null if it has no ore seam at all. */
 function seamOf(t: LocType): number | null {
@@ -52,9 +51,7 @@ for (let id = 0; id < LocType.count; id++) {
 }
 
 const placed = new Map<number, { level: number; x: number; z: number }[]>();
-for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).values())
-    for (const loc of zone.getAllLocsUnsafe())
-        (placed.get(loc.type) ?? placed.set(loc.type, []).get(loc.type)!).push({ level: loc.level, x: loc.x, z: loc.z });
+for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).values()) for (const loc of zone.getAllLocsUnsafe()) (placed.get(loc.type) ?? placed.set(loc.type, []).get(loc.type)!).push({ level: loc.level, x: loc.x, z: loc.z });
 
 const npcs: { name: string; x: number; z: number; level: number }[] = [];
 for (const n of World.npcs) {
@@ -62,16 +59,28 @@ for (const n of World.npcs) {
     if (nm && nm !== 'null') npcs.push({ name: nm, x: n.x, z: n.z, level: n.level });
 }
 const nearestNpc = (x: number, z: number, level: number) => {
-    let best = '-', bd = Infinity;
-    for (const c of npcs) { if (c.level !== level) continue; const d = (c.x-x)**2 + (c.z-z)**2; if (d < bd) { bd = d; best = c.name; } }
+    let best = '-',
+        bd = Infinity;
+    for (const c of npcs) {
+        if (c.level !== level) continue;
+        const d = (c.x - x) ** 2 + (c.z - z) ** 2;
+        if (d < bd) {
+            bd = d;
+            best = c.name;
+        }
+    }
     return best;
 };
 
 console.log('SEAM -> ORE, learned from the rocks that already work');
-for (const s of [...seamOre.keys()].sort((a,b)=>a-b)) console.log(`  ${String(s).padEnd(7)} ${[...seamOre.get(s)!].sort().join(', ')}`);
+for (const s of [...seamOre.keys()].sort((a, b) => a - b)) console.log(`  ${String(s).padEnd(7)} ${[...seamOre.get(s)!].sort().join(', ')}`);
 
-const scenery: string[] = [], known: string[] = [], unknown: string[] = [];
-let sceneryN = 0, knownN = 0, unknownN = 0;
+const scenery: string[] = [],
+    known: string[] = [],
+    unknown: string[] = [];
+let sceneryN = 0,
+    knownN = 0,
+    unknownN = 0;
 for (let id = 0; id < LocType.count; id++) {
     const t = LocType.get(id);
     if (!t || !hasMine(t) || wired(id)) continue;
@@ -79,11 +88,17 @@ for (let id = 0; id < LocType.count; id++) {
     if (!ps.length) continue;
     const seam = seamOf(t);
     const p = ps[0];
-    const row = `  ${nameOf(id).padEnd(16)} x${String(ps.length).padEnd(4)} (${p.x},${p.z},${p.level})`.padEnd(46) +
-        ` near ${nearestNpc(p.x, p.z, p.level)}`;
-    if (seam === null) { scenery.push(row); sceneryN += ps.length; }
-    else if (seamOre.has(seam)) { known.push(`  seam ${String(seam).padEnd(6)} = ${[...seamOre.get(seam)!].join('/').padEnd(8)}` + row.slice(2)); knownN += ps.length; }
-    else { unknown.push(`  seam ${String(seam).padEnd(6)} = ?       ` + row.slice(2)); unknownN += ps.length; }
+    const row = `  ${nameOf(id).padEnd(16)} x${String(ps.length).padEnd(4)} (${p.x},${p.z},${p.level})`.padEnd(46) + ` near ${nearestNpc(p.x, p.z, p.level)}`;
+    if (seam === null) {
+        scenery.push(row);
+        sceneryN += ps.length;
+    } else if (seamOre.has(seam)) {
+        known.push(`  seam ${String(seam).padEnd(6)} = ${[...seamOre.get(seam)!].join('/').padEnd(8)}` + row.slice(2));
+        knownN += ps.length;
+    } else {
+        unknown.push(`  seam ${String(seam).padEnd(6)} = ?       ` + row.slice(2));
+        unknownN += ps.length;
+    }
 }
 console.log(`\n=== ORE KNOWN, just unwired: ${known.length} locs, ${knownN} placements ===`);
 known.sort().forEach(r => console.log(r));

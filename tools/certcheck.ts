@@ -36,8 +36,8 @@ if (ObjType.configs.length === 0) {
 }
 
 // The engine's own two rules, from ObjConfigOps: OC_CERT and OC_UNCERT.
-const cert = (o: ObjType) => (o.certtemplate === -1 && o.certlink >= 0) ? ObjType.configs[o.certlink] : o;
-const uncert = (o: ObjType) => (o.certtemplate >= 0 && o.certlink >= 0) ? ObjType.configs[o.certlink] : o;
+const cert = (o: ObjType) => (o.certtemplate === -1 && o.certlink >= 0 ? ObjType.configs[o.certlink] : o);
+const uncert = (o: ObjType) => (o.certtemplate >= 0 && o.certlink >= 0 ? ObjType.configs[o.certlink] : o);
 
 let notes = 0;
 let noteable = 0;

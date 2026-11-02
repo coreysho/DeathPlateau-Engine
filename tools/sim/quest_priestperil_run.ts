@@ -34,7 +34,7 @@ const m: Manifest = {
     quest: 'PRIEST IN PERIL',
     source: 'oldschool.runescape.wiki/w/Priest_in_Peril',
     stageVar: 'priestperil',
-    done: 60,   // ^priestperil_complete
+    done: 60, // ^priestperil_complete
     start: [3222, 3473, 0],
     steps: [
         { note: 'a bucket for the well water and a weapon. The fifty rune essences come later and' },

@@ -247,5 +247,4 @@ export default class WordEnc {
     private static isCharacterAllowed(char: string): boolean {
         return (char >= ' ' && char <= '\u007f') || char == ' ' || char == '\n' || char == '\t' || char == '£' || char == '€';
     }
-
 }

@@ -29,7 +29,7 @@ const m: Manifest = {
     quest: 'ROMEO & JULIET',
     source: 'oldschool.runescape.wiki/w/Romeo_%26_Juliet',
     stageVar: 'rjquest',
-    done: 100,   // ^romeojuliet_complete
+    done: 100, // ^romeojuliet_complete
     start: [3210, 3428, 0],
     steps: [
         { note: 'wiki: no requirements. The cadava berries are picked during the quest.' },

@@ -117,8 +117,7 @@ for (const lp of locs) {
             p.closeModal();
             const to = reg(p.level, p.x, p.z);
             if (to !== '-' && to !== from) {
-                if (!edges.some(e => e.from === from && e.to === to && e.via.startsWith(lp.name)))
-                    edges.push({ from, to, via: `${lp.name}[${lp.ops[op - 1]}]`, at: `${lp.x},${lp.z},L${lp.l}`, stand: `${sx},${sz}` });
+                if (!edges.some(e => e.from === from && e.to === to && e.via.startsWith(lp.name))) edges.push({ from, to, via: `${lp.name}[${lp.ops[op - 1]}]`, at: `${lp.x},${lp.z},L${lp.l}`, stand: `${sx},${sz}` });
                 continue;
             }
             // AN ORDINARY DOOR DOES NOT MOVE YOU. ~open_door swaps the closed loc for an open one
@@ -147,8 +146,7 @@ const add = (e: Edge) => {
 };
 for (const e of edges) {
     add(e);
-    if (/\[(open|close|pass)/i.test(e.via) && e.from.split('.')[0] === e.to.split('.')[0])
-        add({ from: e.to, to: e.from, via: e.via, at: e.at, stand: e.stand });
+    if (/\[(open|close|pass)/i.test(e.via) && e.from.split('.')[0] === e.to.split('.')[0]) add({ from: e.to, to: e.from, via: e.via, at: e.at, stand: e.stand });
 }
 console.log('');
 console.log(`${size.size} regions, ${edges.length} edges, from ${locs.length} doors and climbables`);

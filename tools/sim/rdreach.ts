@@ -25,8 +25,14 @@ const flood = (level: number, sx: number, sz: number, rad = 80) => {
     seen.add(key(sx, sz));
     while (q.length) {
         const [x, z] = q.shift()!;
-        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx, nz = z + dz;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = x + dx,
+                nz = z + dz;
             if (Math.abs(nx - sx) > rad || Math.abs(nz - sz) > rad) continue;
             if (seen.has(key(nx, nz))) continue;
             if (!canTravel(level, x, z, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
@@ -57,25 +63,48 @@ const trader = H.npcNear('roguesden_trader', 3045, 4974, 1);
 check('Martin Thwait, the Thieving cape master, is standable-next-to', trader !== null, true);
 if (trader) check('  ...and on a tile you can walk to', after.has(trader.x + 1, trader.z) || after.has(trader.x - 1, trader.z) || after.has(trader.x, trader.z + 1) || after.has(trader.x, trader.z - 1), true);
 
-for (const [x, z] of [[3055, 4970], [3055, 4977], [3057, 4970], [3057, 4977]] as const) {
-    const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => after.has(x + dx, z + dz));
+for (const [x, z] of [
+    [3055, 4970],
+    [3055, 4977],
+    [3057, 4970],
+    [3057, 4977]
+] as const) {
+    const beside = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => after.has(x + dx, z + dz));
     check(`  the wall safe at ${x},${z} is walkable to`, beside, true);
 }
-for (const [x, z] of [[3013, 5047], [3018, 5048]] as const) {
-    const beside = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => after.has(x + dx, z + dz));
+for (const [x, z] of [
+    [3013, 5047],
+    [3018, 5048]
+] as const) {
+    const beside = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => after.has(x + dx, z + dz));
     console.log(`  (maze safe at ${x},${z}: ${beside ? 'walkable' : 'behind the maze'})`);
 }
-
 
 // ============================================================================ cracking one
 console.log('');
 console.log('AND CRACKING ONE');
 {
-    const SX = 3055, SZ = 4970;
+    const SX = 3055,
+        SZ = 4970;
     // The tile to stand on is found rather than written down: a walldecor is clickable from one
     // side only, and which side depends on the angle the map gives it.
     let stand: [number, number] | null = null;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+    for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ] as const) {
         if (A.reachLoc(1, SX + dx, SZ + dz, 'roguesden_walldecor_safe', SX, SZ)) stand = [SX + dx, SZ + dz];
     }
     check('there is a tile you can crack the safe from', stand !== null, true);
@@ -100,7 +129,9 @@ console.log('AND CRACKING ONE');
     const safeId = LocType.getId('roguesden_walldecor_safe');
     let worstWait = 0;
     // Tallied over every real click this section makes, wherever it is made from.
-    let allFailed = 0, allSpiked = 0, everHurt = false;
+    let allFailed = 0,
+        allSpiked = 0,
+        everHurt = false;
     // THE BOUND IS 200 TICKS AND THE LONGEST WAIT IS PRINTED. It is a six-tick change, so this
     // should never need more than six - but it ran out once at a bound of 30, deep into a long run,
     // and a number that is measured is worth more than a bound that is guessed. Waiting for the
@@ -135,15 +166,16 @@ console.log('AND CRACKING ONE');
 
     // 1. the level gate
     const low = at('rdsafe_low', 49);
-    check('49 Thieving is turned away', crack(low).join(' | '),
-        'You need a Thieving level of 50 to crack this safe.');
+    check('49 Thieving is turned away', crack(low).join(' | '), 'You need a Thieving level of 50 to crack this safe.');
     const idle = xpOf();
     check('  and it costs no experience', xpOf() - idle, 0);
 
     // 2. at 99 it opens, pays 70 and hands over something
     const hi = at('rdsafe_hi', 99);
     const xpBefore = xpOf();
-    let opened = 0, failed = 0, spiked = 0;
+    let opened = 0,
+        failed = 0,
+        spiked = 0;
     const loot = new Map<string, number>();
     for (let i = 0; i < 120; i++) {
         H.clearInv(hi);
@@ -160,11 +192,20 @@ console.log('AND CRACKING ONE');
         }
     }
     console.log(`       ${opened} cracked, ${failed} failed, ${spiked} of those on the spikes`);
-    console.log(`       loot: ${[...loot].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} x${c}`).join(', ')}`);
+    console.log(
+        `       loot: ${[...loot]
+            .sort((a, b) => b[1] - a[1])
+            .map(([n, c]) => `${n} x${c}`)
+            .join(', ')}`
+    );
     check('120 clicks at 99 are all either a crack or a failure', opened + failed, 120);
     check('  and about nine in ten open it', opened > 92 && opened < 119, true);
     check('  every one that opened paid 70 experience', xpOf() - xpBefore, opened * 700);
-    check('  and every one that opened paid out', [...loot.values()].reduce((a, b) => a + b, 0), opened);
+    check(
+        '  and every one that opened paid out',
+        [...loot.values()].reduce((a, b) => a + b, 0),
+        opened
+    );
 
     // THE TABLE ITSELF, rolled without the world. A diamond is 2 in 256, so 300 cracks turn one up
     // less than half the time and a run of clicks cannot say whether the branch exists at all -
@@ -181,13 +222,19 @@ console.log('AND CRACKING ONE');
             }
             H.clearInv(thief);
         }
-        console.log(`       8000 rolls of the table: ${[...seen].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ${(c / 80).toFixed(1)}%`).join(', ')}`);
-        check('  every branch of the loot table is reachable', [...seen.keys()].sort(),
-            ['Coins', 'Uncut diamond', 'Uncut emerald', 'Uncut ruby', 'Uncut sapphire']);
+        console.log(
+            `       8000 rolls of the table: ${[...seen]
+                .sort((a, b) => b[1] - a[1])
+                .map(([n, c]) => `${n} ${(c / 80).toFixed(1)}%`)
+                .join(', ')}`
+        );
+        check('  every branch of the loot table is reachable', [...seen.keys()].sort(), ['Coins', 'Uncut diamond', 'Uncut emerald', 'Uncut ruby', 'Uncut sapphire']);
         const pct = (n: string) => (seen.get(n) ?? 0) / 80;
-        check('  ...and gems are about a fifth of it, commonest first',
-            pct('Uncut sapphire') > pct('Uncut emerald') && pct('Uncut emerald') > pct('Uncut ruby')
-            && pct('Uncut ruby') > pct('Uncut diamond') && pct('Coins') > 70 && pct('Coins') < 90, true);
+        check(
+            '  ...and gems are about a fifth of it, commonest first',
+            pct('Uncut sapphire') > pct('Uncut emerald') && pct('Uncut emerald') > pct('Uncut ruby') && pct('Uncut ruby') > pct('Uncut diamond') && pct('Coins') > 70 && pct('Coins') < 90,
+            true
+        );
     }
 
     // 3. THE SUCCESS ROLL, asked 6,000 times a side without the world. Every real click costs the
@@ -224,12 +271,10 @@ console.log('AND CRACKING ONE');
         }
     }
     console.log(`       ${allFailed} failures across every click above, ${allSpiked} of them on the spikes`);
-    check('  the spikes catch about half the failures',
-        allFailed > 50 && allSpiked > allFailed * 0.3 && allSpiked < allFailed * 0.7, true);
+    check('  the spikes catch about half the failures', allFailed > 50 && allSpiked > allFailed * 0.3 && allSpiked < allFailed * 0.7, true);
     check('  and take hitpoints off you when they do', everHurt, true);
     console.log(`       at 50 Thieving: ${(without / 60).toFixed(1)}% succeed without a stethoscope, ${(withIt / 60).toFixed(1)}% with one (6000 rolls each)`);
-    check('  a stethoscope in the pack raises the rate by about a fifth',
-        withIt > without * 1.12 && withIt < without * 1.3, true);
+    check('  a stethoscope in the pack raises the rate by about a fifth', withIt > without * 1.12 && withIt < without * 1.3, true);
 }
 
 console.log(`RDREACH ${R.ok} ok, ${R.bad} FAIL`);

@@ -32,7 +32,7 @@ const m: Manifest = {
     quest: 'IN SEARCH OF THE MYREQUE',
     source: 'oldschool.runescape.wiki/w/In_Search_of_the_Myreque',
     stageVar: 'routequest',
-    done: 8,   // ^route_complete
+    done: 8, // ^route_complete
     start: [3504, 3478, 0],
     steps: [
         { note: 'requirements: Nature Spirit, Priest in Peril, The Restless Ghost and 25 Agility.' },
@@ -60,12 +60,7 @@ const m: Manifest = {
         { note: 'replies in order get anywhere; anything else and he closes up. The pouch and the' },
         { note: 'six planks follow in the same conversation.' },
         { setpos: CYREG, why: 'to the boat at the Barrows bridge' },
-        { talk: 'route_cyreg_paddlehorn', picks: [
-            'just die without weapons',
-            'Resourceful enough',
-            'deaths are on your head',
-            'What kind of man are you'
-        ], want: 'wrong shape', why: 'talk him round, show the pouch, hand over the planks' },
+        { talk: 'route_cyreg_paddlehorn', picks: ['just die without weapons', 'Resourceful enough', 'deaths are on your head', 'What kind of man are you'], want: 'wrong shape', why: 'talk him round, show the pouch, hand over the planks' },
         { stage: 2 },
         { note: 'three of the six went into his boat and three are for the bridge' },
         { has: 'woodplank', n: 3 },

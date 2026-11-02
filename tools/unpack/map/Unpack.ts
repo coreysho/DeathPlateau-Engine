@@ -155,8 +155,8 @@ for (let i = 0; i < mapIndex.length / 7; i++) {
     const locFile = mapIndex.g2();
     const _members = mapIndex.gbool();
 
-    const mapX = (region >> 8) & 0xFF;
-    const mapZ = region & 0xFF;
+    const mapX = (region >> 8) & 0xff;
+    const mapZ = region & 0xff;
 
     MapPack.register(landFile, `m${mapX}_${mapZ}`);
     MapPack.register(locFile, `l${mapX}_${mapZ}`);

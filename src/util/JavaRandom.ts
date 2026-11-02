@@ -13,7 +13,7 @@ const p2_27 = 0x0000008000000;
 const p2_31 = 0x0000080000000;
 const p2_32 = 0x0000100000000;
 const p2_48 = 0x1000000000000;
-const p2_53 = Math.pow(2, 53);	// NB: exceeds Number.MAX_SAFE_INTEGER
+const p2_53 = Math.pow(2, 53); // NB: exceeds Number.MAX_SAFE_INTEGER
 
 const m2_16 = 0xffff;
 
@@ -22,7 +22,9 @@ const m2_16 = 0xffff;
 //
 const [c2, c1, c0] = [0x0005, 0xdeec, 0xe66d];
 
-let s2 = 0, s1 = 0, s0 = 0;
+let s2 = 0,
+    s1 = 0,
+    s0 = 0;
 
 //
 // 53-bit safe version of
@@ -31,15 +33,15 @@ let s2 = 0, s1 = 0, s0 = 0;
 function _next() {
     let carry = 0xb;
 
-    let r0 = (s0 * c0) + carry;
+    let r0 = s0 * c0 + carry;
     carry = r0 >>> 16;
     r0 &= m2_16;
 
-    let r1 = (s1 * c0 + s0 * c1) + carry;
+    let r1 = s1 * c0 + s0 * c1 + carry;
     carry = r1 >>> 16;
     r1 &= m2_16;
 
-    let r2 = (s2 * c0 + s1 * c1 + s0 * c2) + carry;
+    let r2 = s2 * c0 + s1 * c1 + s0 * c2 + carry;
     r2 &= m2_16;
 
     [s2, s1, s0] = [r2, r1, r0];
@@ -76,7 +78,7 @@ class JavaRandom {
     //
     setSeed(n: number) {
         checkIsPositiveInt(n);
-        s0 = ((n) & m2_16) ^ c0;
+        s0 = (n & m2_16) ^ c0;
         s1 = ((n / p2_16) & m2_16) ^ c1;
         s2 = ((n / p2_32) & m2_16) ^ c2;
     }
@@ -121,6 +123,6 @@ class JavaRandom {
     nextDouble() {
         return (p2_27 * next(26) + next(27)) / p2_53;
     }
-};
+}
 
 export default new JavaRandom();

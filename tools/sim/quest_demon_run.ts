@@ -16,7 +16,7 @@ const m: Manifest = {
     quest: 'DEMON SLAYER',
     source: 'oldschool.runescape.wiki/w/Demon_Slayer',
     stageVar: 'demonstart',
-    done: 30,   // ^demon_complete
+    done: 30, // ^demon_complete
     start: [3203, 3423, 0],
     steps: [
         { note: 'wiki: 25 bones for Traiborn and a bucket of water for the drain. The bones come' },
@@ -32,7 +32,12 @@ const m: Manifest = {
 
         { note: 'wiki step 2: Sir Prysin, in Varrock palace. Three keys, three different places.' },
         { setpos: [3203, 3473, 0], why: 'north through the city into the palace' },
-        { talk: 'sir_prysin', picks: ['Gypsy Aris said I should come', 'I need to find Silverlight', 'crystal ball seems to think otherwise', 'So give me the keys', 'Can you give me your key', 'Where can I find Captain Rovin', "Well I'd better go key hunting"], tries: 3, why: 'the box needs three keys - and he dropped his own down the kitchen drain' },
+        {
+            talk: 'sir_prysin',
+            picks: ['Gypsy Aris said I should come', 'I need to find Silverlight', 'crystal ball seems to think otherwise', 'So give me the keys', 'Can you give me your key', 'Where can I find Captain Rovin', "Well I'd better go key hunting"],
+            tries: 3,
+            why: 'the box needs three keys - and he dropped his own down the kitchen drain'
+        },
         { stage: 2 },
 
         { note: "wiki step 3: Captain Rovin, top floor of the palace's north-west tower" },

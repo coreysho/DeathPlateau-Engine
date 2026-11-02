@@ -129,11 +129,11 @@ export function unpackObjConfig(config: ConfigIdx, id: number): string[] {
             const model = renameModel(modelId, `${debugname}_womanwear2`);
             def.push(`womanwear2=${model}`);
         } else if (code >= 30 && code < 35) {
-            const index = (code - 30) + 1;
+            const index = code - 30 + 1;
             const op = dat.gjstr();
             def.push(`op${index}=${op}`);
         } else if (code >= 35 && code < 40) {
-            const index = (code - 35) + 1;
+            const index = code - 35 + 1;
             const op = dat.gjstr();
             def.push(`iop${index}=${op}`);
         } else if (code === 40) {
@@ -199,7 +199,7 @@ export function unpackObjConfig(config: ConfigIdx, id: number): string[] {
             const obj = ObjPack.getById(objId) || 'obj_' + objId;
             def.push(`certtemplate=${obj}`);
         } else if (code >= 100 && code < 110) {
-            const index = (code - 100) + 1;
+            const index = code - 100 + 1;
             const objId = dat.g2();
             const count = dat.g2();
 
@@ -225,7 +225,7 @@ export function unpackObjConfig(config: ConfigIdx, id: number): string[] {
             def.push(`team=${team}`);
         } else if (code >= 120 && code < 128) {
             // custom: worn options (see tools/pack/config/ObjConfig.ts)
-            const index = (code - 120) + 1;
+            const index = code - 120 + 1;
             const op = dat.gjstr();
             def.push(`wearop${index}=${op}`);
         } else {

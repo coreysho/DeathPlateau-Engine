@@ -102,7 +102,7 @@ export function unpackNpcConfig(config: ConfigIdx, id: number): string[] {
 
             def.push(`walkanim=${walkanim},${walkanim_b},${walkanim_l},${walkanim_r}`);
         } else if (code >= 30 && code < 35) {
-            const index = (code - 30) + 1;
+            const index = code - 30 + 1;
             const op = dat.gjstr();
             def.push(`op${index}=${op}`);
         } else if (code === 40) {

@@ -31,7 +31,7 @@ for (let i = 0; i < modelIndex.length; i++) {
         }
 
         if ((modelFlags[i] & 0x4) !== 0) {
-            // 
+            //
             readable += 'static ';
         }
 

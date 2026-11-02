@@ -22,6 +22,5 @@ export abstract class ConfigType {
         }
     }
 
-    postDecode() {
-    }
+    postDecode() {}
 }

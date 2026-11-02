@@ -4,9 +4,7 @@ import ClientGameMessage from '#/network/game/client/ClientGameMessage.js';
 export default class ResumePCountDialog extends ClientGameMessage {
     category = ClientGameProtCategory.USER_EVENT;
 
-    constructor(
-        readonly input: number
-    ) {
+    constructor(readonly input: number) {
         super();
     }
 }

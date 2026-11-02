@@ -23,7 +23,7 @@ for (let baseId = 0; baseId < baseCount; baseId++) {
         printWarning(`Missing anim set ${baseId}`);
         continue;
     }
- 
+
     const setName = `anim_${baseId}`;
     AnimSetPack.register(baseId, setName);
     fs.writeFileSync(`${Environment.BUILD_SRC_DIR}/models/${setName}.anim`, set);

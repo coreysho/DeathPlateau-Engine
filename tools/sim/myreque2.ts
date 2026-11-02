@@ -7,7 +7,12 @@ import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
 const open = (l: number, x: number, z: number) =>
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+    [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+    ].some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
 const box = (l: number, x1: number, z1: number, x2: number, z2: number) => {
     console.log('');
     console.log(`=== plane ${l}, ${x1}..${x2} x ${z1}..${z2}`);
@@ -34,7 +39,12 @@ for (const zone of ((World.gameMap as any).zonemap.zones as Map<number, any>).va
 
 console.log('');
 console.log('=== can you walk it');
-const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const DIRS: [number, number][] = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+];
 function pocket(level: number, x: number, z: number, cap = 60000) {
     const seen = new Set<number>([x * 20000 + z]);
     const q: [number, number][] = [[x, z]];
@@ -43,7 +53,8 @@ function pocket(level: number, x: number, z: number, cap = 60000) {
         for (const [dx, dz] of DIRS) {
             const k = (cx + dx) * 20000 + (cz + dz);
             if (seen.has(k) || !canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
-            seen.add(k); q.push([cx + dx, cz + dz]);
+            seen.add(k);
+            q.push([cx + dx, cz + dz]);
         }
     }
     return seen;

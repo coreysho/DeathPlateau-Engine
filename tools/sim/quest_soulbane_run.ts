@@ -15,7 +15,6 @@ import { play, Manifest } from './questrun.js';
 
 await H.boot();
 
-
 // The six holes in the Fear room's walls, and the reaper hides in a different one every time - so a
 // round is all six, five of which say "there's nothing in there", and then whatever leapt out.
 // Each hole, and the tile beside it to stand on. The room is wide and the walk between opposite
@@ -48,7 +47,7 @@ const m: Manifest = {
     quest: "A SOUL'S BANE",
     source: 'oldschool.runescape.wiki/w/A_Soul%27s_Bane',
     stageVar: 'soulbane_prog',
-    done: 7,   // ^soulbane_complete
+    done: 7, // ^soulbane_complete
     start: [3310, 3453, 0],
     steps: [
         { note: 'wiki: a rope, and something to fight with' },

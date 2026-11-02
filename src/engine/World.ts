@@ -76,7 +76,8 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
     trackCycleBandwidthOutBytes,
@@ -119,6 +120,15 @@ const priv = forge.pki.privateKeyFromPem(fs.readFileSync(Environment.LOGIN_RSA_K
 // The login thread's replies that are a refusal (World.onLoginMessage turns each into the client's
 // message); anything else let the player in.
 const LOGIN_FAILURE_REPLIES = new Set([-1, 1, 3, 5, 6, 7, 8, 9, 10, 11]);
+
+// custom (2026-11-02) - the revision that added saved logins, and the one before it.
+//
+// A login block from LOGIN_TOKEN_REVISION or later carries the two saved-login fields at the end;
+// one from before it does not, and is let in without them rather than turned away, so the engine
+// and the client can be shipped in either order. When every client in use is past it, both of
+// these go and the revision check is an equality again.
+const LOGIN_TOKEN_REVISION = 382;
+const LOGIN_LEGACY_REVISION = 381;
 
 type LogoutRequest = {
     save: Uint8Array;
@@ -2267,6 +2277,10 @@ class World {
 
                 player.session = client.uuid;
                 player.reconnecting = reconnecting;
+                // custom (2026-11-02) - a token the login thread just minted for this client.
+                // Written in onLogin with the rest of the opening packets rather than here, where
+                // the player has no outbound stream yet.
+                player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
@@ -2321,6 +2335,24 @@ class World {
             if (success) {
                 this.logoutRequests.delete(username);
             }
+        } else if (isForgetLoginsResponse(msg)) {
+            const { username, count, ok } = msg;
+            this.forgetLoginRequests.delete(username);
+
+            const player = this.getPlayerByUsername(username);
+            if (!player) {
+                return;
+            }
+
+            if (!ok) {
+                player.messageGame('Your saved logins could not be cancelled right now. Please try again later.');
+            } else if (count === 0) {
+                player.messageGame('You have no saved logins to cancel.');
+            } else if (count === 1) {
+                player.messageGame('Cancelled 1 saved login. You will have to type your password next time.');
+            } else {
+                player.messageGame(`Cancelled ${count} saved logins. You will have to type your password next time.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2344,6 +2376,23 @@ class World {
     // the login thread against the account table; the answer comes back through onLoginMessage.
     // One request at a time per account.
     passwordChanges: Set<string> = new Set();
+
+    // custom (2026-11-02) - ::forgetlogins (ClientCheatHandler). One request at a time per account,
+    // the same way a password change is held, and the answer comes back through onLoginMessage.
+    forgetLoginRequests: Set<string> = new Set();
+
+    requestForgetLogins(player: Player): boolean {
+        if (this.forgetLoginRequests.has(player.username)) {
+            return false;
+        }
+
+        this.forgetLoginRequests.add(player.username);
+        this.loginThread.postMessage({
+            type: 'player_forget_logins',
+            username: player.username
+        });
+        return true;
+    }
 
     requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {
         if (this.passwordChanges.has(player.username)) {
@@ -2577,7 +2626,20 @@ class World {
             if (rev === 0xff) {
                 rev = World.loginBuf.g2();
             }
-            if (rev !== Environment.ENGINE_REVISION) {
+            // custom (2026-11-02) - AND THE ONE BEFORE IT, for as long as 382 is the current one.
+            //
+            // The revision is how the engine and the client agree about the shape of what follows,
+            // and every bump before this has been a flag day: deploy the engine and every client
+            // still on the old one is turned away until its launcher fetches the new release, which
+            // only exists after the client repo is pushed. One of those two has to go first, and
+            // whichever it is there is a window where nobody can log in.
+            //
+            // 382 added two fields at the END of the login block and a packet going the other way.
+            // An older client sends neither, which costs it saved logins and nothing else - so it
+            // is let in, and the window disappears. The gate is read from the revision the client
+            // announced, not guessed at: LOGIN_TOKEN_REVISION below is what decides whether those
+            // two fields are there to read.
+            if (rev !== Environment.ENGINE_REVISION && rev !== LOGIN_LEGACY_REVISION) {
                 client.send(Uint8Array.from([6]));
                 client.close();
                 return;
@@ -2621,6 +2683,22 @@ class World {
             const username = World.loginBuf.gjstr();
             const password = World.loginBuf.gjstr();
 
+            // custom (2026-11-02) - SAVED LOGINS, inside the same RSA envelope as the password and
+            // for the same reason: a token is worth an account until it is cancelled, so it travels
+            // exactly as a password does and never in the clear. The envelope had the room - a
+            // 1024-bit key carries 127 bytes and the block was using 55 - so these are two more
+            // fields rather than a second meaning for the password field, which would have left the
+            // server guessing at which of the two it had been sent.
+            //
+            // `remember` asks for a token to keep; `token` is one being used. A client of this
+            // revision sends both on every login, empty when it has nothing to say. One from before
+            // them sends neither, and reading past what it wrote would be reading whatever was left
+            // in the buffer - so the revision it announced is what decides, and an old client is
+            // simply a login with no saved logins in it.
+            const sendsToken = rev >= LOGIN_TOKEN_REVISION;
+            const remember = sendsToken && World.loginBuf.g1() === 1;
+            const token = sendsToken ? World.loginBuf.gjstr() : '';
+
             if (Environment.NODE_PRODUCTION && Environment.NODE_RATELIMIT_DEVICE_LOGIN > 0) {
                 const last = this.loginDeviceAttempts.get(`${uid}@${client.remoteAddress}`);
                 const attempts = last ? last + 1 : 1;
@@ -2640,7 +2718,10 @@ class World {
                 return;
             }
 
-            if (password.length < 1 || password.length > 20) {
+            // One of the two has to be there and be the right shape. A saved login sends no
+            // password at all, so the old "a password is 1 to 20 characters" would have turned every
+            // one of them away at the door.
+            if (token.length > 0 ? !LoginToken.looksLikeToken(token) : password.length < 1 || password.length > 20) {
                 client.send(Uint8Array.from([3]));
                 client.close();
                 return;
@@ -2668,6 +2749,9 @@ class World {
                 remoteAddress: client.remoteAddress,
                 username: safeName,
                 password,
+                remember,
+                token,
+                sendsToken,
                 uid,
                 lowMemory,
                 reconnecting: client.opcode === 18,

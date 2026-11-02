@@ -457,7 +457,7 @@ class BotManager implements BotHooks {
             }
         }
 
-        this.fuzzSeed = seed || (Date.now() & 0x7fffffff);
+        this.fuzzSeed = seed || Date.now() & 0x7fffffff;
         this.fuzzRunning = true;
         findings.setFile(Environment.NODE_BOTS_FUZZ_FILE);
         // The fuzzer's whole point is to find script errors, so it turns the reporter on for itself
@@ -493,7 +493,32 @@ class BotManager implements BotHooks {
      * skipped rather than crashing the spawn, exactly as the kits do.
      */
     private stockFuzzer(bot: BotPlayer): void {
-        const inv = ['coins', 'tinderbox', 'knife', 'bronze_axe', 'bronze_pickaxe', 'hammer', 'chisel', 'needle', 'thread', 'net', 'bucket_empty', 'jug_empty', 'pot_empty', 'vial_empty', 'spade', 'logs', 'bones', 'raw_shrimp', 'bread', 'bucket_water', 'airrune', 'mindrune', 'grain', 'clay'];
+        const inv = [
+            'coins',
+            'tinderbox',
+            'knife',
+            'bronze_axe',
+            'bronze_pickaxe',
+            'hammer',
+            'chisel',
+            'needle',
+            'thread',
+            'net',
+            'bucket_empty',
+            'jug_empty',
+            'pot_empty',
+            'vial_empty',
+            'spade',
+            'logs',
+            'bones',
+            'raw_shrimp',
+            'bread',
+            'bucket_water',
+            'airrune',
+            'mindrune',
+            'grain',
+            'clay'
+        ];
         const counts: Record<string, number> = { coins: 100000, airrune: 500, mindrune: 500, lawrune: 100, naturerune: 100, logs: 10, bones: 5, clay: 5 };
         for (const name of inv) {
             const id = ObjType.getId(name);

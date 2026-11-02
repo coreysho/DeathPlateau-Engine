@@ -53,7 +53,7 @@ const NpcConfigOps: CommandHandlers = {
     },
     [ScriptOpcode.NC_VISLEVEL]: state => {
         state.pushInt(check(state.popInt(), NpcTypeValid).vislevel);
-    },
+    }
 };
 
 export default NpcConfigOps;

@@ -105,7 +105,7 @@ if (!only || only === 'crabs') {
         console.log(`  after walking past: nid ${spot.nid} is ${nowIs}`);
         check('the rock woke into an attackable Rock Crab', nowIs, 'horror_rockcrab');
         if (after && after.isActive) {
-            check('and it woke with the Rock Crab\'s own hitpoints, not the rock\'s', after.baseLevels[3], 50);
+            check("and it woke with the Rock Crab's own hitpoints, not the rock's", after.baseLevels[3], 50);
 
             H.clearLogs();
             tickSeen(20);
@@ -171,13 +171,13 @@ if (!only || only === 'boulder') {
         tickSeen(12);
         const now = World.getNpc(boulder.nid);
         check('the Boulder reveals when walked up to', now && now.isActive ? name(now) : '(gone)', 'giant_rockcrab_deeper');
-        check('and reveals with the Giant Rock Crab\'s own hitpoints', now ? now.baseLevels[3] : 0, 180);
+        check("and reveals with the Giant Rock Crab's own hitpoints", now ? now.baseLevels[3] : 0, 180);
     }
 }
 
 // ------------------------------------------------------- witch's house wolf
 if (!only || only === 'wolf') {
-    console.log('\n== witch\'s house experiment ==');
+    console.log("\n== witch's house experiment ==");
 
     // Every form's footprint must match the model it is drawn from.
     for (const [form, size] of [

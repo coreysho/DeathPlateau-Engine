@@ -8,7 +8,12 @@ import { canTravel } from '#/engine/GameMap.js';
 import { CollisionType } from '#/engine/routefinder/index.js';
 
 await H.boot();
-const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const DIRS: [number, number][] = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+];
 const key = (x: number, z: number) => x * 20000 + z;
 function pocket(level: number, x: number, z: number, cap = 40000) {
     const seen = new Set<number>([key(x, z)]);
@@ -18,13 +23,13 @@ function pocket(level: number, x: number, z: number, cap = 40000) {
         for (const [dx, dz] of DIRS) {
             const k = key(cx + dx, cz + dz);
             if (seen.has(k) || !canTravel(level, cx, cz, dx, dz, 1, 0, CollisionType.NORMAL)) continue;
-            seen.add(k); q.push([cx + dx, cz + dz]);
+            seen.add(k);
+            q.push([cx + dx, cz + dz]);
         }
     }
     return seen;
 }
-const standable = (l: number, x: number, z: number) =>
-    DIRS.some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
+const standable = (l: number, x: number, z: number) => DIRS.some(([dx, dz]) => canTravel(l, x, z, dx, dz, 1, 0, CollisionType.NORMAL));
 
 // every mouth, and a tile beside it to flood from
 type Spot = { nm: string; l: number; x: number; z: number; from: string };
@@ -57,11 +62,20 @@ const groups: { rep: Spot; set: Set<number>; members: string[] }[] = [];
 for (const s of all) {
     let tile: [number, number] | null = null;
     for (const [dx, dz] of [[0, 0] as [number, number], ...DIRS]) {
-        if (standable(s.l, s.x + dx, s.z + dz)) { tile = [s.x + dx, s.z + dz]; break; }
+        if (standable(s.l, s.x + dx, s.z + dz)) {
+            tile = [s.x + dx, s.z + dz];
+            break;
+        }
     }
-    if (!tile) { console.log(`  ${s.nm} L${s.l}: no standable tile`); continue; }
+    if (!tile) {
+        console.log(`  ${s.nm} L${s.l}: no standable tile`);
+        continue;
+    }
     const g = groups.find(g => g.rep.l === s.l && g.set.has(key(tile![0], tile![1])));
-    if (g) { g.members.push(`${s.nm} L${s.l}`); continue; }
+    if (g) {
+        g.members.push(`${s.nm} L${s.l}`);
+        continue;
+    }
     const set = pocket(s.l, tile[0], tile[1]);
     groups.push({ rep: s, set, members: [`${s.nm} L${s.l}`] });
 }
