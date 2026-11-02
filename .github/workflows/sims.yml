@@ -100,12 +100,17 @@ jobs:
             continue
           fi
           if [ "$rc" != "0" ]; then
-            # ONCE MORE BEFORE BELIEVING IT. These sims are not deterministic on a runner:
-            # two dispatches of the same commit disagreed about which ones failed -
-            # quest_ikov_run failed in one and passed in the next, gwdskirmish the other way
-            # round. Without this the list would have to be edited every night to chase
-            # noise, which is how a list stops meaning anything. Only failures are retried,
-            # so a green run costs nothing.
+            # ONCE MORE, AND IT SHOULD NEVER HELP. The retry went in when two dispatches of
+            # the same commit disagreed about which sims failed, and it did not work: on the
+            # run after it, droprate, gwdskirmish and rdreach each failed TWICE in a row,
+            # while all three pass on a laptop. A retry cannot fix a suite that is sampling
+            # the game rather than measuring it.
+            #
+            # The dice are seeded now (tools/sim/harness.ts, seedTheDice), so a sim run is
+            # reproducible and this retry is no longer what keeps the list honest. It stays
+            # as an INSTRUMENT: with the dice fixed, a FLAKY line means something still
+            # varies between two runs of the same commit - a real bug worth chasing, not
+            # noise to absorb. Only failures are retried, so a green run costs nothing.
             rc2=0
             timeout 180 npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then

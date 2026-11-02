@@ -35,6 +35,7 @@ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import OpHeldU from '#/network/game/client/model/OpHeldU.js';
 import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
 import { findPathToEntity, findPathToLoc } from '#/engine/GameMap.js';
+import JavaRandom from '#/util/JavaRandom.js';
 
 // 'nid' is the npc's own index, so a hit can be attributed to ONE npc rather than to every npc
 // sharing its debugname. Without it a sim measuring "how often does my target get poisoned per
@@ -83,8 +84,51 @@ function synthName(id: number): string {
     return synthNames.get(id) ?? String(id);
 }
 
+// EVERY SIM USED TO ROLL A FRESH DICE, and that is why this suite could not be trusted. Two CI
+// dispatches of the SAME engine commit disagreed about which sims failed - quest_ikov_run failed in
+// one and passed in the next, gwdskirmish the other way round - with nothing changed in between. A
+// suite like that is not measuring the game, it is sampling it, and a known-failing list built from
+// it can never converge because the thing it records keeps moving.
+//
+// There are exactly two sources of it, and both are reachable from here:
+//
+//   1. The content's `random` and `randominc` ops, which go through ONE module-global JavaRandom
+//      (src/util/JavaRandom.ts) that seeds itself off Math.random the moment it is imported.
+//   2. The engine's own rolls, which call Math.random directly - an npc picking a wander step or a
+//      hunt target (Npc.ts), an entity shoved aside when its square is taken (PathingEntity.ts),
+//      the fallback step in NaivePathFinder.
+//
+// Seed both and a sim run is reproducible. The number that made this concrete: gwdskirmish counted
+// "52 npcs, 22 kinds" in the god chamber on one run and 50 on the next, because two of the
+// wanderers happened to drift over the boundary. Nothing was wrong either time.
+//
+// SIM_SEED=<n> re-runs a sim on a different dice, which is how to tell a real failure from one
+// specific unlucky roll. SIM_SEED=random restores the old free-running behaviour. Neither is needed
+// for an ordinary run: the default seed is fixed, so the default run is repeatable.
+function seedTheDice(): void {
+    const want = process.env.SIM_SEED ?? '1';
+    if (want === 'random') return;
+    const seed = Number(want);
+    if (!Number.isInteger(seed) || seed < 0) {
+        throw new Error(`SIM_SEED must be a non-negative whole number or "random", not ${JSON.stringify(want)}`);
+    }
+    JavaRandom.setSeed(seed);
+    // mulberry32, four lines and good enough for a dice no player ever sees. It is deliberately NOT
+    // JavaRandom: the two sources stay independent, so seeding one cannot shift the other's stream.
+    let s = seed | 0;
+    Math.random = () => {
+        s = (s + 0x6d2b79f5) | 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 export async function boot() {
     if (booted) return;
+    // BEFORE World.start, because starting the world spawns 12,666 static npcs and rolls for them.
+    seedTheDice();
     await World.start(false, false);
     booted = true;
 
