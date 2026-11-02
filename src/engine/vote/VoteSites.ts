@@ -64,6 +64,16 @@ export type VoteSite = {
         /** Which parameter carries the site's own id for this vote, if it sends one. */
         refParam?: string;
         /**
+         * Which parameter carries the time this player may vote here again, if the site sends one.
+         *
+         * WORTH MORE THAN cooldownHours WHERE IT EXISTS, because a site's window need not be a
+         * rolling one at all. RSPS List sends `reset` and its rule is the next noon or midnight, so
+         * a vote at 11:55 is followed by another at noon - five minutes, where twelve hours was
+         * assumed. Computing it ourselves is wrong by up to the whole window in either direction,
+         * and the site hands us the right answer with every vote.
+         */
+        resetParam?: string;
+        /**
          * Parameters that must arrive with these exact values or the vote is ignored.
          *
          * RSPS List sends voted=1 for a real vote and voted=0 for a failed or duplicated one, down

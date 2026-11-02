@@ -19,6 +19,23 @@
 #
 # So the real state is 266 of 303 passing.
 
+# THE DICE ARE FIXED NOW, AND THIS LIST PREDATES THAT. Every measurement above was taken with
+# the suite rolling a fresh dice each run, which is why it would not settle: the fourth CI run
+# had droprate, gwdskirmish and rdreach each fail TWICE in a row, with all three passing on a
+# laptop, and a retry-once could not absorb that. The cause was not state leaking between sims
+# - each one is its own process - it was two unseeded generators: the module-global JavaRandom
+# behind the content's `random` op, and the engine's own direct Math.random calls for npc
+# wander steps and hunt targets. gwdskirmish counted 52 npcs in the god chamber on one run and
+# 50 on the next for exactly that reason.
+#
+# Both are seeded from tools/sim/harness.ts now, and a sim's output is byte-identical run to
+# run. So THIS LIST IS DUE A FRESH MEASUREMENT under the fixed dice, and some of it will be
+# wrong until that happens: quest_ikov_run, listed below as passing locally, fails on four of
+# five seeds once the dice stop moving - it was never passing, it was being sampled.
+#
+# To re-measure one entry: SIM_SEED=random for the old free-running behaviour, SIM_SEED=<n> for
+# a different dice. A failure that survives several seeds is real.
+
 # ---- CHECKS THAT ACTUALLY FAIL. The interesting ones. A count means the sim ran and disagreed
 # with the engine; a message means it could not get far enough to try.
 audit0               # 108 ok, 1 FAIL

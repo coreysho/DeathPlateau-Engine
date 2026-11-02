@@ -1,15 +1,5 @@
 import VoteBook, { CreditResult } from '#/engine/vote/VoteBook.js';
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
-
-/**
- * Names that are a toplist saying "nobody", not a player saying who they are.
- *
- * Every one of these is a placeholder a site substitutes when a vote carried no name, and all
- * of them are also names somebody could register - so without this list the tickets are real,
- * owed, and collectable by whoever gets there first. Compared after toSafeName, so the case and
- * any punctuation are already gone.
- */
-const NOT_A_PLAYER: ReadonlySet<string> = new Set(['null', 'guest', 'none', 'nil', 'undefined', 'unknown', 'anonymous']);
 import World from '#/engine/World.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import Environment from '#/util/Environment.js';
@@ -57,6 +47,43 @@ export type ClaimOutcome = {
 let book: VoteBook | null = null;
 let bookRefused = false;
 const inFlight = new Set<string>();
+
+/**
+ * Names that are a toplist saying "nobody", not a player saying who they are.
+ *
+ * Every one of these is a placeholder a site substitutes when a vote carried no name, and all
+ * of them are also names somebody could register - so without this list the tickets are real,
+ * owed, and collectable by whoever gets there first. Compared after toSafeName, so the case and
+ * any punctuation are already gone.
+ */
+const NOT_A_PLAYER: ReadonlySet<string> = new Set(['null', 'guest', 'none', 'nil', 'undefined', 'unknown', 'anonymous']);
+
+/**
+ * The moment a site says this player may vote there again, out of whatever it put in its callback.
+ *
+ * NOBODY DOCUMENTS A FORMAT, so this takes unix seconds, unix milliseconds and anything Date can
+ * parse, and refuses the rest rather than guessing. Refused too: a time already gone, which would
+ * read as "ready now" and is far likelier a format read wrong than a site volunteering that a vote
+ * is already spent; and anything over a week out, which no toplist's window is and which would
+ * shut a player out of a site for ever on one bad callback. A refusal costs nothing - the vote is
+ * credited either way, and readiness falls back to cooldownHours.
+ */
+const MAX_RESET_AHEAD = 7 * 24 * 3600_000;
+
+function parseReset(raw: string, now: number): number {
+    const text = raw.trim();
+    if (!text.length) {
+        return 0;
+    }
+    // Seconds or milliseconds, told apart by size: 1e11 is the year 5138 read as seconds and 1973
+    // read as milliseconds, so every real vote falls unambiguously on one side of it.
+    const digits = /^[0-9]+$/.test(text);
+    const at = digits ? (Number(text) < 1e11 ? Number(text) * 1000 : Number(text)) : Date.parse(text);
+    if (!Number.isFinite(at) || at <= now || at - now > MAX_RESET_AHEAD) {
+        return 0;
+    }
+    return at;
+}
 
 /**
  * The parameter NAMES a callback arrived with, for the log.
@@ -229,7 +256,15 @@ export default class VoteService {
             // retries a callback retries on a non-200, so the vote is not lost by saying so.
             return { status: 503, body: 'unavailable' };
         }
-        const result = ledger.credit(site.id, ref, username, site.tickets, at, 0);
+        // WHEN THEY MAY VOTE AGAIN, where the site bothered to say. Stored rather than worked out
+        // from cooldownHours, because a site's window is its own business - see
+        // VoteSite.resetParam.
+        const sent = site.callback.resetParam ? (params[site.callback.resetParam] ?? '').trim() : '';
+        const readyAt = parseReset(sent, at);
+        if (sent.length && readyAt === 0) {
+            printError(`vote: ${siteId} sent "${site.callback.resetParam}" as ${JSON.stringify(sent)}, which is not a time this can use - falling back to cooldownHours`);
+        }
+        const result = ledger.credit(site.id, ref, username, site.tickets, at, 0, readyAt);
         if (result === CreditResult.DUPLICATE) {
             return { status: 200, body: 'duplicate' };
         }
@@ -280,11 +315,44 @@ export default class VoteService {
         return ClaimStatus.STARTED;
     }
 
+    /**
+     * Milliseconds until `username` can be paid for `site` again, 0 if that is now.
+     *
+     * TWO SOURCES, AND THE SITE'S BEATS OURS. A site that says when the next vote is allowed is
+     * describing its own rule, and that rule need not be a rolling window at all: RSPS List's is
+     * the next noon or midnight, so a vote at 11:55 is followed by one at noon. cooldownHours is
+     * the fallback for sites that say nothing, and was the only answer anybody had before
+     * 2 November - it told a player to wait twelve hours where the site would have taken another
+     * vote in five minutes, and called a site ready that would have turned them away.
+     *
+     * ONE PLACE, because the clerk's countdown, the reminder and the claim path have to give the
+     * same answer: being told "ready now" and then refused is worse than either one alone.
+     */
+    static readyIn(site: VoteSite, username: string): number {
+        // No ledger is not an error here - reading readiness must never throw into a script - and
+        // nothing written down means nothing is on cooldown.
+        const ledger = VoteService.ledgerOrNull();
+        if (!ledger) {
+            return 0;
+        }
+        const now = Date.now();
+        const until = ledger.nextVote(site.id, username);
+        if (until > 0) {
+            return until > now ? until - now : 0;
+        }
+        const cooldown = VoteSites.cooldownMs(site);
+        const since = ledger.lastVote(site.id, username);
+        if (cooldown <= 0 || since <= 0) {
+            return 0;
+        }
+        const left = cooldown - (now - since);
+        return left > 0 ? left : 0;
+    }
+
     private static async claimOne(site: VoteSite, username: string): Promise<ClaimOutcome> {
         const cooldown = VoteSites.cooldownMs(site);
-        const since = VoteService.ledger().lastVote(site.id, username);
         const now = Date.now();
-        if (cooldown > 0 && since > 0 && now - since < cooldown) {
+        if (VoteService.readyIn(site, username) > 0) {
             return { site, credited: false, reason: 'cooldown' };
         }
 

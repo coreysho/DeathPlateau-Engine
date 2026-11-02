@@ -13,11 +13,13 @@
         "cooldownHours": 12,
 
         "_comment_callback": "THE SITE CALLS US. Give the site <your server>/vote/example/callback as its callback or postback URL. secretParam/userParam/refParam are what the site calls those things in its request - read its docs. The secret is never written here: put it in the environment and name it.",
+        "_comment_resetparam": "resetParam names the field the site puts the NEXT ALLOWED VOTE TIME in, if it sends one. Set it wherever it exists, because it beats cooldownHours: a site's window need not be a rolling one. RSPS List sends 'reset' and its rule is the next noon or midnight, so a vote at 11:55 is followed by another at noon - and cooldownHours would have said twelve hours. Unix seconds, unix milliseconds or any ordinary date string are all understood; anything else is logged and ignored, and the vote still counts.",
         "callback": {
             "secret": "env:VOTE_EXAMPLE_SECRET",
             "secretParam": "key",
             "userParam": "username",
-            "refParam": "voteid"
+            "refParam": "voteid",
+            "resetParam": "reset"
         },
 
         "_comment_check": "WE CALL THE SITE, when a player clicks Claim. {user} and {key} are substituted. success says how to read a yes out of the answer: either \"contains\" with a substring, or \"json\" with a dotted path and \"equals\". refJson is where the site puts its own id for the vote, if it sends one - without it, one claim per cooldown window is the most anybody can get.",
