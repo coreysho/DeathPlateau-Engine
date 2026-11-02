@@ -142,6 +142,19 @@ export default class VoteService {
      *
      * Returns a line for the HTTP response. The site is a machine: it wants 200 and a word.
      */
+    /**
+     * A REFUSAL ANSWERS 200, NOT 404, and the body says 'unknown'.
+     *
+     * Toplists validate the callback URL before they will save it, by pinging it with no
+     * parameters at all - RSPS List refuses the URL outright with "responded with http code 404".
+     * A 404 therefore makes the engine unconfigurable on the sites it exists to serve.
+     *
+     * Nothing is given away by this. An unlisted id and a wrong key still return the IDENTICAL
+     * response, which is what stops either being probed for; the status code never carried that.
+     * And a site that retries on a non-2xx would have retried a wrong secret for ever, which no
+     * amount of retrying fixes. The one case that still answers non-2xx is a missing ledger (503),
+     * because that one IS worth retrying.
+     */
     static fromCallback(siteId: string, params: Record<string, string>): { status: number; body: string } {
         const site = VoteSites.get(siteId);
         if (!site || !site.callback) {
@@ -149,14 +162,27 @@ export default class VoteService {
             // not be distinguishable from outside - but the log may say which, because the log is
             // ours.
             printError(`vote: callback for ${siteId}, which is not a configured site with a callback${describe(params)}`);
-            return { status: 404, body: 'unknown' };
+            return { status: 200, body: 'unknown' };
         }
 
         const secretParam = site.callback.secretParam ?? 'secret';
         const given = params[secretParam] ?? '';
         if (!timingSafeEqual(given, site.callback.secret)) {
             printError(`vote: ${siteId} callback with a wrong secret - expected it in "${secretParam}"${describe(params)}`);
-            return { status: 404, body: 'unknown' };
+            return { status: 200, body: 'unknown' };
+        }
+
+        // A site that reports its own failures down the same callback - RSPS List sends voted=0 for
+        // a failed or duplicated vote - would otherwise be paid for them. Checked after the secret,
+        // so an unauthenticated caller learns nothing from it, and before the player is read,
+        // because a vote that did not happen needs no player.
+        for (const [param, want] of Object.entries(site.callback.require ?? {})) {
+            const got = params[param];
+            if (got !== want) {
+                printError(`vote: ${siteId} callback says the vote did not count - "${param}" was ${got === undefined ? 'absent' : JSON.stringify(got)}, needed ${JSON.stringify(want)}${describe(params)}`);
+                // 200: the site told us something true and we acted on it. Nothing to retry.
+                return { status: 200, body: 'ignored' };
+            }
         }
 
         const username = (params[site.callback.userParam] ?? '').trim();
@@ -259,12 +285,21 @@ export default class VoteService {
     private static async ask(site: VoteSite, username: string): Promise<string> {
         const check = site.check!;
         const url = check.url.replaceAll('{user}', encodeURIComponent(username)).replaceAll('{key}', encodeURIComponent(check.key ?? ''));
+
+        // {user} and {key} in the HEADERS too, because more sites authenticate with a header than
+        // with a query parameter - RuneTopic wants `Authorization: Bearer <token>`. Without this a
+        // header-authenticated site can only be configured by writing the token into sites.json in
+        // plain text, which is the one thing that file's own comments tell you not to do.
+        //
+        // NOT percent-encoded, unlike the URL: a header value is not a URL, and encoding a bearer
+        // token would corrupt it.
+        const headers = check.headers ? Object.fromEntries(Object.entries(check.headers).map(([name, value]) => [name, value.replaceAll('{user}', username).replaceAll('{key}', check.key ?? '')])) : undefined;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), Environment.VOTE_CHECK_TIMEOUT);
         try {
             const res = await fetch(url, {
                 method: check.method ?? 'GET',
-                headers: check.headers,
+                headers,
                 signal: controller.signal
             });
             return await res.text();

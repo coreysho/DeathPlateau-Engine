@@ -2751,6 +2751,7 @@ class World {
                 password,
                 remember,
                 token,
+                sendsToken,
                 uid,
                 lowMemory,
                 reconnecting: client.opcode === 18,

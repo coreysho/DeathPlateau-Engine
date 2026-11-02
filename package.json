@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsx tools/pack/Build.ts",
+    "cache:check": "tsx tools/pack/CacheCheck.ts",
     "clean": "tsx tools/pack/Clean.ts",
     "db:migrate": "tsx tools/server/prisma-multi.ts migrate deploy",
     "db:reset": "tsx tools/server/prisma-multi.ts migrate reset --force",

@@ -86,24 +86,15 @@ export default class LoginToken {
     }
 
     /**
-     * THE TABLE, IF THE DATABASE HAS NOT GOT IT YET.
+     * THE TABLE, WORD FOR WORD AS THE MIGRATION WRITES IT.
      *
-     * There is a prisma migration for this table, and the dev world applies it on every deploy.
-     * The live world does not: content/tools/deploy.sh runs `npm run sqlite:migrate` only on the
-     * --dev path, so a live deploy carries new code onto a database with the old shape. For most
-     * tables that would be a feature nobody can reach; for this one it is every login on the
-     * server failing at the first query, which is not a way to find out.
-     *
-     * So the sqlite path makes sure of it at startup. It is the same CREATE as the migration, and
-     * IF NOT EXISTS means the migrated database is untouched. mysql is left to its migration:
-     * the multiworld setup is deployed deliberately, by someone running db:migrate.
+     * It is here as well as in prisma/singleworld/migrations because the two can arrive in either
+     * order, and both orders have now happened on the live world. Keep them identical: the index
+     * names are part of that, and tools/sim/logintokens.ts applies each to its own empty database
+     * and fails if what sqlite reports differs by a character.
      */
-    static async ensureTable(): Promise<void> {
-        if (LoginToken.ensured || Environment.DB_BACKEND !== 'sqlite') {
-            LoginToken.ensured = true;
-            return;
-        }
-        await sql`CREATE TABLE IF NOT EXISTS "account_token" (
+    static readonly TABLE_SQL: readonly string[] = [
+        `CREATE TABLE IF NOT EXISTS "account_token" (
             "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             "account_id" INTEGER NOT NULL,
             "token_hash" TEXT NOT NULL,
@@ -112,9 +103,33 @@ export default class LoginToken {
             "expires" DATETIME NOT NULL,
             "uid" INTEGER,
             "created_ip" TEXT
-        )`.execute(db);
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS "account_token_token_hash_key" ON "account_token"("token_hash")`.execute(db);
-        await sql`CREATE INDEX IF NOT EXISTS "account_token_account_id_idx" ON "account_token"("account_id")`.execute(db);
+        )`,
+        'CREATE UNIQUE INDEX IF NOT EXISTS "account_token_token_hash_key" ON "account_token"("token_hash")',
+        'CREATE INDEX IF NOT EXISTS "account_token_account_id_idx" ON "account_token"("account_id")'
+    ];
+
+    /**
+     * THE TABLE, IF THE DATABASE HAS NOT GOT IT YET.
+     *
+     * There is a prisma migration for this table, and now that content/tools/deploy.sh runs
+     * `npm run sqlite:migrate` on the live path too, that is how a deployed world gets it. This
+     * stays for the worlds that are not deployed that way at all - a dev checkout, a scratch
+     * directory, a sim run - where a missing table is every login failing at its first query.
+     *
+     * IT ONCE STOPPED A DEPLOY DEAD. The live world got this table from here, before the deploy
+     * script migrated; the first deploy that did migrate hit P3018, `table "account_token" already
+     * exists`, and refused to go on. Both definitions now say IF NOT EXISTS, so neither has to be
+     * first. mysql is left to its migration: multiworld is deployed deliberately, by someone
+     * running db:migrate, and nothing here creates anything for it.
+     */
+    static async ensureTable(): Promise<void> {
+        if (LoginToken.ensured || Environment.DB_BACKEND !== 'sqlite') {
+            LoginToken.ensured = true;
+            return;
+        }
+        for (const statement of LoginToken.TABLE_SQL) {
+            await sql.raw(statement).execute(db);
+        }
         LoginToken.ensured = true;
     }
 

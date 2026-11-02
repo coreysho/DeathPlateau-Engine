@@ -21,6 +21,12 @@
 //
 // The db.sqlite it opens is the one in the current directory, so from an empty one there is no
 // account_token table to find and ensureTable has to make it.
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { DatabaseSync } from 'node:sqlite';
+
 import { sql } from 'kysely';
 
 import { db } from '#/db/query.js';
@@ -28,11 +34,65 @@ import LoginToken from '#/server/login/LoginToken.js';
 
 const R = { ok: 0, bad: 0 };
 
+// FROM THIS FILE, NOT FROM THE WORKING DIRECTORY. The whole point of the empty-directory run is
+// that the current directory is NOT the repository - that is what gives it a database with no
+// tables - so a path relative to cwd finds nothing. tools/sim/logintokens.ts, up three.
+const REPO = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+
 function check(what: string, got: unknown, want: unknown) {
     const pass = JSON.stringify(got) === JSON.stringify(want);
     if (pass) R.ok++;
     else R.bad++;
     console.log(`  ${pass ? 'ok  ' : 'FAIL'} ${what}: ${JSON.stringify(got)}${pass ? '' : `   (want ${JSON.stringify(want)})`}`);
+}
+
+/**
+ * THE TWO DEFINITIONS OF THIS TABLE SAY THE SAME THING.
+ *
+ * There are two, and that is on purpose: the prisma migration, and LoginToken.ensureTable for the
+ * sqlite path, because until the deploy script learned to run migrations a missing table meant
+ * every login failing at its first query. Two definitions of one table is a standing invitation to
+ * drift - change the model, write a migration, forget the hardcoded CREATE, and a world that made
+ * its own table is quietly a column behind.
+ *
+ * So: apply each to its own empty database and compare what sqlite reports. The comparison is the
+ * whole table and both indexes, names included, because the names are what made the collision on
+ * the live world recoverable - `migrate resolve --applied` is only honest if the schema already
+ * matches, and here it is checked rather than assumed.
+ */
+async function definitionsAgree(): Promise<void> {
+    // COMMENTS OUT FIRST, then split. Splitting a .sql file on ';' and hoping leaves the comment
+    // block that precedes each statement glued to it, and sqlite then parses prose - "near this:
+    // syntax error", from a comment explaining why the statement is written the way it is.
+    const migration = fs
+        .readFileSync(path.join(REPO, 'prisma/singleworld/migrations/20261102010000_account_token/migration.sql'), 'utf8')
+        .split('\n')
+        .filter(line => !line.trim().startsWith('--'))
+        .join('\n')
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+    const shape = (file: string, apply: (one: DatabaseSync) => void) => {
+        fs.rmSync(file, { force: true });
+        const one = new DatabaseSync(file);
+        apply(one);
+        const rows = one.prepare("select type, name, sql from sqlite_master where tbl_name = 'account_token' order by name").all() as { type: string; name: string; sql: string | null }[];
+        one.close();
+        fs.rmSync(file, { force: true });
+        return rows.map(r => `${r.type} ${r.name} ${(r.sql ?? '').replace(/\s+/g, ' ').trim()}`);
+    };
+
+    const tmp = os.tmpdir();
+    const fromMigration = shape(path.join(tmp, `dp-token-mig-${process.pid}.db`), one => {
+        for (const statement of migration) one.exec(statement);
+    });
+    const fromEngine = shape(path.join(tmp, `dp-token-eng-${process.pid}.db`), one => {
+        for (const statement of LoginToken.TABLE_SQL) one.exec(statement);
+    });
+
+    check('the migration makes a table and two indexes', fromMigration.length, 3);
+    check('and the engine makes exactly the same three', fromEngine, fromMigration);
 }
 
 /** Was the table already there? Which tells us whether this run is testing ensureTable. */
@@ -77,6 +137,10 @@ async function rows(accountId: number): Promise<number> {
 }
 
 async function main() {
+    console.log('0. the migration and the engine define the same table');
+    await definitionsAgree();
+    console.log('');
+
     const had = await tableExists();
     console.log(had ? 'the table is already here (a migrated database)' : 'NO account_token table: ensureTable has to make it');
     await ensureAccounts();

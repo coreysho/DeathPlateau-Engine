@@ -69,6 +69,10 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
             const token: string = typeof msg.token === 'string' ? msg.token : '';
             const remember: boolean = msg.remember === true;
             const saved = token.length > 0;
+            // Whether the client is new enough to carry those two fields at all, as World read it
+            // off the revision. Only used to say so in the log, where the difference between "did
+            // not ask" and "could not ask" is the whole diagnosis.
+            const sendsSavedLogin: boolean = msg.sendsToken === true;
 
             if (Environment.LOGIN_SERVER) {
                 // A token lives in this world's own account table. With a login server it is that
@@ -191,9 +195,19 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 if (remember && !saved) {
                     try {
                         issued = await LoginToken.issue(accountId, typeof uid === 'number' ? uid : null, remoteAddress ?? null);
+                        console.log(`[Login]: issued a saved login for ${username}`);
                     } catch (err) {
                         console.error(`[Login]: could not save the login for ${username}: ${err instanceof Error ? err.message : err}`);
                     }
+                } else if (saved) {
+                    console.log(`[Login]: ${username} signed in with a saved login`);
+                }
+
+                // The one that cost an evening of reading code: a login that asked for nothing.
+                // From here it is indistinguishable from a client that cannot ask, so say which it
+                // was - the revision gate is what decides whether those fields were even read.
+                if (!remember && !saved) {
+                    console.log(`[Login]: ${username} asked for no saved login (client sends them: ${sendsSavedLogin})`);
                 }
 
                 if (!fs.existsSync(`data/players/${profile}`)) {
