@@ -52,6 +52,14 @@ export type VoteSite = {
         userParam: string;
         /** Which parameter carries the site's own id for this vote, if it sends one. */
         refParam?: string;
+        /**
+         * Parameters that must arrive with these exact values or the vote is ignored.
+         *
+         * RSPS List sends voted=1 for a real vote and voted=0 for a failed or duplicated one, down
+         * the same callback - so without `{"voted": "1"}` a failed vote pays a ticket. A site that
+         * says nothing about success needs nothing here.
+         */
+        require?: Record<string, string>;
     };
     check?: {
         /** {user} and {key} are substituted. */
@@ -112,6 +120,12 @@ function faults(site: Partial<VoteSite>, index: number): string[] {
     }
     if (site.callback && typeof site.callback.userParam !== 'string') {
         out.push(`${at}.callback.userParam must name the parameter the site puts the player's name in`);
+    }
+    if (site.callback?.require !== undefined) {
+        const bad = typeof site.callback.require !== 'object' || site.callback.require === null || Object.values(site.callback.require).some(v => typeof v !== 'string');
+        if (bad) {
+            out.push(`${at}.callback.require must be an object of parameter names to the exact string values required, e.g. {"voted": "1"}`);
+        }
     }
     return out;
 }

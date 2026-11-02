@@ -172,6 +172,19 @@ export default class VoteService {
             return { status: 200, body: 'unknown' };
         }
 
+        // A site that reports its own failures down the same callback - RSPS List sends voted=0 for
+        // a failed or duplicated vote - would otherwise be paid for them. Checked after the secret,
+        // so an unauthenticated caller learns nothing from it, and before the player is read,
+        // because a vote that did not happen needs no player.
+        for (const [param, want] of Object.entries(site.callback.require ?? {})) {
+            const got = params[param];
+            if (got !== want) {
+                printError(`vote: ${siteId} callback says the vote did not count - "${param}" was ${got === undefined ? 'absent' : JSON.stringify(got)}, needed ${JSON.stringify(want)}${describe(params)}`);
+                // 200: the site told us something true and we acted on it. Nothing to retry.
+                return { status: 200, body: 'ignored' };
+            }
+        }
+
         const username = (params[site.callback.userParam] ?? '').trim();
         if (!username.length || username.length > 12) {
             printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describe(params)}`);
