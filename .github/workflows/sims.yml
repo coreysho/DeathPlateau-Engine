@@ -18,14 +18,10 @@
 # sims open '../content/scripts/...' directly. That is their convention and this matches it.
 name: Nightly sims
 
-# THE SCHEDULE IS DELIBERATELY NOT ON YET. tools/sim/known-failing.txt does not exist, and
-# without it the first nightly run is red with around sixty failures and teaches everybody to
-# ignore the job. The baseline that produces the list is being measured now; the schedule goes
-# on in the same commit that adds it, and until then this runs only when somebody asks it to.
 on:
-  # schedule:
-  #   # 03:00 UTC, off the hour used by everything else.
-  #   - cron: '0 3 * * *'
+  schedule:
+    # 03:00 UTC, off the hour everything else in this project uses.
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -71,8 +67,11 @@ jobs:
     - name: Run this shard
       working-directory: engine
       run: |
-        known=tools/sim/known-failing.txt
-        [ -f "$known" ] || : > "$known"
+        # NAMES ONLY: the list carries a comment per entry saying how it fails, which is the
+        # point of it, so the names are cut out of it rather than matched against the line.
+        known=/tmp/known-failing-names.txt
+        grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
+        echo "known-failing: $(wc -l < "$known") sims"
         newly_red=""
         newly_green=""
         i=0
