@@ -74,10 +74,43 @@ brutalarrows         # and it NEVER passed on this machine, whatever this file u
 mmaggro              # 2 of 3 free-dice runs pass, seed 1 fails - a genuine one-in-three
 templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named checks go with it:
                      # the trek lands you at 1952,4764 instead of Burgh de Rott at 3480,3243, the
-                     # escort survives, and the pack is not emptied
-trollromance         # 3 of 3 free-dice runs pass, seed 1 fails: "menus not reached:
-                     # Trollweiss,What would I need" - and it THROWS rather than failing a named
-                     # check, so the sim reports a stack trace instead of a verdict
+                     # escort survives, and the pack is not emptied.
+                     #
+                     # NOT DIAGNOSED, and an attempt was made and reverted. What IS measured, so
+                     # the next person does not repeat it:
+                     #
+                     #   - the snakes sit ADJACENT to the escort (distance 1) for all 120 ticks of
+                     #     the final loop and never bite it; its health goes 2 -> 3, which is
+                     #     regeneration, so nothing is touching it at all
+                     #   - [queue,trek_escort_watch] is alive and re-queueing the whole time, and
+                     #     trek_route and trek_event_done are both still what the test expects
+                     #   - there are ZERO escorts of that type within 40 tiles of the player: the
+                     #     player sits at 1952,4764 and the escort at 2004,5034, ~270 tiles apart,
+                     #     and every bite goes through [proc,trek_maul_escort] which begins with
+                     #     `npc_find(coord, $escort, 40, 0)` FROM THE PLAYER'S COORD
+                     #
+                     # That last one looks like the answer and is not. Standing the player beside
+                     # the escort does not fix it: on seed 1 the player is pulled straight back to
+                     # 1952,4764, the room's entry square, and on seed 42 it makes things WORSE -
+                     # "left among the monsters, they are mauled" starts failing, having passed
+                     # before. So the distance is a symptom and the room geometry is doing
+                     # something this test does not model. Reverted rather than left half-done.
+                     #
+                     # The failure MESSAGE is the other half of why this sat unlooked-at. "you are
+                     # back in Burgh de Rott: [1952,4764,...]" reads as the trek refusing to send
+                     # you home, and is really the player standing exactly where the test left
+                     # them, rooms away from the villager it is waiting to watch die. Same shape as
+                     # trollromance's "Arrg dies: defeated: 35", which was a corpse in Lumbridge:
+                     # a check reporting the consequence it watches instead of the setup that never
+                     # happened.
+
+# trollromance came OFF this list by being fixed rather than excused, and it is worth saying what
+# was behind it: three bugs, not one. talkTo never followed Tenzing when he wandered out of range;
+# the max-hit measurement topped health up only below 60 while Arrg can deal 76 in a tick; and the
+# kill loop had no top-up at all, so the player died and respawned in Lumbridge while the loop went
+# on swinging at a troll 300 tiles away. That last one printed as "Arrg dies: defeated: 35 (want
+# 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
+# why nobody had got to the bottom of it. Twelve seeds pass now.
 
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
 blastfurnace

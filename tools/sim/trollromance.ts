@@ -106,12 +106,27 @@ function menuOptions(p: Player): string[] {
     return out;
 }
 
+// FOLLOW HIM IF HE WALKS OFF. This stood the player next to the npc, clicked once and waited ten
+// ticks, which works for anyone who holds still and silently fails for anyone who does not.
+// Tenzing has a wanderrange: the click was accepted (opNpc returned true, the player was adjacent,
+// nothing was delayed) and then he stepped from 2822,3556 to 2820,3554 while those ten ticks ran.
+// A player would walk after him; this sim teleports and never moves again, so the interaction had
+// nobody to run against and the whole quest stopped with "menus not reached".
+//
+// It failed on seed 1 every time and passed on three of three free-dice runs, which is the shape
+// that used to get written off as a runner difference. So: re-stand beside wherever he IS and
+// click again, up to twelve times. Four was not enough - seed 31337 still lost him - because each
+// attempt only wins if he happens to stand still for the one tick it takes. Clicking an npc who is
+// already talking to you is harmless, and the loop costs nothing for the npcs that do hold still,
+// which is every other npc in this file.
 function talkTo(p: Player, npc: Npc, picks: string[] = []): string {
     const from = H.ifaces.length;
-    p.teleport(npc.x + npc.width, npc.z, npc.level);
-    H.tick(1);
-    H.opNpc(p, npc, 1);
-    for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+    for (let attempt = 0; attempt < 12 && !p.activeScript; attempt++) {
+        p.teleport(npc.x + npc.width, npc.z, npc.level);
+        H.tick(1);
+        H.opNpc(p, npc, 1);
+        for (let t = 0; t < 10 && !p.activeScript; t++) H.tick(1);
+    }
     drain(p, picks);
     return chatSince(p, from);
 }
@@ -434,9 +449,21 @@ const inArena = Math.abs(p.x - 2914) < 20 && Math.abs(p.z - 3611) < 20;
 truthy('"let\'s take it outside": off to the arena', inArena, [p.x, p.z, p.level]);
 const foe = H.npcNear('trollromance_arrg_attackable', p.x, p.z, 0);
 truthy('  Arrg is there', !!foe, foe && [foe.x, foe.z]);
+// TOPPED UP EVERY TICK, because a threshold of 60 is not enough arithmetic. Arrg's max hit is 38
+// and he can land a swing and a thrown rock in overlapping windows, so 76 in one tick is possible.
+// Sitting on 61 - one point above the old threshold, so no top-up - that kills the player outright.
+//
+// What that looked like was NOT a death. On seed 7 the player died here, respawned in Lumbridge at
+// 3220,3219, and the rest of the fight went on swinging at a troll 300 tiles away at 2907,3608
+// that it never touched once. The failure printed as "Arrg dies: defeated: 35 (want 40)", blaming
+// the quest's stage transition for a corpse two regions away.
+//
+// Full health every tick also makes the max-hit measurement MORE honest, not less: applyDamage
+// clamps a hitsplat to the hitpoints it lands on, so a 38 taken on 20 health is recorded as a 20,
+// and "no hit over his max of 38" was reading clamped numbers whenever health ran low.
 for (let t = 0; t < 120; t++) {
     H.tick(1);
-    if (p.levels[PlayerStat.HITPOINTS] < 60) p.levels[PlayerStat.HITPOINTS] = 99;
+    p.levels[PlayerStat.HITPOINTS] = 99;
     // stand still: the auto-retaliate would take the fight to him
     p.clearInteraction?.();
 }
@@ -459,12 +486,22 @@ truthy(
     myHits.every(h => h.damage <= 38),
     Math.max(...myHits.map(h => h.damage))
 );
-// and he dies
+// and he dies. LONG ENOUGH TO LAND ONE HIT, which thirty ticks is not. Arrg is put on one
+// hitpoint, so any hit at all kills him - but a miss does nothing, and thirty ticks is about seven
+// swings at his attack speed. Seven misses in a row is unremarkable, and on seed 7 that is exactly
+// what happened: the quest sat at 35 and this read as "Arrg dies: defeated: 35 (want 40)", which
+// blames the stage transition for the dice. The check is that killing him advances the quest to
+// 40, not that it happens inside seven swings, so the budget goes up and the condition stays.
 if (foe) {
     foe.levels[3] = 1;
     H.attackNpc(p, foe);
-    for (let t = 0; t < 30 && foe.isActive && stage(p) !== 40; t++) {
+    for (let t = 0; t < 120 && foe.isActive && stage(p) !== 40; t++) {
         H.tick(1);
+        // AND ALIVE IN HERE TOO. Arrg hits 38 and this loop ran with no top-up at all, so 99
+        // health is three hits. On seed 7 the player landed three of his own, missed the rest,
+        // died, and respawned in Lumbridge - which is how a troll on 1 hitpoint "survived" 120
+        // ticks and the quest stayed at 35.
+        p.levels[PlayerStat.HITPOINTS] = 99;
         if (!p.target && foe.isActive) H.attackNpc(p, foe);
     }
     H.tick(4);
