@@ -370,9 +370,27 @@ for (const course of COURSES) {
         } else {
             const bits: string[] = [];
             if (thinAir(land[0], land[1], land[2])) {
-                bits.push('THIN AIR');
-                floorless++;
-                fatal = true;
+                // DECK OVER ROOF IS NOT THIN AIR. mapfloor's own docstring says a thinAir hit is
+                // "go and look", not a fault, and these two are why: Pollnivneach's market stall
+                // lands on 3355,2978 L1 and its second tree on 3362,3000 L2, both with nothing on
+                // their own plane and a drawn roof underneath. The course cam photographs the
+                // player standing squarely on that roof and passes them - "the floor under it is
+                // the roof drawn on L0 - deck over roof" - and Old School's cache has the same
+                // empty terrain at both. They were nearly "fixed" into diverging from OSRS once
+                // already, and --fix would have done it again, because this branch called them
+                // impossible and wrote them into the proposal file.
+                //
+                // So it is still PRINTED - the whole point is to go and look - but it is not fatal
+                // and it is not proposed. thinAir itself is left alone: nineteen landings really
+                // were in the air, and relaxing the test is how you stop finding the twentieth.
+                const deck = [land[2] - 1, land[2] - 2].find(b => b >= 0 && drawn(land[0], land[1], b));
+                if (deck === undefined) {
+                    bits.push('THIN AIR');
+                    floorless++;
+                    fatal = true;
+                } else {
+                    bits.push(`nothing on its own plane, but the roof on L${deck} is drawn (deck over roof)`);
+                }
             } else if (!drawn(land[0], land[1], land[2])) {
                 // not drawn, but a loc is there: the player is standing on the obstacle
                 bits.push('on a loc');
