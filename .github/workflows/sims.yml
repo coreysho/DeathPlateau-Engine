@@ -82,6 +82,7 @@ jobs:
         echo "known-failing: $(wc -l < "$known") sims"
         newly_red=""
         newly_green=""
+        flaky=""
         i=0
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
@@ -99,13 +100,27 @@ jobs:
             continue
           fi
           if [ "$rc" != "0" ]; then
-            echo "::group::$n (exit $rc)"
-            tail -40 "/tmp/$n.log"
+            # ONCE MORE BEFORE BELIEVING IT. These sims are not deterministic on a runner:
+            # two dispatches of the same commit disagreed about which ones failed -
+            # quest_ikov_run failed in one and passed in the next, gwdskirmish the other way
+            # round. Without this the list would have to be edited every night to chase
+            # noise, which is how a list stops meaning anything. Only failures are retried,
+            # so a green run costs nothing.
+            rc2=0
+            timeout 180 npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            if [ "$rc2" = "0" ]; then
+              echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
+              flaky="$flaky $n"
+              continue
+            fi
+            echo "::group::$n (exit $rc, then $rc2 on retry)"
+            tail -40 "/tmp/$n.retry.log"
             echo "::endgroup::"
-            echo "::error title=$n::$n fails and is not on known-failing.txt"
+            echo "::error title=$n::$n fails twice and is not on known-failing.txt"
             newly_red="$newly_red $n"
           fi
         done
+        [ -n "$flaky" ] && echo "FLAKY, failed then passed:$flaky"
         [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
         if [ -n "$newly_red" ]; then
           echo "NEWLY FAILING:$newly_red"
