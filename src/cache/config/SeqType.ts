@@ -84,6 +84,15 @@ export default class SeqType extends ConfigType {
     preanim_move: number = -1;
     postanim_move: number = -1;
     duplicatebehaviour: number = 0;
+    // WHICH ANIMATION SURVIVES WHEN THE TWO STAND ON DIFFERENT SKELETONS. Model.method368 only
+    // walk-merges frames built on the same skeleton, and an OSRS-imported animation is not: the
+    // player rig there has 245 transform groups against this one's 117, and 21 of the 117 group
+    // their vertices differently, so merging across them moves the wrong vertices. The client
+    // therefore drops one of the two. 0 keeps the movement frame, which is right for a gesture -
+    // eating while walking must not leave the player sliding. 1 keeps the primary, which is right
+    // for a special attack: a swing that vanishes the moment you move is worse than legs that
+    // pause for its duration.
+    crossskeleton: number = 0;
 
     // precalculated for seqlength
     duration: number = 0;
@@ -141,6 +150,8 @@ export default class SeqType extends ConfigType {
             this.postanim_move = dat.g1();
         } else if (code === 11) {
             this.duplicatebehaviour = dat.g1();
+        } else if (code === 13) {
+            this.crossskeleton = dat.g1();
         } else if (code === 250) {
             this.debugname = dat.gjstr();
         } else {

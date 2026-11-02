@@ -125,6 +125,16 @@ export function unpackSeqConfig(config: ConfigIdx, id: number): string[] {
         } else if (code === 12) {
             const code12 = dat.g4s();
             def.push(`code12=${code12}`);
+        } else if (code === 13) {
+            const crossskeleton = dat.g1();
+
+            let op = crossskeleton.toString();
+            if (crossskeleton === 0) {
+                op = 'movement';
+            } else if (crossskeleton === 1) {
+                op = 'primary';
+            }
+            def.push(`crossskeleton=${op}`);
         } else {
             printWarning(`unknown seq code ${code}`);
         }
