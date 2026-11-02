@@ -10,6 +10,9 @@ interface LoginResponse {
     save: Uint8Array | null;
     account_id: number;
     members: boolean;
+    // custom (2026-11-02) - whether the login block carried the saved-login fields at all, which
+    // is the client's revision and not a choice. Logged, never acted on.
+    sendsToken?: boolean;
     // custom (2026-11-02) - a freshly issued saved-login token, when the client asked for one and
     // the password was right. Only ever set on the login that minted it; World hands it straight
     // to the player, and nothing reads it back from here.
