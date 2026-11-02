@@ -259,12 +259,21 @@ export default class VoteService {
     private static async ask(site: VoteSite, username: string): Promise<string> {
         const check = site.check!;
         const url = check.url.replaceAll('{user}', encodeURIComponent(username)).replaceAll('{key}', encodeURIComponent(check.key ?? ''));
+
+        // {user} and {key} in the HEADERS too, because more sites authenticate with a header than
+        // with a query parameter - RuneTopic wants `Authorization: Bearer <token>`. Without this a
+        // header-authenticated site can only be configured by writing the token into sites.json in
+        // plain text, which is the one thing that file's own comments tell you not to do.
+        //
+        // NOT percent-encoded, unlike the URL: a header value is not a URL, and encoding a bearer
+        // token would corrupt it.
+        const headers = check.headers ? Object.fromEntries(Object.entries(check.headers).map(([name, value]) => [name, value.replaceAll('{user}', username).replaceAll('{key}', check.key ?? '')])) : undefined;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), Environment.VOTE_CHECK_TIMEOUT);
         try {
             const res = await fetch(url, {
                 method: check.method ?? 'GET',
-                headers: check.headers,
+                headers,
                 signal: controller.signal
             });
             return await res.text();
