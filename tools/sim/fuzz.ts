@@ -23,6 +23,7 @@ import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import DeadOps from '#/engine/script/DeadOps.js';
 import { fuzzTuning } from '#/engine/bot/BotFuzzer.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
@@ -54,6 +55,10 @@ ScriptFaults.enableForTesting(faultsFile);
 // Coverage is what steers the run (BotFuzzer.preferUncovered) as well as what it is judged by, so
 // it goes on before the world boots - the login and startup scripts count too.
 ScriptCoverage.enable();
+// custom (2026-11-02) - and the dead-op collector. The fuzzer's new watcher feeds it, and the
+// engine's own defaultOp feeds it from every other direction, so this run leaves behind the list of
+// options nothing answered as well as the list of things that broke.
+DeadOps.enableForTesting(path.join(os.tmpdir(), `fuzz_deadops_${process.pid}.jsonl`));
 
 await H.boot();
 
@@ -120,6 +125,37 @@ if (findings.size() === 0) {
             console.log(`       ${step}`);
         }
     }
+}
+
+console.log('\nOPTIONS NOTHING ANSWERED');
+// WHY THIS SECTION EXISTS. These are what the owner has been reporting by hand as "it says nothing
+// interesting happens". Every one of them was being printed to a bot, by the engine, and thrown
+// away - BotPlayer keeps a 16-entry message ring and nothing read it. See watchDeadInteraction.
+//
+// A fuzz run reaches whatever it happened to walk past, which is a fraction of the total. The whole
+// list, for the whole game, without a bot: npx tsx tools/sim/opsweep.ts
+if (DeadOps.size() === 0) {
+    console.log('  none - which for a 15,000-trigger build means the bots did not get far.');
+} else {
+    const rows = DeadOps.all();
+    const noTrigger = rows.filter(r => r.kind === 'notrigger');
+    const filler = rows.filter(r => r.kind === 'filler');
+    console.log(`  ${noTrigger.length} options with no trigger at all, ${filler.length} where a trigger ran and still had nothing to say`);
+    for (const row of noTrigger.slice(0, 25)) {
+        console.log(`  x${String(row.count).padStart(4)} [${row.trigger},${row.target}]  first at ${row.where}`);
+    }
+    if (noTrigger.length > 25) {
+        console.log(`  ... and ${noTrigger.length - 25} more`);
+    }
+    for (const row of filler.slice(0, 10)) {
+        console.log(`  x${String(row.count).padStart(4)} filler: ${row.target}`);
+    }
+    if (filler.length > 10) {
+        console.log(`  ... and ${filler.length - 10} more`);
+    }
+    // Left on disk on purpose, unlike the findings and faults files below: this one is a work
+    // queue somebody reads afterwards, not a pass/fail.
+    console.log(`  full list: ${DeadOps.flush()}`);
 }
 
 console.log('\nSCRIPT FAULTS');

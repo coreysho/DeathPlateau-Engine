@@ -12,6 +12,7 @@ import { startWeb } from '#/web.js';
 import { startManagementWeb } from '#/server/management/ManagementWeb.js';
 import OnDemand from '#/engine/OnDemand.js';
 import BotManager from '#/engine/bot/BotManager.js';
+import DeadOps from '#/engine/script/DeadOps.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import VoteService from '#/engine/vote/VoteService.js';
@@ -80,6 +81,11 @@ await World.start();
 // unlike the reporter above: it counts the build's triggers, and ScriptProvider has not loaded them
 // until the world has started.
 ScriptCoverage.init();
+
+// custom (2026-11-02) - the dead-op collector (engine/script/DeadOps.ts). It needs nothing from the
+// cache, but it is kept beside coverage because the two are read together: coverage says which
+// triggers nothing reached, dead ops says which clicks reached nothing.
+DeadOps.init();
 
 // custom (2026-09-27) - server-side bots, only where asked for (the dev world). Never on live.
 if (Environment.NODE_BOTS) {

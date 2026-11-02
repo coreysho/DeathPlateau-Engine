@@ -10,6 +10,7 @@ import type BotPlayer from '#/engine/bot/BotPlayer.js';
 import { isZoneAllocated } from '#/engine/GameMap.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+import DeadOps from '#/engine/script/DeadOps.js';
 import World from '#/engine/World.js';
 import Environment from '#/util/Environment.js';
 import { printWarning } from '#/util/Logger.js';
@@ -25,7 +26,7 @@ import { printWarning } from '#/util/Logger.js';
 // Script errors are not here: ScriptFaults (engine/script/ScriptFaults.ts) already sees every one,
 // and the fuzzer turns it on for itself.
 
-export type FindingKind = 'softlock' | 'corpse' | 'coord' | 'stat' | 'varp' | 'items';
+export type FindingKind = 'softlock' | 'corpse' | 'coord' | 'stat' | 'varp' | 'items' | 'deadop' | 'filler';
 
 export type Finding = {
     sig: string;
@@ -138,6 +139,20 @@ export class WatchState {
 
     /** Npcs seen at zero hitpoints, and the tick each was first seen that way. */
     readonly dying: Map<number, number> = new Map();
+
+    /** The last tick whose messages have been read, so a message is only judged once. */
+    lastMessageTick = -1;
+    /** The tick an engine "No trigger" line was seen on, so its "Nothing interesting" twin is not. */
+    sawNoTrigger = -1;
+
+    /** custom (2026-11-02) - the item-audit window: the tick it started, or -1 when not in one. */
+    auditUntil = -1;
+    auditBaseline: Map<number, number> | null = null;
+    auditMoves = 0;
+    /** Where the bot stood when the window opened; it must not move. See watchItemAudit. */
+    auditAt = '';
+    /** Consecutive ticks inside the window with nothing to move, so a starved window closes early. */
+    auditIdle = 0;
 }
 
 // A soft-lock is "nothing I do has any effect", so it needs a while before it means anything: a
@@ -322,6 +337,101 @@ export function watchVarps(bot: BotPlayer, seed: number, trail: string[]): void 
 }
 
 // ------------------------------------------------------------------------------------------------
+// custom (2026-11-02) - THE ONE THAT WAS MISSING: an interaction nothing answered.
+//
+// The watchers above all ask "is the engine in a state it should not be in". None of them can see
+// the thing the owner keeps reporting by hand, which is an option that exists and does nothing. That
+// is not an engine invariant - the engine is perfectly happy - so no amount of state checking finds
+// it.
+//
+// It does not need finding. The engine says it, out loud, every single time:
+//
+//     Player.defaultOp:  messageGame(`No trigger for [oploc1,some_gate]`)
+//                        messageGame('Nothing interesting happens.')
+//
+// A fuzzing bot has been collecting those in BotPlayer.messages - a 16-entry ring - and dropping
+// them off the end for weeks. The fleet was being handed the to-do list and throwing it away.
+//
+// So: read the mailbox. Two kinds, and the difference is worth keeping:
+//
+//   deadop   "No trigger for [x,y]". There is no [oploc1,x] and no [aploc1,x], for the type or its
+//            category. No state, item, quest or level would have made that click do anything.
+//   filler   "Nothing interesting happens." with no "No trigger" line in front of it, or one of the
+//            content's own equivalents. A trigger DID exist and still had nothing to say - a missing
+//            recipe row, a quest stage nobody wrote, a branch that falls through to
+//            ~displaymessage(^dm_default). Softer than a deadop and much more numerous, so it is
+//            reported against the ACTION the bot took rather than per message, and capped.
+
+/** Said by the content, not the engine, when it has no answer for a combination. */
+const FILLER_LINES: readonly string[] = ['Nothing interesting happens.', 'Nothing interesting happens'];
+
+/**
+ * How many distinct filler findings one run will report before it stops. A dead op is a fact and
+ * there are a bounded number of them; a filler is a judgement and a fuzzer using a random item on a
+ * random thing generates them by the thousand, almost all of them correct behaviour ("no, you may
+ * not use a bucket on a goblin"). Capped so the findings file stays a thing a person reads.
+ */
+const FILLER_CAP = 300;
+let fillerReported = 0;
+
+/**
+ * The bot's message log since the last pass, turned into findings. `did` is what the brain did this
+ * tick, which is what names the op: the engine's own line names the trigger and the target, and the
+ * trail names the click.
+ */
+export function watchDeadInteraction(bot: BotPlayer, w: WatchState, seed: number, trail: string[]): void {
+    const messages = bot.messages;
+    if (!messages.length) {
+        return;
+    }
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i];
+        if (m.tick <= w.lastMessageTick) {
+            break;
+        }
+        // `No trigger for [oploc1,railing]` - the engine built this out of the real trigger it
+        // looked for and the real debugname it looked for it on, so it is the finding verbatim.
+        const noTrigger = m.text.indexOf('No trigger for [');
+        if (noTrigger !== -1) {
+            const what = m.text.slice(noTrigger + 'No trigger for ['.length).replace(/]$/, '');
+            const [trigger, ...rest] = what.split(',');
+            const target = rest.join(',') || '_';
+            // DeadOps is the process-wide collector (every sim and the dev world feed it too); the
+            // finding is the fuzzer's own copy, with the seed and trail that reached it.
+            if (!DeadOps.has('notrigger', trigger, target)) {
+                DeadOps.record('notrigger', trigger, target, bot.username, bot.x, bot.z, bot.level);
+                findings.add('deadop', `[${trigger},${target}] does not exist - the option is in the cache and no script claims it`, bot, seed, trail);
+            }
+            w.sawNoTrigger = m.tick;
+            continue;
+        }
+        if (FILLER_LINES.some(line => m.text === line || m.text.startsWith(line))) {
+            // The engine's own pair: "No trigger for [...]" is immediately followed by this one, and
+            // reporting both would double every dead op.
+            if (m.tick === w.sawNoTrigger) {
+                continue;
+            }
+            if (fillerReported >= FILLER_CAP) {
+                continue;
+            }
+            // There is no trigger name to read here - the content said it, not the engine - so the
+            // action the bot took is the only identification there is. That is why the brain's
+            // lastAction is kept in words.
+            // The trail's last entry is the brain's own words for the click, with its tick:
+            // `t4812 oploc crate op1 @3215,3210,0`. The tick is dropped for the signature so two
+            // bots hitting the same dead combination are one finding.
+            const what = (trail[trail.length - 1] ?? '(unknown action)').replace(/^t\d+ /, '');
+            if (!DeadOps.has('filler', 'content', what)) {
+                DeadOps.record('filler', 'content', what, bot.username, bot.x, bot.z, bot.level);
+                fillerReported++;
+                findings.add('filler', `a trigger ran and still had nothing to say ("${m.text}") for: ${what}`, bot, seed, trail);
+            }
+        }
+    }
+    w.lastMessageTick = messages[messages.length - 1].tick;
+}
+
+// ------------------------------------------------------------------------------------------------
 // Item conservation - the one that matters, because a dupe is the bug that costs a server.
 //
 // HOW IT AVOIDS DROWNING IN FALSE POSITIVES. Almost everything in a game is a source or a sink:
@@ -455,10 +565,157 @@ export function watchItemConservation(bot: BotPlayer, w: WatchState, seed: numbe
     w.moves = 0;
 }
 
+// ------------------------------------------------------------------------------------------------
+// custom (2026-11-02) - THE ITEM AUDIT WINDOW, because the watcher above cannot fire.
+//
+// watchItemConservation asserts over a window in which the bot did nothing but move items. That is
+// the right test. The problem is that it waits for such a window to happen by chance, and with the
+// brain's own weights it does not happen:
+//
+//   - a window needs SETTLE_TICKS (8) clean ticks to take a baseline, then at least one move, then
+//     8 more clean ticks before the comparison - about 17 consecutive ticks with no tainting action
+//     and no xp.
+//   - a tick is two actions, and from FuzzBrain.act's weights roughly a quarter of actions are
+//     conserving ones (walk, invop on its own inventories, wield, take its own drop, idle). So a
+//     clean tick is about one in sixteen, and seventeen in a row is about one in 10^20.
+//   - measured on the 2 November build: 8 fuzzers x 3,545 ticks produced 41 invops in total and not
+//     one comparison. The dupe watcher - the one the file itself calls "the one that matters,
+//     because a dupe is the bug that costs a server" - had never once run its assertion.
+//
+// So the window is no longer waited for, it is TAKEN. Every AUDIT_EVERY ticks the brain stops
+// clicking the world and does nothing but move items between its own backpack, bank, equipment and
+// the floor for AUDIT_TICKS, then stands still for SETTLE_TICKS. The totals at the end must equal
+// the totals at the start. That is a deterministic test of exactly the surface where dupes live -
+// deposit, withdraw, equip, unequip, drop, take, drag - and it runs several times a run instead of
+// never.
+
+/** Ticks between audits. Short enough to run often, long enough that the run is still fuzzing. */
+export const AUDIT_EVERY = 400;
+/** Ticks of nothing but item moves. ~60 moves at two actions a tick, which is a real workout. */
+export const AUDIT_TICKS = 30;
+/** Consecutive ticks with nothing left to move before the window gives up early. */
+export const AUDIT_IDLE_GIVEUP = 4;
+
+/** Is this bot in an item audit right now? The brain asks, to know to move items and nothing else. */
+export function inItemAudit(w: WatchState): boolean {
+    return w.auditUntil !== -1;
+}
+
+/** Still moving, as opposed to standing still waiting for the last script to land. */
+export function auditIsMoving(w: WatchState): boolean {
+    return w.auditUntil !== -1 && World.currentTick < w.auditUntil;
+}
+
+/** The brain opening a window: the totals now are what the totals must be at the end. */
+export function beginItemAudit(bot: BotPlayer, w: WatchState): void {
+    w.auditUntil = World.currentTick + AUDIT_TICKS;
+    w.auditBaseline = ownedItems(bot);
+    w.auditMoves = 0;
+    w.auditIdle = 0;
+    w.auditAt = `${bot.x},${bot.z},${bot.level}`;
+}
+
+/**
+ * Closes the window and compares. Anything that could create or destroy wealth abandons the audit
+ * rather than failing it - a monster that walks up and kills the bot mid-audit is not a dupe, and a
+ * watcher that cries dupe at one would be turned off within a day.
+ */
+export function watchItemAudit(bot: BotPlayer, w: WatchState, seed: number, trail: string[], didThisTick: string[], xpMoved: boolean): void {
+    if (w.auditUntil === -1 || !w.auditBaseline) {
+        return;
+    }
+    const now = World.currentTick;
+
+    // THE BOT MUST NOT MOVE, and this is not fussiness - it was the whole of the first version's
+    // false-positive rate. ownedItems counts the bot's own drops on the ground, but only in the nine
+    // zones around it. A bot that drops a potato seed and then takes two steps has "lost" it, and
+    // one that walks back towards an older drop has "gained" one. The first run of the audit
+    // reported five findings and all five were that: `potato_seed -3`, `cabbage +1`, `flax +1`,
+    // every one of them with nothing in the trail but drop and take.
+    //
+    // Pinning the window to one tile makes the ground set stable, so a drop and a take are a move
+    // and nothing else. A walk - including the route the engine runs for an op click - abandons the
+    // window instead of being reported.
+    if (`${bot.x},${bot.z},${bot.level}` !== w.auditAt) {
+        w.auditUntil = -1;
+        w.auditBaseline = null;
+        return;
+    }
+
+    let movedThisTick = 0;
+    for (const action of didThisTick) {
+        if (!CONSERVING_ACTIONS.has(action)) {
+            // The brain is not supposed to do this during an audit, but a queued script from before
+            // the window can still land inside it. Abandon rather than assert.
+            w.auditUntil = -1;
+            w.auditBaseline = null;
+            return;
+        }
+        if (MOVING_ACTIONS.has(action)) {
+            w.auditMoves++;
+            movedThisTick++;
+        }
+    }
+    // A STARVED WINDOW CLOSES EARLY. Most of the audit's value is deposit and withdraw, and those
+    // need a bank interface; a bot nowhere near one can only shuffle its equipment and the tile it
+    // stands on, and runs out of moves in a few ticks. Measured on the first run: 4,978 audit ticks
+    // produced 239 moves, so nineteen ticks in twenty were a bot standing still achieving nothing.
+    // Sitting out the rest of the window is pure waste, so a window with nothing left to do stops
+    // and compares what it has.
+    if (movedThisTick === 0) {
+        w.auditIdle++;
+        if (w.auditIdle >= AUDIT_IDLE_GIVEUP && now < w.auditUntil) {
+            w.auditUntil = now; // close the moving half; the settle below still applies
+        }
+    } else {
+        w.auditIdle = 0;
+    }
+    if (xpMoved) {
+        w.auditUntil = -1;
+        w.auditBaseline = null;
+        return;
+    }
+    // Dying during an audit scatters the inventory by the engine's own rules; so does a modal that
+    // took wealth (a shop, a trade). Both are legitimate and neither is this watcher's business.
+    if (bot.levels[PlayerStat.HITPOINTS] === 0) {
+        w.auditUntil = -1;
+        w.auditBaseline = null;
+        return;
+    }
+
+    if (now < w.auditUntil + SETTLE_TICKS) {
+        return; // still moving, or settling
+    }
+
+    const after = ownedItems(bot);
+    const ids = new Set<number>([...w.auditBaseline.keys(), ...after.keys()]);
+    const drifts: string[] = [];
+    for (const id of ids) {
+        const delta = (after.get(id) ?? 0) - (w.auditBaseline.get(id) ?? 0);
+        if (delta !== 0) {
+            drifts.push(`${ObjType.get(id)?.debugname ?? id} ${delta > 0 ? '+' : ''}${delta}`);
+        }
+    }
+    if (drifts.length && w.auditMoves > 0) {
+        // A GAIN has no innocent explanation. A LOSS can: a drop went public on the lootdrop timer
+        // and somebody else took it. Said in the finding so it is checked rather than believed.
+        const gained = drifts.some(d => d.includes('+'));
+        findings.add('items', `item audit: ${w.auditMoves} item moves and nothing else over ${AUDIT_TICKS} ticks, and the totals changed: ${drifts.join(', ')}${gained ? '' : ' (loss only - check nobody took a public drop)'}`, bot, seed, trail);
+    }
+    w.auditUntil = -1;
+    w.auditBaseline = null;
+}
+
 /** Everything, once a tick. Wrapped: a watcher must never be why the world went down. */
 export function runWatchers(bot: BotPlayer, w: WatchState, seed: number, trail: string[], didThisTick: string[]): void {
     try {
+        // Read once: watchItemConservation retakes its own baseline on any xp, and the audit window
+        // abandons on any xp, and both must see the same answer on the same tick.
+        const xpMoved = totalXp(bot) !== w.lastXpTotal;
         watchSoftLock(bot, w, seed, trail);
+        // Reading the bot's mailbox: the engine has been telling it which of its clicks nothing
+        // answered, and until now nothing read it. See watchDeadInteraction.
+        watchDeadInteraction(bot, w, seed, trail);
         // Every fourth tick, staggered by slot so the bots do not all scan on the same one. The
         // corpse check walks the nine zones around the bot, and with eight bots in a town that was
         // measurably the most expensive thing in the loop. A corpse is given ten ticks of grace
@@ -473,6 +730,9 @@ export function runWatchers(bot: BotPlayer, w: WatchState, seed: number, trail: 
             watchVarps(bot, seed, trail);
         }
         watchItemConservation(bot, w, seed, trail, didThisTick);
+        // The deterministic half of the same test. watchItemConservation waits for a clean window
+        // and never gets one; this one is handed a window the brain made on purpose.
+        watchItemAudit(bot, w, seed, trail, didThisTick, xpMoved);
     } catch (err) {
         printWarning(`fuzz: a watcher threw and was skipped this tick - ${String((err as { message?: unknown })?.message ?? err)}`);
     }

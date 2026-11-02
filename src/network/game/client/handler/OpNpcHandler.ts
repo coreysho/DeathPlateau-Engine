@@ -1,6 +1,7 @@
 import * as rsbuf from '#/network/rsbuf/index.js';
 
 import NpcType from '#/cache/config/NpcType.js';
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -51,7 +52,7 @@ export default class OpNpcHandler extends ClientGameMessageHandler<OpNpc> {
             }
         }
 
-        if (!npcType.op || npcType.op[message.op - 1] === null || npcType.op[message.op - 1] === 'hidden') {
+        if (!npcType.op || isHiddenOp(npcType.op[message.op - 1])) {
             // bad client: not a valid npc option
             player.write(new UnsetMapFlag());
             return false;

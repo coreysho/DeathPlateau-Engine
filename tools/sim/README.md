@@ -141,12 +141,72 @@ safety guard first every time - the fuzzer refuses on a production world and ref
 who is not staff - because that is the part that must never rot. A run that finds nothing prints the
 action histogram anyway: if it is all `idle` and `walk`, the finding is about the fuzzer.
 
+What a fuzzer IS, as of 2 November 2026, is worth stating because the first version of it found
+nothing at all in weeks of running, and the reason was not the watchers. Eight bots over 6,000
+ticks reached 290 of the build's 15,410 triggers - 1.9% - and the curve was flat. They were not
+short of clicks; they were short of being anybody. Four things were fixed together:
+
+* **Personas** (`src/engine/bot/BotPersona.ts`). A fuzzer used to spawn with a combat kit, 24 tools
+  and every one of the 106 quest varps at zero, so it could only ever see the first line of every
+  quest and could not walk through any door a quest opens. It now rolls stats, quest stages (from
+  the content's own `questvarps.json`) and a sample of the whole obj table, seeded off its fuzz seed
+  so a finding still replays. One in four is left fresh, because a new account is a real state too.
+* **Relocation.** It is picked up and put down in another part of the map every
+  `NODE_BOTS_FUZZ_ROAM` ticks (400; 0 turns it off), because walking never got it out of Lumbridge.
+  Destinations are rolled and then checked for density - with no density check at all, relocating
+  made coverage *worse* than not relocating, because most of the map is field.
+* **The missing packets** (`BotInput.ts`). No bot could send "use item on loc", "use item on npc",
+  "use item on ground obj", a targeted spell, or an inventory drag, which is around 870 triggers
+  unreachable by construction - `[oplocu]` alone is 505.
+* **Oracles that can see unimplemented content**, which none of the old ones could: see DeadOps
+  above, and the item audit below.
+
+Together those take the same 6,000-tick, 8-bot run from 290 triggers and zero findings to roughly
+400 triggers and several hundred findings.
+
+The **item audit window** is the other fix worth reading about, in the header of
+`watchItemAudit` in `BotFuzzWatch.ts`. The conservation watcher - the one the file itself calls "the
+one that matters, because a dupe is the bug that costs a server" - asserted over a window in which
+the bot did nothing but move items, and waited for such a window to happen by chance. It needs about
+seventeen consecutive untainted ticks, and a tick is about one in sixteen, so it had never once run
+its assertion. The window is now taken rather than waited for: every so often the bot stops clicking
+the world, opens a bank if one is in reach, and does nothing but deposit, withdraw, equip, drop, take
+and drag for thirty ticks. The totals at the end must equal the totals at the start.
+
 The same run prints trigger coverage: how many of the build's triggers have ever run in that
 process and how many never have. Pass `noguide` as the fifth argument to turn the coverage steering
 off, so the same seed can be run both ways and the difference measured rather than asserted. On a
 dev world the same numbers come from `NODE_SCRIPT_COVERAGE=true` and `::coverage` / `::coverage
 write`, which is worth doing on its own: the never-reached list is a to-do list, and clearing it
 before testing one thing says exactly which triggers that one thing touched.
+
+`npx tsx tools/sim/opsweep.ts` is the whole-game version of the question the fuzzer answers one
+click at a time: **every option the cache offers that no script answers**. It needs no bots and no
+walking - the cache says a loc has a "Search", the script table says nothing claims `[oploc2]` for
+it, and both facts are on disk. About forty seconds for the whole game.
+
+Measured on the build of 2 November 2026 it reports 2,741 dead options, 1,008 of them on a loc or
+npc the map actually places, sorted by how many of each the map has - which turns a list into a work
+queue. `--baseline` writes `tools/sim/opsweep-baseline.txt` and `--check` fails on anything new, so
+a build that adds a dead option is caught instead of waiting for a playtest report. `--area x1 z1 x2
+z2` narrows it to a rectangle you are working in.
+
+It replaces doing this by hand. `a1lib.deadLocOps`/`deadNpcOps` is the same idea for a rectangle you
+name and `audit3sweep.ts` for a debugname prefix you name; both are for an audit somebody has
+already decided to do. Three traps it had to learn are written up in its header: `ap` triggers count
+as well as `op`, multiloc/multinpc shells answer for their children, and a global `_` fallback is
+not a handler - this build has one for `[opheld2]`, which is how eighty-six dead options hid from
+the first opheld audit (see `opheld2.ts`).
+
+`npx tsx tools/sim/fuzz.ts` also prints **OPTIONS NOTHING ANSWERED** now, from
+`src/engine/script/DeadOps.ts`. `Player.defaultOp` has always printed `No trigger for
+[oploc1,some_gate]` on a dev world and then "Nothing interesting happens." - and a fuzzing bot kept
+those in a 16-entry message ring and dropped them off the end. Nothing read the mailbox. Every sim
+in this directory, every fuzz run and a human playing on the dev world now all feed one deduped
+file; on a world, `NODE_DEAD_OPS=true` plus `::deadops` reads it. It is the other half of
+`::coverage`, and the more actionable half: coverage says which triggers nothing reached, which
+includes plenty of content that is written and merely unplayed, while this says which *clicks*
+reached nothing.
 
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.

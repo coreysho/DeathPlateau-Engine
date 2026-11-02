@@ -123,6 +123,11 @@ export default {
     // where they start, "x,z,level" - empty = Lumbridge, which is where the most content per tile is
     NODE_BOTS_FUZZ_AT: tryParseString(process.env.NODE_BOTS_FUZZ_AT, ''),
     NODE_BOTS_FUZZ_FILE: tryParseString(process.env.NODE_BOTS_FUZZ_FILE, 'data/fuzz-findings.jsonl'),
+    // custom (2026-11-02) - ticks between a fuzzer being picked up and put down somewhere else on
+    // the map (BotManager.relocateFuzzer). A fuzzer that only walks never leaves the town it
+    // started in, so without this the run tests one town however long it is given. 0 turns it off,
+    // which is what a run investigating a reachability bug wants.
+    NODE_BOTS_FUZZ_ROAM: tryParseInt(process.env.NODE_BOTS_FUZZ_ROAM, 400),
     // entities cap
     NODE_MAX_PLAYERS: tryParseInt(process.env.NODE_MAX_PLAYERS, 2047),
     NODE_MAX_CONNECTED: tryParseInt(process.env.NODE_MAX_CONNECTED, 1000),
@@ -224,6 +229,13 @@ export default {
     // trigger nothing has ever reached is content nobody has ever played.
     NODE_SCRIPT_COVERAGE: tryParseBoolean(process.env.NODE_SCRIPT_COVERAGE, false),
     NODE_SCRIPT_COVERAGE_FILE: tryParseString(process.env.NODE_SCRIPT_COVERAGE_FILE, 'data/coverage.txt'),
+
+    // custom (2026-11-02) - the dead-op collector (engine/script/DeadOps.ts): every click that
+    // reached a real target and found no trigger, which is every "Nothing interesting happens." the
+    // engine says. Off unless asked for; on, it costs one Map.get per unanswered click, and only an
+    // unanswered click gets there at all. The file is the to-do list.
+    NODE_DEAD_OPS: tryParseBoolean(process.env.NODE_DEAD_OPS, false),
+    NODE_DEAD_OPS_FILE: tryParseString(process.env.NODE_DEAD_OPS_FILE, 'data/dead-ops.jsonl'),
 
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.

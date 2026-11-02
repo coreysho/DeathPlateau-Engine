@@ -11,6 +11,7 @@ import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
 import { type BotKind, type BotKit, BOT_KITS, kitById, kitsFor } from '#/engine/bot/BotKits.js';
+import { applyPersona, type PersonaKind } from '#/engine/bot/BotPersona.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { isMapBlocked } from '#/engine/GameMap.js';
 import Player from '#/engine/entity/Player.js';
@@ -477,7 +478,8 @@ class BotManager implements BotHooks {
             if (typeof result === 'string') {
                 return `only ${made} of ${count} started: ${result}`;
             }
-            this.stockFuzzer(result);
+            const persona = this.stockFuzzer(result, this.fuzzSeed + i);
+            printInfo(`bots: fuzzer ${result.username} - ${persona}`);
             made++;
         }
         printInfo(`bots: ${made} fuzzers at ${start.x},${start.z},${start.level}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
@@ -485,57 +487,32 @@ class BotManager implements BotHooks {
     }
 
     /**
-     * A fuzzer's toolbox. A combat kit alone gives it a weapon, some armour and food, and after ten
-     * minutes it has eaten the food and there is nothing left to right-click - the first run of this
-     * spent 4000 ticks on 113 inventory ops. These are the everyday tools and materials that most of
-     * the skilling, crafting and item-on-item content in the game asks for, plus a bank with a copy
-     * of each so deposit and withdraw have something to move. Anything the content has renamed is
-     * skipped rather than crashing the spawn, exactly as the kits do.
+     * A fuzzer's toolbox and its life story. See BotPersona.ts for the measurement that moved this
+     * from "a combat kit plus 24 tools" to a rolled persona: the old stocking left every one of the
+     * 106 quests at stage 0 and every fuzzer holding 24 of some 4,000 objs, and that - not a
+     * shortage of clicks - is what held eight bots to 1.5% trigger coverage over 3,545 ticks.
+     *
+     * One in four is left `fresh`, which is exactly the old behaviour, because a brand-new account
+     * is a real state and the one the content's requirement branches are written against.
      */
-    private stockFuzzer(bot: BotPlayer): void {
-        const inv = [
-            'coins',
-            'tinderbox',
-            'knife',
-            'bronze_axe',
-            'bronze_pickaxe',
-            'hammer',
-            'chisel',
-            'needle',
-            'thread',
-            'net',
-            'bucket_empty',
-            'jug_empty',
-            'pot_empty',
-            'vial_empty',
-            'spade',
-            'logs',
-            'bones',
-            'raw_shrimp',
-            'bread',
-            'bucket_water',
-            'airrune',
-            'mindrune',
-            'grain',
-            'clay'
-        ];
-        const counts: Record<string, number> = { coins: 100000, airrune: 500, mindrune: 500, lawrune: 100, naturerune: 100, logs: 10, bones: 5, clay: 5 };
-        for (const name of inv) {
-            const id = ObjType.getId(name);
-            if (id !== -1) {
-                bot.invAdd(InvType.INV, id, counts[name] ?? 1);
+    private stockFuzzer(bot: BotPlayer, seed: number): string {
+        // Its own generator, seeded off the bot's fuzz seed, so the persona replays with the run.
+        let state = seed >>> 0;
+        const rng = {
+            next(): number {
+                state = (state + 0x6d2b79f5) >>> 0;
+                let t = state;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            },
+            int(min: number, max: number): number {
+                return min + Math.floor(this.next() * (max - min + 1));
             }
-        }
-        const bank = InvType.getId('bank');
-        if (bank === -1) {
-            return;
-        }
-        for (const name of [...inv, 'iron_ore', 'copper_ore', 'tin_ore', 'raw_chicken', 'feather', 'leather', 'ball_of_wool', 'uncut_sapphire', 'lawrune', 'naturerune']) {
-            const id = ObjType.getId(name);
-            if (id !== -1) {
-                bot.invAdd(bank, id, counts[name] ?? 10);
-            }
-        }
+        };
+        const roll = rng.next();
+        const kind: PersonaKind = roll < 0.25 ? 'fresh' : roll < 0.75 ? 'mid' : 'done';
+        return applyPersona(bot, rng, kind);
     }
 
     /** NODE_BOTS_FUZZ_AT as "x,z,level", or Lumbridge - the most content per tile in the game. */

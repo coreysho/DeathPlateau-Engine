@@ -1,4 +1,5 @@
 import LocType from '#/cache/config/LocType.js';
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -49,7 +50,7 @@ export default class OpLocHandler extends ClientGameMessageHandler<OpLoc> {
             }
         }
 
-        if (!locType.op || locType.op[message.op - 1] === null || locType.op[message.op - 1] === 'hidden') {
+        if (!locType.op || isHiddenOp(locType.op[message.op - 1])) {
             // bad client: not a valid loc option
             player.write(new UnsetMapFlag());
             return false;
