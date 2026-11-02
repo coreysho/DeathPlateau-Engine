@@ -7,7 +7,7 @@
 // September. The destination travels as an argument through five weak queues, so what this asserts
 // is that it arrives: the staging is the part that can silently drop it.
 import * as H from './harness.js';
-import { check, R, player } from './a1lib.js';
+import { check, R, player, walkable, reachLoc, connected } from './a1lib.js';
 
 await H.boot();
 
@@ -19,8 +19,7 @@ type Book = { com: string; what: string; where: [number, number]; place: string 
 const BOOKS: Book[] = [
     { com: 'magic:home_teleport', what: 'the normal book', where: [3221, 3218], place: 'Lumbridge' },
     { com: 'ancient_magic:home_teleport', what: 'the Ancient Magicks', where: [3087, 3496], place: 'Edgeville' },
-    // Old School sends this one to Lunar Isle; here it has only ever gone to Edgeville.
-    { com: 'lunar_magic:lunar_home_teleport', what: 'Lunar', where: [3087, 3496], place: 'Edgeville' }
+    { com: 'lunar_magic:lunar_home_teleport', what: 'Lunar', where: [2098, 3919], place: 'Lunar Isle' }
 ];
 
 // map_findsquare searches two squares out, so the landing can be the chosen square or a neighbour.
@@ -84,6 +83,27 @@ console.log('\n== the thirty-minute wait still bites');
 // one property the switch from weakqueue to weakqueue* could have quietly dropped - the starred
 // form takes its arguments in a second bracket, and a plain queue would look identical until a
 // player walked away mid-cast and got carried off anyway.
+// "Next to the bank on Lunar Isle" is Old School's wording, and two different questions hide in it.
+// reachLoc answers the first - is the booth actually usable from the tile the spell chose, by the
+// engine's own footprint test - and the flood fill answers the second, which is whether the player
+// can leave. THE FIRST SQUARE PICKED PASSED EVERYTHING BUT THE FLOOD FILL: the three tiles behind
+// the counter (2097-2099, 3921) are walled in on their other three sides, so a player put there is
+// standing beside the bank, can click it, and is stuck in a pocket of three squares for good. Both
+// checks, or neither is worth running.
+console.log('\n== and Lunar lands you within reach of the bank');
+{
+    const p = player('hometelelunar', START[0], START[1]);
+    H.setVar(p, 'home_teleport_last', 0);
+    H.ifButton(p, 'lunar_magic:lunar_home_teleport');
+    H.tick(30);
+    check('on the island', near(p, [2098, 3919]), true);
+    check('  on a walkable square', walkable(0, p.x, p.z), true);
+    check('  and the booth is clickable from it', reachLoc(0, p.x, p.z, 'lunar_bankbooth', 2098, 3920), true);
+    // Not sealed into a pocket of its own: the Moonclan teleport's landing square is reachable on
+    // foot from it, so the player is on the island proper and not on top of a wall.
+    check('  with the rest of the island walkable from it', connected(0, p.x, p.z, 2113, 3915), true);
+}
+
 console.log('\n== and walking away still gives it up');
 {
     const p = player('hometelewalk', START[0], START[1]);
