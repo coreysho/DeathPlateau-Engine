@@ -332,11 +332,19 @@ console.log('\nAND THE CLERK IS HOW A PLAYER ASKS FOR ANY OF IT');
     H.clearInv(p);
     H.tick(2);
 
-    // "Where can I vote?" - the list, with the site's own name and address in it. The 1 answers
-    // the reminder question that follows it ("Thanks.").
+    // "Where can I vote?" - the list, with each site's name and when it can next be voted on.
+    // The 1 answers the reminder question that follows it ("Thanks.").
     const where = A.talk(p, 'vote_clerk', [3, 1]);
     check('  she names the site', A.saw(where, 'Asky Toplist'), true);
-    check('    and where to go', A.saw(where, 'example.invalid'), true);
+    check('    and says it can be voted on now', A.saw(where, 'ready now'), true);
+
+    // THE ADDRESS SHE GIVES IS THE ONE THAT CAN PAY. She used to print the site's own url, which
+    // carries nobody's name - a vote from it counted toward the ranking and could never reach a
+    // ticket - and which no player can click in this client anyway. She names the vote page
+    // instead, which puts their name into every link at once. Both halves are asserted, because
+    // the old address coming back would be the old bug coming back.
+    check('    and sends them where the links carry their name', A.saw(where, 'deathplateau.com/vote'), true);
+    check('    not to the site raw, which could never pay them', A.saw(where, 'example.invalid'), false);
 
     // "I've voted - can you check?" - she starts a claim and says so. The result is a game message
     // a moment later, because a script cannot wait for a web request.
