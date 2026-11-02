@@ -75,9 +75,14 @@ mmaggro              # 2 of 3 free-dice runs pass, seed 1 fails - a genuine one-
 templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named checks go with it:
                      # the trek lands you at 1952,4764 instead of Burgh de Rott at 3480,3243, the
                      # escort survives, and the pack is not emptied
-trollromance         # 3 of 3 free-dice runs pass, seed 1 fails: "menus not reached:
-                     # Trollweiss,What would I need" - and it THROWS rather than failing a named
-                     # check, so the sim reports a stack trace instead of a verdict
+
+# trollromance came OFF this list by being fixed rather than excused, and it is worth saying what
+# was behind it: three bugs, not one. talkTo never followed Tenzing when he wandered out of range;
+# the max-hit measurement topped health up only below 60 while Arrg can deal 76 in a tick; and the
+# kill loop had no top-up at all, so the player died and respawned in Lumbridge while the loop went
+# on swinging at a troll 300 tiles away. That last one printed as "Arrg dies: defeated: 35 (want
+# 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
+# why nobody had got to the bottom of it. Twelve seeds pass now.
 
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
 blastfurnace
