@@ -14,6 +14,7 @@ import OnDemand from '#/engine/OnDemand.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
+import VoteService from '#/engine/vote/VoteService.js';
 import VoteSites from '#/engine/vote/VoteSites.js';
 
 if (OnDemand.cache.count(0) !== 9 || OnDemand.cache.count(2) === 0 || !fs.existsSync('data/pack/server/script.dat')) {
@@ -57,6 +58,21 @@ ScriptFaults.init();
 // Vote clerk, so a mistyped sites.json is a line in the boot log and not a surprise in front of a
 // player. With no file there are no sites and this says nothing at all.
 VoteSites.load();
+
+// custom (2026-11-02) - and open the LEDGER now, for that same reason and one more: its schema is
+// upgraded on open, so a release that adds a column does the adding here, in front of whoever is
+// watching the deploy, rather than in front of whoever logs in first. ready_at arrived that way
+// on 2 November and read as a missing column on the live box for twenty minutes after a perfectly
+// good deploy, which is the kind of thing that gets a deploy rolled back for no reason.
+//
+// ONLY WHERE VOTING IS ON. With no sites there is nothing that could ever be credited, and a
+// server that does not vote should not have a ledger file made for it on the way up.
+//
+// This cannot throw: ledgerOrNull says why it could not open, turns voting off and leaves the
+// rest of the world alone - the same thing that used to happen at the first login instead.
+if (VoteSites.count() > 0) {
+    VoteService.ledgerOrNull();
+}
 
 await World.start();
 
