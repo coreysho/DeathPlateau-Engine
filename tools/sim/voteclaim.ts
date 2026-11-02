@@ -192,6 +192,63 @@ console.log('\nA CALLBACK THAT NAMES NOBODY PAYS NOBODY');
     check('  and one too long for the game to hold', long.status, 400);
 }
 
+console.log('\nAND THE LINK THE CLERK HANDS OUT IS THE ONE THAT CAN BE PAID');
+{
+    // THE OTHER HALF OF THE SAME BUG. Refusing a vote that names nobody is half an answer while
+    // the link the player was handed could not name them either: until 2 November the Vote clerk
+    // printed the bare url, so a vote cast from in game counted toward the ranking and paid
+    // nobody - and on a site that substitutes its own placeholder for a missing name, it paid a
+    // player who does not exist.
+    const personal: VoteSite = { ...CALLBACK_SITE, playerUrl: 'https://example.invalid/vote/pushy?player={user}' };
+    reset([personal]);
+
+    check('  the clerk link carries the player', VoteSites.urlFor(personal, 'corey'), 'https://example.invalid/vote/pushy?player=corey');
+    check('  and a site with no personal form still gets its own url', VoteSites.urlFor(CALLBACK_SITE, 'corey'), CALLBACK_SITE.url);
+
+    // The name goes out in the form it has to come back in. A space is an underscore in the
+    // account table, so sending the display form files the vote under a player who cannot exist -
+    // the "lord fooby" failure above, arriving from the other direction.
+    check('  a display name goes out in the account own form', VoteSites.urlFor(personal, 'Lord Fooby'), 'https://example.invalid/vote/pushy?player=lord_fooby');
+
+    // A path segment rather than a parameter, which is how RuneTopic takes it.
+    const segment: VoteSite = { ...CALLBACK_SITE, playerUrl: 'https://example.invalid/vote/pushy/{user}' };
+    check('  and a path segment is substituted the same way', VoteSites.urlFor(segment, 'Lord Fooby'), 'https://example.invalid/vote/pushy/lord_fooby');
+
+    // END TO END, which is the part that proves anything: read the name back out of the link the
+    // clerk would have printed, hand it to the callback the way the site would, and the tickets
+    // land on the player who clicked it.
+    const link = new URL(VoteSites.urlFor(personal, 'Lord Fooby'));
+    const paid = VoteService.fromCallback('pushy', { key: 'hunter2', player: link.searchParams.get('player') ?? '', voteid: 'rt1' });
+    check('  a vote cast from that link is credited', paid.body, 'ok');
+    check('    to the player who clicked it', VoteService.owed('lord_fooby'), 1);
+}
+
+console.log('\nAND A playerUrl THAT COULD NEVER NAME ANYBODY IS A CONFIGURATION ERROR');
+{
+    // Not a shrug and a fallback: falling back to the nameless url is the bug put back silently,
+    // and the only person who can fix a typo in sites.json is the one reading the boot log.
+    process.env.VOTE_SIMKEY = 'hunter2';
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'votesites-'));
+    const file = path.join(dir, 'sites.json');
+    const entry = { id: 'pushy', name: 'Pushy', url: 'https://example.invalid/vote/pushy', tickets: 1, cooldownHours: 12, callback: { secret: 'env:VOTE_SIMKEY', userParam: 'player' } };
+    const write = (extra: object) => fs.writeFileSync(file, JSON.stringify([{ ...entry, ...extra }]));
+
+    write({ playerUrl: 'https://example.invalid/vote/pushy?player=corey' });
+    check('  a playerUrl with no {user} in it is refused', VoteSites.load(file).length, 0);
+    write({ playerUrl: '/vote?player={user}' });
+    check('  and one that is not an address at all', VoteSites.load(file).length, 0);
+    write({ playerUrl: 'https://example.invalid/vote/pushy?player={user}' });
+    check('  a good one loads', VoteSites.load(file).length, 1);
+
+    // Leaving it out is allowed - a site we can ASK does not need the name in the link, because
+    // the player names themselves by clicking Claim. A site that only ever calls us does need it,
+    // and is told so at boot.
+    write({});
+    check('  and leaving it out still loads the site', VoteSites.load(file).length, 1);
+
+    fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log('\nA VOTE CREDITED WHILE YOU ARE OFFLINE IS WAITING AT YOUR NEXT LOGIN');
 {
     reset([CALLBACK_SITE]);
