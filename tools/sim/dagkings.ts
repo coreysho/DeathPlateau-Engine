@@ -13,6 +13,7 @@
 // already follows.
 import fs from 'fs';
 import * as H from './harness.js';
+import World from '#/engine/World.js';
 import { check, R, player } from './a1lib.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ParamType from '#/cache/config/ParamType.js';
@@ -175,6 +176,46 @@ console.log('\n== Prime casts Water Wave rather than throwing a spine');
     const code = src.replace(/\/\/[^\n]*/g, '');
     check('  no dagannoth spine is thrown by the magic king', /dagannoth_spine/.test(code), false);
     check('  and its max hit is read off the npc, not written twice', /return\(npc_param\(max_hit\)\);/.test(src), true);
+}
+
+// THE SPINOLYP'S SUBMERGE CYCLE IS CLOCKED FROM CONFIG, not from an [ai_spawn]. Same lesson as the
+// King Black Dragon's far breath (tools/sim/kbd.ts): Npc.resetDefaults writes timerInterval back to
+// the npc TYPE's timer field, and it runs every time an npc drops a target - so a timer armed by
+// npc_settimer at spawn is gone a few ticks into the first fight, and the suspicious-water cycle
+// would have stopped for good the first time one of these lost a player between its own ticks.
+console.log('\n== the Spinolyps are clocked by their type, not by a spawn trigger');
+{
+    const forms = ['dagannoth_water_creature_1x1', 'dagannoth_water_creature_1x12', 'dagannoth_water_creature_1x13', 'dagannoth_water_creature_1x1_invisible', 'dagannoth_water_creature_1x1_invisible2', 'dagannoth_water_creature_1x1_invisible3'];
+    for (const f of forms) {
+        check(`  ${f} carries the 20-tick clock`, NpcType.get(NpcType.getId(f)).timer, 20);
+    }
+    // Comments stripped: the note above the cycle names the shape being ruled out.
+    const code = fs.readFileSync('../content/scripts/areas/area_waterbirth/scripts/dagannoth_maze_monsters.rs2', 'utf8').replace(/\/\/[^\n]*/g, '');
+    check('  and nothing arms them from an ai_spawn', /\[ai_spawn,/.test(code), false);
+    check('  while the trigger that reads the clock is still there', (code.match(/\[ai_timer,dagannoth_water_creature/g) ?? []).length, 6);
+
+    // And the cycle actually turns, on the live ones in the maze. 25 of them are placed in the map
+    // data (the .npc header note used to say none were, which was wrong) and every one is armed.
+    const live: any[] = [];
+    for (const npc of (World as any).npcs) {
+        if (npc && forms.includes(NpcType.get(npc.type).debugname ?? '')) live.push(npc);
+    }
+    check('  they are actually in the maze', live.length > 0, true);
+    check(
+        '    all of them clocked',
+        live.every((n: any) => n.timerInterval === 20),
+        true
+    );
+    if (live.length) {
+        const n = live[0];
+        const seen = new Set<string>();
+        for (let t = 0; t < 60; t++) {
+            H.tick(1);
+            seen.add(NpcType.get(n.type).debugname ?? '');
+        }
+        // 60 ticks is three of its 20-tick halves, so it has to have been both things.
+        check('    and one of them submerges and resurfaces', seen.size, 2);
+    }
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
