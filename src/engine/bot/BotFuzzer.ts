@@ -351,14 +351,16 @@ export class FuzzBrain {
         // one slot onto another: the whole surface a dupe lives on, and nothing that could create or
         // destroy anything.
         if (Watch.auditIsMoving(this.watch)) {
+            // No dropping and no taking: the window's totals are the bot's own inventories and do
+            // not include the ground, because the ground cannot be counted reliably (see
+            // ownedInvItems in BotFuzzWatch.ts - two rounds of false `potato_seed +3` findings came
+            // out of trying to). Deposit, withdraw, equip, unequip and drag are the surface a dupe
+            // actually lives on, and they are all here.
             const roll = this.rng.int(1, 100);
-            if (roll <= 40 && this.invOp()) return;
-            if (roll <= 70 && this.equipOrUnequip()) return;
-            if (roll <= 85 && this.invDrag()) return;
-            if (this.dropAndTake()) return;
-            // Still nothing: fall back to the other half rather than burning the tick. An audit of
-            // equipment and the floor alone is still a conservation test.
-            if (this.equipOrUnequip() || this.dropAndTake() || this.invDrag()) return;
+            if (roll <= 45 && this.invOp()) return;
+            if (roll <= 80 && this.equipOrUnequip()) return;
+            if (this.invDrag()) return;
+            if (this.equipOrUnequip() || this.invOp()) return;
             this.note('audit: nothing to move', 'idle');
             return;
         }
@@ -733,54 +735,6 @@ export class FuzzBrain {
         if (Input.invDrag(bot, listener.com, a, b)) {
             this.note(`audit drag ${Component.get(listener.com)?.comName ?? listener.com} ${a}->${b}`, 'invop');
             return true;
-        }
-        return false;
-    }
-
-    /**
-     * Drop something and pick it back up. Both halves count as conserving: the drop is still the
-     * bot's property on the floor (ownedItems counts its own drops) and taking it back moves it.
-     */
-    private dropAndTake(): boolean {
-        const bot = this.bot;
-        const objs = this.nearby<Obj>(
-            (x, z) => World.gameMap.getZone(x, z, bot.level).getAllObjsSafe(),
-            o => o
-            // ITS OWN TILE ONLY. opObjAt sends the route a client would send with the click, so
-            // taking something back from two tiles away walks the bot - and a window that moves is
-            // abandoned (watchItemAudit). On its own tile the route is empty and nothing moves.
-        ).filter(o => o.receiver64 === bot.hash64 && o.x === bot.x && o.z === bot.z);
-        const mine = this.rng.pick(objs);
-        if (mine && this.rng.next() < 0.5) {
-            const type = ObjType.get(mine.type);
-            const op = type.op.findIndex(o => o === 'Take') + 1;
-            if (op !== 0 && Input.opObjAt(bot, mine, op)) {
-                this.note(`audit take ${type.debugname ?? mine.type}`, 'takeobj');
-                return true;
-            }
-        }
-        const inv = bot.getInventory(InvType.INV);
-        if (!inv) {
-            return false;
-        }
-        for (let tries = 0; tries < 6; tries++) {
-            const slot = this.someSlot();
-            if (slot === undefined) {
-                return false;
-            }
-            const item = inv.get(slot);
-            if (!item) {
-                continue;
-            }
-            const type = ObjType.get(item.id);
-            const op = (type.iop ?? []).findIndex(o => o === 'Drop') + 1;
-            if (op === 0) {
-                continue;
-            }
-            if (Input.heldOpSlot(bot, slot, op)) {
-                this.note(`audit drop ${type.debugname ?? item.id}`, 'drop');
-                return true;
-            }
         }
         return false;
     }

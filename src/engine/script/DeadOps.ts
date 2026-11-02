@@ -23,8 +23,15 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 // and exactly the list people have been finding one click at a time.
 //
 // Two kinds, and the difference matters:
-//   notrigger   no [oploc1,x] and no [aploc1,x] exists, for the type or its category. Dead for good:
-//               no state, no quest, no item would have made this click do anything.
+//   notrigger   no [oploc1,x] and no [aploc1,x] exists, for the type or its category, for an option
+//               the cache LABELLED. Always wrong: the client drew "Search" and nothing answers it.
+//   combo       the same, for a use-on or cast-on - [opheldu,x], [opnpcu,x], [opnpct,x]. Kept apart
+//               because having no handler is the NORMAL case here and not a bug by itself. Nothing
+//               labelled "cast Water Blast at a banker" and nothing should happen when you do; the
+//               first run of this reported [opnpct,banker1] 210 times at the top of the list.
+//               Where it IS worth reading is the other direction: no [opheldu,swordfish] at all
+//               means a swordfish cannot be used on anything in the game, which is the kind of row
+//               the hand-run opheldu audit was looking for.
 //   filler      a trigger DID exist and the content still fell through to ~displaymessage(^dm_default)
 //               or said the same words itself. Dead for this state - a missing recipe, a missing
 //               branch, a quest stage nobody wrote. Recorded by the fuzz watcher, not from here.
@@ -34,8 +41,14 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 
 export type DeadOp = {
     sig: string;
-    /** 'notrigger' from the engine's own defaultOp; 'filler' from a watcher that saw the words. */
-    kind: 'notrigger' | 'filler';
+    /**
+     * 'notrigger'  a LABELLED option - the cache advertised "Search" on this loc and no script
+     *              claims it. Always wrong: the player is offered something that does nothing.
+     * 'combo'      a use-on or cast-on whose subject has no handler at all. Informational, not a
+     *              bug on its own - see the note on COMBINATION triggers below.
+     * 'filler'     a trigger existed, ran, and still said nothing. From a watcher, not from here.
+     */
+    kind: 'notrigger' | 'combo' | 'filler';
     /** The trigger the click would have needed, lowercased: `oploc1`, `opheldu`, `apnpct`. */
     trigger: string;
     /** The debugname of the loc, npc, obj, item or spell component it was aimed at. */
@@ -46,6 +59,19 @@ export type DeadOp = {
     tick: number;
     count: number;
 };
+
+/**
+ * The triggers where having no handler is the NORMAL case: using one thing on another, or casting
+ * at something. Nothing advertises "cast Water Blast at a banker" and nothing should happen when
+ * you do, so those are not bugs. A numbered op is different - the cache gave it a label, which
+ * means a client drew it, which means a player was offered it.
+ */
+const COMBINATION_TRIGGER = /^(op|ap)(held|loc|npc|obj|player)(u|t)$/;
+
+/** Which bucket a trigger name belongs in. The fuzz watcher asks, to know whether to raise it. */
+export function kindFor(trigger: string): 'notrigger' | 'combo' {
+    return COMBINATION_TRIGGER.test(trigger) ? 'combo' : 'notrigger';
+}
 
 function key(kind: string, trigger: string, target: string): string {
     return `${kind}|${trigger}|${target}`;
@@ -76,12 +102,19 @@ class DeadOpsTracker {
     /**
      * THE HOT PATH, such as it is - called from Player.defaultOp, which only runs when a click found
      * nothing to do. The boolean first so a world with this off pays one read.
+     *
+     * The kind is worked out HERE rather than by the caller, and that is deliberate: there are two
+     * callers (defaultOp and the fuzz watcher) and the first version let each decide. The watcher
+     * was taught the difference and defaultOp was not, so every row in the file came out labelled
+     * 'notrigger' - including 210 of `[opnpct,banker1]`, a bot casting spells at a bank teller - and
+     * the report's "every one of these is a bug" heading was wrong about most of its list.
      */
-    record(kind: DeadOp['kind'], trigger: string, target: string, who: string, x: number, z: number, level: number): void {
+    record(trigger: string, target: string, who: string, x: number, z: number, level: number): void {
         if (!this.enabled) {
             return;
         }
         try {
+            const kind = kindFor(trigger);
             const sig = key(kind, trigger, target);
             const existing = this.found.get(sig);
             if (existing) {
@@ -96,9 +129,32 @@ class DeadOpsTracker {
         }
     }
 
-    /** Has this exact dead op already been seen? The fuzz watcher asks, so it reports each once. */
-    has(kind: DeadOp['kind'], trigger: string, target: string): boolean {
-        return this.found.has(key(kind, trigger, target));
+    /**
+     * A trigger that DID run and still said nothing. There is no trigger name to record - the
+     * content said it, not the engine - so what identifies it is the action the player took.
+     */
+    recordFiller(what: string, who: string, x: number, z: number, level: number): void {
+        if (!this.enabled) {
+            return;
+        }
+        try {
+            const sig = key('filler', 'content', what);
+            const existing = this.found.get(sig);
+            if (existing) {
+                existing.count++;
+                this.dirty = true;
+                return;
+            }
+            this.found.set(sig, { sig, kind: 'filler', trigger: 'content', target: what, where: `${x},${z},${level}`, who, tick: 0, count: 1 });
+            this.dirty = true;
+        } catch {
+            // as above
+        }
+    }
+
+    /** Which bucket a trigger name belongs in, for a caller deciding whether to raise it. */
+    kindFor(trigger: string): 'notrigger' | 'combo' {
+        return kindFor(trigger);
     }
 
     all(): DeadOp[] {

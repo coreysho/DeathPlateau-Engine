@@ -1258,7 +1258,7 @@ export default class Player extends PathingEntity {
             // to one player and forgotten. DeadOps collects every one, so a fuzz run, a sim or an
             // afternoon on the dev world all leave the same to-do list behind. Inside the same
             // !NODE_PRODUCTION guard: a live world collects nothing and pays nothing.
-            DeadOps.record('notrigger', ServerTriggerType[this.targetOp + 7].toLowerCase(), debugname, this.username, this.x, this.z, this.level);
+            DeadOps.record(ServerTriggerType[this.targetOp + 7].toLowerCase(), debugname, this.username, this.x, this.z, this.level);
         }
 
         this.messageGame('Nothing interesting happens.');

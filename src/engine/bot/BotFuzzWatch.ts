@@ -372,6 +372,12 @@ const FILLER_LINES: readonly string[] = ['Nothing interesting happens.', 'Nothin
  * not use a bucket on a goblin"). Capped so the findings file stays a thing a person reads.
  */
 const FILLER_CAP = 300;
+
+/**
+ * Trail entries that are the brain's own bookkeeping rather than a click at the world. A filler
+ * finding is only as useful as the action it names, and these name nothing.
+ */
+const NOT_A_CLICK = /^t\d+ (audit:|nothing to do|waiting|walk to|relocated|heading|audit open bank|audit: )/;
 let fillerReported = 0;
 
 /**
@@ -398,9 +404,19 @@ export function watchDeadInteraction(bot: BotPlayer, w: WatchState, seed: number
             const target = rest.join(',') || '_';
             // DeadOps is the process-wide collector (every sim and the dev world feed it too); the
             // finding is the fuzzer's own copy, with the seed and trail that reached it.
-            if (!DeadOps.has('notrigger', trigger, target)) {
-                DeadOps.record('notrigger', trigger, target, bot.username, bot.x, bot.z, bot.level);
-                findings.add('deadop', `[${trigger},${target}] does not exist - the option is in the cache and no script claims it`, bot, seed, trail);
+            // A LABELLED OPTION OR A COMBINATION? It matters: the first run of this put
+            // [opnpct,banker1] x210 at the top of the list, which is a bot with 99 Magic casting
+            // spells at a bank teller and is not a bug. DeadOps.kindFor owns that rule, because
+            // Player.defaultOp records these too and the two must agree.
+            //
+            // AND NO `has` GUARD HERE, which was the other half of the same mistake. defaultOp
+            // records the row DURING the click; this watcher reads the message a tick later, by
+            // which time the row always exists - so guarding on it suppressed essentially every
+            // finding. findings.add already dedupes on kind and detail, which is the right place
+            // for it: DeadOps counts occurrences, findings reports the first one with its trail.
+            DeadOps.record(trigger, target, bot.username, bot.x, bot.z, bot.level);
+            if (DeadOps.kindFor(trigger) === 'notrigger') {
+                findings.add('deadop', `[${trigger},${target}] does not exist - the cache offers that option and no script claims it`, bot, seed, trail);
             }
             w.sawNoTrigger = m.tick;
             continue;
@@ -420,12 +436,15 @@ export function watchDeadInteraction(bot: BotPlayer, w: WatchState, seed: number
             // The trail's last entry is the brain's own words for the click, with its tick:
             // `t4812 oploc crate op1 @3215,3210,0`. The tick is dropped for the signature so two
             // bots hitting the same dead combination are one finding.
-            const what = (trail[trail.length - 1] ?? '(unknown action)').replace(/^t\d+ /, '');
-            if (!DeadOps.has('filler', 'content', what)) {
-                DeadOps.record('filler', 'content', what, bot.username, bot.x, bot.z, bot.level);
-                fillerReported++;
-                findings.add('filler', `a trigger ran and still had nothing to say ("${m.text}") for: ${what}`, bot, seed, trail);
-            }
+            //
+            // Walked BACKWARDS past the brain's own bookkeeping, because the message can arrive a
+            // tick or two after the click that caused it - by which time the trail's last entry may
+            // be `audit: settling` or `nothing to do`, and a finding filed against that names
+            // nothing anybody can go and look at. A real run produced exactly that.
+            const what = (trail.findLast(step => !NOT_A_CLICK.test(step)) ?? '(unknown action)').replace(/^t\d+ /, '');
+            DeadOps.recordFiller(what, bot.username, bot.x, bot.z, bot.level);
+            fillerReported++;
+            findings.add('filler', `a trigger ran and still had nothing to say ("${m.text}") for: ${what}`, bot, seed, trail);
         }
     }
     w.lastMessageTick = messages[messages.length - 1].tick;
@@ -483,6 +502,40 @@ function ownedItems(bot: BotPlayer): Map<number, number> {
                     const type = ObjType.get(obj.type);
                     bump(type && type.certlink !== -1 && type.certtemplate !== -1 ? type.certlink : obj.type, obj.count);
                 }
+            }
+        }
+    }
+    return total;
+}
+
+/**
+ * Every obj the bot owns in an inventory of its OWN - backpack, bank, equipment - and nothing on
+ * the ground.
+ *
+ * WHY THE GROUND IS LEFT OUT, written down because it cost two rounds of false findings. ownedItems
+ * above counts the bot's own drops, which is right for the opportunistic watcher and wrong for an
+ * assertion, because the ground is not a reliable ledger:
+ *
+ *   - a drop is only counted while it is in one of the nine zones around the bot;
+ *   - it stops being the bot's at all when the lootdrop timer makes it public, which is a clock
+ *     nobody in this window controls;
+ *   - a drop onto a tile that already holds the same obj merges, and a partial stack does not.
+ *
+ * Pinning the window to one tile fixed the first of those and not the other two: a run still
+ * reported `potato_seed +3` off nothing but drop and take. So the audit asserts over the
+ * inventories only, and the brain does not drop during one. That is no loss - a dupe lives in
+ * deposit, withdraw, equip and unequip, and those are all here. Dropping is still fuzzed outside
+ * the window, where nothing is asserted about it.
+ */
+function ownedInvItems(bot: BotPlayer): Map<number, number> {
+    const total = new Map<number, number>();
+    for (const inv of bot.invs.values()) {
+        for (let i = 0; i < inv.capacity; i++) {
+            const item = inv.get(i);
+            if (item) {
+                const type = ObjType.get(item.id);
+                const id = type && type.certlink !== -1 && type.certtemplate !== -1 ? type.certlink : item.id;
+                total.set(id, (total.get(id) ?? 0) + item.count);
             }
         }
     }
@@ -596,6 +649,13 @@ export const AUDIT_TICKS = 30;
 /** Consecutive ticks with nothing left to move before the window gives up early. */
 export const AUDIT_IDLE_GIVEUP = 4;
 
+/**
+ * The moves allowed INSIDE an audit window: between the bot's own inventories, nothing touching the
+ * ground. See ownedInvItems for why the ground is out. MOVING_ACTIONS is the wider set the
+ * opportunistic watcher uses and still includes drop and take.
+ */
+export const AUDIT_MOVES: ReadonlySet<string> = new Set(['invop', 'wornop', 'equip']);
+
 /** Is this bot in an item audit right now? The brain asks, to know to move items and nothing else. */
 export function inItemAudit(w: WatchState): boolean {
     return w.auditUntil !== -1;
@@ -609,7 +669,7 @@ export function auditIsMoving(w: WatchState): boolean {
 /** The brain opening a window: the totals now are what the totals must be at the end. */
 export function beginItemAudit(bot: BotPlayer, w: WatchState): void {
     w.auditUntil = World.currentTick + AUDIT_TICKS;
-    w.auditBaseline = ownedItems(bot);
+    w.auditBaseline = ownedInvItems(bot);
     w.auditMoves = 0;
     w.auditIdle = 0;
     w.auditAt = `${bot.x},${bot.z},${bot.level}`;
@@ -651,9 +711,16 @@ export function watchItemAudit(bot: BotPlayer, w: WatchState, seed: number, trai
             w.auditBaseline = null;
             return;
         }
-        if (MOVING_ACTIONS.has(action)) {
+        if (AUDIT_MOVES.has(action)) {
             w.auditMoves++;
             movedThisTick++;
+        } else if (MOVING_ACTIONS.has(action)) {
+            // A move the audit does not account for - a drop or a take. The brain does not make
+            // these inside a window; if one arrives from a queued script, abandon rather than
+            // assert against a total that does not include the ground.
+            w.auditUntil = -1;
+            w.auditBaseline = null;
+            return;
         }
     }
     // A STARVED WINDOW CLOSES EARLY. Most of the audit's value is deposit and withdraw, and those
@@ -687,7 +754,7 @@ export function watchItemAudit(bot: BotPlayer, w: WatchState, seed: number, trai
         return; // still moving, or settling
     }
 
-    const after = ownedItems(bot);
+    const after = ownedInvItems(bot);
     const ids = new Set<number>([...w.auditBaseline.keys(), ...after.keys()]);
     const drifts: string[] = [];
     for (const id of ids) {

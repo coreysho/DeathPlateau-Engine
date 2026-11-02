@@ -139,19 +139,36 @@ if (DeadOps.size() === 0) {
 } else {
     const rows = DeadOps.all();
     const noTrigger = rows.filter(r => r.kind === 'notrigger');
+    const combo = rows.filter(r => r.kind === 'combo');
     const filler = rows.filter(r => r.kind === 'filler');
-    console.log(`  ${noTrigger.length} options with no trigger at all, ${filler.length} where a trigger ran and still had nothing to say`);
-    for (const row of noTrigger.slice(0, 25)) {
+
+    // THE THREE BUCKETS ARE NOT EQUALLY INTERESTING and are printed worst-first so the list reads
+    // as a work queue. A labelled option with no script is always wrong. A use-on with no handler
+    // usually is not - nothing advertises "cast Water Blast at a banker".
+    console.log(`  ${noTrigger.length} LABELLED options with no script behind them - every one of these is a bug`);
+    for (const row of noTrigger.slice(0, 30)) {
         console.log(`  x${String(row.count).padStart(4)} [${row.trigger},${row.target}]  first at ${row.where}`);
     }
-    if (noTrigger.length > 25) {
-        console.log(`  ... and ${noTrigger.length - 25} more`);
+    if (noTrigger.length > 30) {
+        console.log(`  ... and ${noTrigger.length - 30} more`);
     }
-    for (const row of filler.slice(0, 10)) {
-        console.log(`  x${String(row.count).padStart(4)} filler: ${row.target}`);
+
+    console.log(`\n  ${combo.length} use-on / cast-on subjects with no handler at all - read these the other way round:`);
+    console.log('  no [opheldu,x] means x cannot be used on anything in the game; most of the rest is just');
+    console.log('  a spell meeting an npc that was never meant to answer it.');
+    for (const row of combo.slice(0, 12)) {
+        console.log(`  x${String(row.count).padStart(4)} [${row.trigger},${row.target}]`);
     }
-    if (filler.length > 10) {
-        console.log(`  ... and ${filler.length - 10} more`);
+    if (combo.length > 12) {
+        console.log(`  ... and ${combo.length - 12} more`);
+    }
+
+    console.log(`\n  ${filler.length} where a trigger DID run and still had nothing to say - a missing branch or recipe:`);
+    for (const row of filler.slice(0, 12)) {
+        console.log(`  x${String(row.count).padStart(4)} ${row.target}`);
+    }
+    if (filler.length > 12) {
+        console.log(`  ... and ${filler.length - 12} more`);
     }
     // Left on disk on purpose, unlike the findings and faults files below: this one is a work
     // queue somebody reads afterwards, not a pass/fail.
