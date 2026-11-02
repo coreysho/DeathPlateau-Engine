@@ -89,9 +89,12 @@ console.log('== a snare catches, and the bird is ON it when it goes');
     // bird has to be within three tiles when one lands, and the snare itself falls over after
     // ^hunter_trap_duration - so one trap can simply run out having caught nothing. That is the
     // game, not a defect, so this lays another rather than reporting a failure that is really luck.
-    let run = trapRun('snarewalk1', 400);
-    for (let go = 2; go <= 4 && (run === null || run.vanished === null); go++) {
-        run = trapRun('snarewalk' + go, 400);
+    // 250 ticks and six goes rather than 400 and four, for the same wall clock: a snare falls over
+    // after ^hunter_trap_duration (200), so everything past that in one run is waiting on a trap
+    // that is already gone. Six independent snares beat four long ones.
+    let run = trapRun('snarewalk1', 250);
+    for (let go = 2; go <= 6 && (run === null || run.vanished === null); go++) {
+        run = trapRun('snarewalk' + go, 250);
     }
     check('a snare was laid beside a swift', run !== null, true);
     if (run) {
