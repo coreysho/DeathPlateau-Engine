@@ -18,6 +18,7 @@ import { thinAir } from './mapfloor.ts';
 import { getExpByLevel } from '#/engine/entity/Player.js';
 import World from '#/engine/World.js';
 import ObjType from '#/cache/config/ObjType.js';
+import JavaRandom from '#/util/JavaRandom.js';
 
 await H.boot();
 
@@ -184,6 +185,84 @@ console.log('\n  the stick is what the bonus is paid for');
         check('    taking it off you', H.invCount(q, 'waa_stick'), 0);
     }
     H.despawn(q);
+}
+
+console.log('\n  the deathslide is the one obstacle that can be failed');
+{
+    const curve = (low: number, high: number, lvl: number) =>
+        Math.floor((low * (99 - lvl)) / 98) + Math.floor((high * (lvl - 1)) / 98) + 1;
+    const lo = K.werewolf_zip_low;
+    const hi = K.werewolf_zip_high;
+    check(`    at 80 neither roll can be lost (${curve(lo, hi, 80)}/256)`, curve(lo, hi, 80) >= 256, true);
+    check(`    and at 79 one still can (${curve(lo, hi, 79)}/256)`, curve(lo, hi, 79) < 256, true);
+    check(`    at the course's own 60 each roll is ${curve(lo, hi, 60)}/256`, curve(lo, hi, 60) < 256, true);
+
+    const origND = JavaRandom.nextDouble.bind(JavaRandom);
+    const pin = (v: number | null) => {
+        (JavaRandom as unknown as { nextDouble: () => number }).nextDouble = v === null ? origND : () => v;
+    };
+
+    // A HELMET STOPS YOU EVEN TRYING.
+    {
+        const q: any = player('werewolf_helm', 3528, 9910, 0);
+        H.setVar(q, 'tutorial', 1000);
+        setAgility(q, K.werewolf_level);
+        H.equip(q, { hat: 'bronze_med_helm' });
+        const from = H.ifaces.length;
+        A.op(q, 3528, 9911, 'loc_5139', 1);
+        H.tick(8);
+        const said = H.ifaces.slice(from).filter(i => i.who === q.username && i.kind === 'text' && i.text).map(i => i.text!);
+        // one word, not a phrase: ~mesbox wraps its text into separate interface lines, so
+        // 'rather in the way' straddled a line break and matched nothing
+        check('    a helmet is refused', A.saw(said, 'helmet'), true);
+        check('    and the player has not moved', at(q), '3528,9910');
+        H.despawn(q);
+    }
+
+    // FORCED TO FAIL: the roll is lost, so the slide still finishes but it costs.
+    {
+        const q: any = player('werewolf_fell', 3528, 9910, 0);
+        H.setVar(q, 'tutorial', 1000);
+        setAgility(q, K.werewolf_level);
+        q.baseLevels[3] = 99;
+        q.levels[3] = 99;
+        const hpBefore = q.levels[3];
+        const xpBefore = q.stats[AGILITY];
+        pin(0.999);
+        A.op(q, 3528, 9911, 'loc_5139', 1);
+        H.tick(14);
+        pin(null);
+        check(`    a lost roll still ends at the bottom (${at(q)})`, at(q), '3527,9897');
+        const paid = q.stats[AGILITY] - xpBefore;
+        const steps = (K.werewolf_xp_zip - paid) / K.werewolf_zip_step;
+        check(`    and pays ${paid / 10}, which is ${steps} step(s) of 20 under 200`,
+            paid < K.werewolf_xp_zip && steps >= 1 && steps <= 3, true);
+        const lost = hpBefore - q.levels[3];
+        check(`    and costs ${lost} hitpoints (${K.werewolf_zip_hit_low}-${K.werewolf_zip_hit_low + K.werewolf_zip_hit_span - 1})`,
+            lost >= K.werewolf_zip_hit_low && lost < K.werewolf_zip_hit_low + K.werewolf_zip_hit_span, true);
+        H.despawn(q);
+    }
+
+    // AND AT 80/80 IT CANNOT BE FAILED, however the roll falls.
+    {
+        const q: any = player('werewolf_eighty', 3528, 9910, 0);
+        H.setVar(q, 'tutorial', 1000);
+        setAgility(q, 80);
+        q.stats[2] = getExpByLevel(80);
+        q.baseLevels[2] = 80;
+        q.levels[2] = 80;
+        q.baseLevels[3] = 99;
+        q.levels[3] = 99;
+        const hpBefore = q.levels[3];
+        const xpBefore = q.stats[AGILITY];
+        pin(0.999);
+        A.op(q, 3528, 9911, 'loc_5139', 1);
+        H.tick(14);
+        pin(null);
+        check('    80 agility and 80 strength never fall', q.stats[AGILITY] - xpBefore, K.werewolf_xp_zip);
+        check('    and take no damage', hpBefore - q.levels[3], 0);
+        H.despawn(q);
+    }
 }
 
 console.log('\n  so a full lap with the stick is the 2006 540, not the wiki\'s 730');
