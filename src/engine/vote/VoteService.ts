@@ -47,6 +47,26 @@ let book: VoteBook | null = null;
 let bookRefused = false;
 const inFlight = new Set<string>();
 
+/**
+ * The parameter NAMES a callback arrived with, for the log.
+ *
+ * WHY THIS EXISTS. Every toplist names its parameters differently - usr, user, username, callback,
+ * postback, p_resp - and none of them documents it in a way you can rely on. Configure the wrong
+ * name and the vote is silently refused: the player votes, gets nothing, and concludes the server
+ * is broken. So when a callback fails, the log says what actually turned up, and one real vote is
+ * enough to fill in sites.json correctly.
+ *
+ * NAMES ONLY, NEVER VALUES. One of those values is the shared secret, and another is somebody's
+ * account name. The names are what you need to configure; the values would only be a leak.
+ */
+function describe(params: Record<string, string>): string {
+    const names = Object.keys(params);
+    if (names.length === 0) {
+        return ' - it carried no parameters at all';
+    }
+    return ` - it carried: ${names.join(', ')}`;
+}
+
 export default class VoteService {
     static ledger(): VoteBook {
         if (!book) {
@@ -126,18 +146,22 @@ export default class VoteService {
         const site = VoteSites.get(siteId);
         if (!site || !site.callback) {
             // Deliberately the same answer as a bad secret. An unlisted id and a wrong key should
-            // not be distinguishable from outside.
+            // not be distinguishable from outside - but the log may say which, because the log is
+            // ours.
+            printError(`vote: callback for ${siteId}, which is not a configured site with a callback${describe(params)}`);
             return { status: 404, body: 'unknown' };
         }
 
-        const given = params[site.callback.secretParam ?? 'secret'] ?? '';
+        const secretParam = site.callback.secretParam ?? 'secret';
+        const given = params[secretParam] ?? '';
         if (!timingSafeEqual(given, site.callback.secret)) {
-            printError(`vote: ${siteId} callback with a wrong secret`);
+            printError(`vote: ${siteId} callback with a wrong secret - expected it in "${secretParam}"${describe(params)}`);
             return { status: 404, body: 'unknown' };
         }
 
         const username = (params[site.callback.userParam] ?? '').trim();
         if (!username.length || username.length > 12) {
+            printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describe(params)}`);
             return { status: 400, body: 'no player' };
         }
 
