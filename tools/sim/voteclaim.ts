@@ -156,12 +156,40 @@ console.log('\nA CALLBACK THAT CANNOT PROVE WHO IT IS DOES NOTHING');
 {
     reset([CALLBACK_SITE]);
     const wrong = VoteService.fromCallback('pushy', { key: 'hunter3', player: 'voteon', voteid: 'x' });
-    check('  a wrong secret is refused', [wrong.status, wrong.body], [404, 'unknown']);
+    check('  a wrong secret is refused', [wrong.status, wrong.body], [200, 'unknown']);
     check('  and nothing was credited', VoteService.owed('voteon'), 0);
     const nosite = VoteService.fromCallback('nosuchsite', { key: 'hunter2', player: 'voteon' });
-    check('  an unknown site answers identically, so neither can be probed for', [nosite.status, nosite.body], [404, 'unknown']);
+    check('  an unknown site answers identically, so neither can be probed for', [nosite.status, nosite.body], [200, 'unknown']);
     const noplayer = VoteService.fromCallback('pushy', { key: 'hunter2', player: '' });
     check('  and a callback with no player is refused', noplayer.status, 400);
+}
+
+console.log('\nA CALLBACK THAT NAMES NOBODY PAYS NOBODY');
+{
+    // THIS HAPPENED. On 2 November the live world credited two tickets to a player called
+    // "Null" - RuneTopic sending its placeholder for a vote that carried no name - and they sat
+    // owed to an account nobody had registered yet, which anybody could then have registered.
+    // A toplist says "nobody" by sending a word, never by sending nothing.
+    reset([CALLBACK_SITE]);
+    for (const sentinel of ['Null', 'null', 'Guest', 'none', 'undefined', 'Unknown']) {
+        const res = VoteService.fromCallback('pushy', { key: 'hunter2', player: sentinel, voteid: 's-' + sentinel });
+        check(`  "${sentinel}" is a placeholder, not a player`, res.status, 400);
+        check('    and nothing is owed to it', VoteService.owed(sentinel.toLowerCase()), 0);
+    }
+
+    // The other way a vote goes to nobody. credit() only lowercases, so a name with a space in
+    // it would be filed under "lord fooby" while the account is "lord_fooby" - owed for ever,
+    // with a log line that reads like a success.
+    const spaced = VoteService.fromCallback('pushy', { key: 'hunter2', player: 'Lord Fooby', voteid: 'lf1' });
+    check('  a name with a space is still that player', spaced.body, 'ok');
+    check('    filed in the form the account table uses', VoteService.owed('lord_fooby'), 1);
+    check('    and not in the form the site sent', VoteService.owed('lord fooby'), 0);
+
+    // Anything that cannot be a name at all.
+    const junk = VoteService.fromCallback('pushy', { key: 'hunter2', player: '???', voteid: 'j1' });
+    check('  a name of nothing but punctuation is refused', junk.status, 400);
+    const long = VoteService.fromCallback('pushy', { key: 'hunter2', player: 'abcdefghijklmnop', voteid: 'j2' });
+    check('  and one too long for the game to hold', long.status, 400);
 }
 
 console.log('\nA VOTE CREDITED WHILE YOU ARE OFFLINE IS WAITING AT YOUR NEXT LOGIN');
