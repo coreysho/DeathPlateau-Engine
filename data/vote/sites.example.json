@@ -6,6 +6,9 @@
         "id": "example",
         "name": "Example Toplist",
         "url": "https://example.com/vote/12345",
+
+        "_comment_playerurl": "THE SAME PAGE WITH THE PLAYER'S NAME IN IT, {user} marking where it goes. Leave it out and the Vote clerk hands every player a link that names nobody: the vote counts toward your ranking and can never pay a ticket, because a site only tells you who voted if you told it first. Some sites take a path segment and some a query parameter - read the site's incentive-voting docs for which, and for what it sends back.",
+        "playerUrl": "https://example.com/vote/12345?player={user}",
         "tickets": 1,
         "cooldownHours": 12,
 
