@@ -1,0 +1,107 @@
+# The 298 pass/fail simulations in tools/sim, which nothing ran automatically.
+#
+# WHY NOT ON EVERY PUSH. They are about two and a half hours end to end - each boots a world,
+# and the audit sweeps are minutes each - against four minutes for the whole of the client's
+# test suite. Sharded eight ways that is about twenty-five minutes of wall clock, which is fine
+# overnight and is not fine on a push.
+#
+# WHY A KNOWN-FAILING LIST. Twenty per cent of them fail today, for three different reasons:
+# some read '../content' and are looking at the wrong checkout, some test content that is not
+# on this branch at all - marksofgrace wants a varp named mark_grace_cooldown that exists
+# nowhere in the content - and some are genuinely failing checks worth fixing. A job that is
+# red every night is a job nobody reads, so tools/sim/known-failing.txt holds the ones already
+# broken when this was switched on, and a shard goes red only for a sim that is NOT on it. A
+# sim that starts passing is reported too: it should come off the list, or the list rots into
+# an excuse.
+#
+# CONTENT IS CHECKED OUT AS 'content' AND NOT UNDER ITS REPOSITORY NAME, because thirty of the
+# sims open '../content/scripts/...' directly. That is their convention and this matches it.
+name: Nightly sims
+
+# THE SCHEDULE IS DELIBERATELY NOT ON YET. tools/sim/known-failing.txt does not exist, and
+# without it the first nightly run is red with around sixty failures and teaches everybody to
+# ignore the job. The baseline that produces the list is being measured now; the schedule goes
+# on in the same commit that adds it, and until then this runs only when somebody asks it to.
+on:
+  # schedule:
+  #   # 03:00 UTC, off the hour used by everything else.
+  #   - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  sims:
+    name: sims ${{ matrix.shard }} of 8
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: engine
+
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Content
+        ref: 377-wip
+        path: content
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: engine/package-lock.json
+
+    - name: Install
+      working-directory: engine
+      run: npm ci
+
+    # Every shard packs its own cache. It is 45 seconds against the 25 minutes of sims behind
+    # it, and sharing one through an artifact would make every shard wait on a job that packs.
+    - name: Pack the content
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+        BUILD_VERIFY: 'false'
+      run: npx tsx tools/pack/Build.ts
+
+    - name: Run this shard
+      working-directory: engine
+      run: |
+        known=tools/sim/known-failing.txt
+        [ -f "$known" ] || : > "$known"
+        newly_red=""
+        newly_green=""
+        i=0
+        for f in $(ls tools/sim/*.ts | sort); do
+          # Only the ones that can actually report a verdict; the rest are hand-run tools.
+          grep -qE 'process\.exit\([^0-9)]' "$f" || continue
+          if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
+          i=$((i + 1))
+          n=$(basename "$f" .ts)
+          rc=0
+          timeout 180 npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          if grep -qx "$n" "$known"; then
+            if [ "$rc" = "0" ]; then
+              echo "::notice title=$n::$n passes now and is still on known-failing.txt"
+              newly_green="$newly_green $n"
+            fi
+            continue
+          fi
+          if [ "$rc" != "0" ]; then
+            echo "::group::$n (exit $rc)"
+            tail -40 "/tmp/$n.log"
+            echo "::endgroup::"
+            echo "::error title=$n::$n fails and is not on known-failing.txt"
+            newly_red="$newly_red $n"
+          fi
+        done
+        [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
+        if [ -n "$newly_red" ]; then
+          echo "NEWLY FAILING:$newly_red"
+          exit 1
+        fi
+        echo "shard ${{ matrix.shard }}: nothing newly broken"
