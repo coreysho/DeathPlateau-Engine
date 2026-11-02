@@ -1,8 +1,19 @@
 import VoteBook, { CreditResult } from '#/engine/vote/VoteBook.js';
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
+
+/**
+ * Names that are a toplist saying "nobody", not a player saying who they are.
+ *
+ * Every one of these is a placeholder a site substitutes when a vote carried no name, and all
+ * of them are also names somebody could register - so without this list the tickets are real,
+ * owed, and collectable by whoever gets there first. Compared after toSafeName, so the case and
+ * any punctuation are already gone.
+ */
+const NOT_A_PLAYER: ReadonlySet<string> = new Set(['null', 'guest', 'none', 'nil', 'undefined', 'unknown', 'anonymous']);
 import World from '#/engine/World.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import Environment from '#/util/Environment.js';
+import { toSafeName } from '#/util/JString.js';
 import { printError, printInfo } from '#/util/Logger.js';
 
 // THE VOTE SERVICE. Both ways a vote can arrive end here, and here is where a credited vote becomes
@@ -185,9 +196,25 @@ export default class VoteService {
             }
         }
 
-        const username = (params[site.callback.userParam] ?? '').trim();
-        if (!username.length || username.length > 12) {
+        // THE NAME A SITE SENDS IS NOT NECESSARILY A PLAYER. Two ways it is not, both of which
+        // used to be credited and neither of which anybody would ever notice:
+        //
+        // A SENTINEL. A toplist that has no name for a vote sends its placeholder rather than
+        // nothing - RuneTopic's own share link reads /vote/death-plateau/Guest - and "Null" was
+        // credited 2 tickets here on 2 November, which sat owed to an account that does not
+        // exist and could have been collected by anyone who registered that name.
+        //
+        // A NAME THAT IS NOT IN THE GAME'S OWN FORM. credit() lowercases and does nothing else,
+        // so "Lord Fooby" would be written down as "lord fooby" while the account is
+        // "lord_fooby" - owed to nobody, for ever, with a healthy-looking log line. toSafeName
+        // is the game's own conversion and is what the account table is keyed by, so the vote
+        // is stored in that form or it is not stored at all.
+        const claimed = (params[site.callback.userParam] ?? '').trim();
+        const username = toSafeName(claimed);
+        if (!claimed.length || claimed.length > 12 || username === 'invalid_name' || NOT_A_PLAYER.has(username)) {
             printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describe(params)}`);
+            // 400 rather than 200: unlike a validator's empty ping, this one got past the secret,
+            // so it is a real caller sending something we cannot pay. Say so.
             return { status: 400, body: 'no player' };
         }
 

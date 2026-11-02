@@ -27,7 +27,10 @@ export class LoginClient extends InternalClient {
         );
     }
 
-    public async playerLogin(username: string, password: string, uid: number, socket: string, remoteAddress: string, reconnecting: boolean, hasSave: boolean) {
+    // custom (2026-11-02) - `token` is a saved login proving itself instead of a password,
+    // `remember` is a password login asking for one to keep, and `sendsToken` is whether the
+    // client is new enough to carry either - which is only ever used to say so in the log.
+    public async playerLogin(username: string, password: string, uid: number, socket: string, remoteAddress: string, reconnecting: boolean, hasSave: boolean, remember: boolean = false, token: string = '', sendsToken: boolean = false) {
         await this.connect();
 
         if (!this.ws || !this.wsr || !this.wsr.checkIfWsLive()) {
@@ -47,17 +50,21 @@ export class LoginClient extends InternalClient {
             username,
             password,
             reconnecting,
-            hasSave
+            hasSave,
+            remember,
+            token,
+            sendsToken
         });
 
         if (reply.error) {
             return { reply: -1, account_id: -1, save: null, muted_until: null, members: false };
         }
 
-        const { response, account_id, staffmodlevel, save, muted_until, members, messageCount, remaining } = reply.result;
+        const { response, account_id, staffmodlevel, save, muted_until, members, messageCount, remaining, token: issued } = reply.result;
         return {
             reply: response,
             account_id,
+            token: issued,
             staffmodlevel,
             save: save ? Buffer.from(save, 'base64') : null,
             muted_until,

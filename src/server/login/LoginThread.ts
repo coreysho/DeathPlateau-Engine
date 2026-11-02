@@ -75,20 +75,20 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
             const sendsSavedLogin: boolean = msg.sendsToken === true;
 
             if (Environment.LOGIN_SERVER) {
-                // A token lives in this world's own account table. With a login server it is that
-                // server which owns accounts and checks passwords, and it has never heard of a
-                // token - so refuse it the way a wrong password is refused. The client then drops
-                // the saved login and asks the player to type one, which is the right outcome and
-                // the only honest one available from here.
-                if (saved) {
-                    console.error('[Login]: a saved login arrived while LOGIN_SERVER is set - refused, tokens are the local account path only');
-                    parentPort.postMessage({ type: 'player_login', socket, username, lowMemory, reconnecting, reply: 1, save: null, account_id: -1, members: false });
-                    break;
-                }
-
+                // custom (2026-11-02) - the saved login goes with it. This branch used to refuse
+                // one outright, on the reasoning that a login server owns accounts and has never
+                // heard of a token; but it reads the same database the token store does, so it is
+                // the authority for both and the right place to decide. Whichever of the two the
+                // client sent, it is proved there and a new one comes back in the response - which
+                // is spread into the message to World below, carrying `token` with it exactly as
+                // the local path does.
+                //
+                // THAT REFUSAL WAS INVISIBLE, which is the worse half. It returned before any of
+                // the three log lines, so on the live world - LOGIN_SERVER=true - a login asking
+                // to be remembered read as a login that asked for nothing at all.
                 trackLoginAttempts.inc();
                 const stopTimer = trackLoginTime.startTimer();
-                const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave);
+                const response = await client.playerLogin(username, password, uid, socket, remoteAddress, reconnecting, hasSave, remember, token, sendsSavedLogin);
 
                 // A staff-only world (NODE_MIN_STAFF_LEVEL). Only a login the login server let in (0, 2, 4)
                 // is refused here - it has marked the account online on this world by now, so it is

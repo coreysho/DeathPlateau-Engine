@@ -15,6 +15,7 @@ import { printInfo } from '#/util/Logger.js';
 import { startManagementWeb } from '#/server/management/ManagementWeb.js';
 import { createInternalServer } from '#/server/InternalServer.js';
 import InvType from '#/cache/config/InvType.js';
+import LoginToken from '#/server/login/LoginToken.js';
 
 const SAFE_PROFILE = /^[A-Za-z0-9_-]{1,32}$/;
 const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_autosave']);
@@ -185,6 +186,15 @@ export default class LoginServer {
                         const { nodeMembers, replyTo, username, password, uid, socket, remoteAddress, reconnecting, hasSave } = msg;
                         const safeName = toSafeName(username);
 
+                        // custom (2026-11-02) - a saved login. This server owns accounts and
+                        // checks passwords, so it owns the token that stands in for one: it
+                        // reads the same database the token store does, and a world asking
+                        // its login server to prove a login should not have to care which of
+                        // the two the client sent. See LoginToken.
+                        const token: string = typeof msg.token === 'string' ? msg.token : '';
+                        const remember: boolean = msg.remember === true;
+                        const saved = token.length > 0;
+
                         if (this.loginRequests.has(safeName)) {
                             s.send(
                                 JSON.stringify({
@@ -216,7 +226,11 @@ export default class LoginServer {
                                 .selectAll()
                                 .executeTakeFirst();
 
-                            if (!Environment.WEBSITE_REGISTRATION && !account) {
+                            // A token can only ever match an account that already exists, so a
+                            // name nobody has registered is refused below as a wrong one would
+                            // be. Registering from a saved login would let a token minted
+                            // anywhere make its own account.
+                            if (!Environment.WEBSITE_REGISTRATION && !account && !saved) {
                                 // register the user automatically
                                 const insertResult = await db
                                     .insertInto('account')
@@ -240,7 +254,10 @@ export default class LoginServer {
                                     .executeTakeFirst();
                             }
 
-                            if (!account || !(await bcrypt.compare(password.toLowerCase(), account.password))) {
+                            // custom (2026-11-02) - one of the two, and the refusal is the same
+                            // either way: nothing in reply 1 says which of them was wrong.
+                            const proven = account ? (saved ? await LoginToken.accepts(account.id, token) : await bcrypt.compare(password.toLowerCase(), account.password)) : false;
+                            if (!account || !proven) {
                                 // invalid username or password
                                 s.send(
                                     JSON.stringify({
@@ -261,6 +278,37 @@ export default class LoginServer {
                                 );
                                 return;
                             }
+
+                            // custom (2026-11-02) - said here because here is where it is
+                            // decided. A login that asks for nothing is indistinguishable
+                            // afterwards from a client too old to ask, so the log says which.
+                            if (saved) {
+                                console.log(`[Login/server]: ${username} signed in with a saved login`);
+                            } else if (!remember) {
+                                console.log(`[Login/server]: ${username} asked for no saved login (client sends them: ${msg.sendsToken === true})`);
+                            }
+
+                            // The token this client gets to keep. Minted once it has proved it
+                            // knows the password and only for a login that is about to
+                            // succeed, so a refusal below does not spend one of the five an
+                            // account may have. Not on a token login: that client has one
+                            // already, and accepts() has just pushed its month out from today.
+                            // A failure is logged and dropped - a login that works is worth
+                            // more than a login that saves, and the player can ask again.
+                            const accountId = account.id;
+                            const savedLogin = async (): Promise<string | undefined> => {
+                                if (!remember || saved) {
+                                    return undefined;
+                                }
+                                try {
+                                    const issued = await LoginToken.issue(accountId, typeof uid === 'number' ? uid : null, remoteAddress ?? null);
+                                    console.log(`[Login/server]: issued a saved login for ${username}`);
+                                    return issued;
+                                } catch (err) {
+                                    console.error(`[Login/server]: could not save the login for ${username}: ${err instanceof Error ? err.message : err}`);
+                                    return undefined;
+                                }
+                            };
 
                             if (nodeMembers && !account.members) {
                                 if (Environment.NODE_AUTO_SUBSCRIBE_MEMBERS) {
@@ -308,7 +356,8 @@ export default class LoginServer {
                                             muted_until: account.muted_until,
                                             save: save.toString('base64'),
                                             members: account.members,
-                                            messageCount: 0
+                                            messageCount: 0,
+                                            token: await savedLogin()
                                         })
                                     );
                                 } else {
@@ -320,7 +369,8 @@ export default class LoginServer {
                                             staffmodlevel: account.staffmodlevel,
                                             muted_until: account.muted_until,
                                             members: account.members,
-                                            messageCount: 0
+                                            messageCount: 0,
+                                            token: await savedLogin()
                                         })
                                     );
                                 }
@@ -377,7 +427,8 @@ export default class LoginServer {
                                             account_id: account.id,
                                             staffmodlevel: account.staffmodlevel,
                                             muted_until: account.muted_until,
-                                            messageCount: 0
+                                            messageCount: 0,
+                                            token: await savedLogin()
                                         })
                                     );
                                 }
@@ -398,7 +449,8 @@ export default class LoginServer {
                                         save: save.toString('base64'),
                                         muted_until: account.muted_until,
                                         members: account.members,
-                                        messageCount: 0
+                                        messageCount: 0,
+                                        token: await savedLogin()
                                     })
                                 );
                             }
