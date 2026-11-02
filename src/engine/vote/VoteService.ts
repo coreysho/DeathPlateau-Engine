@@ -142,6 +142,19 @@ export default class VoteService {
      *
      * Returns a line for the HTTP response. The site is a machine: it wants 200 and a word.
      */
+    /**
+     * A REFUSAL ANSWERS 200, NOT 404, and the body says 'unknown'.
+     *
+     * Toplists validate the callback URL before they will save it, by pinging it with no
+     * parameters at all - RSPS List refuses the URL outright with "responded with http code 404".
+     * A 404 therefore makes the engine unconfigurable on the sites it exists to serve.
+     *
+     * Nothing is given away by this. An unlisted id and a wrong key still return the IDENTICAL
+     * response, which is what stops either being probed for; the status code never carried that.
+     * And a site that retries on a non-2xx would have retried a wrong secret for ever, which no
+     * amount of retrying fixes. The one case that still answers non-2xx is a missing ledger (503),
+     * because that one IS worth retrying.
+     */
     static fromCallback(siteId: string, params: Record<string, string>): { status: number; body: string } {
         const site = VoteSites.get(siteId);
         if (!site || !site.callback) {
@@ -149,14 +162,14 @@ export default class VoteService {
             // not be distinguishable from outside - but the log may say which, because the log is
             // ours.
             printError(`vote: callback for ${siteId}, which is not a configured site with a callback${describe(params)}`);
-            return { status: 404, body: 'unknown' };
+            return { status: 200, body: 'unknown' };
         }
 
         const secretParam = site.callback.secretParam ?? 'secret';
         const given = params[secretParam] ?? '';
         if (!timingSafeEqual(given, site.callback.secret)) {
             printError(`vote: ${siteId} callback with a wrong secret - expected it in "${secretParam}"${describe(params)}`);
-            return { status: 404, body: 'unknown' };
+            return { status: 200, body: 'unknown' };
         }
 
         const username = (params[site.callback.userParam] ?? '').trim();
