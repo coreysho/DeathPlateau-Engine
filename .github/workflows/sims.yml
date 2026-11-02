@@ -127,8 +127,91 @@ jobs:
         done
         [ -n "$flaky" ] && echo "FLAKY, failed then passed:$flaky"
         [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
+        # WRITTEN DOWN BEFORE THE EXIT, so the notify job can name the sims rather than say
+        # "a shard went red, go and read eight logs". The step dies on the next line when
+        # anything is newly red, so anything this file is to carry has to be in it by now.
+        mkdir -p /tmp/verdict
+        {
+          [ -n "$newly_red" ] && echo "red:${newly_red}"
+          [ -n "$flaky" ] && echo "flaky:${flaky}"
+          [ -n "$newly_green" ] && echo "green:${newly_green}"
+        } > "/tmp/verdict/shard-${{ matrix.shard }}.txt" || :
         if [ -n "$newly_red" ]; then
           echo "NEWLY FAILING:$newly_red"
           exit 1
         fi
         echo "shard ${{ matrix.shard }}: nothing newly broken"
+
+    # always(): the step above exits 1 on a red shard, and a red shard's verdict is the one
+    # worth keeping.
+    - name: Keep this shard's verdict
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: verdict-${{ matrix.shard }}
+        path: /tmp/verdict/
+        if-no-files-found: ignore
+        retention-days: 7
+
+  # ------------------------------------------------------------------ and say so in Discord
+  # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token
+  # (Environment.DISCORD_TOKEN, src/server/discord), which belongs to a running server and has
+  # the run of its guild. This repository is PUBLIC. A per-channel incoming webhook can only
+  # post to the one channel it was made for, so that is what CI gets.
+  #
+  # NO SECRET, NO POST, NO FAILURE. If DISCORD_WEBHOOK is not set the job prints the message it
+  # would have sent and succeeds: a missing notification must not turn a green night red, and
+  # printing it means this job can be proved to work before the secret exists.
+  #
+  # To switch it on: in Discord, the channel's Settings -> Integrations -> Webhooks -> New
+  # Webhook, copy its URL, then in this repository Settings -> Secrets and variables ->
+  # Actions -> New repository secret, named DISCORD_WEBHOOK.
+  notify:
+    name: tell Discord
+    needs: sims
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: verdict-*
+        merge-multiple: true
+        path: verdict
+
+    - name: Post the failure
+      env:
+        # Quoted and read as an environment variable rather than interpolated into the script,
+        # so the URL is never part of a command line and cannot land in the log.
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        TRIGGER: ${{ github.event_name }}
+        SHA: ${{ github.sha }}
+      run: |
+        red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+        flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+
+        # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
+        # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
+        # the message says it does not know rather than inventing a clean bill of health.
+        if [ -n "$red" ]; then
+          body="Newly failing: **${red}**"
+        else
+          body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
+        fi
+        [ -n "$flaky" ] && body="${body}"$'\n'"Flaky (failed, then passed on a retry): **${flaky}** - the dice are seeded, so this should never happen and means something still varies between two runs of one commit."
+
+        # jq builds the JSON so a sim name or a message can never break the payload.
+        jq -n --arg body "$body" --arg url "$RUN_URL" --arg trigger "$TRIGGER" --arg sha "${SHA:0:7}" \
+          '{username: "Nightly sims", embeds: [{title: "Nightly sims failed", url: $url, color: 15158332, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
+
+        if [ -z "$DISCORD_WEBHOOK" ]; then
+          echo "DISCORD_WEBHOOK is not set, so nothing was posted. The message would have been:"
+          cat /tmp/discord.json
+          exit 0
+        fi
+        curl --silent --show-error --fail-with-body \
+          -H 'Content-Type: application/json' \
+          --data @/tmp/discord.json \
+          "$DISCORD_WEBHOOK"
+        echo "posted to Discord"
