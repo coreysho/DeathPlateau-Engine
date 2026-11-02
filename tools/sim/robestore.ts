@@ -33,10 +33,15 @@ console.log('\n== Trade opens it');
     const npc = H.npcNear('magic_store_owner2', 2594, 3090, 1);
     check('the robe seller is upstairs in the guild', npc !== null, true);
     if (npc) {
-        p.teleport(npc.x + 1, npc.z, npc.level);
+        // THE SHOPKEEPER WANDERS. Teleporting beside where npcNear found him and clicking a tick
+        // later caught him mid-step often enough to fail about one run in ten - the click then
+        // became a walk, and four ticks was not always enough to arrive. Standing next to where he
+        // IS, immediately before the click, is the fix; the extra ticks cover the walk if he moves
+        // anyway.
         H.tick(1);
+        p.teleport(npc.x + 1, npc.z, npc.level);
         H.opNpc(p, npc, 3);
-        for (let t = 0; t < 4; t++) H.tick(1);
+        for (let t = 0; t < 10 && !p.containsModalInterface(); t++) H.tick(1);
         check('  the shop is open', p.modalTop === Component.getId('shop_template') || p.containsModalInterface(), true);
     }
 }
@@ -46,11 +51,11 @@ console.log('\n== Talk-to asks first, then opens it');
     const p: any = player('robetalk', 2594, 3092, 1);
     const npc = H.npcNear('magic_store_owner2', 2594, 3090, 1);
     if (npc) {
-        p.teleport(npc.x + 1, npc.z, npc.level);
         H.tick(1);
+        p.teleport(npc.x + 1, npc.z, npc.level);
         const lines = talk(p, 'magic_store_owner2', ['Yes please.'], 1, false);
         check('  it greets you', saw(lines, 'Robe Store'), true);
-        for (let t = 0; t < 4; t++) H.tick(1);
+        for (let t = 0; t < 10 && !p.containsModalInterface(); t++) H.tick(1);
         check('  and saying yes opens the shop', p.containsModalInterface(), true);
     }
 }

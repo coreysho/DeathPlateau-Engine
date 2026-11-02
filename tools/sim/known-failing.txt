@@ -43,7 +43,6 @@ audit4               # 39 ok, 8 FAIL
 audit5               # Error: unexpected menu: multi2
 audit6               # Error: unexpected menu: multi3
 audit7               # Error: not carrying deal_blindweed
-fletching            # 1 ok, 10 FAIL
 gwdstaves            # Error: menus not reached: 2
 lunar                # no option "Can we sail to Lunar Isle" in multi2
 myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
