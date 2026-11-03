@@ -174,8 +174,23 @@ jobs:
             gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
             *) cap=180 ;;
           esac
+          # TWO SIMS ASK FOR AN ENVIRONMENT AND SAY SO, and running them without it is how they
+          # ended up on known-failing.txt under the heading "FAIL WITH NOTHING TO SAY". Neither is
+          # broken: each prints its usage line and exits 1, which is correct of them and reads
+          # here as a failure. Given what they ask for, securityfixes is 20 ok and staffrules is
+          # 16 ok - thirty-six assertions that went unrun every night for want of two variables.
+          #
+          # NODE_PRODUCTION is what makes a world behave like a live one: staffrules is about the
+          # owner rules on a real server, and securityfixes checks the save reaches disk before
+          # the world exits. NODE_IDLE_LOGOUT_TICKS=20 is securityfixes's own - it tests the idle
+          # logout and will not wait out the real one.
+          env_for=""
+          case "$n" in
+            securityfixes) env_for="NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20" ;;
+            staffrules) env_for="NODE_PRODUCTION=true" ;;
+          esac
           rc=0
-          timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          env $env_for timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"

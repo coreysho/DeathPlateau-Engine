@@ -117,6 +117,13 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 # 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
 # why nobody had got to the bottom of it. Twelve seeds pass now.
 
+# ---- securityfixes AND staffrules CAME OFF THIS LIST, and they are the case worth copying.
+# Both sat in the section below - "none of them printed a reason" - and both printed one every
+# time: a usage line naming the environment they want, then exit 1. Neither was broken. Given
+# NODE_PRODUCTION=true (and NODE_IDLE_LOGOUT_TICKS=20 for securityfixes) they are 16 ok and 20 ok,
+# so .github/workflows/sims.yml and tools/sim/sweep.sh now pass each the variables it asks for and
+# both are checked rather than listed. Thirty-six assertions that nobody had run.
+#
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
 blastfurnace
 chatchars
@@ -124,8 +131,6 @@ quest_ball_run
 quest_garden_run
 quest_hundred_run
 quest_swansong_run
-securityfixes
-staffrules
 
 # ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
 # four sims as "not known to be broken - known to be slower than the job is willing to wait",

@@ -70,6 +70,62 @@ check(`  all ${pairs.length} take their kit`, applied, pairs.length);
 check(`  and all ${pairs.length} give it back`, reverted, pairs.length);
 if (broken.length) console.log('  ' + broken.join('\n  '));
 
+// --------------------------------------- EVERY WAY TO ASK, THROUGH THE CLICK AND NOT THE PROC
+//
+// Everything above calls ~ornament_kit_revert directly, which proves the proc and says nothing
+// about whether a player can reach it. The items declare more than one way to ask and they do not
+// all agree on the slot, so this reads the slot off the obj rather than assuming one - which is
+// ornament_kit.rs2's own rule: "Every Revert trigger in this file sits on the slot its item's own
+// iop declares".
+//
+//   the 24 kit results   iop4=Revert, this repository's, added with param=ornament_from
+//                        iop5=Dismantle, which came in with the item from the OSRS import
+//   the 2 Gravediggers   iop5=Revert, because a slayer helmet spends its iop4 on Disassemble
+//
+// ONLY ONE OF THE FIRST PAIR USED TO WORK. iop5=Dismantle had no trigger, so it fell through to
+// drop.rs2's [opheld5,_] and put the item on the floor - and every one of these is tradeable=no,
+// so that was a way to lose it outright. opsweep listed all 24 under "answered only by the global
+// fallback", which is what that section is for.
+//
+// H.opheld goes through the handler's own validation, so a slot the obj does not declare throws
+// here rather than quietly passing, which is the point of driving it this way.
+console.log('EVERY SLOT THAT OFFERS TO TAKE THE KIT OFF ACTUALLY DOES');
+{
+    /** The words this build uses for "take the kit off". Anything else on the item is not this. */
+    const TAKES_IT_OFF = /^(revert|dismantle)$/i;
+    const results = [...new Set(pairs.map(x => x.into))];
+    let asked = 0;
+    let ok = 0;
+    const bad: string[] = [];
+    for (const into of results) {
+        const pair = pairs.find(x => x.into === into)!;
+        const iop = ObjType.get(into).iop;
+        const slots = iop.map((label, i) => [i + 1, label] as const).filter(([, label]) => label && TAKES_IT_OFF.test(label));
+        if (!slots.length) {
+            bad.push(`${name(into)} offers no Revert or Dismantle at all`);
+            continue;
+        }
+        for (const [slot, label] of slots) {
+            asked++;
+            const q: any = player(`orn${slot}_${into}`, 3200, 3200);
+            H.clearInv(q);
+            H.give(q, name(into), 1);
+            A.held(q, name(into), slot);
+            const back = H.invCount(q, name(pair.base)) === 1 && H.invCount(q, name(pair.kit)) === 1;
+            // The backpack being empty is the half that matters: a drop empties it too.
+            const gone = H.invCount(q, name(into)) === 0;
+            if (back && gone) ok++;
+            else bad.push(`${name(into)} "${label}" on iop${slot} did not come apart in the backpack`);
+            H.despawn(q);
+        }
+    }
+    check(`  ${asked} options across ${results.length} items, and every one gives both pieces back`, ok, asked);
+    if (bad.length) console.log('    ' + bad.join('\n    '));
+    // 24 results with two words for it and 2 Gravediggers with one. A result that loses an option
+    // would still pass the check above, so the count is asserted too.
+    check('  which is two apiece for the kit results and one for the Gravediggers', asked, 24 * 2 + 2);
+}
+
 // ---------------------------------------------------------------- a decoration is paint
 // Every result must carry its base's bonuses exactly, or a gilded dragon scimitar is a different
 // weapon from a dragon scimitar and nobody meant that.
