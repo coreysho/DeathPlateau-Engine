@@ -267,6 +267,21 @@ behaviour, redundant script.
   steps broken; walking up to shells and sideways to siblings cleared Desert Treasure's obelisks,
   which a real `OpLoc` packet is refused for. `locCanOp` now mirrors the handler line for line.
 
+### What the four strict primitives cost the rest of the suite: one sim
+
+`opLoc`, `opObj`, `opNpc` and `opheld` all refuse an option the cache does not declare now, and
+twice that broke a test which was right: `blowpipe` (an empty toxic blowpipe is deliberately not
+wieldable) and `mutagens` (iop4 on a plain serpentine helm is deliberately impossible - see
+`opheldUnclickable`). Rather than wait for a third, every sim that calls one of the four was run.
+
+**125 sims, and `mutagens` was the only one.** Nothing else throws on an impossible op. Twelve exit
+non-zero for their own reasons and all twelve are already on `known-failing.txt` - the six `audit*`
+batches, `blastfurnace`, `brutalarrows`, `gwdstaves`, `myrequevillage`, `securityfixes`,
+`templetrek` - so 113 pass clean.
+
+That is the evidence the checks are worth keeping: they cost one deliberate exception across the
+whole suite, and they caught a quest that had been reporting 114 of 114 while being unplayable.
+
 ### Checking whether a sim is already known-failing
 
 `known-failing.txt` carries a comment per entry - `audit6               # Error: unexpected menu:
