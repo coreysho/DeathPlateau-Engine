@@ -625,6 +625,14 @@ if (rfd) {
     check('the three wise monkeys give the recipe: stage 2', V(p, 'hundred_ilm_quest'), 2);
     p.teleport(2697, 2784, 0);
     H.tick(2);
+    // A ROPE AND A GORILLA, because the content asks for both and this did not. hundred_monkey.rs2
+    // was changed after a player reported "it auto used rope didnt have in inv, and didnt need to
+    // be a gorilla": [oploc1,loc_12610] now reads ~mm_greegree_form and refuses anything that is
+    // not a gorilla, then refuses again without a rope. Both refusals are a mesbox and a return,
+    // so the tree simply never bent and the banana was never there to pick - which is what this
+    // check, and quest_hundred_run's step 254, have been reporting ever since.
+    H.give(p, 'rope');
+    H.equip(p, { rhand: 'mm_monkey_greegree_for_normal_gorilla' });
     op(p, 2696, 2785, 'loc_12610', 1);
     op(p, 2696, 2785, 'loc_12610', 1);
     check('the crown hauled down: a red banana', H.invCount(p, 'hundred_ilm_red_banana'), 1);

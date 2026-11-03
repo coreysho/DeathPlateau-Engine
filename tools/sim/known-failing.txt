@@ -117,44 +117,37 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 # 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
 # why nobody had got to the bottom of it. Twelve seeds pass now.
 
-# ---- THEY ALL HAD SOMETHING TO SAY. This section held eight sims under "worth a look each;
-# none of them printed a reason", and the reason nobody had a reason is that a listed sim used
-# to fail in silence. The job prints a collapsed group for them now, and all eight were run:
+# ---- WHAT WAS LEFT OF "FAIL WITH NOTHING TO SAY". Eight sims sat here under "worth a look
+# each; none of them printed a reason", because a listed sim used to fail in silence. Run,
+# diagnosed and then fixed, six are gone:
 #
-#   securityfixes     2s   NOT BROKEN. It prints "Run with NODE_PRODUCTION=true
-#                          NODE_IDLE_LOGOUT_TICKS=20" and exits non-zero. Given those, 21 ok.
-#                          sims.yml passes them now. OFF THE LIST.
-#   staffrules        2s   NOT BROKEN, the same way: "Run with NODE_PRODUCTION=true - the owner
-#                          rules are about a live world". Given it, 16 ok. OFF THE LIST.
+#   securityfixes      asked for NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20 in plain English
+#                      and was marked failed for asking. sims.yml passes it now. 21 ok.
+#   staffrules         the same. 16 ok.
+#   chatchars          asserted ENGINE_REVISION is EXACTLY 381, the number its own round
+#                      introduced, so the next bump broke it. Now a floor, >= 381, which is what
+#                      the round actually bought: an older client is turned away. 21 ok.
+#   quest_garden_run   88 of 88
+#   quest_swansong_run 109 of 109
+#                      Both looked for [wise_old_man] and Draynor has none: he is [wom_multi],
+#                      the multinpc that resolves to him, after a duplicate was deleted from
+#                      maps/m48_50.jm2. ONE WORD each. The tile was right all along - the script's
+#                      comment says he is indoors at 3088,3255 and he is not, he is out by the
+#                      house, and standing the player there only got them stuck five tiles away.
+#                      Measured rather than believed.
 #
-#   chatchars         9s   STALE, not broken: it asserts ENGINE_REVISION is 381 and the engine
-#                          is on 384. The client sends 384 too (Client.java login.p2), so the
-#                          game agrees with itself and only this sim is behind.
-#   quest_garden_run  8s   "no wise_old_man anywhere near 3089,3251"
-#   quest_swansong_run 27s  the same line, the same tile - ONE CAUSE, TWO ENTRIES, and it is the
-#                          sims that are wrong. area_draynor/scripts/wise_old_man.rs2 records it:
-#                          Draynor had TWO wise old men, and the duplicate spawned at 3088,3251
-#                          was deleted from maps/m48_50.jm2. The real one is [wom_multi] at
-#                          3088,3255, a multinpc that resolves to wise_old_man. Both sims look
-#                          for him by name at the dead duplicate's tile. Stale after a fix.
-#
-#   quest_hundred_run 97s  step 277, "not carrying hundred_ilm_red_banana" - THE SAME ITEM AND
-#                          THE SAME STEP as audit1 above. Two entries, one bug.
-#   quest_ball_run    14s  step 43, the sneak past nora_t_hagg ends at 2907,3458 and wants
-#                          2908,3471
-#   blastfurnace      42s  37 ok, 1 FAIL: "30 mends them, and pays its 40 Crafting for it" reads
-#                          [0,0] and wants [0,400]. The only one of the eight that looks like a
-#                          live content bug - mending pays no Crafting experience.
-#
-# So of eight "no reason given": two were never broken, three are tests left behind by fixes or
-# by a version bump, two are one shared bug with entries already on this list, and one is a real
-# missing XP drop.
-blastfurnace
-chatchars
-quest_ball_run
-quest_garden_run
-quest_hundred_run
-quest_swansong_run
+# The two that are left have moved, not been fixed - both are further on than they were and
+# stopped somewhere new:
+
+blastfurnace         # 37 ok, 1 FAIL: "30 mends them, and pays its 40 Crafting for it" reads
+                     # [0,0] and wants [0,400]. THE ONLY PLAYER-VISIBLE BUG in this batch -
+                     # mending the Blast Furnace pays no Crafting experience
+quest_ball_run       # step 43, the sneak past nora_t_hagg ends at 2907,3458 and wants 2908,3471
+quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that is fixed - the
+                     # crown needs a rope and a gorilla and the run now has both, and gets 51
+                     # steps further, through the slicing and the roast. Now step 303, the
+                     # Gelatinnoth Mother: 60 minions killed in 884 ticks and the tally reads 4
+                     # of 5, so one of the six forms is not counting
 
 # ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
 # four sims as "not known to be broken - known to be slower than the job is willing to wait",
