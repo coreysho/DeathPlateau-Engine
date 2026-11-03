@@ -31,6 +31,12 @@ export type account_token = {
     uid: number | null;
     created_ip: string | null;
 };
+export type collection_log = {
+    profile: Generated<string>;
+    account_id: number;
+    obj: number;
+    count: number;
+};
 export type friendlist = {
     account_id: number;
     friend_username: string;
@@ -125,6 +131,7 @@ export type DB = {
     account: account;
     account_login: account_login;
     account_token: account_token;
+    collection_log: collection_log;
     friendlist: friendlist;
     hiscore: hiscore;
     hiscore_large: hiscore_large;

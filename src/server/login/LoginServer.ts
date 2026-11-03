@@ -246,6 +246,18 @@ async function updateHiscores(account: { id: number; staffmodlevel: number; bann
     const logInv = InvType.getId('collection_log');
     const log = logInv === -1 ? undefined : player.invs.get(logInv);
     const obtained = log ? log.itemsFiltered.length : 0;
+
+    // WHICH items, into a table of their own. Rewritten whole rather than merged: the inventory in
+    // the save is the truth and this is a copy of it, so working out a difference would mean
+    // trusting rows this table should never have had. An account with an empty log still gets the
+    // delete, which is how an item removed in game stops being shown on the website.
+    if (log) {
+        await db.deleteFrom('collection_log').where('account_id', '=', account.id).where('profile', '=', profile).execute();
+        const owned = log.itemsFiltered.map(item => ({ profile, account_id: account.id, obj: item.id, count: item.count }));
+        if (owned.length > 0) {
+            await db.insertInto('collection_log').values(owned).execute();
+        }
+    }
     if (obtained > 0) {
         const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', COLLECTION_LOG_TYPE).where('profile', '=', profile).executeTakeFirst();
         if (current && current.value !== obtained) {
