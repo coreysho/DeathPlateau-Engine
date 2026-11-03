@@ -300,6 +300,16 @@ file; on a world, `NODE_DEAD_OPS=true` plus `::deadops` reads it. It is the othe
 includes plenty of content that is written and merely unplayed, while this says which *clicks*
 reached nothing.
 
+`npx tsx tools/sim/droplands.ts` puts back the one assertion that retiring the opportunistic
+conservation watcher took away: **a drop lands exactly once**. That watcher counted the bot's own
+ground drops, so it checked this as a side effect - and it could not be trusted to, because an obj
+is only counted within nine zones of the bot, it stops being the bot's when the lootdrop timer makes
+it public, and a drop onto a tile that already holds the same obj merges while a partial stack does
+not. Every finding it produced was one of those three. The assertion belongs in a sim, where one
+known item on one known tile can be counted: one Drop is one obj of one, 500 coins is one obj of
+500 and not 500 objs, two drops of the same thing total two however the engine stores them, 200 then
+300 is 500, and a drop belongs to the dropper and not to the next player who walks up. 13 checks.
+
 `tools/sim/beforeafter.sh <scenario>...` runs a scenario against the content at `HEAD~1` and then at
 `HEAD`, rebuilding in between, so a fix can be shown rather than asserted.
 
