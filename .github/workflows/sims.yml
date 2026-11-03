@@ -199,7 +199,12 @@ jobs:
   #
   # To switch it on: in Discord, the channel's Settings -> Integrations -> Webhooks -> New
   # Webhook, copy its URL, then in this repository Settings -> Secrets and variables ->
-  # Actions -> New repository secret, named DISCORD_WEBHOOK.
+  # Actions -> New repository secret, named DISCORDWEBHOOK.
+  #
+  # NO UNDERSCORE, which is not a typo here. The secret was created as DISCORDWEBHOOK and a
+  # secret cannot be renamed, only deleted and remade - so the workflow matches the secret
+  # rather than making somebody paste the URL again. The shell variable below keeps the
+  # readable spelling; only the ${{ secrets.* }} reference has to match GitHub exactly.
   notify:
     name: tell Discord
     needs: sims
@@ -221,7 +226,7 @@ jobs:
       env:
         # Quoted and read as an environment variable rather than interpolated into the script,
         # so the URL is never part of a command line and cannot land in the log.
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        DISCORD_WEBHOOK: ${{ secrets.DISCORDWEBHOOK }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
@@ -230,7 +235,7 @@ jobs:
         # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
         # "New repository secret", so a webhook in the wrong half is the likeliest reason for a
         # secret that reads empty. This says which half it is in without guessing twice.
-        HAVE_VAR: ${{ vars.DISCORD_WEBHOOK != '' }}
+        HAVE_VAR: ${{ vars.DISCORDWEBHOOK != '' }}
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
