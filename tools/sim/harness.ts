@@ -8,7 +8,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
-import { locCanOp } from '#/cache/config/OpVisibility.js';
+import { isHiddenOp, locCanOp, npcCanOp } from '#/cache/config/OpVisibility.js';
 import ParamType from '#/cache/config/ParamType.js';
 import LocType from '#/cache/config/LocType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
@@ -590,6 +590,13 @@ export function opObj(p: Player, x: number, z: number, objName: string, op: numb
     if (id === -1) throw new Error('no such obj: ' + objName);
     const obj = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
     if (!obj) throw new Error(`no ${objName} at ${x},${z}`);
+    // The check OpObjHandler makes, for the same reason opLoc below has one. An obj's ground menu
+    // defaults to op3="Take" and nothing else, so a sim clicking op1 on a ground obj that declares
+    // no op1 is asking for something no client could send.
+    const groundOps = ObjType.get(id).op;
+    if (isHiddenOp(groundOps?.[op - 1])) {
+        throw new Error(`${objName} has no ground op${op} (${JSON.stringify(groundOps)}), so no client could send this click`);
+    }
     p.clearPendingAction();
     // THE ROUTE GOES TO A TILE NEXT TO IT, which is wrong for a ground obj: you pick one up from
     // its own tile. A caller already standing on it passes walk=false, because otherwise the route
@@ -603,6 +610,11 @@ export function opObj(p: Player, x: number, z: number, objName: string, op: numb
 /** What clicking an op on an npc does: OpNpcHandler, minus the visibility checks. */
 export function opNpc(p: Player, npc: Npc, op: number) {
     if (p.delayed) return false;
+    // The check OpNpcHandler makes. npcCanOp resolves multinpc the way that handler does - an npc
+    // whose type depends on a varbit shows the variant's options, not the shell's.
+    if (!npcCanOp(npc.type, op)) {
+        throw new Error(`${NpcType.get(npc.type)?.debugname ?? npc.type} has no op${op} on itself or any multinpc variant (${JSON.stringify(NpcType.get(npc.type)?.op)}), so no client could send this click`);
+    }
     p.clearPendingAction();
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
     p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPC1 + (op - 1));

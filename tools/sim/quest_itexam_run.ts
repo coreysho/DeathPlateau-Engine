@@ -225,7 +225,11 @@ const m: Manifest = {
         { has: 'rockpick' },
         { go: [CUPBOARD_JAR[0], CUPBOARD_JAR[1] + 1], why: 'to the other cupboard' },
         { loc: 'cupboard', at: CUPBOARD_JAR, why: 'open it' },
-        { loc: 'cupboardopen', at: CUPBOARD_JAR, want: 'specimen jar', why: 'search it' },
+        // op2, not the default op1. A generic cupboardopen declares op2="Search" and op3="Shut"
+        // (cupboards.rs2 hooks [oploc2] and [oploc3] to match) and has no op1 at all, so this step
+        // was clicking an option no client would draw - which harness.opLoc now refuses. The
+        // quest's OWN samplecupboardopen above does declare op1, which is why that one is fine.
+        { loc: 'cupboardopen', at: CUPBOARD_JAR, op: 2, want: 'specimen jar', why: 'search it' },
         { has: 'specimen_jar' },
 
         { note: 'wiki step 20: and a specimen brush off a workman, which is the other pickpocket' },

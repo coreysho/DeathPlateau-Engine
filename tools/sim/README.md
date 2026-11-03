@@ -274,11 +274,21 @@ there"), which was wrong for every cause but one.
 **This makes some quest runners fail, and that is the point.** `quest_dt_run.ts` reported 114 of 114
 checks passing on a quest whose diamond-placement step no client can perform: `desert_treasure_oblix1`
 and its three siblings declare no ops on the shell or on either multiloc variant, and a real `OpLoc`
-packet at op1 on one is **refused by the server's own handler**. A static scan of the sims' literal
-`loc:` steps finds ten more such clicks across `quest_garden_run.ts` (eight flower patches),
-`quest_itexam_run.ts` (`cupboardopen`, which declares op2="Search" and op3="Shut" and is clicked at
-op1 - a sim bug, not a content one) and `quest_dt_run.ts`; steps built from a variable rather than a
-literal are not in that count, so it is a lower bound and the runtime check is what catches the rest.
+packet at op1 on one is **refused by the server's own handler** - checked by sending one, not
+inferred. `vampire_big_grave_noblood` in the same quest is a fifth: `[oploc1,...]` in `dt_blood.rs2`
+against a loc with no op1 and no variants.
+
+`quest_itexam_run.ts` was a *sim* bug of the other kind and is fixed here: it clicked a generic
+`cupboardopen` at the default op1, where that loc declares op2="Search" and op3="Shut" and
+`cupboards.rs2` hooks `[oploc2]`/`[oploc3]` to match. The quest's own `samplecupboardopen` does
+declare op1, which is why only one of the two steps was wrong.
+
+A caution about how to look for more of these. A static scan for `{ loc: '...' }` in the sim sources
+is **not** a reliable way: `quest_garden_run.ts` has a `Bed` type with a `loc` field and nine data
+rows of it, and those rows are consumed as `useLoc` steps (item-on-loc, `[oplocu,...]`) rather than
+clicks - so a scan reports nine flower patches that are perfectly fine. Steps built from a variable
+are missed for the opposite reason. The runtime check is the only complete answer, which is why it
+lives in the harness and not in a linter.
 
 `npx tsx tools/sim/fuzz.ts` also prints **OPTIONS NOTHING ANSWERED** now, from
 `src/engine/script/DeadOps.ts`. `Player.defaultOp` has always printed `No trigger for
