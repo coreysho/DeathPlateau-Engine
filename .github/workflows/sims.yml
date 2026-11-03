@@ -140,6 +140,15 @@ jobs:
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"
               newly_green="$newly_green $n"
+            else
+              # SHOW THE DEBT ITS OWN FAILURE. A listed sim used to fail in total silence, which
+              # makes every entry on that list undiagnosable from CI: the only way to see why
+              # changepassword fails on a runner and passes on a laptop was to take it OFF the
+              # list and make the job red on purpose. The group is collapsed, so a quiet night
+              # stays quiet and the reason is one click away when somebody wants it.
+              echo "::group::$n (exit $rc, on known-failing.txt)"
+              tail -20 "/tmp/$n.log"
+              echo "::endgroup::"
             fi
             continue
           fi
