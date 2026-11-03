@@ -141,8 +141,18 @@ jobs:
             gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
             *) cap=180 ;;
           esac
+          # AND TWO OF THEM ASK FOR A SETTING AND REFUSE TO RUN WITHOUT IT. Both say so in one
+          # line and exit non-zero - "Run with NODE_PRODUCTION=true - the owner rules are about a
+          # live world" - which the job counted as a failure for as long as it has existed. They
+          # were never broken: given what they ask for, securityfixes is 21 ok and staffrules 16.
+          case "$n" in
+            securityfixes) extra='NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20' ;;
+            staffrules) extra='NODE_PRODUCTION=true' ;;
+            *) extra='' ;;
+          esac
           rc=0
-          timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          # shellcheck disable=SC2086 - $extra is a deliberate list of VAR=value for env
+          timeout "$cap" env $extra npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"
@@ -172,7 +182,7 @@ jobs:
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
             rc2=0
-            timeout "$cap" npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            timeout "$cap" env $extra npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
               echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
               flaky="$flaky $n"
