@@ -63,6 +63,48 @@ function trackedVarp(name: string): number {
     return id;
 }
 
+/**
+ * Boss kill counts, one hiscore type each.
+ *
+ * content/scripts/bosses/configs/boss_kills.varp has counted these per god and per boss since
+ * September, for the God Wars doors among other things, and like the player statistics they have
+ * never left the save.
+ *
+ * THE TYPES ARE WRITTEN OUT RATHER THAN COUNTED FROM THE FILE. Numbering them by their order in
+ * boss_kills.varp would mean that inserting a boss silently renumbered every boss after it, and
+ * every row already in the database would then be filed under the wrong one. A type is a promise
+ * about what a number means; it does not get to move.
+ *
+ * 200 upwards, which leaves 100-199 for whole-account figures and the whole of 1-99 for skills.
+ */
+const BOSSES: readonly { varp: string; type: number }[] = [
+    { varp: 'boss_kc_jad', type: 200 },
+    { varp: 'boss_kc_kril', type: 201 },
+    { varp: 'boss_kc_graardor', type: 202 },
+    { varp: 'boss_kc_zilyana', type: 203 },
+    { varp: 'boss_kc_kreearra', type: 204 },
+    { varp: 'boss_kc_kq', type: 205 },
+    { varp: 'boss_kc_chaos_elemental', type: 206 },
+    { varp: 'boss_kc_dag_rex', type: 207 },
+    { varp: 'boss_kc_dag_supreme', type: 208 },
+    { varp: 'boss_kc_dag_prime', type: 209 },
+    { varp: 'boss_kc_kbd', type: 210 },
+    { varp: 'boss_kc_mole', type: 211 },
+    { varp: 'boss_kc_kraken', type: 212 },
+    { varp: 'boss_kc_zulrah', type: 213 }
+];
+
+/**
+ * How much of the collection log an account has filled, as one number.
+ *
+ * THE LOG IS AN INVENTORY, NOT A VARP. collection_log.inv keeps one slot per distinct item ever
+ * obtained, the slot's count being how many - so "obtained" is simply how many slots are taken,
+ * and that is the figure the log itself puts in its heading. The items in it are not written
+ * here: which items somebody owns is a different question from how far along they are, and the
+ * answer to it is 803 columns wide.
+ */
+const COLLECTION_LOG_TYPE = 105;
+
 const SAFE_PROFILE = /^[A-Za-z0-9_-]{1,32}$/;
 const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_autosave']);
 
@@ -166,6 +208,40 @@ async function updateHiscores(account: { id: number; staffmodlevel: number; bann
             update.push({ type: tracked.type, level: 0, value, date: toDbDate(new Date()) });
         } else if (!current) {
             insert.push({ account_id: account.id, profile, type: tracked.type, level: 0, value });
+        }
+    }
+
+    // Boss kill counts, onto the same two piles. Same rule as above: a boss nobody has killed
+    // gets no row rather than a row of zero.
+    for (const boss of BOSSES) {
+        const varp = trackedVarp(boss.varp);
+        if (varp === -1) {
+            continue;
+        }
+
+        const value = player.vars[varp] ?? 0;
+        if (value <= 0) {
+            continue;
+        }
+
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', boss.type).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== value) {
+            update.push({ type: boss.type, level: 0, value, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: boss.type, level: 0, value });
+        }
+    }
+
+    // And how far through the collection log they are: the number of slots taken in it.
+    const logInv = InvType.getId('collection_log');
+    const log = logInv === -1 ? undefined : player.invs.get(logInv);
+    const obtained = log ? log.itemsFiltered.length : 0;
+    if (obtained > 0) {
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', COLLECTION_LOG_TYPE).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== obtained) {
+            update.push({ type: COLLECTION_LOG_TYPE, level: 0, value: obtained, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: COLLECTION_LOG_TYPE, level: 0, value: obtained });
         }
     }
 
