@@ -4,6 +4,7 @@ import InvType from '#/cache/config/InvType.js';
 import NpcType from '#/cache/config/NpcType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import LocType from '#/cache/config/LocType.js';
+import { isVisibleOp } from '#/cache/config/OpVisibility.js';
 import type { BotState } from '#/engine/bot/BotBrain.js';
 import * as Input from '#/engine/bot/BotInput.js';
 import * as Watch from '#/engine/bot/BotFuzzWatch.js';
@@ -141,6 +142,73 @@ function validOps(ops: (string | null)[] | null): number[] {
  * of debugnames would be a list of the bankers somebody remembered.
  */
 let bankSpotCache: { x: number; z: number; level: number }[] | null = null;
+let contentSpotCache: { x: number; z: number; level: number }[] | null = null;
+/**
+ * ONE START TILE PER MAP SQUARE THAT HAS CLICKABLE CONTENT, densest square first.
+ *
+ * bankSpots() is 99 places and every one is a bank, which means towns, which means 31 of this
+ * build's 702 map squares. Measured: 99 bots at those 99 spots reach 10.4% of triggers in 3,000
+ * ticks, and no number of bots standing in towns reaches the other 95% of the map. The ceiling is
+ * where they can be PUT, not how many there are.
+ *
+ * So this derives a spot from the content itself. Every loc carrying an option a client would draw
+ * is a vote for its map square; the square's spot is a standable tile beside one of them. Sorted by
+ * how much such content the square holds, so the first N spots are the N densest places in the game
+ * rather than N arbitrary ones - which matters because a fuzzer dropped in empty moorland walks for
+ * a thousand ticks and clicks nothing.
+ *
+ * NPCS ARE DELIBERATELY NOT COUNTED. An npc is a vote for wherever it happens to be standing when
+ * the list is built, and this build spawns 12,666 of them - wandering ones would make the list
+ * different on every run and unreproducible from a seed. Locs do not move.
+ */
+export function contentSpots(): { x: number; z: number; level: number }[] {
+    if (contentSpotCache) {
+        return contentSpotCache;
+    }
+    type Square = { count: number; spot: { x: number; z: number; level: number } | null };
+    const squares = new Map<string, Square>();
+    const standableBeside = (x: number, z: number, level: number): { x: number; z: number; level: number } | null => {
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            if (!isMapBlocked(x + dx, z + dz, level)) {
+                return { x: x + dx, z: z + dz, level };
+            }
+        }
+        return null;
+    };
+    for (const zone of World.gameMap.existingZones()) {
+        for (const loc of zone.getAllLocsUnsafe()) {
+            const type = LocType.get(loc.type);
+            if (!type?.op?.some(label => isVisibleOp(label))) {
+                continue;
+            }
+            // Level in the key as well as x and z: the upper floors of a city are their own places
+            // and a bot put on the ground floor will not climb to them on its own.
+            const key = `${loc.x >> 6}_${loc.z >> 6}_${loc.level}`;
+            let square = squares.get(key);
+            if (!square) {
+                square = { count: 0, spot: null };
+                squares.set(key, square);
+            }
+            square.count++;
+            if (!square.spot) {
+                square.spot = standableBeside(loc.x, loc.z, loc.level);
+            }
+        }
+    }
+    const spots = [...squares.values()]
+        .filter((sq): sq is { count: number; spot: { x: number; z: number; level: number } } => sq.spot !== null)
+        .sort((a, b) => b.count - a.count)
+        .map(sq => sq.spot);
+    printInfo(`fuzz: ${spots.length} map squares with clickable content, densest first`);
+    contentSpotCache = spots;
+    return contentSpotCache;
+}
+
 /**
  * Exported so BotManager can start a run's bots at DIFFERENT places. It is a derived list, not
  * hand-written coordinates: every entry is a tile beside a real bank booth or teller that the

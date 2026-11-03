@@ -2,7 +2,7 @@ import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
-import { bankSpots, FuzzBrain } from '#/engine/bot/BotFuzzer.js';
+import { contentSpots, FuzzBrain } from '#/engine/bot/BotFuzzer.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -618,7 +618,7 @@ class BotManager implements BotHooks {
  * same tile by coincidence; two bots on one tile is not an error, just a wasted bot.
  */
 function spreadStarts(count: number, seed: number): { x: number; z: number; level: number }[] {
-    const spots = bankSpots();
+    const spots = contentSpots();
     if (!spots.length) {
         return [];
     }
@@ -628,14 +628,19 @@ function spreadStarts(count: number, seed: number): { x: number; z: number; leve
         state = (state * 1664525 + 1013904223) >>> 0;
         return state / 0x100000000;
     };
-    const shuffled = spots.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
+    // THE DENSEST `count` SQUARES, NOT A RANDOM `count`. contentSpots() is sorted by how much
+    // clickable content each map square holds, and shuffling the whole list before taking a slice
+    // threw that away - twelve bots would get twelve arbitrary squares, some of them empty moorland
+    // where a fuzzer walks a thousand ticks and clicks nothing. Take the head, then shuffle only
+    // the head so which bot gets which is still seed-dependent.
+    const chosen = spots.slice(0, Math.min(count, spots.length));
+    for (let i = chosen.length - 1; i > 0; i--) {
         const j = Math.floor(next() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
     }
     const out: { x: number; z: number; level: number }[] = [];
     for (let i = 0; i < count; i++) {
-        out.push(shuffled[i % shuffled.length]);
+        out.push(chosen[i % chosen.length]);
     }
     return out;
 }

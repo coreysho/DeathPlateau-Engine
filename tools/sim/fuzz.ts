@@ -35,10 +35,33 @@
 //   the other   softlock, corpse, coord, stat, varp, items - also unique, also only findable by
 //   watchers    running. A 3,000-tick run with eight bots found none of them, which is a result.
 //
-// SO THE WAY TO GET MORE OUT OF THIS IS MORE RUNNING, not more reading. Trigger coverage on a
-// 3,000-tick run is about 2.4% - some 15,000 triggers that nothing in the world, no sim and no
-// player has ever reached - so the faults that are left are mostly behind content no bot has
-// walked to yet. Longer runs, more bots, and personas that start somewhere other than Lumbridge.
+// AND MORE BOTS, NOT MORE TICKS AND NOT A BETTER SPREAD. Measured, because every part of that was
+// guessed wrong at least once:
+//
+//     8 bots x  3,000 ticks     166s    2.9%
+//    12 bots x 20,000 ticks   1,371s    7.8%
+//    14 bots x 25,000 ticks   1,862s    8.4%
+//    99 bots x  3,000 ticks     881s   10.4%   <- best coverage AND half the wall clock
+//
+// 99 bots at 3,000 ticks beats 14 at 25,000 on coverage and takes half the time, with FEWER
+// bot-ticks. Throughput nearly doubles - 337 bot-ticks/sec against 175 - because the fixed per-tick
+// world cost is amortised across bots instead of repeated across ticks. The nightly wants 99 x
+// 3,000: fifteen minutes.
+//
+// WHERE THEY START MAKES NO MEASURABLE DIFFERENCE, which was a surprise and is worth recording so
+// nobody re-runs it. 99 bots over bank spots (99 places in 31 map squares) and 99 over the densest
+// content squares (99 places in 99 squares) came out at 10.4% and 10.3% on the same seed. The
+// content list is kept because it can reach 878 squares rather than 31, so a fault it finds is a
+// fault somewhere a player can be - but it is not a coverage win and must not be sold as one.
+//
+// WHAT WAS TRIED AND FAILED: letting a bored bot walk instead of taking the cast catch-all. Cast is
+// 23% of all bot-ticks and appeared to be starving wander()'s long walk. It lost coverage at every
+// checkpoint past t4045 and finished 59 triggers behind on the same seed - casting reaches a large
+// population of spell triggers that walking does not replace. Reverted.
+//
+// The ceiling that is left is not bots and not placement: ~14,000 triggers are behind content no
+// bot can reach from the ground - quest states, instanced rooms, and the ai_* families that need
+// something in the world to act on the bot rather than the other way round.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -139,7 +162,7 @@ for (let t = 0; t < TICKS; t++) {
 }
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
-console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT ? AT.join(',') : 'bank spots across the map'}, coverage-guided: ${fuzzTuning.coverageGuided})`);
+console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT ? AT.join(',') : 'the densest map squares'}, coverage-guided: ${fuzzTuning.coverageGuided})`);
 for (const [kind, n] of [...actions.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${String(n).padStart(6)}  ${kind}`);
 }
