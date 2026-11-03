@@ -70,6 +70,7 @@ import UpdateInvPartialEncoder from '#/network/game/server/codec/UpdateInvPartia
 import UpdateInvStopTransmitEncoder from '#/network/game/server/codec/UpdateInvStopTransmitEncoder.js';
 import UpdatePidEncoder from '#/network/game/server/codec/UpdatePidEncoder.js';
 import UpdateRebootTimerEncoder from '#/network/game/server/codec/UpdateRebootTimerEncoder.js';
+import PingEncoder from '#/network/game/server/codec/PingEncoder.js';
 import UpdateRunEnergyEncoder from '#/network/game/server/codec/UpdateRunEnergyEncoder.js';
 import UpdateRunWeightEncoder from '#/network/game/server/codec/UpdateRunWeightEncoder.js';
 import UpdateStatEncoder from '#/network/game/server/codec/UpdateStatEncoder.js';
@@ -145,6 +146,7 @@ import UpdateInvPartial from '#/network/game/server/model/UpdateInvPartial.js';
 import UpdateInvStopTransmit from '#/network/game/server/model/UpdateInvStopTransmit.js';
 import UpdateUid192 from '#/network/game/server/model/UpdatePid.js';
 import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
+import Ping from '#/network/game/server/model/Ping.js';
 import UpdateRunEnergy from '#/network/game/server/model/UpdateRunEnergy.js';
 import UpdateRunWeight from '#/network/game/server/model/UpdateRunWeight.js';
 import UpdateStat from '#/network/game/server/model/UpdateStat.js';
@@ -258,6 +260,7 @@ class ServerGameProtRepository {
         this.bind(UpdateInvPartial, new UpdateInvPartialEncoder());
         this.bind(UpdateInvStopTransmit, new UpdateInvStopTransmitEncoder());
         this.bind(UpdateRunEnergy, new UpdateRunEnergyEncoder());
+        this.bind(Ping, new PingEncoder());
         this.bind(UpdateRunWeight, new UpdateRunWeightEncoder());
         this.bind(UpdateRebootTimer, new UpdateRebootTimerEncoder());
         this.bind(UpdateStat, new UpdateStatEncoder());
