@@ -510,8 +510,10 @@ class BotManager implements BotHooks {
                 return min + Math.floor(this.next() * (max - min + 1));
             }
         };
+        // A quarter of the fleet each. 'weak' earns its quarter: it is the only one monsters will
+        // hunt outside the Wilderness, and about eleven hundred [ai_*] triggers are behind that.
         const roll = rng.next();
-        const kind: PersonaKind = roll < 0.25 ? 'fresh' : roll < 0.75 ? 'mid' : 'done';
+        const kind: PersonaKind = roll < 0.25 ? 'fresh' : roll < 0.5 ? 'weak' : roll < 0.75 ? 'mid' : 'done';
         return applyPersona(bot, rng, kind);
     }
 

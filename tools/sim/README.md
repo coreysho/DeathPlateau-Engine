@@ -164,6 +164,36 @@ short of clicks; they were short of being anybody. Four things were fixed togeth
 Together those take the same 6,000-tick, 8-bot run from 290 triggers and zero findings to roughly
 400 triggers and several hundred findings.
 
+Three more gaps closed after the first round, each one measured rather than assumed:
+
+* **Every shop and bank was unreachable.** `tickInner` returns early whenever a modal is open, so
+  `act()` never ran while one was - and `invOp()`, the op on an item in a grid the server has sent,
+  which is Buy, Sell, Deposit and Withdraw, lives in `act()`. Every shop and bank in the game is a
+  modal. The 240 npcs in this build with a "Trade" option opened a shop on one tick and had it shut
+  on the next without a single item being clicked. The bot now *dwells* in a window for up to
+  `MODAL_DWELL` ticks working its buttons and its grids: invops went from 254 a run to over 1,300.
+* **A maxed account cannot be attacked.** `Npc.huntPlayers` skips a player whose combat level is
+  more than twice the npc's `vislevel` outside the Wilderness, so nothing in the game would come
+  near a rolled or maxed persona. `[ai_queue1..20]` (769 triggers for queue 3 alone),
+  `[ai_opplayer2]` (175) and `[ai_applayer2]` (132) all fire from an npc *deciding to engage*. The
+  `weak` persona has the quests and the items and combat stats of 1, on purpose.
+* **The fuzzer had never once stood still.** Those same `ai_*` families need the player to still be
+  there a few ticks later, and a bot that clicks something and walks twenty tiles away is never
+  available. `loiter()` is now a scheduled stretch, and the budget is the one number here that came
+  out the opposite way from the guess - see the note on `LOITER_EVERY`. Standing still is worth more
+  coverage than walking.
+
+Bot-to-bot trading and item-giving are **not** reachable and that is deliberate, not a gap to be
+closed: `OpPlayerHandler` allows only op 2 (Attack) and op 3 (Follow) when the target is a bot, and
+`OpPlayerUHandler` refuses outright. `[opplayeru]` and `[applayeru]`, ten triggers between them,
+want a sim with two real players.
+
+A caution about the numbers. Trigger coverage on a single seed moves about 15% run to run, so the
+exact weights in `FuzzBrain.act` are tuned no further than that noise allows; two seeds at the
+settings in this commit give 535 and 473 against a 290 baseline. What is *not* noise is the
+structural reachability - whether a packet can be sent at all, whether a shop can be opened,
+whether a monster will engage - and that is what each of the changes above is about.
+
 The **item audit window** is the other fix worth reading about, in the header of
 `watchItemAudit` in `BotFuzzWatch.ts`. The conservation watcher - the one the file itself calls "the
 one that matters, because a dupe is the bug that costs a server" - asserted over a window in which

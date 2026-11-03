@@ -41,8 +41,27 @@ import { printInfo, printWarning } from '#/util/Logger.js';
 // interesting states are the middle ones, and a fleet of bots wants to be spread across them. So
 // each bot rolls each quest independently, weighted towards "somewhere in the middle", and one bot
 // in four is given everything complete so that post-quest content gets a visitor too.
+//
+// AND WHY ONE OF THEM IS DELIBERATELY FEEBLE. 'weak' has the quests and the items and combat stats
+// of 1, and it exists because of Npc.huntPlayers:
+//
+//     if (hunt.checkNotTooStrong === OUTSIDE_WILDERNESS && !player.isInWilderness()
+//         && player.combatLevel > type.vislevel * 2) continue;
+//
+// A monster will not hunt a player more than twice its own level. A rolled 'mid' persona averages
+// somewhere around combat level 70 and a 'done' one is 126, so outside the Wilderness almost
+// nothing in the game will come near either of them - and [ai_queue*] (769 triggers for queue 3
+// alone), [ai_opplayer2] (175) and [ai_applayer2] (132) all fire from an npc deciding to engage.
+// Roughly eleven hundred triggers in this build are reachable only by being weak enough to be worth
+// attacking.
 
-export type PersonaKind = 'fresh' | 'mid' | 'done';
+export type PersonaKind = 'fresh' | 'weak' | 'mid' | 'done';
+
+/**
+ * The stats that go into Player.getCombatLevel. A 'weak' persona holds these at 1 and rolls the
+ * rest, because what makes a monster refuse to hunt you is your COMBAT level and nothing else.
+ */
+const COMBAT_STATS: ReadonlySet<number> = new Set([PlayerStat.ATTACK, PlayerStat.STRENGTH, PlayerStat.DEFENCE, PlayerStat.HITPOINTS, PlayerStat.PRAYER, PlayerStat.RANGED, PlayerStat.MAGIC]);
 
 /** One quest, as questvarps.json describes it: the varp that tracks it and its completed value. */
 type QuestVarp = { name: string; varp: string; value: number };
@@ -162,13 +181,24 @@ export function applyPersona(bot: BotPlayer, rng: Roll, kind: PersonaKind): stri
     }
 
     // ---- stats. 'done' is a maxed account; 'mid' rolls each skill, which is what spreads a fleet
-    // across the level gates rather than putting them all on one side of every one.
+    // across the level gates rather than putting them all on one side of every one; 'weak' is
+    // feeble on purpose, so that monsters will hunt it - see the note at the top of this file.
     let statNote: string;
     if (kind === 'done') {
         for (let stat = 0; stat < PLAYER_STAT_COUNT; stat++) {
             bot.setLevel(stat, 99);
         }
         statNote = 'all 99';
+    } else if (kind === 'weak') {
+        for (let stat = 0; stat < PLAYER_STAT_COUNT; stat++) {
+            // Non-combat skills are still rolled: a weak persona is about being ATTACKABLE, not
+            // about failing every skill gate as well.
+            bot.setLevel(stat, COMBAT_STATS.has(stat) ? 1 : rng.int(1, 99));
+        }
+        bot.setLevel(PlayerStat.HITPOINTS, 10);
+        // Agility is not combat and it is what keeps the bot moving rather than walking all run.
+        bot.setLevel(PlayerStat.AGILITY, Math.max(bot.levels[PlayerStat.AGILITY], 60));
+        statNote = 'combat 1 on purpose (huntable)';
     } else {
         for (let stat = 0; stat < PLAYER_STAT_COUNT; stat++) {
             bot.setLevel(stat, rng.int(1, 99));

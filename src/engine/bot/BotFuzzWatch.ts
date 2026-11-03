@@ -471,43 +471,6 @@ export const CONSERVING_ACTIONS: ReadonlySet<string> = new Set(['walk', 'invop',
 /** The subset of those that actually move something, so a window of pure walking asserts nothing. */
 export const MOVING_ACTIONS: ReadonlySet<string> = new Set(['invop', 'wornop', 'drop', 'equip', 'takeobj']);
 
-/** Every obj the bot owns, across every inventory of its own, plus what it has dropped nearby. */
-function ownedItems(bot: BotPlayer): Map<number, number> {
-    const total = new Map<number, number>();
-    const bump = (id: number, count: number) => total.set(id, (total.get(id) ?? 0) + count);
-    for (const inv of bot.invs.values()) {
-        for (let i = 0; i < inv.capacity; i++) {
-            const item = inv.get(i);
-            if (item) {
-                // A noted item and its unnoted twin are the same wealth, so they count as one obj.
-                // Without this a bank withdraw-as-note reads as a dupe and an unnote as a loss.
-                const type = ObjType.get(item.id);
-                bump(type && type.certlink !== -1 && type.certtemplate !== -1 ? type.certlink : item.id, item.count);
-            }
-        }
-    }
-    // The ground it can see. Its own drops are still its property until they go public, and a drop
-    // that never lands (or lands twice) is exactly the kind of thing worth catching.
-    //
-    // KNOWN WAY TO GET A FALSE POSITIVE, so it does not have to be rediscovered: a drop goes public
-    // on the lootdrop timer, and if another player takes it the total goes down through nobody's
-    // action. The timer is around a hundred ticks against a twenty-five tick window, so it is rare -
-    // but a finding that is only a LOSS, with somebody else standing there, is worth checking before
-    // it is believed. A GAIN never has that excuse.
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-            const zone = World.gameMap.getZone(bot.x + dx * 8, bot.z + dz * 8, bot.level);
-            for (const obj of zone.getAllObjsSafe()) {
-                if (obj.receiver64 === bot.hash64) {
-                    const type = ObjType.get(obj.type);
-                    bump(type && type.certlink !== -1 && type.certtemplate !== -1 ? type.certlink : obj.type, obj.count);
-                }
-            }
-        }
-    }
-    return total;
-}
-
 /**
  * Every obj the bot owns in an inventory of its OWN - backpack, bank, equipment - and nothing on
  * the ground.
@@ -550,76 +513,34 @@ function totalXp(bot: BotPlayer): number {
     return xp;
 }
 
-/**
- * Called once a tick. `didThisTick` is what the brain actually did; an action outside
- * CONSERVING_ACTIONS, or any xp at all, retakes the baseline instead of asserting against it.
- */
-export function watchItemConservation(bot: BotPlayer, w: WatchState, seed: number, trail: string[], didThisTick: string[]): void {
-    const now = World.currentTick;
-    const xp = totalXp(bot);
-
-    let taint = xp !== w.lastXpTotal;
-    let moves = 0;
-    for (const action of didThisTick) {
-        if (!CONSERVING_ACTIONS.has(action)) {
-            taint = true;
-        } else if (MOVING_ACTIONS.has(action)) {
-            moves++;
-        }
-    }
-    w.lastXpTotal = xp;
-
-    // Tainted: throw the window away, and do not start a new one until the tainting action's own
-    // scripts have had time to finish - a cooked fish arrives a tick after the click.
-    if (taint) {
-        w.baseline = null;
-        w.settleUntil = now + SETTLE_TICKS;
-        w.moves = 0;
-        return;
-    }
-
-    if (w.baseline === null) {
-        if (now >= w.settleUntil) {
-            w.baseline = ownedItems(bot);
-            w.baselineTick = now;
-            w.moves = 0;
-        }
-        return;
-    }
-
-    if (moves > 0) {
-        w.moves += moves;
-        w.lastMoveTick = now;
-    }
-
-    // COUNTED IN MOVES, NOT TICKS, and this matters: the fuzzer takes two actions a tick and most of
-    // them are an op on a loc or an npc, so twenty-five CONSECUTIVE ticks of nothing but item moves
-    // never happens and a tick-based window would simply never fire. One move is enough - a single
-    // deposit, withdraw or equip must conserve on its own. The settle wait after the last move is
-    // what gives a script with a delay in it time to finish before the totals are compared.
-    if (w.moves === 0 || now - w.lastMoveTick < SETTLE_TICKS) {
-        return;
-    }
-
-    const after = ownedItems(bot);
-    const ids = new Set<number>([...w.baseline.keys(), ...after.keys()]);
-    const drifts: string[] = [];
-    for (const id of ids) {
-        const delta = (after.get(id) ?? 0) - (w.baseline.get(id) ?? 0);
-        if (delta !== 0) {
-            drifts.push(`${ObjType.get(id)?.debugname ?? id} ${delta > 0 ? '+' : ''}${delta}`);
-        }
-    }
-    if (drifts.length) {
-        findings.add('items', `items changed over ${w.moves} move${w.moves === 1 ? '' : 's'} and nothing else (no xp, nothing but bank/equipment/ground/backpack): ${drifts.join(', ')}`, bot, seed, trail);
-    }
-    w.baseline = after;
-    w.baselineTick = now;
-    w.moves = 0;
-}
-
 // ------------------------------------------------------------------------------------------------
-// custom (2026-11-02) - THE ITEM AUDIT WINDOW, because the watcher above cannot fire.
+// custom (2026-11-02) - ITEM CONSERVATION, and why there is now only one of these.
+//
+// THE WATCHER THAT USED TO BE HERE is gone, and the reasoning is worth keeping because it was a
+// good idea that could not be made to work. watchItemConservation asserted over a window in which
+// the bot did nothing but move items, and waited for such a window to happen by chance:
+//
+//   - a window needed SETTLE_TICKS (8) clean ticks to take a baseline, then at least one move, then
+//     8 more clean ticks - about 17 consecutive ticks with no tainting action and no xp;
+//   - a tick is two actions and roughly a quarter of actions are conserving ones, so a clean tick is
+//     about one in sixteen and seventeen in a row is about one in 10^20;
+//   - measured: 8 fuzzers x 3,545 ticks produced 41 invops and not one comparison. The watcher the
+//     file called "the one that matters, because a dupe is the bug that costs a server" had never
+//     once run its assertion.
+//
+// Then the modal fix landed, invops went from 254 a run to 1,584, and it began to fire - and every
+// time it fired it was wrong, because it counted the bot's own drops on the ground and the ground is
+// not a ledger anyone controls (see ownedInvItems below). Two oracles for one property, one of them
+// sound and one of them lying, is worse than one: the lying one is what teaches people to stop
+// reading the list. So the opportunistic one is retired and the audit window below is the whole of
+// it.
+//
+// WHAT WENT WITH IT, stated so it is not mistaken for coverage: nothing now checks that a drop
+// LANDS - that an obj hits the floor exactly once for one drop. That is a real bug class and it
+// wants a sim that drops one known item on a known tile and counts, not a fuzzer that cannot tell
+// its own drops from the lootdrop timer's.
+//
+// THE ITEM AUDIT WINDOW, which is taken rather than waited for.
 //
 // watchItemConservation asserts over a window in which the bot did nothing but move items. That is
 // the right test. The problem is that it waits for such a window to happen by chance, and with the
@@ -642,8 +563,15 @@ export function watchItemConservation(bot: BotPlayer, w: WatchState, seed: numbe
 // deposit, withdraw, equip, unequip, drop, take, drag - and it runs several times a run instead of
 // never.
 
-/** Ticks between audits. Short enough to run often, long enough that the run is still fuzzing. */
-export const AUDIT_EVERY = 400;
+/**
+ * Ticks between audits.
+ *
+ * Raised from 400 after the modal fix made banks actually reachable: audits started succeeding, and
+ * a succeeding audit costs its whole window. At 400 they took 4,900 of 48,000 bot-ticks, and with
+ * the loiter stretch that was 30% of the run not fuzzing - coverage fell from 624 to 487. A dupe
+ * check does not need to run constantly; it needs to run enough times a run to be convincing.
+ */
+export const AUDIT_EVERY = 900;
 /** Ticks of nothing but item moves. ~60 moves at two actions a tick, which is a real workout. */
 export const AUDIT_TICKS = 30;
 /** Consecutive ticks with nothing left to move before the window gives up early. */
@@ -776,9 +704,11 @@ export function watchItemAudit(bot: BotPlayer, w: WatchState, seed: number, trai
 /** Everything, once a tick. Wrapped: a watcher must never be why the world went down. */
 export function runWatchers(bot: BotPlayer, w: WatchState, seed: number, trail: string[], didThisTick: string[]): void {
     try {
-        // Read once: watchItemConservation retakes its own baseline on any xp, and the audit window
-        // abandons on any xp, and both must see the same answer on the same tick.
-        const xpMoved = totalXp(bot) !== w.lastXpTotal;
+        // Any xp at all means something was earned rather than moved, which voids an audit window.
+        // Read and stored here because the audit is not the only thing that may want it later.
+        const xp = totalXp(bot);
+        const xpMoved = xp !== w.lastXpTotal;
+        w.lastXpTotal = xp;
         watchSoftLock(bot, w, seed, trail);
         // Reading the bot's mailbox: the engine has been telling it which of its clicks nothing
         // answered, and until now nothing read it. See watchDeadInteraction.
@@ -796,9 +726,6 @@ export function runWatchers(bot: BotPlayer, w: WatchState, seed: number, trail: 
         if (World.currentTick % 50 === 0) {
             watchVarps(bot, seed, trail);
         }
-        watchItemConservation(bot, w, seed, trail, didThisTick);
-        // The deterministic half of the same test. watchItemConservation waits for a clean window
-        // and never gets one; this one is handed a window the brain made on purpose.
         watchItemAudit(bot, w, seed, trail, didThisTick, xpMoved);
     } catch (err) {
         printWarning(`fuzz: a watcher threw and was skipped this tick - ${String((err as { message?: unknown })?.message ?? err)}`);

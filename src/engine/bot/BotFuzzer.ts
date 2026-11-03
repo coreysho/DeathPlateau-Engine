@@ -12,6 +12,7 @@ import type BotPlayer from '#/engine/bot/BotPlayer.js';
 import Loc from '#/engine/entity/Loc.js';
 import Npc from '#/engine/entity/Npc.js';
 import Obj from '#/engine/entity/Obj.js';
+import Player from '#/engine/entity/Player.js';
 import { isMapBlocked, isZoneAllocated } from '#/engine/GameMap.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import type ScriptFile from '#/engine/script/ScriptFile.js';
@@ -85,6 +86,32 @@ const BORED_TICKS = 150;
 const RELOCATE_MIN_OPS = 12;
 /** Ticks allowed for walking to a banker and getting the interface open before auditing in place. */
 const BANK_OPEN_TRIES = 25;
+/**
+ * How long the bot works a modal before closing it. A shop needs several clicks to be tested at all
+ * (open, pick a row, Buy, pick another), and the soft-lock watcher allows a modal 100 ticks before
+ * it calls it stuck, so twenty is well inside what the watchers tolerate.
+ */
+const MODAL_DWELL = 20;
+/**
+ * Ticks between loiter stretches, and how long one lasts.
+ *
+ * THESE WERE MEASURED, and they came out the opposite way round from the guess. The reasoning was
+ * "a fuzzer that does not walk does not find anything", so the first budget was 12 ticks in every
+ * 220 - about 5%. That run reached 529 triggers. The accidental version before it, where loitering
+ * leaked into act()'s cascade and took 9,950 of 48,000 bot-ticks while walking collapsed to 350,
+ * reached 624.
+ *
+ * Standing still is worth more than walking, and in hindsight it is obvious why: walking reaches
+ * locs and npcs the bot can click, which it is already saturating, whereas standing still is the
+ * only way anything in the world gets a turn to act on IT - [ai_queue1..20] (769 for queue 3
+ * alone), [ai_opplayer2] (175), [ai_applayer2] (132), [ai_timer] (113). A click cannot reach those
+ * at any weighting.
+ *
+ * So the budget is about a fifth of the ticks, which is near where the accident landed, but as a
+ * stretch with a start and an end rather than a cascade fallthrough that can run away.
+ */
+const LOITER_EVERY = 110;
+const LOITER_TICKS = 24;
 
 /**
  * The one op index a loc, npc or obj actually has at `op` (1-based), or 0 - the same check
@@ -174,6 +201,12 @@ export class FuzzBrain {
     private lastAudit = 0;
     /** Ticks left to spend getting a bank open before an audit gives up and audits in place. */
     private openingBank = 0;
+    /** The tick the current modal was first seen, and which modal it was. See tickInner. */
+    private modalSince = -1;
+    private modalWas = -1;
+    /** The loiter stretch: when the last one started, and the tick the current one ends. */
+    private lastLoiter = 0;
+    private loiterUntil = 0;
 
     constructor(
         readonly s: BotState,
@@ -237,6 +270,23 @@ export class FuzzBrain {
             }
         }
 
+        // A LOITER STRETCH, on a budget rather than on a dice roll. See loiter() for what standing
+        // still buys. It is scheduled like the audit and for the same reason the audit is: the first
+        // version made it one more branch in act()'s cascade at 2% of the rolls, and because it
+        // almost always succeeds it absorbed every other action's failures and came out at 9,950 of
+        // 48,000 bot-ticks - while walking collapsed from 10,276 to 350. A fuzzer that does not walk
+        // does not find anything. A stretch with a start and an end cannot run away like that.
+        if (World.currentTick < this.loiterUntil) {
+            if (this.loiter()) {
+                this.finish();
+                return;
+            }
+            this.loiterUntil = 0; // it got busy; nothing would hunt it, so stop wasting the ticks
+        } else if (World.currentTick - this.lastLoiter >= LOITER_EVERY && !Watch.inItemAudit(this.watch) && !bot.containsModalInterface()) {
+            this.lastLoiter = World.currentTick;
+            this.loiterUntil = World.currentTick + LOITER_TICKS;
+        }
+
         // An item audit, every AUDIT_EVERY ticks: the only way the conservation watcher gets a
         // window it can assert over. See the note above watchItemAudit in BotFuzzWatch.ts for why
         // waiting for one to happen by chance does not work.
@@ -269,7 +319,7 @@ export class FuzzBrain {
                     this.finish();
                     return;
                 }
-            } else if (since >= Watch.AUDIT_EVERY / 4 && this.bankInReach()) {
+            } else if (since >= Watch.AUDIT_EVERY / 3 && this.bankInReach()) {
                 // Start the walk to it; the branch above takes over from here.
                 this.openingBank = BANK_OPEN_TRIES;
                 this.note('heading for a bank for an item audit', 'walk');
@@ -311,12 +361,42 @@ export class FuzzBrain {
                 this.finish();
                 return;
             }
-            // Before giving up on it, click one of its own buttons - this is the only way anything
-            // inside a quest or shop interface ever gets exercised.
-            if (this.rng.next() < 0.6 && this.clickOpenInterface()) {
-                this.finish();
-                return;
+            // custom (2026-11-02) - WORK THE WINDOW BEFORE SHUTTING IT.
+            //
+            // This branch returns before act() ever runs, which means invOp() - the op on an item in
+            // a grid the server has sent, which is Buy, Sell, Deposit and Withdraw - could only ever
+            // fire on a grid that is NOT a modal. Every shop and every bank in the game is a modal.
+            // So the whole buy/sell/deposit/withdraw surface was unreachable outside the item audit
+            // window, and the 240 npcs in this build with a "Trade" option opened a shop on one tick
+            // and had it shut on the next without a single item being clicked.
+            //
+            // A window is now DWELT in: up to MODAL_DWELL ticks of clicking its buttons and its
+            // grids before the bot gives up and closes it. The soft-lock watcher allows a modal 100
+            // ticks before it calls it stuck, so this is comfortably inside what it tolerates - and
+            // a window the bot is working is not a window that will not close.
+            if (this.modalSince === -1 || before !== this.modalWas) {
+                this.modalSince = World.currentTick;
+                this.modalWas = before;
             }
+            if (World.currentTick - this.modalSince < MODAL_DWELL) {
+                // The grid first: its ops are where the wealth moves, and they are what nothing had
+                // ever reached. Then a button, which is how a quest or minigame panel is driven.
+                if (this.rng.next() < 0.5 && this.invOp()) {
+                    this.finish();
+                    return;
+                }
+                if (this.clickOpenInterface()) {
+                    this.finish();
+                    return;
+                }
+                if (this.invOp()) {
+                    this.finish();
+                    return;
+                }
+                // Nothing in it to click. Fall through and close it rather than dwelling in an
+                // empty window for twenty ticks.
+            }
+            this.modalSince = -1;
             bot.closeModal();
             this.note(`close modal (state ${before})`, 'closemodal');
             this.finish();
@@ -357,10 +437,10 @@ export class FuzzBrain {
             // out of trying to). Deposit, withdraw, equip, unequip and drag are the surface a dupe
             // actually lives on, and they are all here.
             const roll = this.rng.int(1, 100);
-            if (roll <= 45 && this.invOp()) return;
+            if (roll <= 45 && this.auditInvOp()) return;
             if (roll <= 80 && this.equipOrUnequip()) return;
             if (this.invDrag()) return;
-            if (this.equipOrUnequip() || this.invOp()) return;
+            if (this.equipOrUnequip() || this.auditInvOp()) return;
             this.note('audit: nothing to move', 'idle');
             return;
         }
@@ -404,9 +484,10 @@ export class FuzzBrain {
         if (roll <= 73 && this.useOnLoc()) return;
         if (roll <= 79 && this.useOnNpc()) return;
         if (roll <= 82 && this.useOnObj()) return;
-        if (roll <= 88 && this.invOp()) return;
-        if (roll <= 94 && this.clickOpenInterface()) return;
-        if (roll <= 97 && this.castOnSomething()) return;
+        if (roll <= 86 && this.invOp()) return;
+        if (roll <= 91 && this.clickOpenInterface()) return;
+        if (roll <= 94 && this.castOnSomething()) return;
+        if (roll <= 97 && this.opOtherPlayer()) return;
         this.wander();
     }
 
@@ -619,11 +700,12 @@ export class FuzzBrain {
         return false;
     }
 
-    /** Is a grid other than the bot's own backpack and equipment on screen - a bank, shop or trade? */
+    /** Is the bank open? That is what the pre-audit walk to a banker is trying to achieve. */
     private hasForeignInv(): boolean {
+        const bank = InvType.getId('bank');
         return this.bot.invListeners.some(l => {
             const com = Component.get(l.com);
-            return com && this.bot.isComponentVisible(com) && validOps(com.iop ?? null).length > 0;
+            return l.type === bank && !!com && this.bot.isComponentVisible(com) && validOps(com.iop ?? null).length > 0;
         });
     }
 
@@ -706,6 +788,73 @@ export class FuzzBrain {
             }
             if (Input.wornOp(bot, com, i, 1)) {
                 this.note(`audit remove ${ObjType.get(item.id)?.debugname ?? item.id}`, 'wornop');
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The grids an AUDIT may move items through: the backpack, what it is wearing, and its bank.
+     *
+     * WHY NOT ANY GRID THE SERVER HAS SENT. invOp() runs whatever [inv_button1..5] script the content
+     * put behind that component, and a script can do anything - a shop's Buy legitimately creates an
+     * item in your backpack in exchange for coins, and the stock it came out of is a SHARED
+     * inventory that ownedInvItems does not and should not count. An audit that called that a move
+     * would call every purchase a dupe.
+     *
+     * These three are different in kind: the scripts behind them move an obj from one inventory of
+     * the player's to another and nothing else, which is exactly what the audit asserts about. It is
+     * also where a dupe actually lives - deposit, withdraw, wear, remove.
+     *
+     * This was arrived at the hard way. The audit reported `abyssal_bludgeon +1` off a trail of
+     * nothing but equip and Remove; two targeted sims (equip/remove, and a two-hander displacing a
+     * shield) both conserved, which meant the finding was the oracle's and not the content's.
+     */
+    private auditGrids(): { com: number; type: number }[] {
+        const bank = InvType.getId('bank');
+        return this.bot.invListeners
+            .filter(l => {
+                if (l.source !== this.bot.uid) {
+                    return false;
+                }
+                if (l.type !== InvType.INV && l.type !== InvType.WORN && l.type !== bank) {
+                    return false;
+                }
+                const com = Component.get(l.com);
+                return !!com && this.bot.isComponentVisible(com);
+            })
+            .map(l => ({ com: l.com, type: l.type }));
+    }
+
+    /** invOp, restricted to the grids above. The audit uses this; ordinary fuzzing uses invOp(). */
+    private auditInvOp(): boolean {
+        const bot = this.bot;
+        const grids = this.auditGrids();
+        for (let tries = 0; tries < 4; tries++) {
+            const grid = this.rng.pick(grids);
+            if (!grid) {
+                return false;
+            }
+            const listener = bot.invListeners.find(l => l.com === grid.com);
+            const inv = bot.getInventoryFromListener(listener);
+            if (!inv) {
+                continue;
+            }
+            const slots: number[] = [];
+            for (let i = 0; i < inv.capacity; i++) {
+                if (inv.get(i)) {
+                    slots.push(i);
+                }
+            }
+            const slot = this.rng.pick(slots);
+            const com = Component.get(grid.com);
+            const op = this.rng.pick(validOps(com?.iop ?? null));
+            if (slot === undefined || op === undefined) {
+                continue;
+            }
+            if (Input.invOp(bot, grid.com, slot, op)) {
+                this.note(`audit invop ${com?.comName ?? grid.com} slot${slot} op${op} (${com?.iop?.[op - 1] ?? ''})`, 'invop');
                 return true;
             }
         }
@@ -1104,6 +1253,81 @@ export class FuzzBrain {
             }
         }
         return n;
+    }
+
+    /**
+     * Something aimed at another fuzzer. [applayert] is 54 triggers and [opplayert] 12 - the god
+     * spells and the rest of the targeted PvP magic - and no fuzzer had ever aimed anything at
+     * another one.
+     *
+     * WHAT IS DELIBERATELY NOT HERE. The engine refuses most of this against a bot on purpose:
+     * OpPlayerHandler allows only op 2 (Attack) and op 3 (Follow) when the target is a bot, and
+     * OpPlayerUHandler refuses outright with "it doesn't take items". So trading a bot and using an
+     * item on one are not oversights to be worked around - [opplayeru] and [applayeru], ten triggers
+     * between them, are out of a fuzzer's reach by design and a sim with two real players is what
+     * would cover them.
+     */
+    private opOtherPlayer(): boolean {
+        const bot = this.bot;
+        const others: Player[] = [];
+        for (const other of World.playerLoop.all()) {
+            if (other !== bot && other.isBot && other.level === bot.level && Math.abs(other.x - bot.x) <= REACH && Math.abs(other.z - bot.z) <= REACH) {
+                others.push(other);
+            }
+        }
+        const other = this.rng.pick(others);
+        if (!other) {
+            return false;
+        }
+        if (this.rng.next() < 0.6) {
+            const coms = Input.castableComs(bot, ComActionTarget.PLAYER);
+            const com = this.rng.pick(coms);
+            if (com !== undefined && Input.castOnPlayer(bot, other, Component.get(com)?.comName ?? '')) {
+                this.note(`cast ${Component.get(com)?.comName ?? com} on ${other.username}`, 'castplayer');
+                return true;
+            }
+            return false;
+        }
+        // op 2 is Attack, op 3 is Follow - the only two the engine lets anyone aim at a bot.
+        const op = this.rng.next() < 0.5 ? 2 : 3;
+        if (Input.opPlayer(bot, other, op)) {
+            this.note(`opplayer ${other.username} op${op}`, 'opplayer');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Stand still and let the world act on it.
+     *
+     * A fuzzer has never once done nothing, and that is a coverage gap rather than a virtue. Whole
+     * families of trigger only fire while a player is standing there being available:
+     *
+     *   [ai_queue1..20]   769 for queue 3 alone. Npc.consumeHuntTarget runs these when a hunt FINDS
+     *                     a player - the npc decides to engage, the player does not click anything.
+     *   [ai_opplayer2]    175, and [ai_applayer2] 132: an npc attacking a player, and following it up.
+     *   [ai_timer]        113. A clock on the npc, which needs the bot to still be there when it
+     *                     comes round.
+     *
+     * None of that happens to a bot that clicks something and immediately walks twenty tiles away.
+     * Npc.huntPlayers also skips a player who is `busy()` - delayed or in a modal - so this stays
+     * out of both: it is the one action that does nothing at all.
+     *
+     * It is weighted low because an idle tick tests nothing by itself. What it buys is the ticks
+     * AFTER it, when something else has decided to act.
+     */
+    private loiter(): boolean {
+        const bot = this.bot;
+        if (bot.containsModalInterface() || bot.delayed) {
+            return false; // busy() is true, so nothing would hunt it anyway
+        }
+        // Drop the walk destination, or the engine keeps walking the route it was already given and
+        // the bot is not standing still at all.
+        this.dest = null;
+        bot.clearWaypoints();
+        bot.unsetMapFlag();
+        this.note('loitering', 'idle');
+        return true;
     }
 
     /**
