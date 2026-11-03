@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import Environment from '#/util/Environment.js';
+import type ScriptFile from '#/engine/script/ScriptFile.js';
 import { printInfo, printWarning } from '#/util/Logger.js';
 
 // custom (2026-11-02) - every interaction that answered "Nothing interesting happens."
@@ -77,6 +78,44 @@ function key(kind: string, trigger: string, target: string): string {
     return `${kind}|${trigger}|${target}`;
 }
 
+/**
+ * What the content says when it has no answer. The engine's own "Nothing interesting happens." in
+ * Player.defaultOp is a different thing - that one has no trigger behind it at all and is recorded
+ * as a 'notrigger'. These are a script running and falling through.
+ */
+export const FILLER_LINES: readonly string[] = ['Nothing interesting happens.', 'Nothing interesting happens'];
+
+export function isFillerLine(message: string): boolean {
+    return FILLER_LINES.includes(message);
+}
+
+/**
+ * Who to blame for a filler line, read off the script call stack.
+ *
+ * NOT `state.script`, WHICH IS THE FIRST THING I TRIED AND IS USELESS. Almost every filler line in
+ * this build comes out of `~displaymessage(^dm_default)`, so the script holding the `mes` is
+ * [proc,displaymessage] every time: 253 rows attributed by coincidence collapsed into one row
+ * naming displaymessage.rs2:19, which identifies nothing at all.
+ *
+ * The call stack has the answer. state.frames holds the gosub chain, and frames[0] is the script
+ * the click ENTERED - the trigger, [oploc1,x] or [label,attempt_pick_pocket] - which is the thing a
+ * person can go and read. The innermost frame is reported beside it, because "the trigger fell
+ * through at displaymessage" and "the trigger fell through in its own body" are different bugs and
+ * the second one wants the line.
+ *
+ * fp is the live depth and frames can be longer than fp (the array is reused), so it is read with
+ * fp and not with length.
+ */
+export function blameFor(state: { script: ScriptFile; pc: number; frames: { script: ScriptFile; pc: number }[]; fp: number }): string {
+    const here = `${state.script.fileName}:${state.script.lineNumber(state.pc)}`;
+    if (state.fp === 0) {
+        return `${state.script.name} (${here})`;
+    }
+    const root = state.frames[0].script;
+    const rootLine = root.lineNumber(state.frames[0].pc);
+    return `${root.name} (${root.fileName}:${rootLine}) -> ${state.script.name} (${here})`;
+}
+
 class DeadOpsTracker {
     enabled = false;
 
@@ -130,9 +169,23 @@ class DeadOpsTracker {
     }
 
     /**
-     * A trigger that DID run and still said nothing. There is no trigger name to record - the
-     * content said it, not the engine - so what identifies it is the action the player took.
+     * A trigger that DID run and still said nothing.
+     *
+     * `what` USED TO BE THE ACTION THE BOT TOOK, and that was the best identification available
+     * before this was called from the right place. The fuzz watcher read the message out of a bot's
+     * mailbox a tick or two after the fact and filed it against the last click in the trail, which
+     * is attribution by coincidence: the most FREQUENT bot action collects the most findings
+     * whatever caused them. A real run blamed `opnpc man op3` fifteen times - Pickpocket on a Man -
+     * and Man is in the pickpocket table, so not one of the fifteen was that click. The top of the
+     * list was its least trustworthy part, which is why 253 findings went unread.
+     *
+     * It is called from the MES opcode now, where the script that said it is `state.script`, so
+     * `what` is that script's name and source line. The fifteen become one line of
+     * pickpocket.rs2 - which is a thing somebody can go and read.
      */
+    /** Exposed on the singleton so a caller with a ScriptState need not import the free function. */
+    blameFor = blameFor;
+
     recordFiller(what: string, who: string, x: number, z: number, level: number): void {
         if (!this.enabled) {
             return;

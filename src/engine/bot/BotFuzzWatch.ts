@@ -10,7 +10,7 @@ import type BotPlayer from '#/engine/bot/BotPlayer.js';
 import { isZoneAllocated } from '#/engine/GameMap.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
-import DeadOps from '#/engine/script/DeadOps.js';
+import DeadOps, { FILLER_LINES } from '#/engine/script/DeadOps.js';
 import World from '#/engine/World.js';
 import Environment from '#/util/Environment.js';
 import { printWarning } from '#/util/Logger.js';
@@ -362,8 +362,8 @@ export function watchVarps(bot: BotPlayer, seed: number, trail: string[]): void 
 //            ~displaymessage(^dm_default). Softer than a deadop and much more numerous, so it is
 //            reported against the ACTION the bot took rather than per message, and capped.
 
-/** Said by the content, not the engine, when it has no answer for a combination. */
-const FILLER_LINES: readonly string[] = ['Nothing interesting happens.', 'Nothing interesting happens'];
+// FILLER_LINES lives in DeadOps now, because the MES opcode needs the same list and two copies of
+// it would drift. Imported above.
 
 /**
  * How many distinct filler findings one run will report before it stops. A dead op is a fact and
@@ -430,21 +430,25 @@ export function watchDeadInteraction(bot: BotPlayer, w: WatchState, seed: number
             if (fillerReported >= FILLER_CAP) {
                 continue;
             }
-            // There is no trigger name to read here - the content said it, not the engine - so the
-            // action the bot took is the only identification there is. That is why the brain's
-            // lastAction is kept in words.
-            // The trail's last entry is the brain's own words for the click, with its tick:
-            // `t4812 oploc crate op1 @3215,3210,0`. The tick is dropped for the signature so two
-            // bots hitting the same dead combination are one finding.
+            // THE DEAD-OPS ROW FOR THIS IS NO LONGER WRITTEN HERE, and that is the point of the
+            // change. It used to be: the action the bot took was the only identification available
+            // from a mailbox, so the trail's last real click was used, walked backwards past the
+            // brain's own bookkeeping because the message can arrive a tick or two after the click
+            // that caused it.
             //
-            // Walked BACKWARDS past the brain's own bookkeeping, because the message can arrive a
-            // tick or two after the click that caused it - by which time the trail's last entry may
-            // be `audit: settling` or `nothing to do`, and a finding filed against that names
-            // nothing anybody can go and look at. A real run produced exactly that.
+            // That is attribution by coincidence, and it does not degrade gracefully - it blames
+            // whichever action the bots take MOST OFTEN, whatever actually caused the message. A
+            // real run filed fifteen findings against `opnpc man op3`, Pickpocket on a Man, and Man
+            // is in the pickpocket table, so not one of them was that click. 253 findings went
+            // unread because their most prominent entries were noise.
+            //
+            // The MES opcode records it now, where `state.script` is the script that said it, so
+            // the row names a file and a line. What is kept here is the FINDING, because the finding
+            // carries the seed and the trail and is the only thing anybody can replay - the trail
+            // is still worth having, as long as nothing pretends it is the cause.
             const what = (trail.findLast(step => !NOT_A_CLICK.test(step)) ?? '(unknown action)').replace(/^t\d+ /, '');
-            DeadOps.recordFiller(what, bot.username, bot.x, bot.z, bot.level);
             fillerReported++;
-            findings.add('filler', `a trigger ran and still had nothing to say ("${m.text}") for: ${what}`, bot, seed, trail);
+            findings.add('filler', `a trigger ran and still had nothing to say ("${m.text}") - the bot was last seen doing: ${what}. The script that said it is in the dead-ops rows.`, bot, seed, trail);
         }
     }
     w.lastMessageTick = messages[messages.length - 1].tick;

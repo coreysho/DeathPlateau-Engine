@@ -13,6 +13,7 @@ import { PlayerQueueType, ScriptArgument } from '#/engine/entity/PlayerQueueRequ
 import { PlayerStat } from '#/engine/entity/PlayerStat.js';
 import { findPath } from '#/engine/GameMap.js';
 import { PlayerHuntAllCommandIterator } from '#/engine/script/ScriptIterators.js';
+import DeadOps, { isFillerLine } from '#/engine/script/DeadOps.js';
 import { ScriptOpcode } from '#/engine/script/ScriptOpcode.js';
 import ScriptPointer, { ActivePlayer, ProtectedActivePlayer } from '#/engine/script/ScriptPointer.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -388,6 +389,16 @@ const PlayerOps: CommandHandlers = {
 
     [ScriptOpcode.MES]: state => {
         const message = state.popString();
+
+        // WHERE A FILLER LINE IS WORTH RECORDING, because here the script that said it is in hand.
+        // "Nothing interesting happens." from a running script means a trigger existed, ran, and
+        // fell through - a missing recipe row, a quest stage nobody wrote, a db_find that found
+        // nothing. The fuzz watcher used to catch these out of a bot's mailbox a tick later and
+        // file them against the bot's last click, which blamed whichever action the bots take most
+        // often rather than the one that caused it. state.script knows the answer exactly.
+        if (DeadOps.enabled && isFillerLine(message)) {
+            DeadOps.recordFiller(DeadOps.blameFor(state), state.activePlayer.username, state.activePlayer.x, state.activePlayer.z, state.activePlayer.level);
+        }
 
         state.activePlayer.messageGame(message);
     },
