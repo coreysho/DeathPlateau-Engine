@@ -267,6 +267,21 @@ behaviour, redundant script.
   steps broken; walking up to shells and sideways to siblings cleared Desert Treasure's obelisks,
   which a real `OpLoc` packet is refused for. `locCanOp` now mirrors the handler line for line.
 
+### One of the recovered options was wrong, and the sim caught it
+
+`toxic_blowpipe_empty` was given an `iop2=Wield`, copied from its loaded twin, which shares the
+`[opheld2]` line and declares exactly that. `tools/sim/blowpipe.ts` then went **121 ok, 1 FAIL**:
+it asserts *"the empty one has no Wield"*, and its header lists that among the things it covers on
+purpose. An empty toxic blowpipe is deliberately not wieldable, so that handler is dead code the
+author kept, and `[opheld2,toxic_blowpipe_empty]` belongs in the orphans baseline rather than being
+"fixed".
+
+The rule was too weak. A twin's label is good evidence; **an existing test asserting the option is
+absent beats it**, and the order to check them in is the test first - `grep tools/sim` for the name
+before touching its config. Done for every other name this branch changed: `implings`, `animmag`,
+`maxcapes`, `zogreyanille`, `quest_zogre_run`, `quest_ahoy_run`, `templelight`, `myrequerod`,
+`quest_myreque2_run`, `quest_eadgar_run` and `audit2` all pass.
+
 ### The quest runners were clicking options that do not exist
 
 `harness.opLoc` reached `setInteraction` directly instead of going through `OpLocHandler`, so it

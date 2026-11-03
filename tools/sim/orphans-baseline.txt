@@ -3,7 +3,7 @@
 # Checked with:                npx tsx tools/sim/orphans.ts --check   (fails on anything NEW)
 #
 # A ratchet, not an approval. Every line is content somebody wrote that nothing can run.
-# 6 lines at the time of writing.
+# 7 lines at the time of writing.
 
 [if_button,player_kit_tailor_legs_woman:com_139] - thessalia.rs2
 [if_button,player_kit_tailor_legs_woman:com_140] - thessalia.rs2
@@ -11,3 +11,4 @@
 [inv_button3,tradingpost:grid] - tradingpost.rs2
 [inv_button3,tradingpost_side:inv] - tradingpost.rs2
 [inv_button4,tradingpost_side:inv] - tradingpost.rs2
+[opheld2,toxic_blowpipe_empty] - blowpipe.rs2

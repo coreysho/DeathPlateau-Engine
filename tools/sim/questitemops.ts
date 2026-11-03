@@ -113,14 +113,17 @@ for (const [name, label, phrase] of ITEMS) {
 // Not quest items, and not a judgement call anywhere: each of these shares its handler line with a
 // sibling obj that already declares the label, so the label is transcribed rather than chosen.
 //
-//   toxic_blowpipe_empty  iop2=Wield          the loaded toxic_blowpipe declares exactly that, and
-//                                             [opheld2,toxic_blowpipe_empty] is its Ranged gate
 //   butterfly_net         iop3=Check totals   magic_butterfly_net declares exactly that and is on
 //                                             the same @impling_totals line
 //   accumulator_max_cape  iop3=Toggle-attract avas_accumulator and avas_attractor both declare
 //                                             exactly that and share ~avas_attract_toggle
+// toxic_blowpipe_empty WAS HERE AND IS NOT ANY MORE, which is the useful part of this list.
+// Its loaded twin declares iop2=Wield and it shares the [opheld2] line, so it fitted the rule
+// exactly - and tools/sim/blowpipe.ts asserts "the empty one has no Wield", with its header
+// listing that as something it covers on purpose. An empty blowpipe is deliberately not
+// wieldable. A twin's label is good evidence; an existing test asserting the option is ABSENT
+// beats it, and the order to check them in is the test first.
 const TWINS: [string, number, string, string][] = [
-    ['toxic_blowpipe_empty', 2, 'Wield', 'toxic_blowpipe'],
     ['butterfly_net', 3, 'Check totals', 'magic_butterfly_net'],
     ['accumulator_max_cape', 3, 'Toggle-attract', 'avas_accumulator']
 ];
