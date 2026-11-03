@@ -913,6 +913,31 @@ export default class Player extends PathingEntity {
         this.refreshModalClose = true;
     }
 
+    /**
+     * Is a chatbox input prompt waiting on this player right now?
+     *
+     * The client's IF_CLOSE handler clears chatbackInputOpen, so an IF_CLOSE that lands AFTER a
+     * P_COUNTDIALOG cancels the prompt on the same tick it appeared. P_COUNTDIALOG is written while
+     * the script runs; IF_CLOSE is written at the END of the tick, from NetworkPlayer.encodeOut -
+     * so any script shaped `if_close; p_countdialog;` opened an amount prompt the player could not
+     * answer, and it vanished before they could type into it. Make X on every skillmultiN panel was
+     * exactly that shape: fletching's Make X did nothing at all, while Make All / 10 / 5 / 1 on the
+     * same panel worked, and cooking's own Make X (cookx, which has no if_close) worked too.
+     */
+    awaitingChatboxInput(): boolean {
+        const execution = this.activeScript?.execution;
+        return execution === ScriptState.COUNTDIALOG || execution === ScriptState.NAMEDIALOG;
+    }
+
+    /**
+     * Must this tick's end-of-tick IF_CLOSE be held back? NetworkPlayer.encodeOut asks before
+     * writing one. Holding costs nothing: refreshModalClose and the lastModal* trackers are left
+     * as they are, so the first tick on which no prompt is waiting sends the close instead.
+     */
+    holdingModalClose(): boolean {
+        return this.refreshModalClose && this.awaitingChatboxInput();
+    }
+
     containsModalInterface() {
         // main or chat is open
         return (this.modalState & (ModalState.MAIN | ModalState.CHAT)) !== ModalState.NONE;

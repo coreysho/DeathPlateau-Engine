@@ -66,6 +66,60 @@ console.log('\n== Make 1 makes one');
     check('  fifteen shafts', H.invCount(p, 'arrow_shaft'), 15);
 }
 
+// MAKE X DID NOTHING AT ALL, and the panel was not at fault. The prompt opened and was cancelled
+// before the player could type a digit into it:
+//
+//   - p_countdialog is written to the client while the script runs (P_COUNTDIALOG), and it is what
+//     sets chatbackInputOpen = 1 - the "Enter amount:" prompt.
+//   - skillmultiN runs `p_pausebutton; if_close;` and only then reads which button was clicked, so
+//     a modal close is already pending by the time the X branch asks.
+//   - IF_CLOSE is NOT written where if_close runs. It is written at the END of the tick, by
+//     NetworkPlayer.encodeOut - after P_COUNTDIALOG.
+//   - and the client's IF_CLOSE handler clears chatbackInputOpen.
+//
+// So the prompt appeared and vanished inside one tick's packets, and Make All / 10 / 5 / 1 on the
+// same panel worked because none of them opens a prompt. Cooking's own Make X (cookx) worked for
+// the same reason in reverse: it has no if_close before its switch. The two other scripts in the
+// content that ask after an if_close - Harold's gamble and the medium clue challenge - both carry a
+// p_delay(0) between the two, with a comment about the old chat interface lingering a tick; that
+// delay is what was saving them.
+//
+// Player.holdingModalClose is the fix: encodeOut holds the close while a prompt is waiting.
+console.log('\n== Make X asks for a number, and the prompt survives long enough to answer');
+{
+    const p: any = player('fletchx', 3222, 3218, 0);
+    p.setLevel(9, 99);
+    H.clearInv(p);
+    H.give(p, 'knife', 1);
+    H.give(p, 'logs', 20);
+    H.useHeldOn(p, 'knife', 'logs');
+    for (let t = 0; t < 8 && p.modalChat < 0; t++) H.tick(1);
+    H.choose(p, 'skillmulti4:com_6'); // obj1 (shafts), Make X
+    check('the script is parked on the amount prompt', H.awaitingCount(p), true);
+    // Both halves of the bug in one place: a close IS pending, and it is being held because of it.
+    check('  a modal close is pending at the same time', p.refreshModalClose, true);
+    check('  so the end-of-tick IF_CLOSE is held back', p.holdingModalClose(), true);
+    check('  and typing a number is accepted', H.typeCount(p, 4), true);
+    check('  the prompt is done, so the close is free to go', p.holdingModalClose(), false);
+    for (let t = 0; t < 60; t++) H.tick(1);
+    check('  four logs cut, not one and not twenty', H.invCount(p, 'logs'), 16);
+    check('    sixty shafts', H.invCount(p, 'arrow_shaft'), 60);
+}
+
+console.log('\n== a button with no prompt behind it holds nothing back');
+{
+    const p: any = player('fletchhold', 3222, 3218, 0);
+    p.setLevel(9, 99);
+    H.clearInv(p);
+    H.give(p, 'knife', 1);
+    H.give(p, 'logs', 20);
+    H.useHeldOn(p, 'knife', 'logs');
+    for (let t = 0; t < 8 && p.modalChat < 0; t++) H.tick(1);
+    H.choose(p, 'skillmulti4:com_8'); // Make 5
+    check('nothing is waiting on the chatbox', H.awaitingCount(p), false);
+    check('  so the close goes out as it always did', p.holdingModalClose(), false);
+}
+
 console.log('\n== and Make All still stops when the logs do');
 {
     const p: any = player('fletchall', 3222, 3218, 0);
@@ -73,10 +127,9 @@ console.log('\n== and Make All still stops when the logs do');
     H.clearInv(p);
     H.give(p, 'knife', 1);
     H.give(p, 'logs', 6);
-    run(p, () => H.useHeldOn(p, 'knife', 'logs'), 'skillmulti4:com_6', 60); // obj1, Make X -> count dialog
-    // Make X opens a count dialog the sim cannot type into, so this only asserts it did not run
-    // away: nothing should have been cut without an answer.
-    check('nothing is cut until the number is given', H.invCount(p, 'logs'), 6);
+    run(p, () => H.useHeldOn(p, 'knife', 'logs'), 'skillmulti4:com_7', 60); // obj1, Make 10
+    check('six logs is all there was', H.invCount(p, 'logs'), 0);
+    check('  ninety shafts', H.invCount(p, 'arrow_shaft'), 90);
 }
 
 console.log('\n== stringing a bow asks too, and animates');
