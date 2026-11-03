@@ -3,7 +3,7 @@
 # Checked with:                npx tsx tools/sim/orphans.ts --check   (fails on anything NEW)
 #
 # A ratchet, not an approval. Every line is content somebody wrote that nothing can run.
-# 60 lines at the time of writing.
+# 35 lines at the time of writing.
 
 [if_button,player_kit_tailor_legs_woman:com_139] - thessalia.rs2
 [if_button,player_kit_tailor_legs_woman:com_140] - thessalia.rs2
@@ -11,31 +11,6 @@
 [inv_button3,tradingpost:grid] - tradingpost.rs2
 [inv_button3,tradingpost_side:inv] - tradingpost.rs2
 [inv_button4,tradingpost_side:inv] - tradingpost.rs2
-[opheld1,ahoy_book_of_haricanto] - quest_ahoy.rs2
-[opheld1,crystalshard_necklace_unstrung] - quest_hauntedmine.rs2
-[opheld1,deal_bucket_swill] - quest_deal.rs2
-[opheld1,deal_slugling] - quest_deal.rs2
-[opheld1,devious_glowingorb] - quest_devious.rs2
-[opheld1,fairy_queen_secateurs] - quest_fairy.rs2
-[opheld1,fairy_skull] - quest_fairy.rs2
-[opheld1,glowing_fungus] - quest_hauntedmine.rs2
-[opheld1,goldbowl_pure] - quest_legends.rs2
-[opheld1,goldbowl_water] - quest_legends.rs2
-[opheld1,goldbowlbless_pure] - quest_legends.rs2
-[opheld1,goldbowlbless_water] - quest_legends.rs2
-[opheld1,handsand_beerhand] - quest_handsand.rs2
-[opheld1,handsand_sandyhand] - quest_handsand.rs2
-[opheld1,handsand_scroll_magic] - quest_handsand.rs2
-[opheld1,ics_little_holy_symbol] - icslittle_town.rs2
-[opheld1,ics_little_linen] - icslittle_town.rs2
-[opheld1,ics_little_pileofsalt] - icslittle_town.rs2
-[opheld1,ics_little_sap_bucket] - icslittle_town.rs2
-[opheld1,ics_little_unholy_symbol] - icslittle_town.rs2
-[opheld1,mdaughter_white_pearl_fruit] - consume_generated.rs2
-[opheld1,mourning_colour_wheel] - quest_mourning2.rs2
-[opheld1,mourning_mirror] - quest_mourning2.rs2
-[opheld1,swan_army] - quest_swansong.rs2
-[opheld1,tbwt_karambwan_vessel_loaded_with_karambwanji] - quest_tbwt.rs2
 [opheld2,toxic_blowpipe_empty] - blowpipe.rs2
 [opheld3,accumulator_max_cape] - avas_device.rs2
 [opheld3,butterfly_net] - hunter_implings.rs2
