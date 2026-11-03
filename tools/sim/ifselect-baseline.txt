@@ -1,0 +1,33 @@
+# Radio buttons whose [if_button] handler disagrees with the highlight script in the cache,
+# as of the build this was written on.
+# Rewritten with: npx tsx tools/sim/ifselect.ts --baseline
+# Checked with:   npx tsx tools/sim/ifselect.ts --check   (fails on anything NEW)
+#
+# A ratchet, not an approval. A mismatch line is a button that stores the wrong thing; a
+# nohandler line is a button that is drawn and labelled and does nothing at all.
+# 24 lines at the time of writing.
+
+nohandler inter_133:com_30 - nothing claims [if_button], the cache highlights it on %com_mode = 2
+nohandler inter_133:com_31 - nothing claims [if_button], the cache highlights it on %com_mode = 1
+nohandler inter_133:com_32 - nothing claims [if_button], the cache highlights it on %com_mode = 0
+nohandler inter_178:com_5 - nothing claims [if_button], the cache highlights it on %com_mode = 0
+nohandler inter_178:com_6 - nothing claims [if_button], the cache highlights it on %com_mode = 2
+nohandler inter_178:com_7 - nothing claims [if_button], the cache highlights it on %com_mode = 1
+nohandler inter_199:com_100 "Dark" - nothing claims [if_button], the cache highlights it on %if1 = 4
+nohandler inter_199:com_101 "Terracotta" - nothing claims [if_button], the cache highlights it on %if1 = 5
+nohandler inter_199:com_102 "Grey" - nothing claims [if_button], the cache highlights it on %if1 = 6
+nohandler inter_199:com_97 "Brown" - nothing claims [if_button], the cache highlights it on %if1 = 1
+nohandler inter_199:com_98 "Khaki" - nothing claims [if_button], the cache highlights it on %if1 = 2
+nohandler inter_199:com_99 "Ashen" - nothing claims [if_button], the cache highlights it on %if1 = 3
+nohandler inter_252:com_22 "Select Schematic One" - nothing claims [if_button], the cache highlights it on %if1 = 1
+nohandler inter_252:com_23 "Select Schematic Two" - nothing claims [if_button], the cache highlights it on %if2 = 1
+nohandler inter_252:com_24 "Select Schematic Three" - nothing claims [if_button], the cache highlights it on %if3 = 1
+nohandler inter_265:com_10 "Set to 7" - nothing claims [if_button], the cache highlights it on %if1 = 7
+nohandler inter_265:com_11 "Set to 8" - nothing claims [if_button], the cache highlights it on %if1 = 8
+nohandler inter_265:com_12 "Set to 9" - nothing claims [if_button], the cache highlights it on %if1 = 9
+nohandler inter_265:com_4 "Set to 1" - nothing claims [if_button], the cache highlights it on %if1 = 1
+nohandler inter_265:com_5 "Set to 2" - nothing claims [if_button], the cache highlights it on %if1 = 2
+nohandler inter_265:com_6 "Set to 3" - nothing claims [if_button], the cache highlights it on %if1 = 3
+nohandler inter_265:com_7 "Set to 4" - nothing claims [if_button], the cache highlights it on %if1 = 4
+nohandler inter_265:com_8 "Set to 5" - nothing claims [if_button], the cache highlights it on %if1 = 5
+nohandler inter_265:com_9 "Set to 6" - nothing claims [if_button], the cache highlights it on %if1 = 6

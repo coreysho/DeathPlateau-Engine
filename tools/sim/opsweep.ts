@@ -31,6 +31,11 @@
 //      item or prints a debug line. That is how eighty-six of these hid from the first opheld audit
 //      (see opheld2.ts). So the lookup here is getByTriggerSpecific, type then category, and a
 //      global-only match is reported in its own section rather than counted as handled.
+//
+// WHAT IS ACTUALLY LEFT IN IT is triaged in tools/sim/opsweep-backlog.md - which buckets are live
+// bugs, which are cache slots Jagex never used, which are whole systems nobody has started, and
+// the worked precedent to follow for the mining ones. The number this prints is not a to-do list
+// on its own: read that file before treating a line as urgent.
 import fs from 'fs';
 import path from 'path';
 
@@ -224,6 +229,23 @@ if (!AREA) {
             const label = type.iop[op];
             // Drop is the engine's own, like Attack above.
             if (!isVisibleOp(label) || /^drop$/i.test(label)) {
+                continue;
+            }
+            // AND SO IS WEARING SOMETHING, which is the other half of the same point and took a
+            // while to admit. Trap 3 in this file's header is about the global [opheld2,_] hiding
+            // dead options behind the equip code, and the cure over-corrected: it reported all
+            // 1,338 Wear, Wield, Equip and Hold labels in the game as "answered only by the global
+            // fallback", because that is literally true and completely uninteresting. equip.rs2's
+            // [opheld2,_] ~equip(last_slot) IS the handler for wearing a helmet - there is no
+            // per-item script to write and never was. A third of this report was items that work.
+            //
+            // The labels below are the ones the global equip code is FOR. Anything else on iop2 -
+            // "Extinguish", "Play-With" - still gets reported, because the equip code will try to
+            // wear it, which is trap 3's actual bug. Note what is deliberately NOT on this list:
+            // iop5 labels other than Drop. "Destroy", "Dismantle", "Release" and "Move" all fall
+            // through to [opheld5,_] ~dropslot and put the item on the floor instead of doing what
+            // the label says, and those 286 stay in the report where they belong.
+            if (op === 1 && /^(wear|wield|equip|hold)$/i.test(label)) {
                 continue;
             }
             const line = `obj  ${type.debugname} iop${op + 1}="${label}"`;

@@ -246,9 +246,11 @@ jobs:
         if-no-files-found: ignore
         retention-days: 7
 
-  # ---------------------------------------------------------------------------- the two ratchets
+  # --------------------------------------------------------------------------- the three ratchets
   # tools/sim/opsweep.ts and tools/sim/orphans.ts cross-reference the cache against the script
-  # table in both directions - an option with no script, and a script no option can fire. Each is
+  # table in both directions - an option with no script, and a script no option can fire - and
+  # tools/sim/ifselect.ts asks the question neither of those can, which is whether a radio button's
+  # handler stores the value its own highlight script says it should. Each is
   # about forty seconds for the whole game and each has a committed baseline, so they are ratchets:
   # a build that adds a dead option or an unreachable trigger fails here instead of waiting for a
   # playtest report.
@@ -268,7 +270,7 @@ jobs:
   # which is the right friction for a ratchet and the wrong friction for somebody editing a .loc.
   # Nightly in this repository is the version that costs nobody anything.
   ratchets:
-    name: no new dead options or unreachable triggers
+    name: no new dead options, unreachable triggers or mis-wired buttons
     # Skipped on a notifier test, the same way the sims job is: that dispatch exists to prove the
     # Discord secret, and packing a cache to prove it is two minutes of nothing. It also keeps
     # needs.ratchets.result at 'skipped' there rather than 'success', so the notify condition reads
@@ -333,6 +335,17 @@ jobs:
       env:
         BUILD_SRC_DIR: ../content
       run: npx tsx tools/sim/orphans.ts --check
+
+    # The third cross-reference, and the one that catches wiring that LOOKS right: a radio button
+    # whose [if_button] handler stores a value the cache does not highlight on. Thessalia's
+    # women's trousers window passed both tools above - every handler existed and every option it
+    # answered existed - and still handed out the wrong trousers for six of its seven styles.
+    - name: Radio buttons whose script disagrees with the cache
+      if: always()
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/ifselect.ts --check
 
   # ------------------------------------------------------------------ and say so in Discord
   # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token

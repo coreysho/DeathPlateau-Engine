@@ -1,4 +1,5 @@
 import Component from '#/cache/config/Component.js';
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import Player from '#/engine/entity/Player.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
@@ -25,8 +26,16 @@ export default class InvButtonHandler extends ClientGameMessageHandler<InvButton
             return false;
         }
 
-        if (!com.iop || com.iop[message.op - 1] === null) {
+        if (!com.iop || isHiddenOp(com.iop[message.op - 1])) {
             // bad client: not a valid interface option
+            //
+            // `=== null` USED TO BE WRONG HERE, and it let every forged inv option through. Unlike
+            // ObjType, which writes iop only for the codes the config declares and leaves the rest
+            // null, Component's decoder fills all five slots unconditionally with gjstr() - so an
+            // option the interface never declared arrives as "" and never as null, and this guard
+            // rejected nothing at all. A client could send op5 on a component offering one option
+            // and the trigger would run. isHiddenOp is what OpHeldHandler already uses and treats
+            // null, "" and the literal "hidden" alike.
             return false;
         }
 
