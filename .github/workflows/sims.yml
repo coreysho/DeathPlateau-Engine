@@ -23,6 +23,22 @@ on:
     # 03:00 UTC, off the hour everything else in this project uses.
     - cron: '0 3 * * *'
   workflow_dispatch:
+    inputs:
+      content_ref:
+        # WHY THIS IS AN INPUT. Both jobs below check the content out at a fixed 377-wip, which is
+        # right for the nightly and wrong for a branch: an engine change and the content change it
+        # goes with live on two branches in two repositories, and pinning one of them means the run
+        # measures a pair that will never ship together.
+        #
+        # It cost a cancelled run to find out. A branch here fixed Desert Treasure's obelisks in the
+        # CONTENT repository and the sims were still run against 377-wip, so audit3 would fail on
+        # exactly the bug that was fixed, and the ratchets - whose baselines had been rebuilt from
+        # the new content - would report seventy-eight orphans that no longer exist.
+        #
+        # Defaulted to 377-wip, so the scheduled run is unchanged.
+        description: 'Content branch to run against'
+        type: string
+        default: '377-wip'
 
 jobs:
   sims:
@@ -42,7 +58,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: coreysho/DeathPlateau-Content
-        ref: 377-wip
+        # `|| '377-wip'` and not the input alone: a scheduled run carries no inputs, so
+        # github.event.inputs.content_ref is empty there rather than defaulted.
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
         path: content
 
     - uses: actions/setup-node@v6
@@ -54,6 +72,12 @@ jobs:
     - name: Install
       working-directory: engine
       run: npm ci
+
+    # IN THE LOG, because a red verdict is unreadable without it: the same engine commit passes or
+    # fails depending on which content it was built against.
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
 
     # Every shard packs its own cache. It is 45 seconds against the 25 minutes of sims behind
     # it, and sharing one through an artifact would make every shard wait on a job that packs.
@@ -197,7 +221,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: coreysho/DeathPlateau-Content
-        ref: 377-wip
+        # `|| '377-wip'` and not the input alone: a scheduled run carries no inputs, so
+        # github.event.inputs.content_ref is empty there rather than defaulted.
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
         path: content
 
     - uses: actions/setup-node@v6
@@ -209,6 +235,12 @@ jobs:
     - name: Install
       working-directory: engine
       run: npm ci
+
+    # IN THE LOG, because a red verdict is unreadable without it: the same engine commit passes or
+    # fails depending on which content it was built against.
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
 
     - name: Pack the content
       working-directory: engine
