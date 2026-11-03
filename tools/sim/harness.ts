@@ -8,6 +8,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
+import { locCanOp } from '#/cache/config/OpVisibility.js';
 import ParamType from '#/cache/config/ParamType.js';
 import LocType from '#/cache/config/LocType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
@@ -544,6 +545,30 @@ export function opLoc(p: Player, x: number, z: number, locName: string, op: numb
     if (id === -1) throw new Error('no such loc: ' + locName);
     const loc = World.getLoc(x, z, p.level, id);
     if (!loc) throw new Error(`no ${locName} at ${x},${z}`);
+    // custom (2026-11-03) - THE CHECK OpLocHandler MAKES, which this did not.
+    //
+    // This function reaches setInteraction directly rather than going through the handler, and the
+    // one thing the handler does that matters here is refuse an op the loc does not have:
+    //
+    //     if (!locType.op || isHiddenOp(locType.op[message.op - 1])) -> "bad client", refused
+    //
+    // Without it a sim can click an option no client would ever draw and no packet would ever be
+    // accepted, and the content behind it runs - so the sim passes and the game is unplayable. That
+    // is the exact failure this directory's quest runner was built to catch ("a player who blinks
+    // into Zanaris never finds out that the gate has no handler"), reintroduced by its own click.
+    //
+    // Found from the other end, by tools/sim/orphans.ts: Desert Treasure's four obelisks declare no
+    // ops at all, on the shell or on either multiloc variant, while [oploc1,desert_treasure_oblix1]
+    // places the diamond that finishes the quest. quest_dt_run.ts reported 114 of 114 checks passing.
+    //
+    // A `hidden` op is NOT refused, here or by the handler: p_oploc re-enters those from script and
+    // the content uses that deliberately. Only a slot the cache leaves empty is refused.
+    // locCanOp, not LocType.get(id).op: a multiloc shell's ops come from whichever variant the
+    // varbit is showing, and the client sends that variant's op. Checking the shell alone called 60
+    // working sim steps broken - see the note in OpVisibility.ts.
+    if (!locCanOp(id, op)) {
+        throw new Error(`${locName} has no op${op} on itself or any multiloc variant (${JSON.stringify(LocType.get(id).op)}), so no client could send this click`);
+    }
     p.clearPendingAction();
     // the route: a real client sends one with the click, and a player with none goes nowhere
     p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach));

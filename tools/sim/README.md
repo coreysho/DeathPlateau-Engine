@@ -228,6 +228,58 @@ as well as `op`, multiloc/multinpc shells answer for their children, and a globa
 not a handler - this build has one for `[opheld2]`, which is how eighty-six dead options hid from
 the first opheld audit (see `opheld2.ts`).
 
+`npx tsx tools/sim/orphans.ts` is the exact inverse: **every trigger no click can fire**. opsweep
+asks "the cache offers this option - does a script answer it?" and finds content nobody wrote; this
+asks "a script answers this option - does the cache offer it?" and finds content somebody *did*
+write that nothing can reach. 84 on this build, and `--baseline` / `--check` ratchet it the same way.
+
+It matters because "never run" in a coverage report lumps together three different things: content
+that works and nobody walked to, content that needs a quest state the run did not have, and content
+that *cannot* run because the loc it is written against has no such option. Only the third is
+decidable without running anything, and only the third is a bug rather than a to-do.
+
+It cannot tell a lost feature from deliberate dead code, and says so, grouped by file so a cluster
+is one decision: `[opheld1,ahoy_book_of_haricanto]` reads a quest book that declares no `iop1`, so
+the book cannot be read - a bug. The 24 `[opheld2,barrows_*_broken]` are a refusal handler for
+re-equipping broken Barrows, which is already impossible because the obj offers no Wear - correct
+behaviour, redundant script.
+
+**Two things got this wrong before it got it right, and both are now in one place**
+(`src/cache/config/OpVisibility.ts`), because the same mistake was made twice in different files:
+
+* `hidden` is **declared**, not missing. A tree's op3 is the literal string `"hidden"`, and
+  `p_oploc(n)` re-enters any non-null slot from script - `farming_triggers.rs2` says "only
+  `p_oploc(3)` fires it" in as many words, and this build calls `p_oploc` 65 times. Reporting those
+  as unreachable condemned core woodcutting and mining. So: opsweep asks "would a **client** draw
+  this?" (`hidden` = no, needs no script) and orphans asks "does the cache **declare** the slot?"
+  (`hidden` = yes, a script is fine).
+* a multiloc resolves **downward only**. `OpLocHandler` takes the placed type, resolves
+  `multiloc[varbit]`, and checks *that* type's ops. Checking the shell alone called 60 working sim
+  steps broken; walking up to shells and sideways to siblings cleared Desert Treasure's obelisks,
+  which a real `OpLoc` packet is refused for. `locCanOp` now mirrors the handler line for line.
+
+### The quest runners were clicking options that do not exist
+
+`harness.opLoc` reached `setInteraction` directly instead of going through `OpLocHandler`, so it
+skipped the one check that matters here - *is this an op the loc actually has*. A sim could therefore
+click an option no client would draw and no packet would be accepted, the content behind it ran, and
+the sim passed. That is the exact failure `questrun.ts` was built to catch ("a player who blinks into
+Zanaris never finds out that the gate has no handler"), reintroduced by its own click primitive, and
+about 130 quest runners rest on it.
+
+It now refuses, with the reason: `sword_mirror1 has no op1 on itself or any multiloc variant (null),
+so no client could send this click`. `questrun` prints that instead of its old guess ("no <loc>
+there"), which was wrong for every cause but one.
+
+**This makes some quest runners fail, and that is the point.** `quest_dt_run.ts` reported 114 of 114
+checks passing on a quest whose diamond-placement step no client can perform: `desert_treasure_oblix1`
+and its three siblings declare no ops on the shell or on either multiloc variant, and a real `OpLoc`
+packet at op1 on one is **refused by the server's own handler**. A static scan of the sims' literal
+`loc:` steps finds ten more such clicks across `quest_garden_run.ts` (eight flower patches),
+`quest_itexam_run.ts` (`cupboardopen`, which declares op2="Search" and op3="Shut" and is clicked at
+op1 - a sim bug, not a content one) and `quest_dt_run.ts`; steps built from a variable rather than a
+literal are not in that count, so it is a lower bound and the runtime check is what catches the rest.
+
 `npx tsx tools/sim/fuzz.ts` also prints **OPTIONS NOTHING ANSWERED** now, from
 `src/engine/script/DeadOps.ts`. `Player.defaultOp` has always printed `No trigger for
 [oploc1,some_gate]` on a dev world and then "Nothing interesting happens." - and a fuzzing bot kept

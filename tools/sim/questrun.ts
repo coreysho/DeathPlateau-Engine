@@ -1829,8 +1829,14 @@ export function play(m: Manifest, p: Player): Result[] {
                 locl = lt.length;
                 standOnIfWalkable(p, s.loc, s.at[0], s.at[1]);
                 sent = H.opLoc(p, s.at[0], s.at[1], s.loc, s.op ?? 1);
-            } catch (_e) {
-                hard(what, false, 'no ' + s.loc + ' there on level ' + p.level + ' (player at ' + p.x + ',' + p.z + ')');
+            } catch (e) {
+                // The real reason, not a guess at it. This used to say "no <loc> there" whatever
+                // went wrong, which is only one of the things that can: since harness.opLoc started
+                // refusing an op the cache does not declare - the check OpLocHandler makes and this
+                // directory's click did not - the useful message is that one, and it was being
+                // thrown away and replaced with a wrong one.
+                const why = String((e as { message?: unknown })?.message ?? e);
+                hard(what, false, why.includes('has no op') ? why : 'no ' + s.loc + ' there on level ' + p.level + ' (player at ' + p.x + ',' + p.z + ')');
                 continue;
             }
             if (!sent) {
