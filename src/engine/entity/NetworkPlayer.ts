@@ -197,7 +197,13 @@ export class NetworkPlayer extends Player {
         // The close is redundant in that case anyway - every IF_OPENCHAT / IF_OPENMAIN /
         // IF_OPENSIDE handler in the client already unloads the other layers itself, and unloads
         // its own layer only when the id actually changes.
-        if (this.modalMain !== this.lastModalMain || this.modalChat !== this.lastModalChat || this.modalSide !== this.lastModalSide || this.refreshModalClose) {
+        //
+        // AND IT MUST NOT LAND ON AN OPEN AMOUNT PROMPT EITHER. The client's IF_CLOSE handler also
+        // clears chatbackInputOpen, and P_COUNTDIALOG was written mid-script while this runs at the
+        // end of the tick - so `if_close; p_countdialog;` cancelled its own prompt. Holding the
+        // close costs nothing: refreshModalClose and lastModal* are left untouched, so the first
+        // tick on which no prompt is waiting sends it. See Player.awaitingChatboxInput.
+        if (!this.holdingModalClose() && (this.modalMain !== this.lastModalMain || this.modalChat !== this.lastModalChat || this.modalSide !== this.lastModalSide || this.refreshModalClose)) {
             // (modalState is re-checked because closeModal() can run after an open in the same
             // tick, in which case the block below writes no IF_OPEN* and the close is still needed)
             const reopening: boolean = this.refreshModal && this.modalState !== ModalState.NONE;

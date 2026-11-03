@@ -553,6 +553,50 @@ export function opLoc(p: Player, x: number, z: number, locName: string, op: numb
 }
 
 /**
+ * What using a carried item ON a loc does: OpLocUHandler, minus the client validation. This is the
+ * only way to test cooking, which is all [oplocu,_cooking_fire] / [oplocu,_cooking_oven] - there is
+ * no op on a fire to click, you put the food on it.
+ */
+export function useHeldOnLoc(p: Player, useName: string, x: number, z: number, locName: string): boolean {
+    if (p.delayed) return false;
+    const useObj = ObjType.getId(useName);
+    const locId = LocType.getId(locName);
+    if (useObj === -1) throw new Error('no such obj: ' + useName);
+    if (locId === -1) throw new Error('no such loc: ' + locName);
+    const loc = World.getLoc(x, z, p.level, locId);
+    if (!loc) throw new Error(`no ${locName} at ${x},${z}`);
+    const inv = p.getInventory(InvType.INV)!;
+    let slot = -1;
+    for (let i = 0; i < inv.capacity; i++)
+        if (inv.get(i)?.id === useObj) {
+            slot = i;
+            break;
+        }
+    if (slot === -1) throw new Error('not carrying ' + useName);
+    p.clearPendingAction();
+    p.lastUseItem = useObj;
+    p.lastUseSlot = slot;
+    // the route, as opLoc does it: a real client sends one with the click
+    p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(locId).forceapproach));
+    p.setInteraction(Interaction.ENGINE, loc, ServerTriggerType.APLOCU);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/** Where a loc of this type is placed, nearest first to (x, z) on that level. */
+export function locsNear(locName: string, x: number, z: number, level = 0): { x: number; z: number; level: number }[] {
+    const id = LocType.getId(locName);
+    if (id === -1) throw new Error('no such loc: ' + locName);
+    const out: { x: number; z: number; level: number }[] = [];
+    for (const zone of (World.gameMap as unknown as { zonemap: { zones: Map<number, { getAllLocsUnsafe(): { type: number; x: number; z: number; level: number }[] }> } }).zonemap.zones.values()) {
+        for (const loc of zone.getAllLocsUnsafe()) {
+            if (loc.type === id && loc.level === level) out.push({ x: loc.x, z: loc.z, level: loc.level });
+        }
+    }
+    return out.sort((a, b) => Math.max(Math.abs(a.x - x), Math.abs(a.z - z)) - Math.max(Math.abs(b.x - x), Math.abs(b.z - z)));
+}
+
+/**
  * What clicking an op on a ground obj does: OpObjHandler, minus the visibility checks.
  *
  * NOT a1lib's take(), which lifts the obj straight into the inventory and never runs a script.
@@ -609,6 +653,24 @@ export function choose(p: Player, comName: string) {
     if (p.resumeButtons.indexOf(comId) === -1 || !p.activeScript || p.activeScript.execution !== ScriptState.PAUSEBUTTON) return false;
     p.executeScript(p.activeScript, true, true);
     return true;
+}
+
+/**
+ * Type a number into the chatbox amount prompt: ResumePCountDialogHandler, minus the network. A
+ * script parked on p_countdialog is the only thing this can answer, and saying so is the point -
+ * a Make X that never reached the prompt returns false here rather than quietly being counted as
+ * answered.
+ */
+export function typeCount(p: Player, amount: number) {
+    if (!p.activeScript || p.activeScript.execution !== ScriptState.COUNTDIALOG) return false;
+    p.activeScript.lastInt = amount;
+    p.executeScript(p.activeScript, true, true);
+    return true;
+}
+
+/** Is the player's script parked on the amount prompt right now? */
+export function awaitingCount(p: Player) {
+    return !!p.activeScript && p.activeScript.execution === ScriptState.COUNTDIALOG;
 }
 
 /** "Cast on" an inventory item: OpHeldTHandler, minus the client validation. */
