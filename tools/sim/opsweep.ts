@@ -50,6 +50,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
+import Environment from '#/util/Environment.js';
 
 const argv = process.argv.slice(2);
 const WRITE_BASELINE = argv.includes('--baseline');
@@ -287,6 +288,62 @@ if (!AREA) {
     }
 }
 
+// ------------------------------------------------------- can a player ever hold this obj at all?
+//
+// opsweep tells you whether a loc or npc is PLACED on the map, and that is most of what makes its
+// loc and npc sections readable: 1,005 options a player can walk up to are a different problem
+// from 1,729 on scenery the map never puts anywhere. There was no equivalent test for an obj, and
+// it is why the obj section read far worse than it is - 142 of the 144 dead "Read" entries are
+// clue scroll variants, and not one of them is named in any script, drop table or reward table, so
+// nobody can hold one to read it.
+//
+// THE TEST ONLY WORKS IN ONE DIRECTION and the report says so. If an obj's name appears nowhere in
+// the content sources then nothing can hand it out, which is conclusive: no script adds it, no
+// table lists it, no shop stocks it, nothing degrades or uncerts into it. Being named proves
+// nothing in return - a name in a comment counts - so the sections are "nobody can hold one" and
+// "somebody might", not "unobtainable" and "obtainable".
+//
+// AN OBJ CONFIG DECLARING ITS OWN NAME IS NOT A WAY TO GET IT, so [name] header lines in .obj
+// files are skipped. The key=value lines are kept, because param=fixed and certlink are how a
+// degraded or certed obj is reached from one that is.
+function namedInContent(): Set<string> {
+    const seen = new Set<string>();
+    const header = /^\s*\[[a-zA-Z0-9_]+\]\s*$/;
+    const walk = (dir: string): void => {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory()) {
+                walk(full);
+                continue;
+            }
+            let text: string;
+            try {
+                text = fs.readFileSync(full, 'ascii');
+            } catch {
+                continue;
+            }
+            const declaresObjs = e.name.endsWith('.obj');
+            for (const line of text.split(/\r?\n/)) {
+                if (declaresObjs && header.test(line)) {
+                    continue;
+                }
+                for (const token of line.match(/[A-Za-z0-9_]+/g) ?? []) {
+                    seen.add(token);
+                }
+            }
+        }
+    };
+    walk(path.join(Environment.BUILD_SRC_DIR, 'scripts'));
+    return seen;
+}
+
+const NAMED = namedInContent();
+/** The obj name a report line is about, or null when the line is not about an obj. */
+function objOf(line: string): string | null {
+    const m = /^obj\s+([a-zA-Z0-9_]+) /.exec(line);
+    return m ? m[1] : null;
+}
+
 // --------------------------------------------------------------------------------------- the report
 
 const byInstances = (a: Row, b: Row) => b.instances - a.instances || a.line.localeCompare(b.line);
@@ -299,6 +356,14 @@ const unplaced = dead.filter(r => r.instances === 0);
 console.log(`OPTIONS NO SCRIPT ANSWERS${AREA ? ` in ${AREA.join(',')}` : ''}`);
 console.log(`  ${dead.length} dead options (${placed.length} on something the map actually places)`);
 console.log(`  ${swallowed.length} more reach only the global fallback script, which is a different bug and usually a quieter one`);
+console.log(
+    `  of the dead, ${
+        dead.filter(r => {
+            const o = objOf(r.line);
+            return o !== null && !NAMED.has(o);
+        }).length
+    } are on an obj nothing in content can hand to a player`
+);
 console.log('');
 
 console.log(`-- dead, and on the map (${placed.length}) - these are what a player clicks`);
@@ -309,12 +374,27 @@ if (placed.length > 80) {
     console.log(`   ... and ${placed.length - 80} more`);
 }
 
-console.log(`\n-- dead, not placed anywhere on the map (${unplaced.length}) - real, but nobody can reach them today`);
-for (const row of unplaced.slice(0, 25)) {
+const unheld = unplaced.filter(r => {
+    const obj = objOf(r.line);
+    return obj !== null && !NAMED.has(obj);
+});
+const rest = unplaced.filter(r => !unheld.includes(r));
+
+console.log(`\n-- dead, not placed anywhere on the map (${rest.length}) - real, but nobody can reach them today`);
+for (const row of rest.slice(0, 25)) {
     console.log(`   ${row.line}`);
 }
-if (unplaced.length > 25) {
-    console.log(`   ... and ${unplaced.length - 25} more`);
+if (rest.length > 25) {
+    console.log(`   ... and ${rest.length - 25} more`);
+}
+
+console.log(`\n-- dead on an obj whose name appears NOWHERE in content (${unheld.length}) - nothing can hand it`);
+console.log('   out, so nobody can hold one to click it. Cache slots, not missing content.');
+for (const row of unheld.slice(0, 25)) {
+    console.log(`   ${row.line}`);
+}
+if (unheld.length > 25) {
+    console.log(`   ... and ${unheld.length - 25} more`);
 }
 
 console.log(`\n-- answered only by the global fallback (${swallowed.length}) - see trap 3 in this file's header`);

@@ -71,7 +71,22 @@ the whole Lunar Isle `loc474_169xx/170xx` run. mining.rs2 keeps a player swingin
 `p_oploc(3)`, and `P_OPLOC` returns early on a null slot, so such a rock mines once and stops even
 once its category and ore are right. Every working rock in the build carries `op3=hidden`.
 
-### 391 dead objs, of which 112 are not items at all
+### 391 dead objs, of which 332 are on an item nobody can hold
+The report now says this itself: a section headed "dead on an obj whose name appears NOWHERE in
+content". If an obj's name is absent from every file under `content/scripts`, nothing can hand it
+out - no script adds it, no drop or reward table lists it, no shop stocks it, nothing degrades or
+uncerts into it - so there is no way to be holding one when you click. The test only works in that
+direction: being named proves nothing, since a mention in a comment counts, which is why the
+heading is "nobody can hold one" and not "unobtainable".
+
+332 objs, 338 option lines, and the families are all cache slots or unfinished tiers: 106
+`whoopsie_*` anti-macro stubs, 133 `trail_clue_*` variants, 13 easter eggs, and the Achievement
+Diary cloaks and amulets at tiers 1-3, where only tier 4 was ever wired (`diary_teleports.rs2`
+names `ardougne_cloak_4` and nothing else, and the vote shop stocks only that one).
+
+That leaves about 53 obj lines worth a human read, which is a very different list from 391.
+
+### Of the dead objs, 112 are not items at all
 `9mm_revolver`, `brass_monkey`, `elven_sheep`, `rotten_net`, the `whoopsie_obj30xx` run: every one
 is the same stub - `model=obj_priest_robe`, `cost=1`, the same recolour and 2d values, no
 `wearpos`, no worn models. They are empty slots in the 377 cache with a joke name, and their
@@ -125,5 +140,5 @@ doors) is the Rogues' Den course, which is one coherent piece of work rather tha
    everything else the tool has already settled.
 2. `mm_bush_kharazi_jungle_tree1`/`2` - the same story for woodcutting, 123 placed instances of
    unchoppable jungle tree. `[oploc1,_tree]` in woodcut.rs2 dispatches on category the same way.
-3. Teach opsweep whether an obj is obtainable, so the 391-line obj section stops hiding its two
-   real entries behind 142 clue scrolls nobody can hold.
+3. Done: opsweep now separates the obj lines nobody can hold from the rest, which took the obj
+   section from 391 lines to about 53 worth reading.
