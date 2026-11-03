@@ -625,6 +625,13 @@ if (rfd) {
     check('the three wise monkeys give the recipe: stage 2', V(p, 'hundred_ilm_quest'), 2);
     p.teleport(2697, 2784, 0);
     H.tick(2);
+    // A GORILLA AND A ROPE, which this used to do with neither. hundred_monkey.rs2 added both after
+    // a play report - "it auto used rope didnt have in inv, and didnt need to be a gorilla" - so the
+    // haul now asks ~mm_greegree_form for the worn greegree's own param and wants a rope in the bag.
+    // Two clicks with empty hands get the refusal message and no banana, which is what put this sim
+    // on known-failing.txt.
+    H.equip(p, { rhand: 'mm_monkey_greegree_for_normal_gorilla' });
+    H.give(p, 'rope');
     op(p, 2696, 2785, 'loc_12610', 1);
     op(p, 2696, 2785, 'loc_12610', 1);
     check('the crown hauled down: a red banana', H.invCount(p, 'hundred_ilm_red_banana'), 1);
