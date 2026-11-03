@@ -141,7 +141,19 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 #
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
 chatchars
+# quest_ball_run: step 43 walks the sneak-past-Nora route and lands at 2907,3458 instead of
+#   2908,3471 - thirteen tiles short. Reads as the route rather than the content; nothing refused.
 quest_ball_run
+# quest_hundred_run: 248 of 249 now (was 230 of 232 - the red banana chain is fixed). The one left
+#   is step 302, the Gelatinnoth Mother, and the content is RIGHT: all.npc gives each of her six
+#   forms defence 5 against its own style and 1000 against everything else, which is the original
+#   saying "hit it with the matching thing", and she cycles form every 30 ticks on an ai_queue6
+#   ring. Four elemental forms collapse to magic because the engine's defence params only separate
+#   melee, ranged and magic - the note above [hundred_minion1] records that simplification.
+#   So killing her needs the attack style switched as she turns, and questrun's `fight` step picks
+#   one style and holds it: against 1000 defence it does nothing in five forms out of six. Fixing
+#   this means teaching `fight` to read the target's form and switch, which is a real piece of work
+#   and not a content change.
 quest_hundred_run
 
 # ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
