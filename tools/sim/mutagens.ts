@@ -133,7 +133,13 @@ console.log('\nRESTORE PUTS THE HELM BACK, AND THE MUTAGEN DOES NOT COME WITH IT
     H.clearInv(t);
     H.give(t, 'serpentine_helm', 1);
     setCharges(t, 100);
-    A.held(t, 'serpentine_helm', 4);
+    // opheldUnclickable, because iop4 is exactly what the plain helm does NOT have: it declares
+    // [null,"Wear","Check",null,"Uncharge"], while tanzanite_helm and magma_helm declare
+    // iop4=Restore and share this category trigger with it. No client can send this click, and that
+    // is the point - the shared handler has to leave an un-mutated helm alone if it is ever reached
+    // with one. H.opheld refuses an impossible op now, so the exception is spelled out here.
+    H.opheldUnclickable(t, 'serpentine_helm', 4);
+    A.drive(t);
     check('  the plain serpentine helm has nothing to restore and is left alone', [H.invCount(t, 'serpentine_helm'), charges(t)], [1, 100]);
     check(
         '  and only the mutated four carry a way back',

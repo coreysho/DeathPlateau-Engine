@@ -396,6 +396,47 @@ export function attackNpc(p: Player, target: Npc) {
     return true;
 }
 
+/**
+ * opheld WITHOUT the "could a client send this?" check, for a test whose whole point is that it
+ * could not.
+ *
+ * There is exactly one of these, and it is a fair use rather than a loophole. tools/sim/mutagens.ts
+ * sends iop4 to a plain serpentine_helm, which declares [null,"Wear","Check",null,"Uncharge"] and
+ * so has no iop4 at all - while tanzanite_helm and magma_helm declare iop4=Restore and share a
+ * CATEGORY trigger with it. The test is that the shared handler leaves the un-mutated helm untouched
+ * if it is ever reached with one, which is a defensive path by definition: no client can get there.
+ *
+ * Making opheld strict broke that test, and the two wrong ways out were obvious and worth naming.
+ * Returning false instead of throwing would have left the sim's own assertions passing against a
+ * click that never happened - a test that cannot fail. Relaxing opheld for everyone would reopen
+ * the door this closed, which is sims clicking options no player has.
+ *
+ * So: a separate function with an ugly name, so the exception is legible where it is used.
+ */
+export function opheldUnclickable(p: Player, objName: string, op: number) {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const inv = p.getInventory(InvType.INV)!;
+    let slot = -1;
+    for (let i = 0; i < inv.capacity; i++) {
+        if (inv.get(i)?.id === id) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot === -1) throw new Error('not carrying ' + objName);
+    const obj = ObjType.get(id);
+    p.lastItem = id;
+    p.lastSlot = slot;
+    p.closeModal();
+    p.moveClickRequest = false;
+    const script = ScriptProvider.getByTrigger(ServerTriggerType.OPHELD1 + (op - 1), obj.id, obj.category);
+    if (!script) throw new Error('no opheld' + op + ' trigger for ' + objName);
+    p.executeScript(ScriptRunner.init(script, p), true);
+    return true;
+}
+
 /** What the client's inventory right-click does: OpHeldHandler, minus the client validation. */
 export function opheld(p: Player, objName: string, op: number) {
     if (p.delayed) return false; // OpHeldHandler: "normal: cannot interact while delayed"
@@ -404,9 +445,12 @@ export function opheld(p: Player, objName: string, op: number) {
     // The fourth of these, and the last: opLoc, opObj and opNpc all reached setInteraction without
     // asking whether the option exists, and so did this. OpHeldHandler refuses an iop the obj does
     // not declare, so a sim that clicks one is testing something no client can send.
+    //
+    // opheldUnclickable is the way past this, for the one case where clicking an impossible op is
+    // the point of the test rather than a mistake. See its own note.
     const iops = ObjType.get(id).iop;
     if (isHiddenOp(iops?.[op - 1])) {
-        throw new Error(`${objName} has no iop${op} (${JSON.stringify(iops)}), so no client could send this click`);
+        throw new Error(`${objName} has no iop${op} (${JSON.stringify(iops)}), so no client could send this click. If that is deliberate, H.opheldUnclickable says so at the call site.`);
     }
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
