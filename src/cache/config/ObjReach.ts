@@ -74,3 +74,64 @@ export function somebodyCanHold(debugname: string | null | undefined): boolean {
     }
     return namesAppearingInContent().has(debugname);
 }
+
+/**
+ * THE SAME QUESTION FOR AN NPC THE MAP NEVER PLACES, which is a different question from the obj one
+ * and needed its own walk.
+ *
+ * opsweep files a dead option on an unplaced npc under "nobody can reach them today", and for
+ * scenery that is right. For an npc it can be badly wrong: an npc is also reachable by `npc_add`,
+ * and the whole point of some of them is that no map square places one. Twenty-one woodcutting Ents
+ * sat in that bucket looking handled while the woodcutting anti-macro event spawned them at every
+ * ordinary tree in the game and the player could not chop a single one.
+ *
+ * So this asks the narrower question: does any .rs2 name it? Scripts are what spawn npcs, and
+ * unlike .obj and .npc configs a script never declares an npc merely by existing. Same one-way
+ * rule as above: absence is conclusive, presence proves nothing.
+ */
+let inScripts: Set<string> | null = null;
+
+export function namesAppearingInScripts(): Set<string> {
+    if (inScripts) {
+        return inScripts;
+    }
+    const seen = new Set<string>();
+    const walk = (dir: string): void => {
+        let entries: fs.Dirent[];
+        try {
+            entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch {
+            return;
+        }
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory()) {
+                walk(full);
+                continue;
+            }
+            if (!e.name.endsWith('.rs2')) {
+                continue;
+            }
+            let text: string;
+            try {
+                text = fs.readFileSync(full, 'ascii');
+            } catch {
+                continue;
+            }
+            for (const token of text.match(/[A-Za-z0-9_]+/g) ?? []) {
+                seen.add(token);
+            }
+        }
+    };
+    walk(path.join(Environment.BUILD_SRC_DIR, 'scripts'));
+    inScripts = seen;
+    return inScripts;
+}
+
+/** False only when no script names it, which is the conclusive direction. */
+export function scriptCanSpawn(debugname: string | null | undefined): boolean {
+    if (!debugname) {
+        return false;
+    }
+    return namesAppearingInScripts().has(debugname);
+}

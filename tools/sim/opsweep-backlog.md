@@ -1,6 +1,6 @@
 # What is left in the opsweep backlog, and which parts of it are bugs
 
-`tools/sim/opsweep.ts` prints 2,733 dead options and 138 that reach only a global fallback. The
+`tools/sim/opsweep.ts` prints 2,710 dead options and 138 that reach only a global fallback. The
 number on its own is not a to-do list: it mixes live bugs a player can hit today with cache slots
 Jagex never used and systems nobody has started. This file is the triage, so the next person picks
 a bucket instead of picking a line.
@@ -9,6 +9,18 @@ Counts are from the 3 November 2026 baseline. Rerun `npx tsx tools/sim/opsweep.t
 The report was 4,370 lines before two things came out of it that were not backlog at all: 1,338
 `Wear`/`Wield` labels that the global equip code has always handled correctly, and the Destroy bug
 below, now fixed.
+
+## Read this second: "not placed on the map" means nothing for an npc
+ 
+The loc and npc sections split on whether the map places one, and for a loc that is the whole story.
+For an **npc it can be badly wrong**, because `npc_add` reaches one too and some npcs exist only to
+be spawned. Twenty-one woodcutting Ents sat in the "nobody can reach them today" bucket while the
+anti-macro event spawned them at every ordinary tree, oak, willow, yew, maple and magic tree in the
+game and the player could not chop a single one - the npc carried `op1="Chop down"` and no
+`category=macro_event_ent`, so `[opnpc1,_macro_event_ent]` never saw the click. Fixed, and the
+report has a third section now: **37 dead options on an npc a .rs2 names**, which is where to read
+first. `garden_trolley_king` and `_saradomin` with four options each, `razmire_keelgan`'s two shops
+and `cyrisus_dream` are the biggest of them.
 
 ## Read this first: what "dead" does and does not prove
 
@@ -165,7 +177,13 @@ doors) is the Rogues' Den course, which is one coherent piece of work rather tha
    placed-instance count per line changed of anything here. The three questions above
    (depletes or not, the two no-recolour families, and `loc_14850/51/52`) are the owner's to answer;
    everything else the tool has already settled.
-2. `mm_bush_kharazi_jungle_tree1`/`2` - the same story for woodcutting, 123 placed instances of
-   unchoppable jungle tree. `[oploc1,_tree]` in woodcut.rs2 dispatches on category the same way.
+2. Done: `mm_bush_kharazi_jungle_tree1`/`2`, Ape Atoll's two Jungle Trees, 123 placed instances of
+   unchoppable jungle tree - the same missing-category story as Mine. They have `category=tree`, a
+   `next_loc_stage` into their own stumps and rows in `woodcutting_trees` now;
+   `tools/sim/junglechop.ts` chops one of each on the map and records the cache's own evidence that
+   they are ordinary trees rather than the Legends' Quest machete jungle.
 3. Done: opsweep now separates the obj lines nobody can hold from the rest, which took the obj
-   section from 391 lines to about 53 worth reading.
+   section from 391 lines to about 53 worth reading, and separates the unplaced npcs a script names
+   from the unplaced scenery nothing can reach.
+4. The 37 script-spawned npc lines in the section above. They are the only part of this file where
+   "the map does not place one" was hiding live bugs rather than describing dead cache slots.

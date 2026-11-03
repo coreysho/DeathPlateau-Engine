@@ -43,7 +43,7 @@ import path from 'path';
 import * as H from './harness.js';
 import Component from '#/cache/config/Component.js';
 import { isVisibleOp } from '#/cache/config/OpVisibility.js';
-import { namesAppearingInContent } from '#/cache/config/ObjReach.js';
+import { namesAppearingInContent, namesAppearingInScripts } from '#/cache/config/ObjReach.js';
 import { SPELLBOOKS } from '#/engine/bot/BotInput.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -307,9 +307,21 @@ if (!AREA) {
 // files are skipped. The key=value lines are kept, because param=fixed and certlink are how a
 // degraded or certed obj is reached from one that is.
 const NAMED = namesAppearingInContent();
+// AND THE SAME TEST FOR AN NPC THE MAP NEVER PLACES. "Not placed" means unreachable for scenery and
+// means nothing for an npc, because npc_add reaches one too - 21 woodcutting Ents sat in that
+// bucket looking handled while the anti-macro event spawned them at every ordinary tree in the game
+// and the player could not chop one. A script naming the npc is not proof it spawns it, so the
+// section is headed "a script names it" rather than "reachable".
+const SPAWNED = namesAppearingInScripts();
 /** The obj name a report line is about, or null when the line is not about an obj. */
 function objOf(line: string): string | null {
     const m = /^obj\s+([a-zA-Z0-9_]+) /.exec(line);
+    return m ? m[1] : null;
+}
+
+/** The npc name a report line is about, or null when the line is not about an npc. */
+function npcOf(line: string): string | null {
+    const m = /^npc\s+([a-zA-Z0-9_]+) /.exec(line);
     return m ? m[1] : null;
 }
 
@@ -347,7 +359,25 @@ const unheld = unplaced.filter(r => {
     const obj = objOf(r.line);
     return obj !== null && !NAMED.has(obj);
 });
-const rest = unplaced.filter(r => !unheld.includes(r));
+const unheldSet = new Set(unheld);
+const spawnable = unplaced.filter(r => {
+    if (unheldSet.has(r)) {
+        return false;
+    }
+    const npc = npcOf(r.line);
+    return npc !== null && SPAWNED.has(npc);
+});
+const spawnableSet = new Set(spawnable);
+const rest = unplaced.filter(r => !unheldSet.has(r) && !spawnableSet.has(r));
+
+console.log(`\n-- dead, not placed, but on an npc a SCRIPT NAMES (${spawnable.length}) - npc_add reaches these,`);
+console.log('   so "not placed" says nothing about whether a player meets one. Read these first.');
+for (const row of spawnable.slice(0, 40)) {
+    console.log(`   ${row.line}`);
+}
+if (spawnable.length > 40) {
+    console.log(`   ... and ${spawnable.length - 40} more`);
+}
 
 console.log(`\n-- dead, not placed anywhere on the map (${rest.length}) - real, but nobody can reach them today`);
 for (const row of rest.slice(0, 25)) {
