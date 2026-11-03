@@ -164,3 +164,34 @@ changepassword
 # how many guardians can reach the table and how fast they come back, and a probe that ticks the
 # live world 200 times to find out does not finish inside the 180s a sim gets.
 quest_ikov_run
+
+# ------------------------------------------------------------------------------------------------
+# quest_dt_run - NEWLY RED, AND NOT NEWLY BROKEN. (2026-11-03)
+#
+# It reported 114 of 114 checks passing until harness.opLoc started making the check OpLocHandler
+# makes: is this an op the loc actually has. It was not, for five of Desert Treasure's locs, so the
+# run had been driving the quest through clicks no client can send.
+#
+#   desert_treasure_oblix1..4   [oploc1,...] ~dt_place_diamond, the step that finishes the quest.
+#                               Neither the shell nor desert_treasure_oblix_a nor fd_blood_column
+#                               declares an op at all. Confirmed by sending a real OpLoc(op1)
+#                               packet through OpLocHandler: REFUSED.
+#   vampire_big_grave_noblood   [oploc1,...] in dt_blood.rs2, same shape, no multiloc variants.
+#                               This is the one the run stops on today, at step 54.
+#
+# ~dt_place_diamond is written for a click, not for an item-on-loc: it checks the quest stage, then
+# whether the obelisk is already charged, then whether you hold the diamond, then Magic 50, and its
+# messages are addressed to someone who clicked an obelisk. There is no [oplocu] on any of them. So
+# the content means these to be clickable and the cache does not offer the option.
+#
+# THE FIX IS NOT HERE. It is an op1 label on five 377 loc configs - user-visible game text, and a
+# choice this project cares about getting right against Old School. It is also a mechanism the
+# repository does not have yet: all 126 overlay .loc files in the content define NEW locs, none
+# amends an imported one. So this is listed rather than patched, and tools/sim/orphans.ts carries
+# the other 20 of the same shape.
+#
+# Nine other quest runners whose content has orphaned triggers were run to see whether the new
+# check had broken the suite: quest_icslittle, quest_legends (229 checks), quest_handsand,
+# quest_lunar (187), quest_waterfall, quest_mourning2, quest_hauntedmine and the rest all pass
+# clean. Their orphans sit in paths no sim clicks, which is how they went unnoticed.
+quest_dt_run
