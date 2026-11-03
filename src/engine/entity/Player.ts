@@ -64,6 +64,7 @@ import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js'
 import UpdateRunEnergy from '#/network/game/server/model/UpdateRunEnergy.js';
 import UpdateStat from '#/network/game/server/model/UpdateStat.js';
 import VarpLarge from '#/network/game/server/model/VarpLarge.js';
+import VarpBatch from '#/network/game/server/model/VarpBatch.js';
 import VarpSmall from '#/network/game/server/model/VarpSmall.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
@@ -563,13 +564,7 @@ export default class Player extends PathingEntity {
         this.write(new IfClose());
         this.write(new UpdatePid(this.slot, this.members));
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         this.write(new ResetAnims());
 
         const loginTrigger = ScriptProvider.getByTriggerSpecific(ServerTriggerType.LOGIN, -1, -1);
@@ -593,13 +588,7 @@ export default class Player extends PathingEntity {
         // - reset_anims
         // - socials
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         // reload entity info (overkill? does the client have some logic around this?)
         this.buildArea.clear(true);
         // rebuild scene later this tick (note: rebuild won't run on the client if you're in the same zone!)
@@ -2014,6 +2003,40 @@ export default class Player extends PathingEntity {
 
         mask <<= startbit;
         this.setVar(basevar, (mask & (value << startbit)) | (this.vars[basevar] & ~mask));
+    }
+
+    /**
+     * Send every transmitted varp, in one packet.
+     *
+     * One packet per varp was 371 of the 536 a login sent, and the 377 client parses five a loop
+     * iteration - about 2.2 seconds of catching up before it was level with the world. The count
+     * does not depend on the player: it is every varp the content marks transmit, so a new
+     * character and a maxed one pay the same. See VarpBatch, and tools/sim/loginspike.ts for how
+     * the figure was arrived at.
+     *
+     * Every varp still goes, zeros included. The client reverts varps to varCache on
+     * RESET_CLIENT_VARCACHE rather than zeroing them and frees neither on logout, so a player who
+     * logs out to the login screen and back in holds the last session's values and a varp now 0
+     * would keep its old one.
+     */
+    private writeAllVarps(): void {
+        const small: number[][] = [];
+        const large: number[][] = [];
+
+        for (let varp = 0; varp < this.vars.length; varp++) {
+            if (!VarPlayerType.get(varp).transmit) {
+                continue;
+            }
+
+            const value = this.vars[varp];
+            if (value >= -128 && value <= 127) {
+                small.push([varp, value]);
+            } else {
+                large.push([varp, value]);
+            }
+        }
+
+        this.write(new VarpBatch(small, large));
     }
 
     private writeVarp(id: number, value: number): void {
