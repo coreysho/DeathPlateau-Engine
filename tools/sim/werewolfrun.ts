@@ -86,7 +86,7 @@ for (const [name, loc, lx, lz, ex, ez, xp] of LAP) {
     const was = p.stats[AGILITY];
     try {
         A.op(p, lx, lz, loc, 1);
-    } catch (e) {
+    } catch (_notOnThisLevel) {
         console.log(`    ${name}: the loc is not on the player's level`);
         ok = false;
         break;

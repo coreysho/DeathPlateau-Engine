@@ -11,9 +11,7 @@
 //
 //   npx tsx tools/sim/werewolfland.ts
 import * as H from './harness.ts';
-import * as A from './a1lib.ts';
 import LocType from '#/cache/config/LocType.js';
-import World from '#/engine/World.js';
 import { canTravel, isFlagged } from '#/engine/GameMap.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { drawn, onLoc } from './mapfloor.ts';
