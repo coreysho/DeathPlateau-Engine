@@ -111,7 +111,17 @@ const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_aut
 async function updateHiscores(account: { id: number; staffmodlevel: number; banned_until: string | null } | undefined, player: Player, profile: string) {
     if (!account) return;
 
-    if (account.staffmodlevel > 1) {
+    // NOBODY WHO CAN HAND THEMSELVES THE SCORE. ::give and ::setstat are in the staffModLevel >= 3
+    // block of ClientCheatHandler - "admin commands, potentially destructive for a live economy" -
+    // so 3 and above is exactly the set of people who can award themselves an item or a level, and
+    // exactly the set that must not appear on a board. (Owner, 2 November.)
+    //
+    // 2 and below stay on. A super-moderator has getcoord, tele, teleto and setvis; a moderator has
+    // ban, mute and kick. None of those fabricates experience, a kill or an item. Teleporting
+    // everywhere is a convenience and worth knowing about, but it is not the same kind of thing as
+    // typing yourself a level, and excluding somebody for holding the ban hammer would be punishing
+    // them for helping.
+    if (account.staffmodlevel >= 3) {
         return;
     }
 
@@ -293,6 +303,12 @@ export default class LoginServer {
         }
 
         InvType.load('data/pack');
+        // AND THE VARPS, because updateHiscores reads them by name. Without this
+        // VarPlayerType.getId answers -1 for everything and every figure it writes - deaths,
+        // kills, playtime, quest points, boss counts - is skipped in silence, which is exactly
+        // what happened the first time this shipped. InvType was loaded here and varps were
+        // not, because until now nothing in this process had ever needed one.
+        VarPlayerType.load('data/pack');
 
         this.server = createInternalServer('Login server', Environment.LOGIN_PORT, () => {
             printInfo(`Login server listening on port ${Environment.LOGIN_PORT}`);
