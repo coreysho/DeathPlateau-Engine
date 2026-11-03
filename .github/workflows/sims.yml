@@ -153,6 +153,81 @@ jobs:
         if-no-files-found: ignore
         retention-days: 7
 
+  # ---------------------------------------------------------------------------- the two ratchets
+  # tools/sim/opsweep.ts and tools/sim/orphans.ts cross-reference the cache against the script
+  # table in both directions - an option with no script, and a script no option can fire. Each is
+  # about forty seconds for the whole game and each has a committed baseline, so they are ratchets:
+  # a build that adds a dead option or an unreachable trigger fails here instead of waiting for a
+  # playtest report.
+  #
+  # A SEPARATE JOB, not a shard. The sharded job above runs every sim bare, and bare these two
+  # print a report and exit 0 - they only ratchet with --check, which no shard would pass. It also
+  # means a red ratchet is legible on its own rather than buried in one shard of eight.
+  #
+  # AND NOT ON known-failing.txt EITHER. That list is for sims already broken when the nightly was
+  # switched on; these two are green today by construction, because their baselines were written
+  # from today's build.
+  #
+  # WHERE THIS REALLY BELONGS is the content repository's own push CI: a dead option is almost
+  # always added by a content change, and its `pack` job already checks out both repositories and
+  # builds the cache, so the two steps would drop straight in. What stops it is that the baselines
+  # live HERE, so banking a deliberate new entry would need an engine pull request to go green -
+  # which is the right friction for a ratchet and the wrong friction for somebody editing a .loc.
+  # Nightly in this repository is the version that costs nobody anything.
+  ratchets:
+    name: no new dead options or unreachable triggers
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: engine
+
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Content
+        ref: 377-wip
+        path: content
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: engine/package-lock.json
+
+    - name: Install
+      working-directory: engine
+      run: npm ci
+
+    - name: Pack the content
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+        BUILD_VERIFY: 'false'
+      run: npx tsx tools/pack/Build.ts
+
+    # Both tools boot a world, and World refuses to start without a login key - see the note on
+    # the same step in the sims job.
+    - name: A login key for this run
+      working-directory: engine
+      run: npx tsx tools/server/rsa.ts
+
+    # --check exits 1 on anything NEW and prints it. Fixed entries are reported and do not fail:
+    # banking them is a deliberate `--baseline` commit, not something CI should do by itself.
+    - name: Options the cache offers that no script answers
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/opsweep.ts --check
+
+    - name: Triggers no click can fire
+      if: always()
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/orphans.ts --check
+
   # ------------------------------------------------------------------ and say so in Discord
   # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token
   # (Environment.DISCORD_TOKEN, src/server/discord), which belongs to a running server and has
@@ -168,7 +243,7 @@ jobs:
   # Actions -> New repository secret, named DISCORD_WEBHOOK.
   notify:
     name: tell Discord
-    needs: sims
+    needs: [sims, ratchets]
     if: failure()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -187,6 +262,7 @@ jobs:
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
+        RATCHETS: ${{ needs.ratchets.result }}
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
@@ -194,8 +270,14 @@ jobs:
         # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
         # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
         # the message says it does not know rather than inventing a clean bill of health.
+        #
+        # AND THE RATCHETS CAN BE THE FAILURE. This job needs both, so a green sweep with a red
+        # opsweep/orphans arrives here with no verdict files at all - which used to read as "a
+        # shard died" and sent whoever got the message to look in the wrong place.
         if [ -n "$red" ]; then
           body="Newly failing: **${red}**"
+        elif [ "$RATCHETS" != "success" ]; then
+          body="The sims are fine. The ratchets are not: **opsweep/orphans** found a dead option or an unreachable trigger that is not in its baseline. The run log names it."
         else
           body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
         fi
