@@ -45,6 +45,23 @@ jobs:
         ref: 377-wip
         path: content
 
+    # AND THE CLIENT, because two sims check that the client and the server still agree about the
+    # wire. varpbatch reads Protocol.java's SERVERPROT_LENGTH table to prove the client has a
+    # length for the batched-varp opcode the server now writes - get that wrong and every player
+    # desyncs at login. Without this checkout the sim cannot read the file and dies, which is how
+    # it turned up as "newly failing" on the first unattended night.
+    #
+    # The path is a SIBLING OF engine/, not under it: the sims default to '../DeathPlateau-Client'
+    # and run with engine/ as their working directory.
+    #
+    # dev-logging ON PURPOSE. It is the branch the launcher ships, so this compares the server
+    # against the client players are actually running, which is the disagreement that matters.
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Client
+        ref: dev-logging
+        path: DeathPlateau-Client
+
     - uses: actions/setup-node@v6
       with:
         node-version: 24
@@ -77,6 +94,7 @@ jobs:
       run: |
         # NAMES ONLY: the list carries a comment per entry saying how it fails, which is the
         # point of it, so the names are cut out of it rather than matched against the line.
+        SKIP_IN_CI='pingwire'
         known=/tmp/known-failing-names.txt
         grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
         echo "known-failing: $(wc -l < "$known") sims"
@@ -87,6 +105,11 @@ jobs:
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
           grep -qE 'process\.exit\([^0-9)]' "$f" || continue
+          # AND NOT THE ONES THAT NEED A RUNNING GAME. This is not known-failing.txt: nothing is
+          # broken here, the job simply cannot give these sims what they ask for, and recording
+          # them as "failing" would be a lie that also hides a real failure if one ever appears.
+          #   pingwire  opens a socket to a live server and fetches /crc0 off its web port
+          case " $SKIP_IN_CI " in *" $(basename "$f" .ts) "*) continue ;; esac
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
