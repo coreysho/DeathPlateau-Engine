@@ -138,7 +138,18 @@ async function main() {
     // The first probes land while this script is still chewing through everything a login sends
     // (the map, the invs, the stats), and what they measure is THIS script being slow, not the
     // connection. So take several and judge the last, by which time the stream is quiet.
-    const WANT = 5;
+    const WANT = 6;
+    // THE PROBE THAT IS ANSWERED THE WAY A PLAYER ANSWERS IT. A client being played is never
+    // silent: mouse, camera and movement packets arrive continuously, so the answer to a probe is
+    // rarely the first thing to land in the tick that carries it. Stamping the start of the batch
+    // instead of the packet therefore measured the gap to some EARLIER packet - 1-2 ms on a 30 ms
+    // connection, and 0 where that packet had landed before the probe was sent. That cannot be
+    // caught on loopback by answering faster, because there everything is instant; it is caught by
+    // answering LATE, with chatter in front, and insisting the server reports the lateness.
+    const CHATTY_PROBE = 4;
+    const LATE_BY = 250;
+    let lateRtt = -1;
+    const WHOLE_TICK = 600;
     let pings = 0;
     let firstSeq = -1;
     let measured = -1;
@@ -167,13 +178,30 @@ async function main() {
                 firstSeq = seq;
                 check('the first probe carries "not measured yet"', rtt, 0xffff);
             } else {
-                measured = rtt;
-                all.push(rtt);
+                if (pings === CHATTY_PROBE + 1) {
+                    lateRtt = rtt;
+                } else {
+                    measured = rtt;
+                    all.push(rtt);
+                }
             }
-            // answer every one of them, as the client does, straight away
-            sock.write(Buffer.from([(2 + outCipher.nextInt()) & 0xff, seq]));
+
+            if (pings === CHATTY_PROBE) {
+                // a keep-alive first, so the batch this tick reads does NOT begin with the answer,
+                // then the answer itself a known interval later
+                sock.write(Buffer.from([(40 + outCipher.nextInt()) & 0xff]));
+                await new Promise(wait => setTimeout(wait, LATE_BY));
+                sock.write(Buffer.from([(2 + outCipher.nextInt()) & 0xff, seq]));
+            } else {
+                // answer every other one as the client does, straight away
+                sock.write(Buffer.from([(2 + outCipher.nextInt()) & 0xff, seq]));
+            }
         }
     }
+
+    check('an answer held back behind other traffic is reported as late, not as instant', lateRtt >= LATE_BY - 50, true);
+    check('...and as the lateness it was, not as a whole tick', lateRtt >= 0 && lateRtt < WHOLE_TICK, true);
+    console.log(`  (answered probe ${CHATTY_PROBE} ${LATE_BY} ms late behind a keep-alive; the server measured ${lateRtt} ms)`);
 
     check('the probes keep coming on their own', pings, WANT);
     check('the probe sequence advances', measured >= 0 && firstSeq >= 0, true);

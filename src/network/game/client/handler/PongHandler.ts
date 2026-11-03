@@ -14,10 +14,12 @@ export default class PongHandler extends ClientGameMessageHandler<Pong> {
             return false;
         }
 
-        // When the answer LANDED, not when this tick got round to reading it - input is read once a
-        // tick, so Date.now() here would make every round trip look like a whole tick (see
-        // ClientSocket.inboundSince). Falls back to now if the socket never recorded one.
-        const arrived = isClientConnected(player) && player.client.inboundSince > 0 ? player.client.inboundSince : Date.now();
+        // When THIS ANSWER landed, not when this tick got round to reading it - input is read once
+        // a tick, so Date.now() here would make every round trip look like a whole tick. Nor when
+        // the batch holding it began: a client being played sends mouse and camera packets
+        // continuously, so that stamp usually belonged to an earlier one and reported 1-2 ms on a
+        // 30 ms connection. See ClientSocket.packetArrival. Falls back to now if nothing timed it.
+        const arrived = isClientConnected(player) && player.client.packetArrival > 0 ? player.client.packetArrival : Date.now();
         player.pingMs = Math.max(0, Math.min(0xfffe, arrived - player.pingSentAt));
         player.pingSentAt = -1;
 

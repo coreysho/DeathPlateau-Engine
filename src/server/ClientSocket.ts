@@ -32,11 +32,33 @@ export default abstract class ClientSocket {
     legacyHitmarks = false;
     waiting = 0; // bytes to wait for (if any)
 
-    // custom (2026-11-03) - when the bytes waiting to be read STARTED arriving. The world reads its
-    // input once a tick, so a handler asking Date.now() is really asking when the tick got round to
-    // it, not when the client answered - which would have reported every round trip as a whole tick.
-    // Only the first chunk of a fresh batch sets it; the rest of the batch belongs to the same wait.
-    inboundSince: number = -1;
+    // custom (2026-11-03) - WHEN EACH PACKET ARRIVED, which is not when the tick got round to
+    // reading it and not when its batch began either.
+    //
+    // The world reads its input once a tick, so a handler asking Date.now() is asking when the
+    // tick reached it: every round trip measured a whole tick (575 ms on loopback). The first fix
+    // stamped the start of each unread batch, which is right only for a client that was otherwise
+    // silent. A client being played is never silent - mouse, camera and movement packets arrive
+    // continuously - so the stamp almost always belonged to an earlier packet in the same 600 ms
+    // window and the measured round trip came out far too low, or 0 where that packet had landed
+    // before the probe was even sent. A player on a 30 ms connection saw 1 ms and 2 ms.
+    //
+    // So arrivals are kept per chunk against the byte offset they end at, and a read looks up the
+    // offset it is about to consume. Chunks are coalesced when they share a millisecond, which is
+    // both free precision-wise and the bound on this list: a flood of one-byte segments cannot
+    // grow it past one entry per millisecond. The hard cap is the backstop for a clock that does
+    // not advance between them.
+    private static readonly MAX_ARRIVALS: number = 1024;
+    // end: cumulative received bytes this chunk runs to. at: when it landed.
+    private arrivals: { end: number; at: number }[] = [];
+    private received: number = 0; // cumulative bytes handed to buffer()
+    private consumed: number = 0; // cumulative bytes taken by read()
+    // When the packet a handler is running for started arriving, or -1 if it is not known. Set
+    // from the OPCODE's arrival, so a payload split across segments is still timed from the front.
+    packetArrival: number = -1;
+    // ...and the arrival of the first byte the last read() consumed, which is where the above
+    // comes from. See NetworkPlayer.read.
+    lastReadArrival: number = -1;
 
     buffer(data: Buffer) {
         if (data.length + this.in.pos > this.in.length) {
@@ -44,11 +66,29 @@ export default abstract class ClientSocket {
             return;
         }
 
-        if (this.in.pos === 0) {
-            this.inboundSince = Date.now();
+        this.received += data.length;
+        const at = Date.now();
+        const last = this.arrivals.length > 0 ? this.arrivals[this.arrivals.length - 1] : null;
+        if (last !== null && (last.at === at || this.arrivals.length >= ClientSocket.MAX_ARRIVALS)) {
+            last.end = this.received;
+        } else {
+            this.arrivals.push({ end: this.received, at });
         }
 
         this.in.pdata(data, 0, data.length);
+    }
+
+    // When the next byte waiting to be read arrived, or -1 if nothing recorded it. Drops the
+    // chunks already read past on the way, so this list stays as short as the unread buffer.
+    private arrivalOfNextByte(): number {
+        let dropped = 0;
+        while (dropped < this.arrivals.length && this.arrivals[dropped].end <= this.consumed) {
+            dropped++;
+        }
+        if (dropped > 0) {
+            this.arrivals.splice(0, dropped);
+        }
+        return this.arrivals.length > 0 ? this.arrivals[0].at : -1;
     }
 
     // available bytes we can read
@@ -66,9 +106,13 @@ export default abstract class ClientSocket {
             return false;
         }
 
+        // before the bytes go, while the offset they start at is still this.consumed
+        this.lastReadArrival = this.arrivalOfNextByte();
+
         // copy data to dest
         dest.set(this.in.data.subarray(0, length), offset);
         this.in.pos -= length;
+        this.consumed += length;
 
         // shift buffer to the next read - only the bytes still buffered, not the whole 64 KB: a flood of
         // 1-byte packets made every read copy the full buffer
