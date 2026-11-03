@@ -1,3 +1,4 @@
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import Component from '#/cache/config/Component.js';
 import ObjType from '#/cache/config/ObjType.js';
 import Player from '#/engine/entity/Player.js';
@@ -43,7 +44,11 @@ export default class OpHeldHandler extends ClientGameMessageHandler<OpHeld> {
         }
 
         const obj = ObjType.get(objId);
-        if (obj.iop[message.op - 1] === null) {
+        // isHiddenOp, not `=== null`: the client's ObjType.decode drops an iop labelled "hidden"
+        // in any casing (equalsIgnoreCase), so it never draws the option - while `=== null` here
+        // let the packet through for one. Same mismatch that OpLocHandler, OpNpcHandler and
+        // OpObjHandler had; src/cache/config/OpVisibility.ts is the one answer now.
+        if (isHiddenOp(obj.iop[message.op - 1])) {
             // bad client: not a valid item option
             return false;
         }

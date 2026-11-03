@@ -401,6 +401,13 @@ export function opheld(p: Player, objName: string, op: number) {
     if (p.delayed) return false; // OpHeldHandler: "normal: cannot interact while delayed"
     const id = ObjType.getId(objName);
     if (id === -1) throw new Error('no such obj: ' + objName);
+    // The fourth of these, and the last: opLoc, opObj and opNpc all reached setInteraction without
+    // asking whether the option exists, and so did this. OpHeldHandler refuses an iop the obj does
+    // not declare, so a sim that clicks one is testing something no client can send.
+    const iops = ObjType.get(id).iop;
+    if (isHiddenOp(iops?.[op - 1])) {
+        throw new Error(`${objName} has no iop${op} (${JSON.stringify(iops)}), so no client could send this click`);
+    }
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
     for (let i = 0; i < inv.capacity; i++) {

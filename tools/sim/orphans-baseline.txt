@@ -3,7 +3,7 @@
 # Checked with:                npx tsx tools/sim/orphans.ts --check   (fails on anything NEW)
 #
 # A ratchet, not an approval. Every line is content somebody wrote that nothing can run.
-# 84 lines at the time of writing.
+# 60 lines at the time of writing.
 
 [if_button,player_kit_tailor_legs_woman:com_139] - thessalia.rs2
 [if_button,player_kit_tailor_legs_woman:com_140] - thessalia.rs2
@@ -36,30 +36,6 @@
 [opheld1,mourning_mirror] - quest_mourning2.rs2
 [opheld1,swan_army] - quest_swansong.rs2
 [opheld1,tbwt_karambwan_vessel_loaded_with_karambwanji] - quest_tbwt.rs2
-[opheld2,barrows_ahrim_body_broken] - tier70.rs2
-[opheld2,barrows_ahrim_head_broken] - tier70.rs2
-[opheld2,barrows_ahrim_legs_broken] - tier70.rs2
-[opheld2,barrows_ahrim_weapon_broken] - tier70.rs2
-[opheld2,barrows_dharok_body_broken] - tier70.rs2
-[opheld2,barrows_dharok_head_broken] - tier70.rs2
-[opheld2,barrows_dharok_legs_broken] - tier70.rs2
-[opheld2,barrows_dharok_weapon_broken] - tier70.rs2
-[opheld2,barrows_guthan_body_broken] - tier70.rs2
-[opheld2,barrows_guthan_head_broken] - tier70.rs2
-[opheld2,barrows_guthan_legs_broken] - tier70.rs2
-[opheld2,barrows_guthan_weapon_broken] - tier70.rs2
-[opheld2,barrows_karil_body_broken] - tier70.rs2
-[opheld2,barrows_karil_head_broken] - tier70.rs2
-[opheld2,barrows_karil_legs_broken] - tier70.rs2
-[opheld2,barrows_karil_weapon_broken] - tier70.rs2
-[opheld2,barrows_torag_body_broken] - tier70.rs2
-[opheld2,barrows_torag_head_broken] - tier70.rs2
-[opheld2,barrows_torag_legs_broken] - tier70.rs2
-[opheld2,barrows_torag_weapon_broken] - tier70.rs2
-[opheld2,barrows_verac_body_broken] - tier70.rs2
-[opheld2,barrows_verac_head_broken] - tier70.rs2
-[opheld2,barrows_verac_legs_broken] - tier70.rs2
-[opheld2,barrows_verac_weapon_broken] - tier70.rs2
 [opheld2,toxic_blowpipe_empty] - blowpipe.rs2
 [opheld3,accumulator_max_cape] - avas_device.rs2
 [opheld3,butterfly_net] - hunter_implings.rs2
