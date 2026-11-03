@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 4377 lines at the time of writing.
+# 4376 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -136,7 +136,6 @@ dead loc  burgh_inn_crumble_wall op1="Search"
 dead loc  burgh_inn_rubble_rock op1="Mine"
 dead loc  burgh_inn_rubble_rock op2="Prospect"
 dead loc  burgh_ladder_hatch_up op1="Climb-up"
-dead loc  burgh_outside_rubble_pile op2="Search"
 dead loc  burgh_quest_food_table op1="Search"
 dead loc  burgh_rubble_a_1 op1="Mine"
 dead loc  burgh_rubble_a_1 op2="Prospect"

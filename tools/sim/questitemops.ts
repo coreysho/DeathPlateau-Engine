@@ -1,4 +1,4 @@
-// TWENTY-FIVE QUEST ITEMS THAT COULD NOT BE CLICKED, and now reach their handlers.
+// ITEM OPTIONS THAT COULD NOT BE CLICKED, and now reach their handlers.
 //
 //   npx tsx tools/sim/questitemops.ts
 //
@@ -106,6 +106,35 @@ for (const [name, label, phrase] of ITEMS) {
         .join(' ')
         .replace(/\s+/g, ' ');
     check(`${name} says its piece`, said.includes(phrase), true);
+}
+
+// ------------------------------------------------------------------- three more, from twins alone
+//
+// Not quest items, and not a judgement call anywhere: each of these shares its handler line with a
+// sibling obj that already declares the label, so the label is transcribed rather than chosen.
+//
+//   toxic_blowpipe_empty  iop2=Wield          the loaded toxic_blowpipe declares exactly that, and
+//                                             [opheld2,toxic_blowpipe_empty] is its Ranged gate
+//   butterfly_net         iop3=Check totals   magic_butterfly_net declares exactly that and is on
+//                                             the same @impling_totals line
+//   accumulator_max_cape  iop3=Toggle-attract avas_accumulator and avas_attractor both declare
+//                                             exactly that and share ~avas_attract_toggle
+const TWINS: [string, number, string, string][] = [
+    ['toxic_blowpipe_empty', 2, 'Wield', 'toxic_blowpipe'],
+    ['butterfly_net', 3, 'Check totals', 'magic_butterfly_net'],
+    ['accumulator_max_cape', 3, 'Toggle-attract', 'avas_accumulator']
+];
+for (const [name, slot, label, twin] of TWINS) {
+    const id = ObjType.getId(name);
+    const twinId = ObjType.getId(twin);
+    if (id === -1 || twinId === -1) {
+        check(`${name} and ${twin} exist`, false, true);
+        continue;
+    }
+    check(`${name} iop${slot}`, ObjType.get(id).iop?.[slot - 1], label);
+    // The point of the pairing: if the twin's label ever changes, this fails rather than drifting.
+    check(`${name} matches ${twin}`, ObjType.get(id).iop?.[slot - 1], ObjType.get(twinId).iop?.[slot - 1]);
+    check(`${name} has its own [opheld${slot}]`, !!ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELD1 + (slot - 1), id, -1), true);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);

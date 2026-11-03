@@ -3,7 +3,7 @@
 # Checked with:                npx tsx tools/sim/orphans.ts --check   (fails on anything NEW)
 #
 # A ratchet, not an approval. Every line is content somebody wrote that nothing can run.
-# 35 lines at the time of writing.
+# 6 lines at the time of writing.
 
 [if_button,player_kit_tailor_legs_woman:com_139] - thessalia.rs2
 [if_button,player_kit_tailor_legs_woman:com_140] - thessalia.rs2
@@ -11,32 +11,3 @@
 [inv_button3,tradingpost:grid] - tradingpost.rs2
 [inv_button3,tradingpost_side:inv] - tradingpost.rs2
 [inv_button4,tradingpost_side:inv] - tradingpost.rs2
-[opheld2,toxic_blowpipe_empty] - blowpipe.rs2
-[opheld3,accumulator_max_cape] - avas_device.rs2
-[opheld3,butterfly_net] - hunter_implings.rs2
-[oploc1,burgh_outside_rubble_pile] - quest_myreque2.rs2
-[oploc1,burgh_well] - myreque2_rod.rs2
-[oploc1,desert_treasure_oblix1] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix2] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix3] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix4] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix_a] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix_b] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix_c] - quest_deserttreasure.rs2
-[oploc1,desert_treasure_oblix_d] - quest_deserttreasure.rs2
-[oploc1,deserttreasure_shadowladder] - dt_shadow.rs2
-[oploc1,deserttreasure_wall_crusher] - dt_pyramid.rs2
-[oploc1,dt_dummy_square] - dt_pyramid.rs2
-[oploc1,eadgar_troll_cauldron] - quest_eadgar.rs2
-[oploc1,fd_bandit_openchest] - dt_shadow.rs2
-[oploc1,fd_firedungeon_openchest] - dt_smoke.rs2
-[oploc1,loc474_16601] - lunar_dream.rs2
-[oploc1,loc474_16602] - lunar_dream.rs2
-[oploc1,loc474_16810] - lunar_island.rs2
-[oploc1,vampire_big_grave_noblood] - dt_blood.rs2
-[oploc1,vampire_big_grave_withblood] - dt_blood.rs2
-[oploc2,_farming_compost_bin] - farming_triggers.rs2
-[oploc3,loc474_16604] - lunar_dream.rs2
-[oploc3,loc474_16679] - lunar_island.rs2
-[oploc3,loc474_16680] - lunar_island.rs2
-[opobj1,zogre_cup_of_tea_sithix] - zogre_yanille.rs2

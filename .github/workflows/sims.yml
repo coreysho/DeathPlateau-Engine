@@ -77,6 +77,16 @@ jobs:
       run: |
         # NAMES ONLY: the list carries a comment per entry saying how it fails, which is the
         # point of it, so the names are cut out of it rather than matched against the line.
+        # THE PER-SIM CAP, 360 AND NOT 180. seedstall passes all nine of its checks and takes
+        # four minutes doing it: a hundred thefts, each with sixteen ticks of regrowth, which is
+        # the measurement it exists to make. At 180 it was killed mid-run and filed as a failure
+        # twice over, with a clean tally sitting in its log - sweep.sh already says the cap "is
+        # there to catch a sim that has hung, not to race the slowest one", and this is the same
+        # cap with the same job.
+        #
+        # It only costs wall clock on a sim that is ALREADY failing or slow, since a passing sim
+        # exits on its own; the 90-minute job timeout above is the real ceiling.
+        cap=360
         known=/tmp/known-failing-names.txt
         grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
         echo "known-failing: $(wc -l < "$known") sims"
@@ -91,7 +101,7 @@ jobs:
           i=$((i + 1))
           n=$(basename "$f" .ts)
           rc=0
-          timeout 180 npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"
@@ -112,7 +122,7 @@ jobs:
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
             rc2=0
-            timeout 180 npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            timeout "$cap" npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
               echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
               flaky="$flaky $n"
