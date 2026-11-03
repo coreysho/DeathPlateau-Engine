@@ -9,6 +9,7 @@ import { setVarp } from '#/engine/bot/BotBrain.js';
 import type BotPlayer from '#/engine/bot/BotPlayer.js';
 import { PLAYER_STAT_COUNT, PlayerStat } from '#/engine/entity/PlayerStat.js';
 import Environment from '#/util/Environment.js';
+import { somebodyCanHold } from '#/cache/config/ObjReach.js';
 import { printInfo, printWarning } from '#/util/Logger.js';
 
 // custom (2026-11-02) - WHO the fuzzer is, as opposed to what it clicks.
@@ -120,6 +121,23 @@ function carriableObjs(): number[] {
             continue;
         }
         if (type.members && !Environment.NODE_MEMBERS) {
+            continue;
+        }
+        // AND NOTHING NO PLAYER CAN HOLD, which is a precision fix rather than a safety one.
+        //
+        // The pool was every obj with a debugname, and plenty of those are interface furniture: the
+        // 24 trail_slidingpuzzleb* pieces exist so the cache can draw a sliding puzzle inside a
+        // clue interface, and content only ever inv_setslots them into trail_puzzleinv. A bot
+        // handed one put it in its BACKPACK, clicked its fifth option, and
+        // [opheld5,_trail_puzzle_piece] - written for a 25-slot puzzle grid - read
+        // inv_getobj(trail_puzzleinv, 26) and threw.
+        //
+        // That is a script fault a player cannot reach, and a fault nobody can reach is noise. The
+        // whole lesson of the filler attribution was that noise is why findings go unread, so the
+        // fuzzer should manufacture states a player could be in. The serpentine helm fault found in
+        // the same week WAS reachable - an uncharged helm is a real item off Zulrah - and this
+        // filter keeps that one while dropping the puzzle piece.
+        if (!somebodyCanHold(type.debugname)) {
             continue;
         }
         carriable.push(id);

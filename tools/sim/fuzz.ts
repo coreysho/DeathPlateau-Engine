@@ -59,7 +59,10 @@ const argv = process.argv.slice(2);
 const TICKS = parseInt(argv[0] ?? '') || 2000;
 const COUNT = parseInt(argv[1] ?? '') || 4;
 const SEED = parseInt(argv[2] ?? '') || 20260929;
-const AT = (argv[3] ?? '3222,3218,0').split(',').map(n => parseInt(n));
+// NO DEFAULT COORDINATE ANY MORE, and that is the whole point of the change: passing one meant
+// BotManager took the "caller named a place" path every time and all the bots stacked on Lumbridge.
+// Left undefined, they spread over bankSpots(). Name a coordinate to aim a run at one area.
+const AT = argv[3] ? argv[3].split(',').map(n => parseInt(n)) : null;
 // `noguide` as the fifth argument turns the coverage steering off, so the same seed can be run both
 // ways and the difference measured rather than asserted.
 fuzzTuning.coverageGuided = argv[4] !== 'noguide';
@@ -113,7 +116,7 @@ H.tick(2);
 
 console.log('\nTHE RUN');
 (Environment as { NODE_BOTS_FUZZ_FILE: string }).NODE_BOTS_FUZZ_FILE = findingsFile;
-const why = BotManager.startFuzzers(COUNT, SEED, { x: AT[0], z: AT[1], level: AT[2] ?? 0 });
+const why = BotManager.startFuzzers(COUNT, SEED, AT ? { x: AT[0], z: AT[1], level: AT[2] ?? 0 } : undefined);
 check('started', why, '');
 H.tick(10);
 const bots = () => [...World.playerLoop.all()].filter(p => p.isBot) as BotPlayer[];
@@ -136,7 +139,7 @@ for (let t = 0; t < TICKS; t++) {
 }
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
-console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT.join(',')}, coverage-guided: ${fuzzTuning.coverageGuided})`);
+console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT ? AT.join(',') : 'bank spots across the map'}, coverage-guided: ${fuzzTuning.coverageGuided})`);
 for (const [kind, n] of [...actions.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${String(n).padStart(6)}  ${kind}`);
 }

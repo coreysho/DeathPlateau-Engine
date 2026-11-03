@@ -43,6 +43,7 @@ import path from 'path';
 import * as H from './harness.js';
 import Component from '#/cache/config/Component.js';
 import { isVisibleOp } from '#/cache/config/OpVisibility.js';
+import { namesAppearingInContent } from '#/cache/config/ObjReach.js';
 import { SPELLBOOKS } from '#/engine/bot/BotInput.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -50,7 +51,6 @@ import ObjType from '#/cache/config/ObjType.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
-import Environment from '#/util/Environment.js';
 
 const argv = process.argv.slice(2);
 const WRITE_BASELINE = argv.includes('--baseline');
@@ -306,38 +306,7 @@ if (!AREA) {
 // AN OBJ CONFIG DECLARING ITS OWN NAME IS NOT A WAY TO GET IT, so [name] header lines in .obj
 // files are skipped. The key=value lines are kept, because param=fixed and certlink are how a
 // degraded or certed obj is reached from one that is.
-function namedInContent(): Set<string> {
-    const seen = new Set<string>();
-    const header = /^\s*\[[a-zA-Z0-9_]+\]\s*$/;
-    const walk = (dir: string): void => {
-        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-            const full = path.join(dir, e.name);
-            if (e.isDirectory()) {
-                walk(full);
-                continue;
-            }
-            let text: string;
-            try {
-                text = fs.readFileSync(full, 'ascii');
-            } catch {
-                continue;
-            }
-            const declaresObjs = e.name.endsWith('.obj');
-            for (const line of text.split(/\r?\n/)) {
-                if (declaresObjs && header.test(line)) {
-                    continue;
-                }
-                for (const token of line.match(/[A-Za-z0-9_]+/g) ?? []) {
-                    seen.add(token);
-                }
-            }
-        }
-    };
-    walk(path.join(Environment.BUILD_SRC_DIR, 'scripts'));
-    return seen;
-}
-
-const NAMED = namedInContent();
+const NAMED = namesAppearingInContent();
 /** The obj name a report line is about, or null when the line is not about an obj. */
 function objOf(line: string): string | null {
     const m = /^obj\s+([a-zA-Z0-9_]+) /.exec(line);

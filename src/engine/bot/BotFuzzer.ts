@@ -141,7 +141,13 @@ function validOps(ops: (string | null)[] | null): number[] {
  * of debugnames would be a list of the bankers somebody remembered.
  */
 let bankSpotCache: { x: number; z: number; level: number }[] | null = null;
-function bankSpots(): { x: number; z: number; level: number }[] {
+/**
+ * Exported so BotManager can start a run's bots at DIFFERENT places. It is a derived list, not
+ * hand-written coordinates: every entry is a tile beside a real bank booth or teller that the
+ * collision map says is standable, which makes it the only list of "somewhere a player would be"
+ * in this build that is checked rather than asserted.
+ */
+export function bankSpots(): { x: number; z: number; level: number }[] {
     if (bankSpotCache) {
         return bankSpotCache;
     }

@@ -2,7 +2,7 @@ import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
-import { FuzzBrain } from '#/engine/bot/BotFuzzer.js';
+import { bankSpots, FuzzBrain } from '#/engine/bot/BotFuzzer.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -471,10 +471,24 @@ class BotManager implements BotHooks {
         // .preferUncovered). Also the number the run is judged by afterwards.
         ScriptCoverage.enable();
 
+        // ONE TILE FOR ALL OF THEM WAS THE COVERAGE CEILING. Every bot started on the caller's
+        // coordinate - Lumbridge, in practice - and wandered out from there, so twelve bots
+        // explored one region twelve times over. A 3,000-tick run reached 2.4% of this build's
+        // triggers, and the measurement in stockFuzzer below records the same lesson from the
+        // other side: what holds coverage down is not a shortage of clicks.
+        //
+        // So with no coordinate asked for, they are spread over bankSpots() - a derived list of
+        // tiles beside real bank booths and tellers, every one checked against the collision map.
+        // Banks are in towns and towns are where content is, which makes it a better spread than
+        // coordinates I would otherwise be inventing. Seeded off fuzzSeed, so a run replays.
+        //
+        // An EXPLICIT `at` still puts them all on it, because a caller naming a coordinate means
+        // it - that is how you aim a run at one area.
+        const spread = at ? null : spreadStarts(count, this.fuzzSeed);
         const start = at ?? this.fuzzStart();
         let made = 0;
         for (let i = 0; i < count; i++) {
-            const result = this.spawn('roamer', { at: start, manual: true, fuzzSeed: this.fuzzSeed + i });
+            const result = this.spawn('roamer', { at: spread?.[i] ?? start, manual: true, fuzzSeed: this.fuzzSeed + i });
             if (typeof result === 'string') {
                 return `only ${made} of ${count} started: ${result}`;
             }
@@ -482,7 +496,8 @@ class BotManager implements BotHooks {
             printInfo(`bots: fuzzer ${result.username} - ${persona}`);
             made++;
         }
-        printInfo(`bots: ${made} fuzzers at ${start.x},${start.z},${start.level}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
+        const where = spread ? `${new Set(spread.map(p => `${p.x},${p.z},${p.level}`)).size} places` : `${start.x},${start.z},${start.level}`;
+        printInfo(`bots: ${made} fuzzers at ${where}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
         return '';
     }
 
@@ -592,6 +607,37 @@ class BotManager implements BotHooks {
     pendingRespawns(): number {
         return this.respawns.length;
     }
+}
+
+/**
+ * `count` start tiles for a fuzz run, spread over bankSpots() and seeded so the run replays.
+ *
+ * Distinct while there are distinct spots to give, then it wraps - twelve bots and a hundred spots
+ * means twelve places, and more bots than spots means some share, which is better than all of them
+ * sharing one. It walks the shuffled list rather than picking at random so no two bots land on the
+ * same tile by coincidence; two bots on one tile is not an error, just a wasted bot.
+ */
+function spreadStarts(count: number, seed: number): { x: number; z: number; level: number }[] {
+    const spots = bankSpots();
+    if (!spots.length) {
+        return [];
+    }
+    // The same cheap generator the personas use, so the spread is part of what a seed reproduces.
+    let state = seed >>> 0 || 1;
+    const next = (): number => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 0x100000000;
+    };
+    const shuffled = spots.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(next() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const out: { x: number; z: number; level: number }[] = [];
+    for (let i = 0; i < count; i++) {
+        out.push(shuffled[i % shuffled.length]);
+    }
+    return out;
 }
 
 export default new BotManager();
