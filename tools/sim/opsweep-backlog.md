@@ -1,11 +1,14 @@
 # What is left in the opsweep backlog, and which parts of it are bugs
 
-`tools/sim/opsweep.ts` prints 2,734 dead options and 298 that reach only a global fallback. The
+`tools/sim/opsweep.ts` prints 2,733 dead options and 138 that reach only a global fallback. The
 number on its own is not a to-do list: it mixes live bugs a player can hit today with cache slots
 Jagex never used and systems nobody has started. This file is the triage, so the next person picks
 a bucket instead of picking a line.
 
 Counts are from the 3 November 2026 baseline. Rerun `npx tsx tools/sim/opsweep.ts` for today's.
+The report was 4,370 lines before two things came out of it that were not backlog at all: 1,338
+`Wear`/`Wield` labels that the global equip code has always handled correctly, and the Destroy bug
+below, now fixed.
 
 ## Read this first: what "dead" does and does not prove
 
@@ -29,22 +32,44 @@ fuzzer already walks past them, so a bot run will not tell you anything new abou
 A whole unimplemented system, and the `Remove`/`Remove-room`/`Build` labels are its editing mode.
 Not worth picking at one loc at a time: either Construction gets built or these stay.
 
-### 174 locs with a dead "Mine" or "Prospect" - and these ARE bugs
+### 175 locs with a dead "Mine" or "Prospect" - run `deadrocks.ts` before touching these
 Placed, clickable rock with an inert Mine option, and the cause is almost always a missing
 `category=mining_rock_normal`. **There is a worked precedent**:
 `content/scripts/skill_mining/configs/rimmington_rocks.loc`, where the owner moved the whole
 loc_9708-9725 run out of the 377 dump and fixed `category=`, `param=next_loc_stage_mining` and the
 `mine.dbrow` ore tables, with a long comment explaining how the depleted variants were identified.
-Follow that file.
+`regional_rocks.loc` beside it does the same for four more mines. Follow those two files.
 
-The clusters, by placed instance count: `dwarf_gold_mine` / `_l` / `_r` (95 + 30 + 30 - the
-Dwarven mineral veins, "distinctly like gold", referenced by nothing at all), `loc_10944..10946`
-(~32 each), the `loc474_169xx/170xx` run, and the `burgh_rubble_*` set.
+**`npx tsx tools/sim/deadrocks.ts` applies their method for you**, so this bucket does not need
+researching from the names. It learns the seam-colour-to-ore mapping from the 119 rocks already in
+`mine.dbrow` and reads the unwired rocks against it, and it prints placement counts, so the work
+can be done in the order that reaches players. Today, of 175: **99 have their ore settled by seam
+colour**, 22 are spent rocks that want `param=mining_rock_empty,1` and no ore at all, 19 carry a
+seam colour no wired rock shares, and 35 carry no recolour to go on. `--placed` narrows it to the
+47 locs (452 instances) a player can actually walk up to.
 
-**Each one needs a decision this tool cannot make**: which ore, and whether the rock depletes. The
-gold veins are unambiguous from their own description; `loc_10946` carries `recol2d=16706`, which
-is not one of the five ore colours rimmington_rocks.loc documents, so its ore is a guess until
-somebody decides. Do not infer an ore from a recolour alone.
+**What the tool deliberately will not decide**, and why nothing here is wired yet:
+
+- **Whether a rock depletes.** A depleting rock needs `param=next_loc_stage_mining` pointing at its
+  spent partner, and `loc_change` refuses a null type, so wiring one without a partner throws
+  rather than failing quietly. A non-depleting rock needs its own `get_ore_*` label in mining.rs2
+  instead - rune essence is the precedent: `blankrunestone` carries no next stage and
+  `get_ore_essence` just calls `p_oploc(3)` again.
+- **The two biggest placed clusters have no colour to go on at all.** `dwarf_gold_mine` / `_l` /
+  `_r` (155 instances) and the `loc_4976..4996` / `loc_12941..3` run (110 instances) are "Mineral
+  vein" and "A distinctive layer in the rock strata" - no recolour, and no vein mechanic exists in
+  this build. Their descriptions are the only evidence, and for the dwarven ones the description
+  does name gold.
+- **`loc_14850/51/52`** (72 instances, the third largest) are the awkward case worth a look: their
+  seam is recoloured to 0, which by regional_rocks.loc's rule ("a rock with no ore colour is a rock
+  with no ore in it") makes them spent rocks - but they carry `mapscene=12`, so the map draws a
+  mine icon there, and the live rocks of their own family are placed 300 tiles away in the Lava
+  Maze. Spent or never-assigned is a judgement call.
+
+**One more trap before wiring anything.** Several of these rocks declare no `op3` at all, including
+the whole Lunar Isle `loc474_169xx/170xx` run. mining.rs2 keeps a player swinging with
+`p_oploc(3)`, and `P_OPLOC` returns early on a null slot, so such a rock mines once and stops even
+once its category and ore are right. Every working rock in the build carries `op3=hidden`.
 
 ### 391 dead objs, of which 112 are not items at all
 `9mm_revolver`, `brass_monkey`, `elven_sheep`, `rotten_net`, the `whoopsie_obj30xx` run: every one
@@ -56,23 +81,34 @@ Finding the real items among them is worth doing by hand, and it pays: `ring_of_
 this bucket, with `iop1=Wear` and no `wearpos`, and it is a hard clue reward the collection log
 counts. It is fixed. The test that separates the two is whether the obj has real worn data.
 
-### 298 that reach only a global fallback - small, and all of it wrong
+### 138 that reach only a global fallback - small, and all of it wrong
 This section used to be 1,629 and most of it was noise: every `Wear`, `Wield`, `Equip` and `Hold`
 on `iop2` in the game, reported because `equip.rs2`'s `[opheld2,_] ~equip(last_slot)` is "only the
 global fallback". That global IS the handler for wearing a helmet, so opsweep now skips those four
-labels on iop2 and the section is down to 298. What is left is worth reading line by line:
+labels on iop2. A further 160 were the Destroy bug, now fixed - see below. What is left is worth
+reading line by line:
 
-- **286 `iop5` labels that are not Drop** - 160 `Destroy`, 96 `Move`, 24 `Dismantle`, 6 `Release`.
-  There are exactly two global opheld triggers in the build: `[opheld2,_] ~equip` and
-  `[opheld5,_] ~dropslot`. So clicking "Destroy" on an untradeable does not destroy it, it **drops
-  it on the floor**, and `~dropslot` has no label check to stop it. This is one systemic bug, not
-  286 - and the fix is one proc, because `oc_iop` is already in `ScriptOpcode.ts` (`OC_IOP`,
-  "official, see cs2") and merely unimplemented, so the engine side is a handler in ObjOps and the
-  content side is a branch in `~dropslot`. Destroy wants a confirmation dialog; Move, Dismantle and
-  Release each want a decision about what they should do.
+- **126 `iop5` labels that are not Drop** - 96 `Move`, 24 `Dismantle`, 6 `Release`. There are
+  exactly two global opheld triggers in the build, `[opheld2,_] ~equip` and `[opheld5,_]`, so these
+  still reach the drop code and get put on the floor. Each wants a feature rather than a branch:
+  `Dismantle` should split an ornamented item back into base plus kit (the 24 are the `*_or` and
+  `*_t` items), `Release` should put the creature down, and `Move` belongs to the sliding-puzzle
+  interfaces (`trail_slidingpuzzlec/d` and the `reinitialisation_*` run). Note that making them
+  inert instead would be worse than the drop: `Dismantle` IS the fifth option on an ornamented
+  godsword, so there is no `Drop` underneath it and the item would be stuck in the backpack.
 - **`iop2` labels the equip code will try to wear** - `Play-With` x3, `Destroy` x3, `Hold`.
 - A handful of loc/npc/ground-obj ops: `templetrek_snake_dead op2="Skin"`, `fire_object op3="Study"`,
   `magictraining_guardianstatue op3="Observe"`.
+
+### Fixed: 160 `iop5="Destroy"` items were being dropped on the floor
+Kept here because the shape of it is worth remembering. `[opheld5,_] ~dropslot` took every
+fifth-option click without looking at the label, so clicking "Destroy" on an untradeable quest item
+dropped it - no confirmation, and `^dropslot_duration` then took it away for good, so a misclick
+cost the item. The check could not be written because `oc_iop` had been declared in
+`ScriptOpcode.ts` since the enum ("official, see cs2") with no handler behind it. It is implemented
+now, alongside `oc_op` for the ground menu, and `drop.rs2` branches on the label into a
+confirmation built the way `storage_items.rs2` already built one for the herb sack. 171 items go
+through it; the 31 that have their own `[opheld5,x]` are untouched. `tools/sim/destroyop.ts`.
 
 ### The rest
 189 `Open` / 102 `Close` (doors), 158 `Search`, 55 `Climb-down` / 39 `Climb-up` / 37 `Climb`,
@@ -83,10 +119,11 @@ doors) is the Rogues' Den course, which is one coherent piece of work rather tha
 
 ## Where to start
 
-1. The `[opheld5,_]` label bug. One systemic fix, 286 items, and today the game silently drops
-   things players meant to destroy.
-2. The mining categories, cluster by cluster, following `rimmington_rocks.loc`. Highest
-   placed-instance count per line changed of anything here.
-3. `mm_bush_kharazi_jungle_tree1`/`2` - the same fix for woodcutting, 123 placed instances.
-4. Teach opsweep whether an obj is obtainable, so the 391-line obj section stops hiding its two
+1. The mining clusters, in `deadrocks.ts --placed` order, following `rimmington_rocks.loc`. Highest
+   placed-instance count per line changed of anything here. The three questions above
+   (depletes or not, the two no-recolour families, and `loc_14850/51/52`) are the owner's to answer;
+   everything else the tool has already settled.
+2. `mm_bush_kharazi_jungle_tree1`/`2` - the same story for woodcutting, 123 placed instances of
+   unchoppable jungle tree. `[oploc1,_tree]` in woodcut.rs2 dispatches on category the same way.
+3. Teach opsweep whether an obj is obtainable, so the 391-line obj section stops hiding its two
    real entries behind 142 clue scrolls nobody can hold.

@@ -35,7 +35,8 @@
 // WHAT IS ACTUALLY LEFT IN IT is triaged in tools/sim/opsweep-backlog.md - which buckets are live
 // bugs, which are cache slots Jagex never used, which are whole systems nobody has started, and
 // the worked precedent to follow for the mining ones. The number this prints is not a to-do list
-// on its own: read that file before treating a line as urgent.
+// on its own: read that file before treating a line as urgent. For the 175 rocks in it,
+// tools/sim/deadrocks.ts goes further and works out which ore each one is supposed to hold.
 import fs from 'fs';
 import path from 'path';
 
@@ -227,8 +228,12 @@ if (!AREA) {
         }
         for (let op = 0; op < type.iop.length; op++) {
             const label = type.iop[op];
-            // Drop is the engine's own, like Attack above.
-            if (!isVisibleOp(label) || /^drop$/i.test(label)) {
+            // Drop is the engine's own, like Attack above - and so is Destroy, since drop.rs2's
+            // [opheld5,_] reads oc_iop and branches on the label. Both are handled by that one
+            // global and there is no per-item script to write for either. The OTHER iop5 labels
+            // are not: Move, Dismantle and Release still fall through to the drop, which is the
+            // wrong behaviour and stays in this report until somebody writes the feature.
+            if (!isVisibleOp(label) || /^(drop|destroy)$/i.test(label)) {
                 continue;
             }
             // AND SO IS WEARING SOMETHING, which is the other half of the same point and took a
@@ -241,10 +246,7 @@ if (!AREA) {
             //
             // The labels below are the ones the global equip code is FOR. Anything else on iop2 -
             // "Extinguish", "Play-With" - still gets reported, because the equip code will try to
-            // wear it, which is trap 3's actual bug. Note what is deliberately NOT on this list:
-            // iop5 labels other than Drop. "Destroy", "Dismantle", "Release" and "Move" all fall
-            // through to [opheld5,_] ~dropslot and put the item on the floor instead of doing what
-            // the label says, and those 286 stay in the report where they belong.
+            // wear it, which is trap 3's actual bug.
             if (op === 1 && /^(wear|wield|equip|hold)$/i.test(label)) {
                 continue;
             }
