@@ -92,6 +92,7 @@ import {
     trackCycleZoneTime,
     trackNpcCount,
     trackPlayerCount,
+    trackPlayerPacketsPerTick,
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
@@ -190,8 +191,12 @@ class World {
     readonly objDelayedQueue: LinkList<ObjDelayedRequest> = new LinkList();
 
     // debug data
-    readonly lastCycleStats: Uint16Array = new Uint16Array(12);
-    readonly cycleStats: Uint16Array = new Uint16Array(12);
+    // custom (2026-11-03) - 13 entries for PACKETS_OUT_MAX, and Uint32 because Uint16 was already
+    // too narrow for the one that was here: BANDWIDTH_OUT counts BYTES per tick, and 65535 of them
+    // is 150 packets of 437, so a busy tick wrapped silently and lostcity_cycle_bandwidth_out_bytes
+    // under-reported by whole multiples of 64 KB with nothing to say it had.
+    readonly lastCycleStats: Uint32Array = new Uint32Array(13);
+    readonly cycleStats: Uint32Array = new Uint32Array(13);
 
     tickRate: number = World.TICKRATE; // speeds up when we're processing server shutdown
     currentTick: number = 0; // the current tick of the game world.
@@ -624,7 +629,8 @@ class World {
                             ` - ${since} slow tick${since === 1 ? '' : 's'} since the last warning.` +
                             ` world ${this.cycleStats[WorldStat.WORLD]} | in ${this.cycleStats[WorldStat.CLIENT_IN]} | npcs ${this.cycleStats[WorldStat.NPC]}` +
                             ` | players ${this.cycleStats[WorldStat.PLAYER]} | zones ${this.cycleStats[WorldStat.ZONE]} | out ${this.cycleStats[WorldStat.CLIENT_OUT]}` +
-                            ` | cleanup ${this.cycleStats[WorldStat.CLEANUP]} ms, ${this.getHumanPlayerCount()} players`
+                            ` | cleanup ${this.cycleStats[WorldStat.CLEANUP]} ms, ${this.getHumanPlayerCount()} players,` +
+                            ` up to ${this.cycleStats[WorldStat.PACKETS_OUT_MAX]} packets to one client`
                     );
                 }
             }
@@ -641,6 +647,7 @@ class World {
             this.lastCycleStats[WorldStat.CLEANUP] = this.cycleStats[WorldStat.CLEANUP];
             this.lastCycleStats[WorldStat.BANDWIDTH_IN] = this.cycleStats[WorldStat.BANDWIDTH_IN];
             this.lastCycleStats[WorldStat.BANDWIDTH_OUT] = this.cycleStats[WorldStat.BANDWIDTH_OUT];
+            this.lastCycleStats[WorldStat.PACKETS_OUT_MAX] = this.cycleStats[WorldStat.PACKETS_OUT_MAX];
 
             // push stats to prometheus
             if (Environment.NODE_PRODUCTION) {
@@ -1198,6 +1205,19 @@ class World {
                         }
                     }
                     this.playerLoop.add(key, player);
+                } else {
+                    // custom (2026-11-03) - AND AN ADDRESS THAT IS NEITHER OF THOSE. normalizeAddress
+                    // answers 'unknown' when a socket has no remoteAddress, which Node does for one
+                    // already destroyed by the time the connection event fires, and that string holds
+                    // no '.' and no ':' - so neither branch above ran and the player was not added to
+                    // the loop AT ALL. Logged in, greeted, saved, holding a session, and then never
+                    // ticked: no input read, no logout processing, no cleanup, until a restart.
+                    //
+                    // Everything here buckets by address so that one address cannot take more than
+                    // its turn; an address we cannot read is one bucket shared by all of them, which
+                    // is the cautious end of that same rule. Found by a sim whose stub socket left
+                    // remoteAddress at its default - see tools/sim/packetcount.ts.
+                    this.playerLoop.add(0n, player);
                 }
             } else {
                 // 127.0.0.1
@@ -1390,6 +1410,7 @@ class World {
         const start: number = Date.now();
 
         this.cycleStats[WorldStat.BANDWIDTH_OUT] = 0; // reset bandwidth counter
+        this.cycleStats[WorldStat.PACKETS_OUT_MAX] = 0; // ...and the per-tick packet high-water mark
 
         for (const player of this.playerLoop.all()) {
             if (!isClientConnected(player)) {
@@ -1440,6 +1461,20 @@ class World {
         // - reset players
         for (const player of this.playerLoop.all()) {
             player.resetEntity(false);
+
+            // custom (2026-11-03) - HOW CLOSE THIS CLIENT CAME TO FALLING BEHIND. Counted here, at
+            // the end of the tick, because messages are written throughout one (a script's say,
+            // processClientsOut's info packets) and the figure is the tick's whole output.
+            if (isClientConnected(player)) {
+                const sent = player.packetsThisTick;
+                player.packetsThisTick = 0;
+                if (sent > this.cycleStats[WorldStat.PACKETS_OUT_MAX]) {
+                    this.cycleStats[WorldStat.PACKETS_OUT_MAX] = sent;
+                }
+                if (Environment.NODE_PRODUCTION) {
+                    trackPlayerPacketsPerTick.observe(sent);
+                }
+            }
 
             // - reset invs (players)
             for (const inv of player.invs.values()) {
