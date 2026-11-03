@@ -125,6 +125,15 @@ staffrules
 # ---- LONGER THAN THE 180 SECOND CAP. Not known to be broken - known to be slower than the job
 # is willing to wait. If one of these is worth running, it needs its own timeout rather than a
 # bigger cap for all 303.
+#
+# THAT MECHANISM EXISTS NOW: sims.yml carries a per-sim cap, and glassblowing is the first to
+# use it. It was never on this list - it went red on the first unattended night and read as a
+# real failure, because a sim killed at the cap looks exactly like one that failed: no verdict
+# line, just output that stops mid-run. It is 88 checks over seventeen products, takes 216
+# seconds on a machine faster than a runner, and passes. Its cap is 600.
+#
+# The four below have not been timed, so nobody knows whether they want 300 seconds or 3000.
+# Timing them is the work that would take them off this list.
 audit1
 dpick
 gwdanims

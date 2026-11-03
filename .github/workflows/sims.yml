@@ -124,8 +124,18 @@ jobs:
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
+          # A FEW ARE HONESTLY SLOW, and a sim killed at the cap looks exactly like a sim that
+          # failed: no verdict line, just output that stops. glassblowing is 88 checks over
+          # seventeen products and takes 216 seconds on a machine FASTER than a runner, so the
+          # 180 second cap killed it and the job reported it as "fails twice". It was passing
+          # all along. Its own cap rather than a bigger one for all 300, because a cap that
+          # covers the slowest sim stops being a timeout at all.
+          case "$n" in
+            glassblowing) cap=600 ;;
+            *) cap=180 ;;
+          esac
           rc=0
-          timeout 180 npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"
@@ -146,7 +156,7 @@ jobs:
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
             rc2=0
-            timeout 180 npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            timeout "$cap" npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
               echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
               flaky="$flaky $n"
