@@ -15,7 +15,53 @@ import { printInfo } from '#/util/Logger.js';
 import { startManagementWeb } from '#/server/management/ManagementWeb.js';
 import { createInternalServer } from '#/server/InternalServer.js';
 import InvType from '#/cache/config/InvType.js';
+import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import LoginToken from '#/server/login/LoginToken.js';
+
+/**
+ * THE FIGURES THAT ARE NOT SKILLS, and the hiscore types they are filed under.
+ *
+ * The game has counted all of these since September - content/scripts/player/configs/player_stats.varp
+ * and the quest point varp - and shows them on the quest tab's Player Statistics page. None of
+ * them has ever left the save file, so the website could show a player's levels and nothing about
+ * what they had actually done. This is the only thing missing: the counting, the saving and the
+ * display were all already built.
+ *
+ * TYPES START AT 100 so they cannot collide with a skill. A skill's type is its PlayerStat plus
+ * one, and the day somebody adds the twenty-fourth skill it should not land on top of quest
+ * points. 0 in hiscore_large is the overall row and is not ours.
+ *
+ * THEY GO IN `hiscore` RATHER THAN A TABLE OF THEIR OWN because rank then costs nothing: the site
+ * already ranks a row by counting the rows above it, so "NPC kills, ranked 5th" falls out of
+ * exactly the query that ranks Attack. `level` is 0 for all of them - a kill count has no level,
+ * and writing the value there twice would be inventing a second meaning for the column.
+ */
+const TRACKED: readonly { varp: string; type: number }[] = [
+    { varp: 'qp', type: 100 },
+    { varp: 'player_npc_kills', type: 101 },
+    { varp: 'player_pvp_kills', type: 102 },
+    { varp: 'player_deaths', type: 103 },
+    { varp: 'player_playtime', type: 104 }
+];
+
+/**
+ * Varp ids by name, worked out once.
+ *
+ * -1 IS A FINE ANSWER and is cached like any other: a profile whose content does not define one of
+ * these simply never gets that row, rather than this asking the config every logout for a name
+ * that was not there the first time.
+ */
+const trackedIds = new Map<string, number>();
+
+function trackedVarp(name: string): number {
+    const known = trackedIds.get(name);
+    if (known !== undefined) {
+        return known;
+    }
+    const id = VarPlayerType.getId(name);
+    trackedIds.set(name, id);
+    return id;
+}
 
 const SAFE_PROFILE = /^[A-Za-z0-9_-]{1,32}$/;
 const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_autosave']);
@@ -98,6 +144,28 @@ async function updateHiscores(account: { id: number; staffmodlevel: number; bann
                     value: player.stats[stat]
                 });
             }
+        }
+    }
+
+    // The non-skill figures, onto the same two piles so they are written in the same round trip.
+    for (const tracked of TRACKED) {
+        const varp = trackedVarp(tracked.varp);
+        if (varp === -1) {
+            continue;
+        }
+
+        // Zero is not written. A player who has never died should have no deaths row rather than a
+        // row saying nothing happened - and it keeps a brand new account off five hiscore tables.
+        const value = player.vars[varp] ?? 0;
+        if (value <= 0) {
+            continue;
+        }
+
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', tracked.type).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== value) {
+            update.push({ type: tracked.type, level: 0, value, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: tracked.type, level: 0, value });
         }
     }
 
