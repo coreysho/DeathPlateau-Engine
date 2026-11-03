@@ -267,6 +267,15 @@ behaviour, redundant script.
   steps broken; walking up to shells and sideways to siblings cleared Desert Treasure's obelisks,
   which a real `OpLoc` packet is refused for. `locCanOp` now mirrors the handler line for line.
 
+### Checking whether a sim is already known-failing
+
+`known-failing.txt` carries a comment per entry - `audit6               # Error: unexpected menu:
+multi3` - so matching a whole line against a name finds nothing. The job itself extracts the names
+first (`grep -oE '^[a-z0-9_]+'`), and anything asking "is this one already listed?" has to do the
+same. Getting that wrong here cost a pointless attribution hunt: `audit6` reads as absent to a
+whole-line match, so five of its failures looked like a regression to be chased, and it had been on
+the list all along.
+
 ### One of the recovered options was wrong, and the sim caught it
 
 `toxic_blowpipe_empty` was given an `iop2=Wield`, copied from its loaded twin, which shares the
