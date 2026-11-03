@@ -96,24 +96,37 @@ Finding the real items among them is worth doing by hand, and it pays: `ring_of_
 this bucket, with `iop1=Wear` and no `wearpos`, and it is a hard clue reward the collection log
 counts. It is fixed. The test that separates the two is whether the obj has real worn data.
 
-### 138 that reach only a global fallback - small, and all of it wrong
-This section used to be 1,629 and most of it was noise: every `Wear`, `Wield`, `Equip` and `Hold`
-on `iop2` in the game, reported because `equip.rs2`'s `[opheld2,_] ~equip(last_slot)` is "only the
-global fallback". That global IS the handler for wearing a helmet, so opsweep now skips those four
-labels on iop2. A further 160 were the Destroy bug, now fixed - see below. What is left is worth
-reading line by line:
+### 114 that reach only a global fallback - and only 17 can happen to a player
+The report splits this section too, by the same obtainability test: 97 of the lines are on objs
+whose names appear nowhere in content. 96 of those are `iop5="Move"` on the `trail_slidingpuzzle*`
+and `reinitialisation_*` sprites, which exist so the cache can draw a puzzle inside an interface
+and which nothing hands to anybody, so "clicking Move drops it" is not something that can happen.
 
-- **126 `iop5` labels that are not Drop** - 96 `Move`, 24 `Dismantle`, 6 `Release`. There are
-  exactly two global opheld triggers in the build, `[opheld2,_] ~equip` and `[opheld5,_]`, so these
-  still reach the drop code and get put on the floor. Each wants a feature rather than a branch:
-  `Dismantle` should split an ornamented item back into base plus kit (the 24 are the `*_or` and
-  `*_t` items), `Release` should put the creature down, and `Move` belongs to the sliding-puzzle
-  interfaces (`trail_slidingpuzzlec/d` and the `reinitialisation_*` run). Note that making them
-  inert instead would be worse than the drop: `Dismantle` IS the fifth option on an ornamented
-  godsword, so there is no `Drop` underneath it and the item would be stuck in the backpack.
-- **`iop2` labels the equip code will try to wear** - `Play-With` x3, `Destroy` x3, `Hold`.
-- A handful of loc/npc/ground-obj ops: `templetrek_snake_dead op2="Skin"`, `fire_object op3="Study"`,
-  `magictraining_guardianstatue op3="Observe"`.
+**The 17 that can**, and what each actually does - measured by clicking it on a real player, not
+read off the label:
+
+- **`iop5="Release"` on 6 items** - `poh_toy_cat`, the three wound-up POH toys, and the two
+  `100_jubbly_balloon_toad_*`. The item is dropped on the floor with no message at all. Every one
+  is `tradeable=true`, so it is recoverable; "Release" plausibly means "put it down" anyway, which
+  is roughly what happens. Needs a decision about what releasing is meant to do before it needs
+  code.
+- **`iop2="Play-With"` on the 3 fishbowl fish** - the item leaves the backpack and does **not**
+  appear on the ground: the global `[opheld2,_]` equip code **wears it**, into the weapon slot,
+  silently. This is trap 3 happening rather than threatening. It is also not obviously wrong: all
+  three carry `wearpos=3`, so the cache does intend them to be held, and a pet fish you hold is a
+  pet fish. What is wrong is that the menu says Play-With and the action is equip.
+- **7 npc and ground-obj ops**: `op2="Destroy"` on the three Dagannoth weak doors (placed, one
+  each), `elid_ranging_target op2="Shoot"` (placed), `templetrek_snake_dead op2="Skin"`,
+  `fire_object op3="Study"`, and Talk-To on two npcs the map never places.
+
+### Where the global-fallback section's 1,629 went
+Worth recording, because the number moved for three different reasons and only one of them was a
+bug being fixed. 1,338 were every `Wear`, `Wield`, `Equip` and `Hold` on `iop2` in the game,
+reported because `equip.rs2`'s `[opheld2,_] ~equip(last_slot)` is "only the global fallback" -
+true, and completely uninteresting, since that global IS the handler for wearing a helmet and
+there is no per-item script to write. opsweep skips those four labels on iop2 now. 160 were the
+Destroy bug and 24 the Dismantle bug, both fixed below. 97 of the remaining 114 are on objs nobody
+can hold. Seventeen lines are left.
 
 ### Fixed: 160 `iop5="Destroy"` items were being dropped on the floor
 Kept here because the shape of it is worth remembering. `[opheld5,_] ~dropslot` took every
@@ -124,6 +137,20 @@ cost the item. The check could not be written because `oc_iop` had been declared
 now, alongside `oc_op` for the ground menu, and `drop.rs2` branches on the label into a
 confirmation built the way `storage_items.rs2` already built one for the herb sack. 171 items go
 through it; the 31 that have their own `[opheld5,x]` are untouched. `tools/sim/destroyop.ts`.
+
+### Fixed: 24 `iop5="Dismantle"` had the same shape, one slot over
+The 24 ornamented results - `*_or`, `*_g`, `*_t`, the infinity robes - each declare TWO ways to
+take the kit off: `iop4=Revert`, this repository's, added with `param=ornament_from`; and
+`iop5=Dismantle`, which came in with the item from a modern OSRS cache. Every trigger was on iop4,
+so Dismantle fell through to the drop, and every one of these is `tradeable=no` - dropping an
+Armadyl godsword (or) was losing it.
+
+`ornament_kit.rs2` answers both slots now, which is the rule that file already states: *every
+Revert trigger sits on the slot its item's own iop declares*. Wiring it rather than deleting
+`iop5=Dismantle` keeps the imported cache data, and a player clicking either word means the same
+thing. The precedent is in that same file - the two Gravedigger helmets have always used
+`[opheld5,...]`, because a slayer helmet spends its iop4 on Disassemble.
+`tools/sim/ornamentkits.ts` drives all 50 options across 26 items through the real handler.
 
 ### The rest
 189 `Open` / 102 `Close` (doors), 158 `Search`, 55 `Climb-down` / 39 `Climb-up` / 37 `Climb`,

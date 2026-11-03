@@ -397,12 +397,33 @@ if (unheld.length > 25) {
     console.log(`   ... and ${unheld.length - 25} more`);
 }
 
+// THE SAME SPLIT HERE, and it matters more in this section than in the dead one. 96 of these are
+// iop5="Move" on the sliding-puzzle and reinitialisation sprites, which are objs the cache uses to
+// draw a puzzle inside an interface and which nothing hands to anybody - so "clicking Move drops
+// it" is not a thing that can happen to a player. Ten lines are on an item somebody can hold, and
+// those ten are the whole of what this section is worth reading for.
+const swallowedUnheld = swallowed.filter(r => {
+    const obj = objOf(r.line);
+    return obj !== null && !NAMED.has(obj);
+});
+const swallowedHeld = swallowed.filter(r => !swallowedUnheld.includes(r));
+
 console.log(`\n-- answered only by the global fallback (${swallowed.length}) - see trap 3 in this file's header`);
-for (const row of swallowed.slice(0, 25)) {
+console.log(`   ${swallowedHeld.length} on something a player can actually have:`);
+for (const row of swallowedHeld.slice(0, 40)) {
     console.log(`   ${row.line}  x${row.instances} ${row.where.join(' ')}`);
 }
-if (swallowed.length > 25) {
-    console.log(`   ... and ${swallowed.length - 25} more`);
+if (swallowedHeld.length > 40) {
+    console.log(`   ... and ${swallowedHeld.length - 40} more`);
+}
+if (swallowedUnheld.length) {
+    console.log(`   and ${swallowedUnheld.length} on an obj whose name appears nowhere in content, so nobody can hold one:`);
+    for (const row of swallowedUnheld.slice(0, 10)) {
+        console.log(`      ${row.line}`);
+    }
+    if (swallowedUnheld.length > 10) {
+        console.log(`      ... and ${swallowedUnheld.length - 10} more`);
+    }
 }
 
 // SPELLBOOK DRIFT. BotInput.castableComs casts only from the books it knows by name, because
