@@ -12,6 +12,33 @@
 // A run that finds nothing is a result and is printed as one. What is NOT a result is a run that
 // found nothing because the bots never did anything, so the action histogram is printed too - if it
 // is all `idle` and `walk`, the finding is about the fuzzer, not the content.
+//
+// WHAT THE BOTS ARE ACTUALLY FOR, measured rather than assumed, because it is easy to spend a day
+// reading the wrong section of this report. Every finding kind was checked against what the
+// cross-reference tools already know (tools/sim/opsweep.ts, orphans.ts, ifselect.ts):
+//
+//   notrigger   NOT unique. Every one of a run's notrigger findings was already in
+//               opsweep-baseline.txt - opsweep reads the whole cache in forty seconds, and the
+//               bots find the subset they happen to walk into. Useful as a reachability signal
+//               ("a player really does meet this one"), not as a discovery.
+//   combo       noise by construction, and the report says so where it prints them.
+//   filler      ZERO BUGS once attributed properly. All twenty rows of a 3,000-tick run were
+//               `case default : ~displaymessage(^dm_default)` at the end of a use-on switch -
+//               content correctly refusing a combination a fuzzer invented. They were 253 rows
+//               before the attribution was fixed, which is the only reason they looked like a
+//               seam.
+//   SCRIPT      UNIQUE, and the reason to run this at all. A handler that exists, dispatches
+//   FAULTS      correctly and then throws on the data is invisible to every cross-reference: the
+//               option is declared, the script is reachable, and all three tools say so. One run
+//               found [opheld5,_serpentine_helm] throwing on inv_setslot, which meant three helms
+//               could not be dropped at all. See tools/sim/serpentinedrop.ts.
+//   the other   softlock, corpse, coord, stat, varp, items - also unique, also only findable by
+//   watchers    running. A 3,000-tick run with eight bots found none of them, which is a result.
+//
+// SO THE WAY TO GET MORE OUT OF THIS IS MORE RUNNING, not more reading. Trigger coverage on a
+// 3,000-tick run is about 2.4% - some 15,000 triggers that nothing in the world, no sim and no
+// player has ever reached - so the faults that are left are mostly behind content no bot has
+// walked to yet. Longer runs, more bots, and personas that start somewhere other than Lumbridge.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
