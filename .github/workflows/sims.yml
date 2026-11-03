@@ -226,6 +226,11 @@ jobs:
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
         NOTIFY_TEST: ${{ inputs.notify_test }}
+        # DIAGNOSTIC ONLY, and deliberately not used to send anything. 'Settings -> Secrets and
+        # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
+        # "New repository secret", so a webhook in the wrong half is the likeliest reason for a
+        # secret that reads empty. This says which half it is in without guessing twice.
+        HAVE_VAR: ${{ vars.DISCORD_WEBHOOK != '' }}
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
@@ -252,7 +257,18 @@ jobs:
           '{username: "Nightly sims", embeds: [{title: $title, url: $url, color: $colour, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
 
         if [ -z "$DISCORD_WEBHOOK" ]; then
-          echo "DISCORD_WEBHOOK is not set, so nothing was posted. The message would have been:"
+          if [ "$HAVE_VAR" = "true" ]; then
+            echo "FOUND IT: DISCORD_WEBHOOK is a repository VARIABLE, not a secret. Delete it from"
+            echo "the Variables tab and add it under Secrets. It matters on a public repository:"
+            echo "GitHub masks a secret in these logs and does not mask a variable, so a failing"
+            echo "curl could print the URL into a log anybody can read."
+          else
+            echo "DISCORD_WEBHOOK is empty, and there is no repository variable of that name"
+            echo "either. So it is not on this repository's Actions secrets at all - check it is"
+            echo "on coreysho/DeathPlateau-Engine, under the Actions tab (not Dependabot or"
+            echo "Codespaces), as a Repository secret (not an Environment secret)."
+          fi
+          echo "Nothing was posted. The message would have been:"
           cat /tmp/discord.json
           exit 0
         fi
