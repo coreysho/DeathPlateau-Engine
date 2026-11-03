@@ -92,12 +92,14 @@ import {
     trackCycleZoneTime,
     trackNpcCount,
     trackPlayerCount,
+    trackPlayerPacketsPerTick,
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
 import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
-import { printDebug, printError, printInfo } from '#/util/Logger.js';
+import Ping from '#/network/game/server/model/Ping.js';
+import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
 import OnDemand from './OnDemand.js';
 import { ObjDelayedRequest } from './entity/ObjDelayedRequest.js';
 import DbTableIndex from '#/cache/config/DbTableIndex.js';
@@ -189,8 +191,12 @@ class World {
     readonly objDelayedQueue: LinkList<ObjDelayedRequest> = new LinkList();
 
     // debug data
-    readonly lastCycleStats: Uint16Array = new Uint16Array(12);
-    readonly cycleStats: Uint16Array = new Uint16Array(12);
+    // custom (2026-11-03) - 13 entries for PACKETS_OUT_MAX, and Uint32 because Uint16 was already
+    // too narrow for the one that was here: BANDWIDTH_OUT counts BYTES per tick, and 65535 of them
+    // is 150 packets of 437, so a busy tick wrapped silently and lostcity_cycle_bandwidth_out_bytes
+    // under-reported by whole multiples of 64 KB with nothing to say it had.
+    readonly lastCycleStats: Uint32Array = new Uint32Array(13);
+    readonly cycleStats: Uint32Array = new Uint32Array(13);
 
     tickRate: number = World.TICKRATE; // speeds up when we're processing server shutdown
     currentTick: number = 0; // the current tick of the game world.
@@ -208,6 +214,11 @@ class World {
     // custom (2026-09-27) - the bot manager (engine/bot/BotManager.ts) plugs in here when NODE_BOTS is
     // set. A hook rather than an import so the world does not depend on the bots at all.
     bots: BotHooks | null = null;
+
+    // how often a slow tick may be written to the log, and how many went unsaid since (processPings' neighbour)
+    static readonly SLOW_TICK_WARN_INTERVAL: number = 30000;
+    private slowTickCount: number = 0;
+    private lastSlowTickWarning: number = 0;
 
     loginAddressAttempts: TTLCache<string, number> = new TTLCache({ ttl: 60000 });
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
@@ -543,6 +554,10 @@ class World {
             // - stat changes
             // - afk zones changes
             // - flush packets
+            // custom (2026-11-03) - measure the round trip to each client, before the flush below
+            // so the probe rides out with everything else this tick.
+            this.processPings();
+
             this.processClientsOut();
 
             // cleanup
@@ -598,6 +613,28 @@ class World {
 
             this.cycleStats[WorldStat.CYCLE] = Date.now() - start; // set the main logic stat here, before telemetry.
 
+            // custom (2026-11-03) - say so when the world runs late. A tick is 600ms; longer than that
+            // and every player feels it, wherever they are. Nothing used to be logged at all, so the
+            // only way to know was to be told the game felt laggy. Throttled, with the count of the
+            // overruns that were swallowed in between, because a struggling world would otherwise
+            // write a line every tick and make the journal part of the problem.
+            if (this.cycleStats[WorldStat.CYCLE] > this.tickRate && this.tickRate > 0) {
+                this.slowTickCount++;
+                if (Date.now() - this.lastSlowTickWarning >= World.SLOW_TICK_WARN_INTERVAL) {
+                    const since = this.slowTickCount;
+                    this.slowTickCount = 0;
+                    this.lastSlowTickWarning = Date.now();
+                    printWarning(
+                        `tick ${this.currentTick} took ${this.cycleStats[WorldStat.CYCLE]}ms (over the ${this.tickRate}ms budget)` +
+                            ` - ${since} slow tick${since === 1 ? '' : 's'} since the last warning.` +
+                            ` world ${this.cycleStats[WorldStat.WORLD]} | in ${this.cycleStats[WorldStat.CLIENT_IN]} | npcs ${this.cycleStats[WorldStat.NPC]}` +
+                            ` | players ${this.cycleStats[WorldStat.PLAYER]} | zones ${this.cycleStats[WorldStat.ZONE]} | out ${this.cycleStats[WorldStat.CLIENT_OUT]}` +
+                            ` | cleanup ${this.cycleStats[WorldStat.CLEANUP]} ms, ${this.getHumanPlayerCount()} players,` +
+                            ` up to ${this.cycleStats[WorldStat.PACKETS_OUT_MAX]} packets to one client`
+                    );
+                }
+            }
+
             this.lastCycleStats[WorldStat.CYCLE] = this.cycleStats[WorldStat.CYCLE];
             this.lastCycleStats[WorldStat.WORLD] = this.cycleStats[WorldStat.WORLD];
             this.lastCycleStats[WorldStat.CLIENT_IN] = this.cycleStats[WorldStat.CLIENT_IN];
@@ -610,6 +647,7 @@ class World {
             this.lastCycleStats[WorldStat.CLEANUP] = this.cycleStats[WorldStat.CLEANUP];
             this.lastCycleStats[WorldStat.BANDWIDTH_IN] = this.cycleStats[WorldStat.BANDWIDTH_IN];
             this.lastCycleStats[WorldStat.BANDWIDTH_OUT] = this.cycleStats[WorldStat.BANDWIDTH_OUT];
+            this.lastCycleStats[WorldStat.PACKETS_OUT_MAX] = this.cycleStats[WorldStat.PACKETS_OUT_MAX];
 
             // push stats to prometheus
             if (Environment.NODE_PRODUCTION) {
@@ -1167,6 +1205,19 @@ class World {
                         }
                     }
                     this.playerLoop.add(key, player);
+                } else {
+                    // custom (2026-11-03) - AND AN ADDRESS THAT IS NEITHER OF THOSE. normalizeAddress
+                    // answers 'unknown' when a socket has no remoteAddress, which Node does for one
+                    // already destroyed by the time the connection event fires, and that string holds
+                    // no '.' and no ':' - so neither branch above ran and the player was not added to
+                    // the loop AT ALL. Logged in, greeted, saved, holding a session, and then never
+                    // ticked: no input read, no logout processing, no cleanup, until a restart.
+                    //
+                    // Everything here buckets by address so that one address cannot take more than
+                    // its turn; an address we cannot read is one bucket shared by all of them, which
+                    // is the cautious end of that same rule. Found by a sim whose stub socket left
+                    // remoteAddress at its default - see tools/sim/packetcount.ts.
+                    this.playerLoop.add(0n, player);
                 }
             } else {
                 // 127.0.0.1
@@ -1359,6 +1410,7 @@ class World {
         const start: number = Date.now();
 
         this.cycleStats[WorldStat.BANDWIDTH_OUT] = 0; // reset bandwidth counter
+        this.cycleStats[WorldStat.PACKETS_OUT_MAX] = 0; // ...and the per-tick packet high-water mark
 
         for (const player of this.playerLoop.all()) {
             if (!isClientConnected(player)) {
@@ -1409,6 +1461,20 @@ class World {
         // - reset players
         for (const player of this.playerLoop.all()) {
             player.resetEntity(false);
+
+            // custom (2026-11-03) - HOW CLOSE THIS CLIENT CAME TO FALLING BEHIND. Counted here, at
+            // the end of the tick, because messages are written throughout one (a script's say,
+            // processClientsOut's info packets) and the figure is the tick's whole output.
+            if (isClientConnected(player)) {
+                const sent = player.packetsThisTick;
+                player.packetsThisTick = 0;
+                if (sent > this.cycleStats[WorldStat.PACKETS_OUT_MAX]) {
+                    this.cycleStats[WorldStat.PACKETS_OUT_MAX] = sent;
+                }
+                if (Environment.NODE_PRODUCTION) {
+                    trackPlayerPacketsPerTick.observe(sent);
+                }
+            }
 
             // - reset invs (players)
             for (const inv of player.invs.values()) {
@@ -2174,6 +2240,33 @@ class World {
     // buffers - and a login that failed inside the thread never got a reply, so it could be repeated.
     onClientClosed(client: ClientSocket) {
         this.loginRequests.delete(client.uuid);
+    }
+
+    // custom (2026-11-03) - the latency probe. Every NODE_PING_TICKS ticks each connected client is
+    // sent a sequence byte and answers with it (PongHandler), which is the only honest way to know
+    // what a player's connection is actually costing them - a tunnel or a bad route shows up here and
+    // nowhere else. The number travels back out on the next probe for the client to draw.
+    private processPings(): void {
+        if (Environment.NODE_PING_TICKS <= 0 || this.currentTick % Environment.NODE_PING_TICKS !== 0) {
+            return;
+        }
+
+        const now = Date.now();
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot || !isClientConnected(player)) {
+                continue;
+            }
+
+            // the previous probe never came back - write it off rather than leave a stale number on
+            // screen for ever, and rather than match a late answer to the wrong send
+            if (player.pingSentAt !== -1) {
+                player.pingMs = -1;
+            }
+
+            player.pingSeq = (player.pingSeq + 1) & 0xff;
+            player.pingSentAt = now;
+            player.write(new Ping(player.pingSeq, player.pingMs < 0 ? 0xffff : player.pingMs));
+        }
     }
 
     rebuild() {

@@ -15,7 +15,95 @@ import { printInfo } from '#/util/Logger.js';
 import { startManagementWeb } from '#/server/management/ManagementWeb.js';
 import { createInternalServer } from '#/server/InternalServer.js';
 import InvType from '#/cache/config/InvType.js';
+import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import LoginToken from '#/server/login/LoginToken.js';
+
+/**
+ * THE FIGURES THAT ARE NOT SKILLS, and the hiscore types they are filed under.
+ *
+ * The game has counted all of these since September - content/scripts/player/configs/player_stats.varp
+ * and the quest point varp - and shows them on the quest tab's Player Statistics page. None of
+ * them has ever left the save file, so the website could show a player's levels and nothing about
+ * what they had actually done. This is the only thing missing: the counting, the saving and the
+ * display were all already built.
+ *
+ * TYPES START AT 100 so they cannot collide with a skill. A skill's type is its PlayerStat plus
+ * one, and the day somebody adds the twenty-fourth skill it should not land on top of quest
+ * points. 0 in hiscore_large is the overall row and is not ours.
+ *
+ * THEY GO IN `hiscore` RATHER THAN A TABLE OF THEIR OWN because rank then costs nothing: the site
+ * already ranks a row by counting the rows above it, so "NPC kills, ranked 5th" falls out of
+ * exactly the query that ranks Attack. `level` is 0 for all of them - a kill count has no level,
+ * and writing the value there twice would be inventing a second meaning for the column.
+ */
+const TRACKED: readonly { varp: string; type: number }[] = [
+    { varp: 'qp', type: 100 },
+    { varp: 'player_npc_kills', type: 101 },
+    { varp: 'player_pvp_kills', type: 102 },
+    { varp: 'player_deaths', type: 103 },
+    { varp: 'player_playtime', type: 104 }
+];
+
+/**
+ * Varp ids by name, worked out once.
+ *
+ * -1 IS A FINE ANSWER and is cached like any other: a profile whose content does not define one of
+ * these simply never gets that row, rather than this asking the config every logout for a name
+ * that was not there the first time.
+ */
+const trackedIds = new Map<string, number>();
+
+function trackedVarp(name: string): number {
+    const known = trackedIds.get(name);
+    if (known !== undefined) {
+        return known;
+    }
+    const id = VarPlayerType.getId(name);
+    trackedIds.set(name, id);
+    return id;
+}
+
+/**
+ * Boss kill counts, one hiscore type each.
+ *
+ * content/scripts/bosses/configs/boss_kills.varp has counted these per god and per boss since
+ * September, for the God Wars doors among other things, and like the player statistics they have
+ * never left the save.
+ *
+ * THE TYPES ARE WRITTEN OUT RATHER THAN COUNTED FROM THE FILE. Numbering them by their order in
+ * boss_kills.varp would mean that inserting a boss silently renumbered every boss after it, and
+ * every row already in the database would then be filed under the wrong one. A type is a promise
+ * about what a number means; it does not get to move.
+ *
+ * 200 upwards, which leaves 100-199 for whole-account figures and the whole of 1-99 for skills.
+ */
+const BOSSES: readonly { varp: string; type: number }[] = [
+    { varp: 'boss_kc_jad', type: 200 },
+    { varp: 'boss_kc_kril', type: 201 },
+    { varp: 'boss_kc_graardor', type: 202 },
+    { varp: 'boss_kc_zilyana', type: 203 },
+    { varp: 'boss_kc_kreearra', type: 204 },
+    { varp: 'boss_kc_kq', type: 205 },
+    { varp: 'boss_kc_chaos_elemental', type: 206 },
+    { varp: 'boss_kc_dag_rex', type: 207 },
+    { varp: 'boss_kc_dag_supreme', type: 208 },
+    { varp: 'boss_kc_dag_prime', type: 209 },
+    { varp: 'boss_kc_kbd', type: 210 },
+    { varp: 'boss_kc_mole', type: 211 },
+    { varp: 'boss_kc_kraken', type: 212 },
+    { varp: 'boss_kc_zulrah', type: 213 }
+];
+
+/**
+ * How much of the collection log an account has filled, as one number.
+ *
+ * THE LOG IS AN INVENTORY, NOT A VARP. collection_log.inv keeps one slot per distinct item ever
+ * obtained, the slot's count being how many - so "obtained" is simply how many slots are taken,
+ * and that is the figure the log itself puts in its heading. The items in it are not written
+ * here: which items somebody owns is a different question from how far along they are, and the
+ * answer to it is 803 columns wide.
+ */
+const COLLECTION_LOG_TYPE = 105;
 
 const SAFE_PROFILE = /^[A-Za-z0-9_-]{1,32}$/;
 const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_autosave']);
@@ -23,7 +111,17 @@ const SAVE_FILE_MESSAGES = new Set(['player_login', 'player_logout', 'player_aut
 async function updateHiscores(account: { id: number; staffmodlevel: number; banned_until: string | null } | undefined, player: Player, profile: string) {
     if (!account) return;
 
-    if (account.staffmodlevel > 1) {
+    // NOBODY WHO CAN HAND THEMSELVES THE SCORE. ::give and ::setstat are in the staffModLevel >= 3
+    // block of ClientCheatHandler - "admin commands, potentially destructive for a live economy" -
+    // so 3 and above is exactly the set of people who can award themselves an item or a level, and
+    // exactly the set that must not appear on a board. (Owner, 2 November.)
+    //
+    // 2 and below stay on. A super-moderator has getcoord, tele, teleto and setvis; a moderator has
+    // ban, mute and kick. None of those fabricates experience, a kill or an item. Teleporting
+    // everywhere is a convenience and worth knowing about, but it is not the same kind of thing as
+    // typing yourself a level, and excluding somebody for holding the ban hammer would be punishing
+    // them for helping.
+    if (account.staffmodlevel >= 3) {
         return;
     }
 
@@ -101,6 +199,74 @@ async function updateHiscores(account: { id: number; staffmodlevel: number; bann
         }
     }
 
+    // The non-skill figures, onto the same two piles so they are written in the same round trip.
+    for (const tracked of TRACKED) {
+        const varp = trackedVarp(tracked.varp);
+        if (varp === -1) {
+            continue;
+        }
+
+        // Zero is not written. A player who has never died should have no deaths row rather than a
+        // row saying nothing happened - and it keeps a brand new account off five hiscore tables.
+        const value = player.vars[varp] ?? 0;
+        if (value <= 0) {
+            continue;
+        }
+
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', tracked.type).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== value) {
+            update.push({ type: tracked.type, level: 0, value, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: tracked.type, level: 0, value });
+        }
+    }
+
+    // Boss kill counts, onto the same two piles. Same rule as above: a boss nobody has killed
+    // gets no row rather than a row of zero.
+    for (const boss of BOSSES) {
+        const varp = trackedVarp(boss.varp);
+        if (varp === -1) {
+            continue;
+        }
+
+        const value = player.vars[varp] ?? 0;
+        if (value <= 0) {
+            continue;
+        }
+
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', boss.type).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== value) {
+            update.push({ type: boss.type, level: 0, value, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: boss.type, level: 0, value });
+        }
+    }
+
+    // And how far through the collection log they are: the number of slots taken in it.
+    const logInv = InvType.getId('collection_log');
+    const log = logInv === -1 ? undefined : player.invs.get(logInv);
+    const obtained = log ? log.itemsFiltered.length : 0;
+
+    // WHICH items, into a table of their own. Rewritten whole rather than merged: the inventory in
+    // the save is the truth and this is a copy of it, so working out a difference would mean
+    // trusting rows this table should never have had. An account with an empty log still gets the
+    // delete, which is how an item removed in game stops being shown on the website.
+    if (log) {
+        await db.deleteFrom('collection_log').where('account_id', '=', account.id).where('profile', '=', profile).execute();
+        const owned = log.itemsFiltered.map(item => ({ profile, account_id: account.id, obj: item.id, count: item.count }));
+        if (owned.length > 0) {
+            await db.insertInto('collection_log').values(owned).execute();
+        }
+    }
+    if (obtained > 0) {
+        const current = await db.selectFrom('hiscore').select('value').where('account_id', '=', account.id).where('type', '=', COLLECTION_LOG_TYPE).where('profile', '=', profile).executeTakeFirst();
+        if (current && current.value !== obtained) {
+            update.push({ type: COLLECTION_LOG_TYPE, level: 0, value: obtained, date: toDbDate(new Date()) });
+        } else if (!current) {
+            insert.push({ account_id: account.id, profile, type: COLLECTION_LOG_TYPE, level: 0, value: obtained });
+        }
+    }
+
     if (insert.length > 0) {
         await db.insertInto('hiscore').values(insert).execute();
     }
@@ -149,6 +315,12 @@ export default class LoginServer {
         }
 
         InvType.load('data/pack');
+        // AND THE VARPS, because updateHiscores reads them by name. Without this
+        // VarPlayerType.getId answers -1 for everything and every figure it writes - deaths,
+        // kills, playtime, quest points, boss counts - is skipped in silence, which is exactly
+        // what happened the first time this shipped. InvType was loaded here and varps were
+        // not, because until now nothing in this process had ever needed one.
+        VarPlayerType.load('data/pack');
 
         this.server = createInternalServer('Login server', Environment.LOGIN_PORT, () => {
             printInfo(`Login server listening on port ${Environment.LOGIN_PORT}`);

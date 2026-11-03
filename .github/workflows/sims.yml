@@ -20,7 +20,8 @@ name: Nightly sims
 
 on:
   schedule:
-    # 03:00 UTC, off the hour everything else in this project uses.
+    # 03:00 UTC, off the hour everything else in this project uses. GitHub delays scheduled runs
+    # under load and is not shy about it - the first unattended run fired at 10:28.
     - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
@@ -39,10 +40,19 @@ on:
         description: 'Content branch to run against'
         type: string
         default: '377-wip'
+      notify_test:
+        # A WAY TO PROVE THE DISCORD SECRET WORKS without waiting for a bad night or faking a
+        # broken sim. Testing the webhook URL by hand proves the URL works; it does NOT prove
+        # the repository secret is right, which is where a typo, a stray newline or a truncated
+        # paste actually lands. This runs the notify job alone, against the real secret.
+        description: 'Post a test message to Discord and skip the sims'
+        type: boolean
+        default: false
 
 jobs:
   sims:
     name: sims ${{ matrix.shard }} of 8
+    if: ${{ !inputs.notify_test }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -62,6 +72,23 @@ jobs:
         # github.event.inputs.content_ref is empty there rather than defaulted.
         ref: ${{ github.event.inputs.content_ref || '377-wip' }}
         path: content
+
+    # AND THE CLIENT, because two sims check that the client and the server still agree about the
+    # wire. varpbatch reads Protocol.java's SERVERPROT_LENGTH table to prove the client has a
+    # length for the batched-varp opcode the server now writes - get that wrong and every player
+    # desyncs at login. Without this checkout the sim cannot read the file and dies, which is how
+    # it turned up as "newly failing" on the first unattended night.
+    #
+    # The path is a SIBLING OF engine/, not under it: the sims default to '../DeathPlateau-Client'
+    # and run with engine/ as their working directory.
+    #
+    # dev-logging ON PURPOSE. It is the branch the launcher ships, so this compares the server
+    # against the client players are actually running, which is the disagreement that matters.
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Client
+        ref: dev-logging
+        path: DeathPlateau-Client
 
     - uses: actions/setup-node@v6
       with:
@@ -111,6 +138,7 @@ jobs:
         # It only costs wall clock on a sim that is ALREADY failing or slow, since a passing sim
         # exits on its own; the 90-minute job timeout above is the real ceiling.
         cap=360
+        SKIP_IN_CI='pingwire'
         known=/tmp/known-failing-names.txt
         grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
         echo "known-failing: $(wc -l < "$known") sims"
@@ -121,15 +149,46 @@ jobs:
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
           grep -qE 'process\.exit\([^0-9)]' "$f" || continue
+          # AND NOT THE ONES THAT NEED A RUNNING GAME. This is not known-failing.txt: nothing is
+          # broken here, the job simply cannot give these sims what they ask for, and recording
+          # them as "failing" would be a lie that also hides a real failure if one ever appears.
+          #   pingwire  opens a socket to a live server and fetches /crc0 off its web port
+          case " $SKIP_IN_CI " in *" $(basename "$f" .ts) "*) continue ;; esac
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
+          # A FEW ARE HONESTLY SLOW, and a sim killed at the cap looks exactly like a sim that
+          # failed: no verdict line, just output that stops. glassblowing is 88 checks over
+          # seventeen products and takes 216 seconds on a machine FASTER than a runner, so the
+          # 180 second cap killed it and the job reported it as "fails twice". It was passing
+          # all along. Its own cap rather than a bigger one for all 300, because a cap that
+          # covers the slowest sim stops being a timeout at all.
+          #
+          # MEASURED, not guessed, on a machine faster than a runner: glassblowing 216s, gwdguards
+          # 322s, audit1 357s, dpick 396s, gwdanims 433s. Each cap is roughly three times its own
+          # measurement, which is headroom for a slower box and still a timeout rather than a
+          # blank cheque. The cap is a ceiling, not a cost: a sim that finishes early costs what
+          # it costs.
+          case "$n" in
+            glassblowing) cap=600 ;;
+            gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
+            *) cap=180 ;;
+          esac
           rc=0
           timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
               echo "::notice title=$n::$n passes now and is still on known-failing.txt"
               newly_green="$newly_green $n"
+            else
+              # SHOW THE DEBT ITS OWN FAILURE. A listed sim used to fail in total silence, which
+              # makes every entry on that list undiagnosable from CI: the only way to see why
+              # changepassword fails on a runner and passes on a laptop was to take it OFF the
+              # list and make the job red on purpose. The group is collapsed, so a quiet night
+              # stays quiet and the reason is one click away when somebody wants it.
+              echo "::group::$n (exit $rc, on known-failing.txt)"
+              tail -20 "/tmp/$n.log"
+              echo "::endgroup::"
             fi
             continue
           fi
@@ -210,6 +269,11 @@ jobs:
   # Nightly in this repository is the version that costs nobody anything.
   ratchets:
     name: no new dead options or unreachable triggers
+    # Skipped on a notifier test, the same way the sims job is: that dispatch exists to prove the
+    # Discord secret, and packing a cache to prove it is two minutes of nothing. It also keeps
+    # needs.ratchets.result at 'skipped' there rather than 'success', so the notify condition reads
+    # the same for both jobs.
+    if: ${{ !inputs.notify_test }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -282,15 +346,25 @@ jobs:
   #
   # To switch it on: in Discord, the channel's Settings -> Integrations -> Webhooks -> New
   # Webhook, copy its URL, then in this repository Settings -> Secrets and variables ->
-  # Actions -> New repository secret, named DISCORD_WEBHOOK.
+  # Actions -> New repository secret, named DISCORDWEBHOOK.
+  #
+  # NO UNDERSCORE, which is not a typo here. The secret was created as DISCORDWEBHOOK and a
+  # secret cannot be renamed, only deleted and remade - so the workflow matches the secret
+  # rather than making somebody paste the URL again. The shell variable below keeps the
+  # readable spelling; only the ${{ secrets.* }} reference has to match GitHub exactly.
   notify:
     name: tell Discord
     needs: [sims, ratchets]
-    if: failure()
+    # needs.*.result rather than failure(), because on a notifier test both of those jobs are
+    # SKIPPED and failure() would not fire. !cancelled() keeps it from speaking after a cancel.
+    # Both jobs are named: a green sweep with a red ratchet is still a night worth hearing about.
+    if: ${{ !cancelled() && (needs.sims.result == 'failure' || needs.ratchets.result == 'failure' || inputs.notify_test) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+    # Nothing to download on a test, and v4 treats "no artifacts matched" as an error.
     - uses: actions/download-artifact@v4
+      if: ${{ !inputs.notify_test }}
       with:
         pattern: verdict-*
         merge-multiple: true
@@ -300,11 +374,17 @@ jobs:
       env:
         # Quoted and read as an environment variable rather than interpolated into the script,
         # so the URL is never part of a command line and cannot land in the log.
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        DISCORD_WEBHOOK: ${{ secrets.DISCORDWEBHOOK }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
         RATCHETS: ${{ needs.ratchets.result }}
+        NOTIFY_TEST: ${{ inputs.notify_test }}
+        # DIAGNOSTIC ONLY, and deliberately not used to send anything. 'Settings -> Secrets and
+        # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
+        # "New repository secret", so a webhook in the wrong half is the likeliest reason for a
+        # secret that reads empty. This says which half it is in without guessing twice.
+        HAVE_VAR: ${{ vars.DISCORDWEBHOOK != '' }}
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
@@ -316,7 +396,13 @@ jobs:
         # AND THE RATCHETS CAN BE THE FAILURE. This job needs both, so a green sweep with a red
         # opsweep/orphans arrives here with no verdict files at all - which used to read as "a
         # shard died" and sent whoever got the message to look in the wrong place.
-        if [ -n "$red" ]; then
+        if [ "$NOTIFY_TEST" = "true" ]; then
+          # SAYS SO IN THE MESSAGE, loudly. A test that looks like a real failure is worse than
+          # no test: somebody reads it at 3am and goes looking for a broken sim.
+          title="Nightly sims: notifier test"
+          colour=3066993
+          body="This is a test of the failure notification. The sims did not run and nothing is broken."
+        elif [ -n "$red" ]; then
           body="Newly failing: **${red}**"
         elif [ "$RATCHETS" != "success" ]; then
           body="The sims are fine. The ratchets are not: **opsweep/orphans** found a dead option or an unreachable trigger that is not in its baseline. The run log names it."
@@ -327,10 +413,22 @@ jobs:
 
         # jq builds the JSON so a sim name or a message can never break the payload.
         jq -n --arg body "$body" --arg url "$RUN_URL" --arg trigger "$TRIGGER" --arg sha "${SHA:0:7}" \
-          '{username: "Nightly sims", embeds: [{title: "Nightly sims failed", url: $url, color: 15158332, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
+          --arg title "${title:-Nightly sims failed}" --argjson colour "${colour:-15158332}" \
+          '{username: "Nightly sims", embeds: [{title: $title, url: $url, color: $colour, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
 
         if [ -z "$DISCORD_WEBHOOK" ]; then
-          echo "DISCORD_WEBHOOK is not set, so nothing was posted. The message would have been:"
+          if [ "$HAVE_VAR" = "true" ]; then
+            echo "FOUND IT: DISCORD_WEBHOOK is a repository VARIABLE, not a secret. Delete it from"
+            echo "the Variables tab and add it under Secrets. It matters on a public repository:"
+            echo "GitHub masks a secret in these logs and does not mask a variable, so a failing"
+            echo "curl could print the URL into a log anybody can read."
+          else
+            echo "DISCORD_WEBHOOK is empty, and there is no repository variable of that name"
+            echo "either. So it is not on this repository's Actions secrets at all - check it is"
+            echo "on coreysho/DeathPlateau-Engine, under the Actions tab (not Dependabot or"
+            echo "Codespaces), as a Repository secret (not an Environment secret)."
+          fi
+          echo "Nothing was posted. The message would have been:"
           cat /tmp/discord.json
           exit 0
         fi

@@ -74,6 +74,19 @@ model account_login {
     @@id([profile, account_id])
 }
 
+/// Which items an account has in its collection log, one row per item. The hiscore table
+/// carries how far along somebody is as a single number, because that can be ranked; which items
+/// is a set 803 wide and belongs in rows.
+model collection_log {
+    profile    String @default("main")
+    account_id Int
+    obj        Int
+    count      Int
+
+    @@id([profile, account_id, obj])
+    @@index([profile, account_id])
+}
+
 model hiscore {
     account_id Int
     profile    String @default("main")

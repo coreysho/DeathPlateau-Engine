@@ -90,6 +90,10 @@ for (const [name, loc, lx, lz, ex, ez, xp] of LAP) {
         // The real reason rather than a guess at it: A.op throws for a loc that is missing, on
         // another level, OR - since harness.opLoc started making OpLocHandler's check - for an op
         // the loc does not have. Three different causes were all reported as the middle one.
+        //
+        // 377-wip reached the same lint error from the other side and renamed the binding to
+        // _notOnThisLevel, which silences the rule and keeps the wrong message. Reading the error
+        // does both, so this side wins the merge rather than being a second opinion about style.
         console.log(`    ${name}: ${String((e as { message?: unknown })?.message ?? e)}`);
         ok = false;
         break;

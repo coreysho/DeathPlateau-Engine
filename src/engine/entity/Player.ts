@@ -65,6 +65,7 @@ import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js'
 import UpdateRunEnergy from '#/network/game/server/model/UpdateRunEnergy.js';
 import UpdateStat from '#/network/game/server/model/UpdateStat.js';
 import VarpLarge from '#/network/game/server/model/VarpLarge.js';
+import VarpBatch from '#/network/game/server/model/VarpBatch.js';
 import VarpSmall from '#/network/game/server/model/VarpSmall.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
@@ -347,6 +348,12 @@ export default class Player extends PathingEntity {
     // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
     // -1 until the world first looks at it. World.processLogouts logs out on it (2026-10-19).
     lastUserInput: number = -1;
+
+    // custom (2026-11-03) - the round trip to this client, measured by ServerGameProt.PING and
+    // PongHandler. -1 until the first answer comes back, and again whenever one goes unanswered.
+    pingMs: number = -1;
+    pingSeq: number = 0;
+    pingSentAt: number = -1;
     loggingOut: boolean = false;
     preventLogoutMessage: string | null = null;
     preventLogoutUntil: number = -1;
@@ -558,13 +565,7 @@ export default class Player extends PathingEntity {
         this.write(new IfClose());
         this.write(new UpdatePid(this.slot, this.members));
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         this.write(new ResetAnims());
 
         const loginTrigger = ScriptProvider.getByTriggerSpecific(ServerTriggerType.LOGIN, -1, -1);
@@ -588,13 +589,7 @@ export default class Player extends PathingEntity {
         // - reset_anims
         // - socials
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         // reload entity info (overkill? does the client have some logic around this?)
         this.buildArea.clear(true);
         // rebuild scene later this tick (note: rebuild won't run on the client if you're in the same zone!)
@@ -912,6 +907,31 @@ export default class Player extends PathingEntity {
         }
 
         this.refreshModalClose = true;
+    }
+
+    /**
+     * Is a chatbox input prompt waiting on this player right now?
+     *
+     * The client's IF_CLOSE handler clears chatbackInputOpen, so an IF_CLOSE that lands AFTER a
+     * P_COUNTDIALOG cancels the prompt on the same tick it appeared. P_COUNTDIALOG is written while
+     * the script runs; IF_CLOSE is written at the END of the tick, from NetworkPlayer.encodeOut -
+     * so any script shaped `if_close; p_countdialog;` opened an amount prompt the player could not
+     * answer, and it vanished before they could type into it. Make X on every skillmultiN panel was
+     * exactly that shape: fletching's Make X did nothing at all, while Make All / 10 / 5 / 1 on the
+     * same panel worked, and cooking's own Make X (cookx, which has no if_close) worked too.
+     */
+    awaitingChatboxInput(): boolean {
+        const execution = this.activeScript?.execution;
+        return execution === ScriptState.COUNTDIALOG || execution === ScriptState.NAMEDIALOG;
+    }
+
+    /**
+     * Must this tick's end-of-tick IF_CLOSE be held back? NetworkPlayer.encodeOut asks before
+     * writing one. Holding costs nothing: refreshModalClose and the lastModal* trackers are left
+     * as they are, so the first tick on which no prompt is waiting sends the close instead.
+     */
+    holdingModalClose(): boolean {
+        return this.refreshModalClose && this.awaitingChatboxInput();
     }
 
     containsModalInterface() {
@@ -2015,6 +2035,40 @@ export default class Player extends PathingEntity {
 
         mask <<= startbit;
         this.setVar(basevar, (mask & (value << startbit)) | (this.vars[basevar] & ~mask));
+    }
+
+    /**
+     * Send every transmitted varp, in one packet.
+     *
+     * One packet per varp was 371 of the 536 a login sent, and the 377 client parses five a loop
+     * iteration - about 2.2 seconds of catching up before it was level with the world. The count
+     * does not depend on the player: it is every varp the content marks transmit, so a new
+     * character and a maxed one pay the same. See VarpBatch, and tools/sim/loginspike.ts for how
+     * the figure was arrived at.
+     *
+     * Every varp still goes, zeros included. The client reverts varps to varCache on
+     * RESET_CLIENT_VARCACHE rather than zeroing them and frees neither on logout, so a player who
+     * logs out to the login screen and back in holds the last session's values and a varp now 0
+     * would keep its old one.
+     */
+    private writeAllVarps(): void {
+        const small: number[][] = [];
+        const large: number[][] = [];
+
+        for (let varp = 0; varp < this.vars.length; varp++) {
+            if (!VarPlayerType.get(varp).transmit) {
+                continue;
+            }
+
+            const value = this.vars[varp];
+            if (value >= -128 && value <= 127) {
+                small.push([varp, value]);
+            } else {
+                large.push([varp, value]);
+            }
+        }
+
+        this.write(new VarpBatch(small, large));
     }
 
     private writeVarp(id: number, value: number): void {

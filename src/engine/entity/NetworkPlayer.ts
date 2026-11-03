@@ -44,6 +44,12 @@ export class NetworkPlayer extends Player {
     userPath: number[] = [];
     opcalled: boolean = false;
 
+    // custom (2026-11-03) - server messages sent to this client in the current tick, reset by
+    // World.processCleanup once the tick's output is complete. The client parses at most five
+    // packets per loop iteration, so this is the figure that says whether it can keep up; see
+    // trackPlayerPacketsPerTick for the arithmetic.
+    packetsThisTick: number = 0;
+
     constructor(username: string, username37: bigint, hash64: bigint, client: ClientSocket) {
         super(username, username37, hash64);
 
@@ -89,6 +95,11 @@ export class NetworkPlayer extends Player {
         if (this.client.opcode === -1) {
             NetworkPlayer.inBuf.pos = 0;
             this.client.read(NetworkPlayer.inBuf.data, 0, 1);
+
+            // custom (2026-11-03) - this packet is timed from its opcode, so a handler measuring a
+            // round trip (PongHandler) gets when the CLIENT answered rather than when this tick
+            // reached the answer, and is not thrown off by the payload arriving in a later segment.
+            this.client.packetArrival = this.client.lastReadArrival;
 
             if (this.client.decryptor) {
                 this.client.opcode = (NetworkPlayer.inBuf.g1() - this.client.decryptor.nextInt()) & 0xff;
@@ -186,7 +197,13 @@ export class NetworkPlayer extends Player {
         // The close is redundant in that case anyway - every IF_OPENCHAT / IF_OPENMAIN /
         // IF_OPENSIDE handler in the client already unloads the other layers itself, and unloads
         // its own layer only when the id actually changes.
-        if (this.modalMain !== this.lastModalMain || this.modalChat !== this.lastModalChat || this.modalSide !== this.lastModalSide || this.refreshModalClose) {
+        //
+        // AND IT MUST NOT LAND ON AN OPEN AMOUNT PROMPT EITHER. The client's IF_CLOSE handler also
+        // clears chatbackInputOpen, and P_COUNTDIALOG was written mid-script while this runs at the
+        // end of the tick - so `if_close; p_countdialog;` cancelled its own prompt. Holding the
+        // close costs nothing: refreshModalClose and lastModal* are left untouched, so the first
+        // tick on which no prompt is waiting sends it. See Player.awaitingChatboxInput.
+        if (!this.holdingModalClose() && (this.modalMain !== this.lastModalMain || this.modalChat !== this.lastModalChat || this.modalSide !== this.lastModalSide || this.refreshModalClose)) {
             // (modalState is re-checked because closeModal() can run after an open in the same
             // tick, in which case the block below writes no IF_OPEN* and the close is still needed)
             const reopening: boolean = this.refreshModal && this.modalState !== ModalState.NONE;
@@ -257,6 +274,7 @@ export class NetworkPlayer extends Player {
 
         this.client.send(buf.data.subarray(0, buf.pos));
         World.cycleStats[WorldStat.BANDWIDTH_OUT] += buf.pos;
+        this.packetsThisTick++;
     }
 
     override logout() {
