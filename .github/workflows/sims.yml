@@ -20,13 +20,24 @@ name: Nightly sims
 
 on:
   schedule:
-    # 03:00 UTC, off the hour everything else in this project uses.
+    # 03:00 UTC, off the hour everything else in this project uses. GitHub delays scheduled runs
+    # under load and is not shy about it - the first unattended run fired at 10:28.
     - cron: '0 3 * * *'
   workflow_dispatch:
+    inputs:
+      notify_test:
+        # A WAY TO PROVE THE DISCORD SECRET WORKS without waiting for a bad night or faking a
+        # broken sim. Testing the webhook URL by hand proves the URL works; it does NOT prove
+        # the repository secret is right, which is where a typo, a stray newline or a truncated
+        # paste actually lands. This runs the notify job alone, against the real secret.
+        description: 'Post a test message to Discord and skip the sims'
+        type: boolean
+        default: false
 
 jobs:
   sims:
     name: sims ${{ matrix.shard }} of 8
+    if: ${{ !inputs.notify_test }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -192,11 +203,15 @@ jobs:
   notify:
     name: tell Discord
     needs: sims
-    if: failure()
+    # needs.sims.result rather than failure(), because on a notifier test the sims job is
+    # SKIPPED and failure() would not fire. !cancelled() keeps it from speaking after a cancel.
+    if: ${{ !cancelled() && (needs.sims.result == 'failure' || inputs.notify_test) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+    # Nothing to download on a test, and v4 treats "no artifacts matched" as an error.
     - uses: actions/download-artifact@v4
+      if: ${{ !inputs.notify_test }}
       with:
         pattern: verdict-*
         merge-multiple: true
@@ -210,6 +225,7 @@ jobs:
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
+        NOTIFY_TEST: ${{ inputs.notify_test }}
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
@@ -217,7 +233,13 @@ jobs:
         # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
         # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
         # the message says it does not know rather than inventing a clean bill of health.
-        if [ -n "$red" ]; then
+        if [ "$NOTIFY_TEST" = "true" ]; then
+          # SAYS SO IN THE MESSAGE, loudly. A test that looks like a real failure is worse than
+          # no test: somebody reads it at 3am and goes looking for a broken sim.
+          title="Nightly sims: notifier test"
+          colour=3066993
+          body="This is a test of the failure notification. The sims did not run and nothing is broken."
+        elif [ -n "$red" ]; then
           body="Newly failing: **${red}**"
         else
           body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
@@ -226,7 +248,8 @@ jobs:
 
         # jq builds the JSON so a sim name or a message can never break the payload.
         jq -n --arg body "$body" --arg url "$RUN_URL" --arg trigger "$TRIGGER" --arg sha "${SHA:0:7}" \
-          '{username: "Nightly sims", embeds: [{title: "Nightly sims failed", url: $url, color: 15158332, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
+          --arg title "${title:-Nightly sims failed}" --argjson colour "${colour:-15158332}" \
+          '{username: "Nightly sims", embeds: [{title: $title, url: $url, color: $colour, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
 
         if [ -z "$DISCORD_WEBHOOK" ]; then
           echo "DISCORD_WEBHOOK is not set, so nothing was posted. The message would have been:"
