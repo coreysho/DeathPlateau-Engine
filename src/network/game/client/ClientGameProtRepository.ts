@@ -9,6 +9,7 @@ import CloseModalDecoder from '#/network/game/client/codec/CloseModalDecoder.js'
 import FriendListAddDecoder from '#/network/game/client/codec/FriendListAddDecoder.js';
 import FriendListDelDecoder from '#/network/game/client/codec/FriendListDelDecoder.js';
 import IdleTimerDecoder from '#/network/game/client/codec/IdleTimerDecoder.js';
+import PongDecoder from '#/network/game/client/codec/PongDecoder.js';
 import IfButtonDecoder from '#/network/game/client/codec/IfButtonDecoder.js';
 import IdkSaveDesignDecoder from '#/network/game/client/codec/IdkSaveDesignDecoder.js';
 import IgnoreListAddDecoder from '#/network/game/client/codec/IgnoreListAddDecoder.js';
@@ -49,6 +50,7 @@ import CloseModalHandler from '#/network/game/client/handler/CloseModalHandler.j
 import FriendListAddHandler from '#/network/game/client/handler/FriendListAddHandler.js';
 import FriendListDelHandler from '#/network/game/client/handler/FriendListDelHandler.js';
 import IdleTimerHandler from '#/network/game/client/handler/IdleTimerHandler.js';
+import PongHandler from '#/network/game/client/handler/PongHandler.js';
 import IfButtonHandler from '#/network/game/client/handler/IfButtonHandler.js';
 import IdkSaveDesignHandler from '#/network/game/client/handler/IdkSaveDesignHandler.js';
 import IgnoreListAddHandler from '#/network/game/client/handler/IgnoreListAddHandler.js';
@@ -122,6 +124,7 @@ class ClientGameProtRepository {
         this.bind(new FriendListAddDecoder(), new FriendListAddHandler());
         this.bind(new FriendListDelDecoder(), new FriendListDelHandler());
         this.bind(new IdleTimerDecoder(), new IdleTimerHandler());
+        this.bind(new PongDecoder(), new PongHandler());
         this.bind(new IfButtonDecoder(), new IfButtonHandler());
         this.bind(new IdkSaveDesignDecoder(), new IdkSaveDesignHandler());
         this.bind(new IgnoreListAddDecoder(), new IgnoreListAddHandler());

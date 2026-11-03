@@ -97,7 +97,8 @@ import {
 import Environment from '#/util/Environment.js';
 import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
-import { printDebug, printError, printInfo } from '#/util/Logger.js';
+import Ping from '#/network/game/server/model/Ping.js';
+import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
 import OnDemand from './OnDemand.js';
 import { ObjDelayedRequest } from './entity/ObjDelayedRequest.js';
 import DbTableIndex from '#/cache/config/DbTableIndex.js';
@@ -208,6 +209,11 @@ class World {
     // custom (2026-09-27) - the bot manager (engine/bot/BotManager.ts) plugs in here when NODE_BOTS is
     // set. A hook rather than an import so the world does not depend on the bots at all.
     bots: BotHooks | null = null;
+
+    // how often a slow tick may be written to the log, and how many went unsaid since (processPings' neighbour)
+    static readonly SLOW_TICK_WARN_INTERVAL: number = 30000;
+    private slowTickCount: number = 0;
+    private lastSlowTickWarning: number = 0;
 
     loginAddressAttempts: TTLCache<string, number> = new TTLCache({ ttl: 60000 });
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
@@ -543,6 +549,10 @@ class World {
             // - stat changes
             // - afk zones changes
             // - flush packets
+            // custom (2026-11-03) - measure the round trip to each client, before the flush below
+            // so the probe rides out with everything else this tick.
+            this.processPings();
+
             this.processClientsOut();
 
             // cleanup
@@ -597,6 +607,27 @@ class World {
             }
 
             this.cycleStats[WorldStat.CYCLE] = Date.now() - start; // set the main logic stat here, before telemetry.
+
+            // custom (2026-11-03) - say so when the world runs late. A tick is 600ms; longer than that
+            // and every player feels it, wherever they are. Nothing used to be logged at all, so the
+            // only way to know was to be told the game felt laggy. Throttled, with the count of the
+            // overruns that were swallowed in between, because a struggling world would otherwise
+            // write a line every tick and make the journal part of the problem.
+            if (this.cycleStats[WorldStat.CYCLE] > this.tickRate && this.tickRate > 0) {
+                this.slowTickCount++;
+                if (Date.now() - this.lastSlowTickWarning >= World.SLOW_TICK_WARN_INTERVAL) {
+                    const since = this.slowTickCount;
+                    this.slowTickCount = 0;
+                    this.lastSlowTickWarning = Date.now();
+                    printWarning(
+                        `tick ${this.currentTick} took ${this.cycleStats[WorldStat.CYCLE]}ms (over the ${this.tickRate}ms budget)` +
+                            ` - ${since} slow tick${since === 1 ? '' : 's'} since the last warning.` +
+                            ` world ${this.cycleStats[WorldStat.WORLD]} | in ${this.cycleStats[WorldStat.CLIENT_IN]} | npcs ${this.cycleStats[WorldStat.NPC]}` +
+                            ` | players ${this.cycleStats[WorldStat.PLAYER]} | zones ${this.cycleStats[WorldStat.ZONE]} | out ${this.cycleStats[WorldStat.CLIENT_OUT]}` +
+                            ` | cleanup ${this.cycleStats[WorldStat.CLEANUP]} ms, ${this.getHumanPlayerCount()} players`
+                    );
+                }
+            }
 
             this.lastCycleStats[WorldStat.CYCLE] = this.cycleStats[WorldStat.CYCLE];
             this.lastCycleStats[WorldStat.WORLD] = this.cycleStats[WorldStat.WORLD];
@@ -2174,6 +2205,33 @@ class World {
     // buffers - and a login that failed inside the thread never got a reply, so it could be repeated.
     onClientClosed(client: ClientSocket) {
         this.loginRequests.delete(client.uuid);
+    }
+
+    // custom (2026-11-03) - the latency probe. Every NODE_PING_TICKS ticks each connected client is
+    // sent a sequence byte and answers with it (PongHandler), which is the only honest way to know
+    // what a player's connection is actually costing them - a tunnel or a bad route shows up here and
+    // nowhere else. The number travels back out on the next probe for the client to draw.
+    private processPings(): void {
+        if (Environment.NODE_PING_TICKS <= 0 || this.currentTick % Environment.NODE_PING_TICKS !== 0) {
+            return;
+        }
+
+        const now = Date.now();
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot || !isClientConnected(player)) {
+                continue;
+            }
+
+            // the previous probe never came back - write it off rather than leave a stale number on
+            // screen for ever, and rather than match a late answer to the wrong send
+            if (player.pingSentAt !== -1) {
+                player.pingMs = -1;
+            }
+
+            player.pingSeq = (player.pingSeq + 1) & 0xff;
+            player.pingSentAt = now;
+            player.write(new Ping(player.pingSeq, player.pingMs < 0 ? 0xffff : player.pingMs));
+        }
     }
 
     rebuild() {

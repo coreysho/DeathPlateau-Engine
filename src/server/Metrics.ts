@@ -67,6 +67,12 @@ export const trackCycleBandwidthOutBytes = new Counter({
     help: 'Total outgoing bandwidth in bytes.'
 });
 
+export const trackPlayerPing = new Histogram({
+    name: 'lostcity_player_ping_ms',
+    help: 'Round trip to a connected client, in milliseconds.',
+    buckets: [20, 50, 100, 150, 200, 300, 500, 800, 1200, 2000]
+});
+
 export const trackSessionEventsPublished = new Counter({
     name: 'lostcity_session_events_published',
     help: 'Total number of session events published.'

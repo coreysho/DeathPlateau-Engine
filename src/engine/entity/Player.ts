@@ -346,6 +346,12 @@ export default class Player extends PathingEntity {
     // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
     // -1 until the world first looks at it. World.processLogouts logs out on it (2026-10-19).
     lastUserInput: number = -1;
+
+    // custom (2026-11-03) - the round trip to this client, measured by ServerGameProt.PING and
+    // PongHandler. -1 until the first answer comes back, and again whenever one goes unanswered.
+    pingMs: number = -1;
+    pingSeq: number = 0;
+    pingSentAt: number = -1;
     loggingOut: boolean = false;
     preventLogoutMessage: string | null = null;
     preventLogoutUntil: number = -1;

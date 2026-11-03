@@ -1,4 +1,8 @@
 export default class ServerGameProt {
+    // custom (2026-11-03) - the latency probe. seq (1) + the previously measured round trip (2).
+    // Opcode 1 was free in this table; the client learns its length from Protocol.SERVERPROT_LENGTH.
+    static readonly PING = new ServerGameProt(1, 3);
+
     // interfaces
     static readonly IF_OPENCHAT = new ServerGameProt(109, 2);
     static readonly IF_OPENMAIN_SIDE = new ServerGameProt(128, 4);

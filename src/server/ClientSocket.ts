@@ -32,10 +32,20 @@ export default abstract class ClientSocket {
     legacyHitmarks = false;
     waiting = 0; // bytes to wait for (if any)
 
+    // custom (2026-11-03) - when the bytes waiting to be read STARTED arriving. The world reads its
+    // input once a tick, so a handler asking Date.now() is really asking when the tick got round to
+    // it, not when the client answered - which would have reported every round trip as a whole tick.
+    // Only the first chunk of a fresh batch sets it; the rest of the batch belongs to the same wait.
+    inboundSince: number = -1;
+
     buffer(data: Buffer) {
         if (data.length + this.in.pos > this.in.length) {
             this.close();
             return;
+        }
+
+        if (this.in.pos === 0) {
+            this.inboundSince = Date.now();
         }
 
         this.in.pdata(data, 0, data.length);
