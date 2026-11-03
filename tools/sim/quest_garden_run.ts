@@ -103,9 +103,16 @@ const m: Manifest = {
         { note: 'wiki step 2: the Wise Old Man unlocks the Ring of Charos. Seven questions and six' },
         { note: 'of them right, and the diplomatic answer is the conciliatory one every time. He was' },
         { note: 'placed nowhere at all until now, which is why this half of the quest did not exist.' },
-        { setpos: [3089, 3251, 0], why: 'to Draynor' },
+        { note: 'HE IS wom_multi AT 3088,3255, INSIDE HIS HOUSE, and was all along. This step used' },
+        { note: 'to setpos to 3089,3251 and talk to wise_old_man, because a second Wise Old Man had' },
+        { note: 'been spawned outside - reported from the game as "there are two wise old men in' },
+        { note: 'draynor" - and that duplicate is gone from maps/m48_50.jm2 now. The one who was' },
+        { note: 'always there is the multinpc, and the trigger has to be on the SHELL: Player' },
+        { note: '.getOpTrigger reads the type standing in the world, so an [opnpc1] on the resolved' },
+        { note: 'child never fires. areas/area_draynor/scripts/wise_old_man.rs2 explains it at length.' },
+        { setpos: [3089, 3255, 0], why: "to Draynor, beside the Wise Old Man's own house" },
         {
-            talk: 'wise_old_man',
+            talk: 'wom_multi',
             picks: ['Why not have a range?', 'Take it and thank him.', 'I love every minute of it.', 'Go on then.', 'PKMaster0036, obviously.', 'Could I ask you something in return?', 'No, but I will keep an eye out.'],
             want: 'ring is unlocked',
             why: 'all seven right'

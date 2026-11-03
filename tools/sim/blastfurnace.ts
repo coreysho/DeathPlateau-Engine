@@ -367,7 +367,18 @@ p.setLevel(12, 30);
 H.tick(1);
 const cxp = p.stats[12];
 click(PUMP, 1, [], 'hammer');
-check('30 mends them, and pays its 40 Crafting for it', [H.getVarBit(p, 'blast_furnace_broken_pipe_reading'), p.stats[12] - cxp], [0, 400]);
+// MENDING PAYS NO XP, AND THAT IS DELIBERATE, which this check used to disagree with. It wanted
+// 400 (OSRS pays 40 Crafting for the repair) and was written on 25 October; blast_furnace.rs2
+// removed the award on the 26th and says why in as many words: "The pipes only ever split from
+// pumping past the gauge - nothing breaks them at random here - so the XP rewarded breaking them
+// on purpose: pump, burst, mend, repeat, for ever." That is a real exploit in THIS build, where
+// nothing splits the pipes except the player choosing to, and the sim simply never caught up.
+// It has been on known-failing.txt ever since, for one day's drift.
+//
+// Asserted as zero rather than deleted, because "no XP" is now the behaviour somebody decided on
+// and an award creeping back in should fail here.
+check('30 mends them', H.getVarBit(p, 'blast_furnace_broken_pipe_reading'), 0);
+check('  and pays no Crafting, so pump-burst-mend is not an XP loop', p.stats[12] - cxp, 0);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

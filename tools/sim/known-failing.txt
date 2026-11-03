@@ -117,6 +117,21 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 # 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
 # why nobody had got to the bottom of it. Twelve seeds pass now.
 
+# ---- quest_garden_run AND quest_swansong_run CAME OFF for the same stale npc. Both set the
+# player down at 3089,3251 and talked to `wise_old_man`, which is a duplicate that was spawned
+# outside his house, reported from the game as "there are two wise old men in draynor", and then
+# deleted from maps/m48_50.jm2. The one who was always there is `wom_multi` at 3088,3255 inside,
+# and the trigger has to sit on that SHELL because Player.getOpTrigger reads the type standing in
+# the world. Garden went from aborting at step 6 with 5 checks run to 88 of 88 COMPLETE - 83 checks
+# that had never run once - and Swan Song from 60 of 61 to 109 of 109 COMPLETE.
+#
+# ---- blastfurnace CAME OFF THIS LIST for one day's drift. The sim wanted 400 Crafting for
+# mending the furnace pipes, which is what OSRS pays, and was written on 25 October;
+# blast_furnace.rs2 removed the award on the 26th and said why - nothing splits the pipes in this
+# build except the player choosing to, so paying for the repair made pump-burst-mend an XP loop.
+# The sim never caught up and has been listed ever since. It asserts zero now, so an award creeping
+# back in still fails. 39 ok.
+#
 # ---- securityfixes AND staffrules CAME OFF THIS LIST, and they are the case worth copying.
 # Both sat in the section below - "none of them printed a reason" - and both printed one every
 # time: a usage line naming the environment they want, then exit 1. Neither was broken. Given
@@ -125,12 +140,9 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 # both are checked rather than listed. Thirty-six assertions that nobody had run.
 #
 # ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
-blastfurnace
 chatchars
 quest_ball_run
-quest_garden_run
 quest_hundred_run
-quest_swansong_run
 
 # ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
 # four sims as "not known to be broken - known to be slower than the job is willing to wait",
