@@ -1398,7 +1398,18 @@ export function play(m: Manifest, p: Player): Result[] {
             // walk it again, further out of her way. Three goes, re-routing from wherever the
             // throw-out left the player.
             const sneakTo = (tx: number, tz: number): boolean => {
-                for (const [sx, sz] of route(p.level, p.x, p.z, tx, tz, 96, 0)) {
+                // AN EMPTY ROUTE IS NOT AN ARRIVAL. route() returns nothing when there is no way
+                // from here to there, and walking a zero-step path "succeeded" - so being thrown
+                // out of the garden mid-leg ended the attempt as a win, the retry never ran, and
+                // the step reported "ended up at 2907,3458" as though the player had strolled
+                // there. That is 13 tiles south of the fountain, outside the hedge, which is
+                // exactly where Nora T. Hagg puts people she catches.
+                const legs = route(p.level, p.x, p.z, tx, tz, 96, 0);
+                if (!legs.length && (p.x !== tx || p.z !== tz)) {
+                    blocked = 'no route from ' + p.x + ',' + p.z + ' to ' + tx + ',' + tz;
+                    return false;
+                }
+                for (const [sx, sz] of legs) {
                     // hold while the npc is within range of the tile being left OR the one being
                     // stepped onto - checking only the next tile let her walk into the player
                     for (let w = 0; w < 60; w++) {

@@ -139,10 +139,27 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 # The two that are left have moved, not been fixed - both are further on than they were and
 # stopped somewhere new:
 
-blastfurnace         # 37 ok, 1 FAIL: "30 mends them, and pays its 40 Crafting for it" reads
-                     # [0,0] and wants [0,400]. THE ONLY PLAYER-VISIBLE BUG in this batch -
-                     # mending the Blast Furnace pays no Crafting experience
-quest_ball_run       # step 43, the sneak past nora_t_hagg ends at 2907,3458 and wants 2908,3471
+# blastfurnace is FIXED and off: 38 ok. It was not a bug at all, and I called it one twice
+# before reading the content. blast_furnace.rs2 removed that Crafting XP on purpose - "the XP
+# rewarded breaking them on purpose: pump, burst, mend, repeat, for ever" - so the sim was
+# asserting a closed exploit. It now asserts that mending pays nothing, and says why.
+quest_ball_run       # step 43, the sneak past nora_t_hagg. DIAGNOSED, and it is the questrun
+                     # driver rather than the content. Nora catches the player mid-leg and
+                     # teleports them out of the garden, and sneakTo walks a route computed
+                     # BEFORE the throw-out: the probe caught the player at 2929,3456 still
+                     # being walked toward 2906,3460, 23 tiles away. The outer retry then
+                     # re-routes from outside the hedge, where there is no way back in, so all
+                     # three attempts are spent before anybody notices.
+                     #
+                     # Two things were tried and did not fix it: waiting longer (240 ticks
+                     # instead of 60 - she is never more than 8 tiles away in a garden that
+                     # size, so the wait always times out and the player walks anyway) and
+                     # making an empty route a failure instead of a silent arrival. That second
+                     # one is kept - it was a real driver bug, and it is why this step used to
+                     # report "ended up at 2907,3458" as though the player had strolled there.
+                     #
+                     # What it needs is for sneakTo to notice the teleport and re-enter the
+                     # garden, which means knowing the way in. Left for somebody with the map.
 quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that is fixed - the
                      # crown needs a rope and a gorilla and the run now has both, and gets 51
                      # steps further, through the slicing and the roast. Now step 303, the
