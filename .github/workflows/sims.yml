@@ -130,8 +130,15 @@ jobs:
           # 180 second cap killed it and the job reported it as "fails twice". It was passing
           # all along. Its own cap rather than a bigger one for all 300, because a cap that
           # covers the slowest sim stops being a timeout at all.
+          #
+          # MEASURED, not guessed, on a machine faster than a runner: glassblowing 216s, gwdguards
+          # 322s, audit1 357s, dpick 396s, gwdanims 433s. Each cap is roughly three times its own
+          # measurement, which is headroom for a slower box and still a timeout rather than a
+          # blank cheque. The cap is a ceiling, not a cost: a sim that finishes early costs what
+          # it costs.
           case "$n" in
             glassblowing) cap=600 ;;
+            gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
             *) cap=180 ;;
           esac
           rc=0

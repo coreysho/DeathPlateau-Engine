@@ -63,6 +63,11 @@ gwdstaves            # Error: menus not reached: 2
 lunar                # no option "Can we sail to Lunar Isle" in multi2
 myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
 slayerbuilt          # 24 ok, 1 FAIL
+audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf, audit1.ts:666).
+                     # Same shape as audit7's "not carrying deal_blindweed" above, so the two
+                     # are probably one bug in how the audit hands itself quest items
+gwdanims             # 73 ok, 1 FAIL: "zilyana dies with its own animation" - the other three
+                     # God Wars generals pass the same check, so this is one npc's death_anim
 brutalarrows         # and it NEVER passed on this machine, whatever this file used to say: 0 of
                      # 3 free-dice runs pass, and seed 1 fails too. It sat for a week under
                      # "passes here, fails on a runner" - a claim nobody had checked.
@@ -122,22 +127,18 @@ quest_swansong_run
 securityfixes
 staffrules
 
-# ---- LONGER THAN THE 180 SECOND CAP. Not known to be broken - known to be slower than the job
-# is willing to wait. If one of these is worth running, it needs its own timeout rather than a
-# bigger cap for all 303.
+# ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
+# four sims as "not known to be broken - known to be slower than the job is willing to wait",
+# with a note that nobody had timed them. Timed now, on a machine faster than a runner:
 #
-# THAT MECHANISM EXISTS NOW: sims.yml carries a per-sim cap, and glassblowing is the first to
-# use it. It was never on this list - it went red on the first unattended night and read as a
-# real failure, because a sim killed at the cap looks exactly like one that failed: no verdict
-# line, just output that stops mid-run. It is 88 checks over seventeen products, takes 216
-# seconds on a machine faster than a runner, and passes. Its cap is 600.
+#   gwdguards  322s  23 ok, 0 FAIL   - passes. OFF THE LIST.
+#   dpick      396s   6 ok, 0 FAIL   - passes. OFF THE LIST.
+#   audit1     357s  throws          - real, below
+#   gwdanims   433s  73 ok, 1 FAIL   - real, below
 #
-# The four below have not been timed, so nobody knows whether they want 300 seconds or 3000.
-# Timing them is the work that would take them off this list.
-audit1
-dpick
-gwdanims
-gwdguards
+# So half of that section was passing sims that nobody had ever seen finish, exactly like
+# glassblowing. All four have their own cap in sims.yml now and actually run; the two that fail
+# have moved up to the section above, with what they say rather than how long they take.
 
 # ---- A GENUINE MACHINE DIFFERENCE, and now the only one. This section held seven sims that
 # "pass here and fail on a GitHub runner", none of them diagnosed. With the dice fixed, six of
