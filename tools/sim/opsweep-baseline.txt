@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 4376 lines at the time of writing.
+# 4370 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -2288,13 +2288,7 @@ dead npc  viking_woman_indoors op1="Talk-to"
 dead npc  w_ardougnecitizen1 op1="Talk-to"
 dead npc  w_ardougnecitizen2 op1="Talk-to"
 dead npc  w_ardougnecitizen5 op1="Talk-to"
-dead npc  waa_skullball op1="Tap"
-dead npc  waa_skullball op3="Kick"
-dead npc  waa_skullball op4="Shoot"
-dead npc  waa_skullball op5="Show-Goal"
 dead npc  wanted_savant op1="Talk-to"
-dead npc  werewolf_skullballboss op1="Talk-To"
-dead npc  werewolf_trainer_1 op1="Talk-To"
 dead npc  wileycat op1="Pick-up"
 dead npc  wileycat op3="Talk-to"
 dead npc  wileycat op4="Interact-with"
