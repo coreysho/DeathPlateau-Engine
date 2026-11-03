@@ -44,6 +44,12 @@ export class NetworkPlayer extends Player {
     userPath: number[] = [];
     opcalled: boolean = false;
 
+    // custom (2026-11-03) - server messages sent to this client in the current tick, reset by
+    // World.processCleanup once the tick's output is complete. The client parses at most five
+    // packets per loop iteration, so this is the figure that says whether it can keep up; see
+    // trackPlayerPacketsPerTick for the arithmetic.
+    packetsThisTick: number = 0;
+
     constructor(username: string, username37: bigint, hash64: bigint, client: ClientSocket) {
         super(username, username37, hash64);
 
@@ -262,6 +268,7 @@ export class NetworkPlayer extends Player {
 
         this.client.send(buf.data.subarray(0, buf.pos));
         World.cycleStats[WorldStat.BANDWIDTH_OUT] += buf.pos;
+        this.packetsThisTick++;
     }
 
     override logout() {
