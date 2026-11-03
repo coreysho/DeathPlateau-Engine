@@ -116,7 +116,7 @@ for (const p of placed) {
 
 // ----------------------------------------------------------------------------- the dead ones
 
-type Row = { name: string; op: number; label: string; dir: number; instances: number; clear: number; partnered: number; where: string; partner: string | null; sameModel: string[] };
+type Row = { name: string; op: number; label: string; dir: number; instances: number; clear: number; partnered: number; offset: number; where: string; partner: string | null; sameModel: string[] };
 const rows = new Map<string, Row>();
 for (const p of placed) {
     const type = LocType.get(p.type);
@@ -132,7 +132,7 @@ for (const p of placed) {
         let row = rows.get(key);
         if (!row) {
             const sameModel = [...new Set([...(type.models ?? [])].flatMap(m => wiredByModel.get(m) ?? []))];
-            row = { name: type.debugname, op: op + 1, label, dir, instances: 0, clear: 0, partnered: 0, where: `${p.x},${p.z},${p.level}`, partner: null, sameModel };
+            row = { name: type.debugname, op: op + 1, label, dir, instances: 0, clear: 0, partnered: 0, offset: 0, where: `${p.x},${p.z},${p.level}`, partner: null, sameModel };
             rows.set(key, row);
         }
         row.instances++;
@@ -148,10 +148,20 @@ for (const p of placed) {
         }
         if (!clear) continue;
         row.clear++;
-        const mate = climbs.find(c => c.level === to && c.dir === -dir && Math.max(Math.abs(c.x - p.x), Math.abs(c.z - p.z)) <= 2);
+        // THE PARTNER MUST BE ON THE SAME TILE, not near it. This said "within two tiles" and the
+        // three Lunar Isle ladders it then recommended carry a comment in lunar_isle.loc saying
+        // somebody had already tried exactly that and reverted it: their other half is ONE tile
+        // away, the direction varies by placement, and _ladder_up / _ladder_down mean "same tile,
+        // one level" - so it teleported players into the wall between the two halves. A partner one
+        // tile off is evidence AGAINST the generic category, not for it.
+        const mate = climbs.find(c => c.level === to && c.dir === -dir && c.x === p.x && c.z === p.z);
+        const nearby = climbs.find(c => c.level === to && c.dir === -dir && Math.max(Math.abs(c.x - p.x), Math.abs(c.z - p.z)) <= 2);
         if (mate) {
             row.partnered++;
             row.partner ??= `${LocType.get(mate.type).debugname} "${mate.label}" at ${mate.x},${mate.z},${mate.level}`;
+        } else if (nearby) {
+            row.offset++;
+            row.partner ??= `${LocType.get(nearby.type).debugname} "${nearby.label}" at ${nearby.x},${nearby.z},${nearby.level} - OFF BY ${Math.max(Math.abs(nearby.x - p.x), Math.abs(nearby.z - p.z))} TILES`;
         }
     }
 }
@@ -185,13 +195,15 @@ const DISTINCTIVE = 3;
 const copyWired = list.filter(r => r.sameModel.length > 0 && r.sameModel.length <= DISTINCTIVE && r.sameModel.some(h => h.startsWith('[oploc1,')));
 const certain = list.filter(r => !copyWired.includes(r) && r.partnered === r.instances && r.instances > 0 && canTakeCategory(r));
 const twoWay = list.filter(r => !certain.includes(r) && !copyWired.includes(r) && (bothWays.has(r.name) || r.op !== 1));
-const maybe = list.filter(r => !certain.includes(r) && !twoWay.includes(r) && !copyWired.includes(r) && r.clear > 0);
-const elsewhere = list.filter(r => !certain.includes(r) && !twoWay.includes(r) && !copyWired.includes(r) && r.clear === 0);
+const offsetPartner = list.filter(r => !certain.includes(r) && !twoWay.includes(r) && !copyWired.includes(r) && r.offset > 0);
+const maybe = list.filter(r => !certain.includes(r) && !twoWay.includes(r) && !copyWired.includes(r) && !offsetPartner.includes(r) && r.clear > 0);
+const elsewhere = list.filter(r => !certain.includes(r) && !twoWay.includes(r) && !copyWired.includes(r) && !offsetPartner.includes(r) && r.clear === 0);
 
 console.log(`${list.length} placed locs offer Climb-up or Climb-down with no script to answer it`);
 console.log(`  ${copyWired.length} share a DISTINCTIVE model with a ladder that has its own trigger - copy that one`);
 console.log(`  ${certain.length} take the generic category: one direction, on op1, with a partner at the far end of EVERY instance`);
 console.log(`  ${twoWay.length} go both ways or hang off op2+, so no single category can answer them`);
+console.log(`  ${offsetPartner.length} have a partner ONE OR TWO TILES OFF, which rules the generic category OUT - they need an angle-aware trigger`);
 console.log(`  ${maybe.length} have clear ground one level away but no partner there`);
 console.log(`  ${elsewhere.length} have nothing standable one level away, so they go somewhere else entirely`);
 console.log('');
@@ -216,6 +228,7 @@ show('a ladder with its own trigger uses the same model', copyWired, 'copy that 
 show('one direction on op1, with a partner at the far end of every instance', certain, 'category=ladder_up / ladder_down is very likely right');
 if (!CERTAIN_ONLY) {
     show('two directions, or not on op1', twoWay, 'one category cannot answer both - these want their own trigger, like [label,ladder_options]');
+    show('a partner one or two tiles off', offsetPartner, 'NOT the generic category - see loc474_16732 in lunar_isle.loc, where that was tried and reverted');
     show('clear ground, no partner', maybe, 'read the area before wiring - the far end may belong to something else');
     show('nothing standable one level away', elsewhere, 'these need their own [oploc1,name] with the destination written out');
 }

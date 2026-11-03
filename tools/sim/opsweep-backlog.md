@@ -75,6 +75,22 @@ player inside a wall. `npx tsx tools/sim/deadladders.ts` sorts them by how safe 
 - **12** have clear ground one level away and no partner there; **4** have nothing standable one
   level away at all, so they go somewhere else entirely and need their destination written out.
 
+**The 25 have NOT been wired, and what is missing is the test, not the diagnosis.** All 25 were
+given `category=ladder_up` / `ladder_down` and then taken off again, because a sim that climbs each
+one and checks where it lands could not be made to tell a real failure from its own:
+
+- most of these ladders stand in tight indoor spaces, and a sim that teleports the player to a ring
+  of tiles around the loc and clicks gets `"I can't reach that!"` from tiles that are open but
+  unroutable - eleven of them, which looks exactly like a broken ladder;
+- and one landing really is blocked. `loc_11739` climbed from 3050,3355,1 puts the player at
+  **3050,3356,2, which is a wall**. One of the 25 is wrong and the naive test cannot say which
+  others are.
+
+So the next person needs an approach that uses the engine's own router to pick the tile a player
+would actually stand on, and then asserts the landing on that tile. Until then these stay here:
+the same-tile partner test is good evidence and it is not proof, and lunar_isle.loc records what
+happens when a ladder is put on these categories on evidence alone.
+
 ## The buckets, largest first
 
 ### 501 npc "Talk-to" - dialogue nobody has written

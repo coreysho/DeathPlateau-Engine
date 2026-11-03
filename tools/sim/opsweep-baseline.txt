@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2824 lines at the time of writing.
+# 2822 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -1091,8 +1091,6 @@ dead loc  pest_ship_island_off op1="Cross"
 dead loc  pest_ship_island_on op1="Cross"
 dead loc  pest_ship_sarim_off op1="Cross"
 dead loc  pest_ship_sarim_on op1="Cross"
-dead loc  pest_tree op1="Chop down"
-dead loc  pest_tree2 op1="Chop down"
 dead loc  pest_wall_destroyed_1 op3="Repair"
 dead loc  pest_wall_destroyed_2 op3="Repair"
 dead loc  pest_wall_gate_damaged_1 op1="Open"
