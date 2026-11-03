@@ -95,6 +95,9 @@ export default class ServerGameProt {
     static readonly VARP_SMALL = new ServerGameProt(182, 3);
     static readonly VARP_LARGE = new ServerGameProt(115, 6);
     static readonly RESET_CLIENT_VARCACHE = new ServerGameProt(113, 0);
+    // custom (2026-11-03) - every varp in one variable-length packet rather than one packet each.
+    // 114 was free on both sides; see VarpBatch for what it is for.
+    static readonly VARP_BATCH = new ServerGameProt(114, -2);
 
     // audio
     static readonly SYNTH_SOUND = new ServerGameProt(26, 5);

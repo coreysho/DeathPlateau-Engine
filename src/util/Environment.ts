@@ -42,7 +42,7 @@ export default {
     // old clients' key is gone, so rolling back past it also means LOGIN_RSA_KEY_PATH=the old pem.)
     //   383 = PING / PONG (server prot 1, client prot 2, 2026-11-03). An older client has no length
     //         for opcode 1 and would read the probe's payload as its next packets.
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 383),
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 384),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),

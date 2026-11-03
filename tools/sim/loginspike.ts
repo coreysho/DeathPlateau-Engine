@@ -5,17 +5,22 @@
 // iteration, GameShell.run). That makes a login the one place the client measurably falls behind
 // the world, so this says WHICH messages it is - a count alone cannot tell you what to do about it.
 //
-// It reports, for a brand new character:
+// WHAT IT FOUND, and what was done about it. For a brand new character:
 //
-//      536 packets, 3144 bytes, of which 371 packets and 1517 bytes are varps -
-//      one packet per transmitted varp, sent whatever the value.
+//      before   536 packets, 3144 bytes - 371 packets and 1517 bytes of them varps,
+//               one packet per transmitted varp whatever its value
+//      after    238 packets, 2852 bytes - the 299 the login loop sent are one VARP_BATCH
+//
+// About 2.2 seconds of the client catching up, down to about 0.95. The 61 small and 11 large varps
+// still in the list below are not the loop: they are varps the LOGIN trigger script changes after
+// the batch has gone, which are ordinary mid-session changes and belong in packets of their own.
 //
 // The varp count does not depend on the player: onLogin sends every varp whose type is transmit,
-// so it is the same for a new character and a maxed one. Nor can the zeros simply be skipped -
+// so it is the same for a new character and a maxed one. Nor could the zeros simply be skipped -
 // RESET_CLIENT_VARCACHE copies varCache back into varps rather than zeroing them (Client.java,
 // ptype == 113), and the client only frees that array in unload(), so a player who logs out to the
 // login screen and back in still holds the last session's values and a varp that is now 0 would
-// keep its old one.
+// keep its old one. That is why this is a batch and not a filter.
 //
 // Usage: NODE_PRODUCTION=true npx tsx tools/sim/loginspike.ts
 import * as H from './harness.js';
@@ -43,6 +48,10 @@ const real = proto.writeInner;
 proto.writeInner = function (message) {
     if (collecting) {
         const key = message.constructor.name;
+        if (key === 'VarpBatch') {
+            const b = message as unknown as { small: number[][]; large: number[][] };
+            console.log(`    [VarpBatch carries ${b.small.length} small + ${b.large.length} large]`);
+        }
         const sock = (this as unknown as { client: Sink }).client;
         const before = sock.bytes;
         const r = real.call(this, message);
