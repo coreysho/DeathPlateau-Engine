@@ -90,12 +90,11 @@ export function somebodyCanHold(debugname: string | null | undefined): boolean {
  * rule as above: absence is conclusive, presence proves nothing.
  */
 let inScripts: Set<string> | null = null;
+let spawnLines: Set<string> | null = null;
 
-export function namesAppearingInScripts(): Set<string> {
-    if (inScripts) {
-        return inScripts;
-    }
+function walkScripts(): void {
     const seen = new Set<string>();
+    const spawned = new Set<string>();
     const walk = (dir: string): void => {
         let entries: fs.Dirent[];
         try {
@@ -118,14 +117,41 @@ export function namesAppearingInScripts(): Set<string> {
             } catch {
                 continue;
             }
-            for (const token of text.match(/[A-Za-z0-9_]+/g) ?? []) {
-                seen.add(token);
+            for (const line of text.split(/\r?\n/)) {
+                const spawns = line.includes('npc_add') || line.includes('npc_changetype');
+                for (const token of line.match(/[A-Za-z0-9_]+/g) ?? []) {
+                    seen.add(token);
+                    if (spawns) {
+                        spawned.add(token);
+                    }
+                }
             }
         }
     };
     walk(path.join(Environment.BUILD_SRC_DIR, 'scripts'));
     inScripts = seen;
-    return inScripts;
+    spawnLines = spawned;
+}
+
+export function namesAppearingInScripts(): Set<string> {
+    if (!inScripts) {
+        walkScripts();
+    }
+    return inScripts!;
+}
+
+/**
+ * The stronger half of the same evidence: names sitting on a line that calls `npc_add` or
+ * `npc_changetype`. Not a narrower REPLACEMENT for namesAppearingInScripts - an npc can be spawned
+ * through a constant, an enum or a dbrow whose name differs, so a miss here is not conclusive and
+ * must never be used to file a line back under "unreachable". It is only ever used to put the
+ * demonstrably-spawned lines at the top of a list.
+ */
+export function namesSpawnedInScripts(): Set<string> {
+    if (!spawnLines) {
+        walkScripts();
+    }
+    return spawnLines!;
 }
 
 /** False only when no script names it, which is the conclusive direction. */

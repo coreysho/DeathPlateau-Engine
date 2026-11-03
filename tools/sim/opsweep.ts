@@ -43,7 +43,7 @@ import path from 'path';
 import * as H from './harness.js';
 import Component from '#/cache/config/Component.js';
 import { isVisibleOp } from '#/cache/config/OpVisibility.js';
-import { namesAppearingInContent, namesAppearingInScripts } from '#/cache/config/ObjReach.js';
+import { namesAppearingInContent, namesAppearingInScripts, namesSpawnedInScripts } from '#/cache/config/ObjReach.js';
 import { SPELLBOOKS } from '#/engine/bot/BotInput.js';
 import LocType from '#/cache/config/LocType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -313,6 +313,7 @@ const NAMED = namesAppearingInContent();
 // and the player could not chop one. A script naming the npc is not proof it spawns it, so the
 // section is headed "a script names it" rather than "reachable".
 const SPAWNED = namesAppearingInScripts();
+const SPAWNED_HERE = namesSpawnedInScripts();
 /** The obj name a report line is about, or null when the line is not about an obj. */
 function objOf(line: string): string | null {
     const m = /^obj\s+([a-zA-Z0-9_]+) /.exec(line);
@@ -371,9 +372,17 @@ const spawnableSet = new Set(spawnable);
 const rest = unplaced.filter(r => !unheldSet.has(r) && !spawnableSet.has(r));
 
 console.log(`\n-- dead, not placed, but on an npc a SCRIPT NAMES (${spawnable.length}) - npc_add reaches these,`);
-console.log('   so "not placed" says nothing about whether a player meets one. Read these first.');
+console.log('   so "not placed" says nothing about whether a player meets one. Read these first, and the');
+console.log('   ones marked <- npc_add first of all: a name sitting on an npc_add line is the strongest');
+console.log('   evidence here. A name WITHOUT the mark is not cleared - an npc can be spawned through a');
+console.log('   constant or an enum whose name differs - it is only weaker evidence.');
+const spawnMark = (line: string): string => {
+    const npc = npcOf(line);
+    return npc !== null && SPAWNED_HERE.has(npc) ? '  <- npc_add' : '';
+};
+spawnable.sort((a, b) => spawnMark(b.line).length - spawnMark(a.line).length || a.line.localeCompare(b.line));
 for (const row of spawnable.slice(0, 40)) {
-    console.log(`   ${row.line}`);
+    console.log(`   ${row.line}${spawnMark(row.line)}`);
 }
 if (spawnable.length > 40) {
     console.log(`   ... and ${spawnable.length - 40} more`);

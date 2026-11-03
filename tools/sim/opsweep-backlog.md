@@ -33,6 +33,48 @@ not one of them is named anywhere in a script, drop table or reward table - noth
 so nobody can read them. Teaching opsweep "is this obj ever given to anybody" would cut the obj
 section down to what matters; until then, check before treating an obj line as urgent.
 
+## Read this third: `deadcategory.ts` guesses the fix for 286 of these lines
+
+Three of the biggest live buckets in this file turned out to be the same bug wearing different
+hats - 175 rocks with an inert Mine, 123 Ape Atoll jungle trees with an inert Chop-down, 21
+woodcutting Ents nobody could chop - and in all three the handler was already written, already
+dispatching on `category=`, with a working sibling sitting in the same cache family. Each took an
+afternoon to find and ten seconds to fix.
+
+**`npx tsx tools/sim/deadcategory.ts --placed`** does that reading. For every dead option it names
+the category that would answer it, learned from the locs and npcs that already work: a wired
+sibling drawn with the same model, a wired loc whose option at the same slot carries the same
+wording, or one sharing a name stem and that wording. 286 of the 588 placed loc lines get a
+suggestion, and it prints how many locs already carry each suggested category so a generic category
+can be told from a bespoke one - `ladder_up` is on one loc and is still right for a dead Climb-up;
+`rashiliyia_tomb_door_opened` is on two and is right for nothing outside Rashiliyia's tomb.
+
+Where the suggestions land, after the mining rocks: **47 ladders** (see below), 26 chests, 10 more
+trees, 11 gangplanks, 9 crates. `--category <name>` prints every line one suggestion covers.
+
+### 52 ladders and trapdoors that do nothing - run `deadladders.ts`
+The most consequential bucket in the file, because a ladder that does nothing is a room nobody can
+get into: Port Sarim jail, Lletya, the Wilderness ladders, Burgh de Rott's hatches, the Rum Deal
+ghost ship, the fairy ring winch, the board-game ladders.
+
+`ladders.rs2` has a generic handler - `[oploc1,_ladder_up]` / `[oploc1,_ladder_down]`, used today by
+two locs on Lunar Isle - and it does the naive thing: straight up or down from the tile the player
+stands on. **`~climb_ladder` does not validate**, it `p_telejump`s, so a wrong destination puts the
+player inside a wall. `npx tsx tools/sim/deadladders.ts` sorts them by how safe that would be:
+
+- **4** share a distinctive model with a ladder that has its own trigger - copy that trigger. The
+  two Rum Deal ghost-ship ladders are the reason this test exists: a partner sits directly above
+  each, so they look like plain vertical links, and their model is `shipladder_angled`, whose
+  handler steps TWO TILES OUT in the direction the ladder faces. The category would have dropped
+  players in the hull.
+- **28** take the generic category: one direction, on op1, with a ladder of the opposite direction
+  at the far end of every instance the map places.
+- **4** go both ways, or hang the option off op2+. One loc carries one category and the generic
+  handler is op1-only, so no category can answer both - these want `[label,ladder_options]`, which
+  ladders.rs2 already has.
+- **12** have clear ground one level away and no partner there; **4** have nothing standable one
+  level away at all, so they go somewhere else entirely and need their destination written out.
+
 ## The buckets, largest first
 
 ### 501 npc "Talk-to" - dialogue nobody has written
