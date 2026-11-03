@@ -185,8 +185,17 @@ Three more gaps closed after the first round, each one measured rather than assu
 
 Bot-to-bot trading and item-giving are **not** reachable and that is deliberate, not a gap to be
 closed: `OpPlayerHandler` allows only op 2 (Attack) and op 3 (Follow) when the target is a bot, and
-`OpPlayerUHandler` refuses outright. `[opplayeru]` and `[applayeru]`, ten triggers between them,
-want a sim with two real players.
+`OpPlayerUHandler` refuses outright so players cannot lose items into one. `[opplayeru]` and
+`[applayeru]`, ten triggers between them, therefore want a sim with two real players - which is
+`npx tsx tools/sim/jarshare.ts`, for the four butterfly jars. It covers all three branches of
+`~hunter_jar_share`, because two of them are guards that would rot silently: the multi-combat flag
+on *both* coords, and the target's own accept-aid option. It also asserts the thing easiest to get
+wrong - the jar is consumed and an empty one takes its place, since a share that kept the jar would
+be an unlimited Strength boost. 13 checks.
+
+It uses `harness.useOnPlayer`, which mirrors `OpPlayerUHandler` rather than calling it: that
+handler's `rsbuf.hasPlayer` check is filled only for a connected client, so the real one refuses
+every such click before the content runs. Every other check is kept, the bot refusal included.
 
 A caution about the numbers. Trigger coverage on a single seed moves about 15% run to run, so the
 exact weights in `FuzzBrain.act` are tuned no further than that noise allows; two seeds at the

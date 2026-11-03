@@ -629,6 +629,47 @@ export function opNpc(p: Player, npc: Npc, op: number) {
     return true;
 }
 
+/**
+ * ONE PLAYER USING AN ITEM ON ANOTHER: OpPlayerUHandler, mirrored rather than called.
+ *
+ * The one check that cannot be called is rsbuf.hasPlayer(player.slot, other.slot) - the server fills
+ * that list only for a CONNECTED client, and a harness player has no socket, so the real handler
+ * refuses every one of these before it reaches the content. That is the same reason
+ * src/engine/bot/BotInput.ts mirrors opPlayer, opNpc and castOnPlayer instead of calling them.
+ * Here it is mirrored as what it stands for: the other player is within a client's view distance on
+ * the same level.
+ *
+ * EVERY OTHER CHECK IS KEPT, including the one that looks like it is in the way:
+ *
+ *     if (other.isBot) { "... is a bot - it doesn't take items." }
+ *
+ * A bot does not take items, deliberately, so players cannot lose them into one. That is why
+ * [opplayeru] and [applayeru] - ten triggers in this build - are out of a fuzzer's reach and want a
+ * sim with two real players (tools/sim/jarshare.ts).
+ */
+export function useOnPlayer(p: Player, other: Player, objName: string): boolean {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const listener = p.invListeners.find(l => l.type === InvType.INV && l.source === p.uid);
+    const com = listener ? Component.get(listener.com) : undefined;
+    if (!listener || !com || !com.usable || !p.isComponentVisible(com)) return false;
+    const inv = p.getInventoryFromListener(listener);
+    if (!inv) return false;
+    const slot = inv.getItemIndex(id);
+    if (slot === -1 || !inv.validSlot(slot) || !inv.hasAt(slot, id)) return false;
+    if (!other.isActive || other.slot === -1 || World.getPlayer(other.slot) !== other) return false;
+    if (other.isBot) return false; // the handler's own rule, kept
+    if (other.level !== p.level || Math.abs(p.x - other.x) > 15 || Math.abs(p.z - other.z) > 15) return false;
+    p.clearPendingAction();
+    if (ObjType.get(id).members && !Environment.NODE_MEMBERS) return false;
+    (p as unknown as { lastUseItem: number; lastUseSlot: number }).lastUseItem = id;
+    (p as unknown as { lastUseItem: number; lastUseSlot: number }).lastUseSlot = slot;
+    p.setInteraction(Interaction.ENGINE, other, ServerTriggerType.APPLAYERU, id);
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
 /** The nearest live npc of a type to (x, z) on this level, or null. */
 export function npcNear(npcName: string, x: number, z: number, level = 0): Npc | null {
     const id = NpcType.getId(npcName);
