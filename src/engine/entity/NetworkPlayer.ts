@@ -90,6 +90,11 @@ export class NetworkPlayer extends Player {
             NetworkPlayer.inBuf.pos = 0;
             this.client.read(NetworkPlayer.inBuf.data, 0, 1);
 
+            // custom (2026-11-03) - this packet is timed from its opcode, so a handler measuring a
+            // round trip (PongHandler) gets when the CLIENT answered rather than when this tick
+            // reached the answer, and is not thrown off by the payload arriving in a later segment.
+            this.client.packetArrival = this.client.lastReadArrival;
+
             if (this.client.decryptor) {
                 this.client.opcode = (NetworkPlayer.inBuf.g1() - this.client.decryptor.nextInt()) & 0xff;
             } else {
