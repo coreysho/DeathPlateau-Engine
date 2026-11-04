@@ -15,6 +15,8 @@ import fs from 'fs';
 
 import * as H from './harness.js';
 import World from '#/engine/World.js';
+import ClientCheat from '#/network/game/client/model/ClientCheat.js';
+import ClientCheatHandler from '#/network/game/client/handler/ClientCheatHandler.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import EventAppletFocus from '#/network/game/client/model/EventAppletFocus.js';
 import EventCameraPosition from '#/network/game/client/model/EventCameraPosition.js';
@@ -132,6 +134,46 @@ check('a connection that did nothing writes no row', submitted, 0);
 quiet.input.userActions = 5;
 World.submitInputCounts(quiet);
 check('...and one that did something writes one', submitted, 1);
+
+// ---- ::track, WITHOUT WHICH NONE OF THE CAPTURE IS REACHABLE. input.active was only ever set by
+// a player being reported: the RELAY_TRACK opcode exists and the friend server relays it, and no
+// caller was ever written. So a suspect the counts above flag could not be watched.
+// SHORT NAMES, because base37 holds twelve characters and getPlayerByUsername looks up by
+// username37: 'inputcounts_sus' is fifteen, so toBase37 mangled it and the lookup matched nothing.
+// The test read as "an administrator cannot turn the capture on", which was a lie about the engine.
+const staff = join('ic_mod');
+const suspect = join('ic_sus');
+World.cycle();
+const cheat = new ClientCheatHandler();
+const said: string[] = [];
+(suspect as unknown as { messageGame: (m: string) => void }).messageGame = () => {};
+(staff as unknown as { messageGame: (m: string) => void }).messageGame = (m: string) => {
+    said.push(m);
+};
+
+staff.staffModLevel = 2;
+cheat.handle(new ClientCheat(`track ${suspect.username}`), staff);
+check('a moderator cannot turn the capture on', suspect.input.active, false);
+
+staff.staffModLevel = 3;
+cheat.handle(new ClientCheat(`track ${suspect.username}`), staff);
+check('an administrator can', suspect.input.active, true);
+check('...and is told who', /ic.sus/i.test(said[said.length - 1] ?? ''), true);
+
+said.length = 0;
+cheat.handle(new ClientCheat('track'), staff);
+check('::track with no name lists who is being watched', /ic.sus/i.test(said[0] ?? ''), true);
+
+cheat.handle(new ClientCheat(`untrack ${suspect.username}`), staff);
+check('::untrack turns it off again', suspect.input.active, false);
+
+said.length = 0;
+cheat.handle(new ClientCheat('track'), staff);
+check('...and then it lists nobody', /nobody/i.test(said[0] ?? ''), true);
+
+said.length = 0;
+cheat.handle(new ClientCheat('track someone_not_here'), staff);
+check('a name nobody is using says so rather than failing silently', /not online/i.test(said[0] ?? ''), true);
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);
 process.exit(R.bad > 0 ? 1 : 0);
