@@ -677,7 +677,34 @@ if (rfd) {
     check('the snake stuffed', H.invCount(p, 'hundred_ilm_correctly_stuffed_snake'), 1);
     p.teleport(3230, 3197, 0);
     H.tick(2);
-    useOn(p, 3230, 3196, 'range', 'hundred_ilm_correctly_stuffed_snake');
+    // THE ROAST IS A COIN FLIP AND THE RANGE NEEDS TICKS, which is two reasons this step gave
+    // the plinth below it nothing to hand over. cooking_generic_stuffed_snake is
+    // successchance 500,500 - half of them burn, at any Cooking level - and a1lib's useOn
+    // returns as soon as it has set the interaction, where questrun's useLoc ticks the world
+    // again afterwards. One snake, one click, no ticks: the plinth then threw "not carrying
+    // hundred_ilm_cooked_stuffed_snake" and named the plinth for the range's miss.
+    //
+    // Spare snakes and cook until one survives, which is what a player does with a fifty-fifty.
+    // ONE AT A TIME, because more than one opens the make-x panel and this has no pick for it.
+    // questrun's useLoc passes its picks into useOn for exactly that reason; quest_hundred_run
+    // roasts the same snake with no picks at all and works, because it is carrying one.
+    for (let a = 0; a < 8 && H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') < 1; a++) {
+        // A LEFTOVER DELAY OR AN OPEN BOX EATS THE CLICK, silently. Cooked on its own this works
+        // first time - one snake in, one roasted out - so what stops it here is the state this
+        // audit arrives in after eighty steps, not the range.
+        for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+        p.clearPendingAction();
+        H.tick(1);
+        if (H.invCount(p, 'hundred_ilm_correctly_stuffed_snake') < 1) H.give(p, 'hundred_ilm_correctly_stuffed_snake', 1);
+        H.mesgs.length = 0;
+        useOn(p, 3230, 3196, 'range', 'hundred_ilm_correctly_stuffed_snake');
+        H.tick(8);
+        if (a === 0 && H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') < 1) {
+            console.log(`    the range said nothing useful: at ${p.x},${p.z} lvl${p.level}, [${H.mesgs.map(m => m.text).join(' | ')}]`);
+        }
+    }
+    check('the stuffed snake roasts on a range', H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') >= 1, true);
     plinth('hundred_monkey_base', 1865, 5319, 'hundred_ilm_cooked_stuffed_snake');
     check('King Awowogei is freed', tally(p), 9);
 
