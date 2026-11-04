@@ -125,9 +125,30 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
 export const saw = (lines: string[], s: string) => lines.some(l => l.includes(s));
 
 export function findNpc(npcName: string, p: Player): Npc {
-    const npc = [p.level, 0, 1, 2, 3].map(l => H.npcNear(npcName, p.x, p.z, l)).find(n => n);
-    if (!npc) throw new Error('no npc ' + npcName);
-    return npc;
+    // THE NEAREST ACROSS FLOORS, which is what the line below this already claimed. It took the
+    // first FLOOR that had one - p.level, then 0, 1, 2, 3 - and returned that, so distance only
+    // decided between npcs that happened to share a storey.
+    //
+    // Captain Bentley is the case that found it. There is one on each dock, "both this config":
+    // Pirates' Cove at 2224,3800 on LEVEL 2, the ship's deck, and Lunar Isle at 2114,3893 on
+    // level 0. A player standing on the Cove at 2202,3806 is 22 tiles from one and 88 from the
+    // other, and this handed back the one 88 tiles away because it was on level 0 first. `talk`
+    // then teleports to whatever it is given, so the sim sailed the player across the sea and
+    // got the conversation for somebody already on Lunar Isle - which is exactly what Bentley
+    // should say to somebody standing on Lunar Isle.
+    let best: Npc | null = null;
+    let bestD = Infinity;
+    for (const level of [p.level, 0, 1, 2, 3]) {
+        const npc = H.npcNear(npcName, p.x, p.z, level);
+        if (!npc) continue;
+        const d = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
+        if (d < bestD) {
+            bestD = d;
+            best = npc;
+        }
+    }
+    if (!best) throw new Error('no npc ' + npcName);
+    return best;
 }
 /** Talk to the nearest npc of a type (any floor), standing next to it first. */
 export function talk(p: Player, npcName: string, picks: (number | string)[] = [], op = 1, teleport = true): string[] {

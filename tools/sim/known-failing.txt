@@ -85,7 +85,14 @@ audit7               # 14s. FAILS AT ITS FIRST STEP: "Pete rows you out: stage 1
                      # "not carrying deal_blindweed" is simply where it finally gives up
 gwdstaves            # 6s. "menus not reached: 2" out of useHeld - see the note above about what
                      # that kind of message is worth
-lunar                # 7s. no option "Can we sail to Lunar Isle" in multi2, and what IS offered
+# lunar is FIXED and off: 139 ok. It was an a1lib bug, not the quest. findNpc said it
+# returned "the nearest npc of a type (any floor)" and actually returned the first FLOOR
+# that had one, so distance only decided between npcs sharing a storey. There is a
+# Captain Bentley on each dock - Pirates' Cove at 2224,3800 on LEVEL 2, the ship's deck,
+# and Lunar Isle at 2114,3893 on level 0 - and a player standing on the Cove, 22 tiles
+# from one and 88 from the other, was handed the far one because level 0 came first.
+# talk() teleports to whatever it is given, so the sim sailed itself to Lunar Isle and
+# then complained that Bentley was talking like somebody was on Lunar Isle.
                      # is "Take me back to Pirates' Cove | I'll stay a while" - which is the
                      # conversation for somebody ALREADY on Lunar Isle. The sim's idea of where
                      # the player is standing is wrong, not the dialogue
