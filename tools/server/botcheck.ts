@@ -55,6 +55,7 @@ async function main() {
         .select([
             'account.username as username',
             'session.ip as ip',
+            'session.timestamp as started',
             'session.uid as uid',
             'session_input.timestamp as ended',
             'session_input.user_actions as actions',
@@ -76,26 +77,47 @@ async function main() {
     const scored = rows
         .map(r => {
             const telemetry = r.moves + r.clicks + r.camera + r.focus;
-            return { ...r, telemetry, perAction: r.actions > 0 ? telemetry / r.actions : 0 };
+            // PER MINUTE, NOT PER ACTION, and the first real session is why. MouseTracking samples
+            // the cursor every 50ms but the client only ships a packet once 40 samples have piled
+            // up - about one every two seconds - so a real client emits roughly 30 telemetry
+            // packets a minute WHATEVER THE PLAYER IS DOING, including nothing. field99 counts
+            // samples, not movements.
+            //
+            // So per-action scales with how busy the session was rather than with how real it was:
+            // somebody standing still scores high and somebody clicking fast scores low, and
+            // neither says anything. Per minute is flat for every real client and zero for a bot
+            // that is not running one. The first human session measured 2.65 per action, which
+            // tells you nothing on its own; 45 packets over its length does.
+            const minutes = Math.max(1 / 60, (new Date(r.ended).getTime() - new Date(r.started).getTime()) / 60000);
+            return {
+                ...r,
+                telemetry,
+                minutes,
+                perMinute: telemetry / minutes,
+                perAction: r.actions > 0 ? telemetry / r.actions : 0
+            };
         })
         .filter(r => r.actions >= MIN_ACTIONS)
-        .sort((a, b) => a.perAction - b.perAction);
+        .sort((a, b) => a.perMinute - b.perMinute);
 
     console.log(`${rows.length} session(s) in the last ${DAYS} day(s), ${scored.length} with at least ${MIN_ACTIONS} actions.\n`);
-    console.log('Ranked by how little the client reported per action. Lowest is most worth a look.\n');
+    console.log('Ranked by how little the client reported per MINUTE. A real client manages about 30,');
+    console.log('whatever the player is doing. Lowest is most worth a look.\n');
     // padEnd/padStart, not a printf format: node's console.log understands %s and %d and silently
     // prints '%-18s' as the literal four characters, which is how the first run of this came out.
     const row = (a: string, b: string, c: string, d: string, e: string, f: string, g: string) =>
         `${a.padEnd(18)} ${b.padStart(8)} ${c.padStart(9)} ${d.padStart(7)} ${e.padStart(7)} ${f.padStart(7)}  ${g}`;
 
-    console.log(row('player', 'actions', 'telemetry', 'per act', 'camera', 'focus', 'reading'));
+    console.log(row('player', 'actions', 'telemetry', 'per min', 'camera', 'focus', 'reading'));
 
     for (const r of scored.slice(0, 25)) {
         let reading: string;
         if (r.telemetry === 0) {
             reading = 'NOTHING REPORTED - not the real client, or not a person';
-        } else if (r.perAction < 0.2) {
-            reading = 'almost nothing reported - worth the full capture';
+        } else if (r.perMinute < 10) {
+            // a real client manages about 30 a minute on its own; a third of that means long
+            // stretches where the client was not running, or was not answering
+            reading = 'far below what a running client reports - worth the full capture';
         } else if (r.camera === 0 && r.focus === 0) {
             reading = 'never turned the camera or left the window';
         } else {
@@ -107,7 +129,7 @@ async function main() {
                 r.username ?? '(no account row)',
                 String(r.actions),
                 String(r.telemetry),
-                r.perAction.toFixed(2),
+                r.perMinute.toFixed(1),
                 String(r.camera),
                 String(r.focus),
                 reading
