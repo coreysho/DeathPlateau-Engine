@@ -23,7 +23,8 @@
 # still not atomic, so it goes the same way as the rest.
 #
 # node, because there is no sqlite3 binary on the game box and the engine's own runtime is already
-# there. Nothing else is needed beyond coreutils, tar and rsync.
+# there. Nothing else is needed beyond coreutils, tar, and either rsync or scp - whichever the box
+# happens to have, because it turned out to have only the second.
 #
 # THE ARCHIVE HOLDS A PRIVATE KEY, so it is written 0600 and the directory at each end is 0700.
 # Treat a copy of it the way you would treat the key.
@@ -155,7 +156,17 @@ say "wrote $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"
 if [ -n "${DP_SKIP_OFFSITE:-}" ]; then
     say "DP_SKIP_OFFSITE set - the archive stays here"
 else
-    rsync -q --chmod=F600 "$ARCHIVE" "$OFFSITE/" || die "the archive is written locally but did NOT reach $OFFSITE"
+    # EITHER TOOL, because the game box had neither rsync nor a reason to: openssh is already
+    # there for the tunnel's sake and scp -p carries the 0600 across, which is the only thing
+    # rsync was being asked for on a single 500K file. The first run of this died on
+    # 'rsync: command not found' with the archive written and nothing sent.
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -q --chmod=F600 "$ARCHIVE" "$OFFSITE/" || die "the archive is written locally but did NOT reach $OFFSITE"
+    elif command -v scp >/dev/null 2>&1; then
+        scp -q -p "$ARCHIVE" "$OFFSITE/" || die "the archive is written locally but did NOT reach $OFFSITE"
+    else
+        die "neither rsync nor scp is installed - the archive is written locally and went nowhere"
+    fi
     say "sent to $OFFSITE"
 
     # retention at the far end, where nothing else is going to do it
