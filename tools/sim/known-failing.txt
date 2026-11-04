@@ -252,20 +252,3 @@ changepassword
 # fixes it, plus walking back to the table afterwards: the fight carries the player off it, and
 # "nothing on the floor nearby" is the take looking four tiles from where the fight ended.
 #
-# Step 93 clicks Take on the staff of Armadyl and the staff stays on the table. The manifest
-# assumes the lift always works and puts "a Guardian objects" AFTER it. The content does the
-# opposite: [opobj3,ikov_staffofarmardyl] runs npc_huntall(coord, 5, 1) first and, if any
-# guardian_of_armadyl is within five tiles WITH LINE OF SIGHT, it says "That is not thine to
-# take!", sets opplayer2 on that npc and returns without giving you anything. The guardians in
-# that room all have a wanderrange, so whether one is inside five tiles at the moment of the
-# click is the dice - which is why this sim looked like a runner-only failure for a week.
-#
-# PROVEN, not guessed: with that npc_huntall block commented out of the content and the content
-# repacked, all four seeds that fail (1, 2, 7, 42) pass; seed 3 passes either way. The content
-# was put straight back afterwards - the block is the game's rule, not a bug.
-#
-# The fix is in tools/sim/quest_ikov_run.ts: deal with the objecting Guardian BEFORE expecting
-# the staff, the way a player has to. Left undone because the ordering needs a measurement of
-# how many guardians can reach the table and how fast they come back, and a probe that ticks the
-# live world 200 times to find out does not finish inside the 180s a sim gets.
-quest_ikov_run
