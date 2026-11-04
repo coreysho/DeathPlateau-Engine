@@ -1,5 +1,8 @@
 // The fuzzing bots against the real engine - `npx tsx tools/sim/fuzz.ts [ticks] [bots] [seed] [x,z,level]`
 //
+//   npx tsx tools/sim/fuzz.ts                    a short run, reported, always exit 0
+//   npx tsx tools/sim/fuzz.ts 3000 99 --gate     what the nightly runs: red on a fault or a finding
+//
 // It boots the world, puts fuzzing bots (src/engine/bot/BotFuzzer.ts) into it and lets them click
 // everything in reach for however many ticks you ask for, then prints what the watchers
 // (BotFuzzWatch.ts) and the script fault reporter (ScriptFaults.ts) caught, and what the run
@@ -72,13 +75,37 @@ import Environment from '#/util/Environment.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
-import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import { type FindingKind, findings } from '#/engine/bot/BotFuzzWatch.js';
 import DeadOps from '#/engine/script/DeadOps.js';
 import { fuzzTuning } from '#/engine/bot/BotFuzzer.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 
-const argv = process.argv.slice(2);
+const rawArgv = process.argv.slice(2);
+// --gate ANYWHERE, and stripped before the positional arguments are read, so the nightly can say
+// `fuzz.ts 3000 99 --gate` without having to pass a seed and a coordinate it does not want to pin.
+//
+// WHAT THE GATE COVERS, and why it is not everything this prints. A SCRIPT FAULT is content
+// throwing inside the engine and has no innocent reading at all. Of the watcher findings, SIX of
+// the eight kinds are the same sort of thing - a softlock, a corpse that never cleared, a
+// coordinate off the map, a stat or a varp outside what a player can have, items appearing from
+// nowhere - and all of them are zero on this build, so "still zero" is a contract CI can hold
+// without a baseline file to maintain.
+//
+// THE OTHER TWO KINDS ARE NOT GATED, and the first version of this gated on findings.size() and
+// would have been red every night: a 99-bot run was at **254 findings by tick 545**, essentially
+// all of them `deadop` and `filler`. Those two, and the three OPTIONS NOTHING ANSWERED buckets they
+// feed, move for innocent reasons: `deadop` is a strict subset of what tools/sim/opsweep.ts reports
+// and that already has a committed baseline, so gating here would fail the same bug twice; `combo`
+// is noise by construction, since nothing advertises casting Water Blast at a banker; and `filler`
+// contained zero real bugs once its attribution was fixed to blame the entered trigger. Gating on a
+// number that moves for innocent reasons is how a nightly becomes a job nobody reads.
+//
+// The set below is written out POSITIVELY rather than as "everything except deadop and filler", so
+// a kind added to FindingKind later has to be classified on purpose instead of joining the gate by
+// accident.
+const GATE = rawArgv.includes('--gate');
+const argv = rawArgv.filter(a => a !== '--gate');
 const TICKS = parseInt(argv[0] ?? '') || 2000;
 const COUNT = parseInt(argv[1] ?? '') || 4;
 const SEED = parseInt(argv[2] ?? '') || 20260929;
@@ -245,6 +272,20 @@ const cov = ScriptCoverage.summary();
 console.log(`  ${cov.executed}/${cov.total} of this build's triggers have run in this process (${((cov.executed / Math.max(1, cov.total)) * 100).toFixed(1)}%)`);
 console.log(`  ${cov.total - cov.executed} have never run - nothing in the world, no sim and no player has reached them`);
 console.log(`  full list: ${ScriptCoverage.write(path.join(os.tmpdir(), `fuzz_coverage_${process.pid}.txt`))}`);
+
+if (GATE) {
+    console.log('\nTHE GATE');
+    const GATED: FindingKind[] = ['softlock', 'corpse', 'coord', 'stat', 'varp', 'items'];
+    const gated = findings.all().filter(f => GATED.includes(f.kind));
+    check('no script faults - content throwing inside the engine', ScriptFaults.size(), 0);
+    check(
+        `no ${GATED.join('/')} findings`,
+        gated.map(f => `${f.kind}: ${f.detail}`),
+        []
+    );
+    console.log(`  reported and NOT gated: ${findings.size() - gated.length} deadop/filler findings and the three`);
+    console.log('  OPTIONS NOTHING ANSWERED buckets above - see the note on --gate at the top of this file');
+}
 
 fs.rmSync(faultsFile, { force: true });
 fs.rmSync(findingsFile, { force: true });

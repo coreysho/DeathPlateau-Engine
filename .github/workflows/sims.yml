@@ -362,6 +362,104 @@ jobs:
         BUILD_SRC_DIR: ../content
       run: npx tsx tools/sim/ifselect.ts --check
 
+  # ------------------------------------------------------------------ and the bots, which run nowhere else
+  # WHY THIS JOB EXISTS. The ratchets above read the cache against the script table and find what was
+  # never WRITTEN. They cannot find what BREAKS, because that needs somebody to be standing in the
+  # right place holding the right thing - and the only thing in this project that does that is
+  # src/engine/bot/BotFuzzer.ts, which until now ran only when somebody remembered to run it. Of the
+  # two script faults it has ever found, one was real: an uncharged serpentine helm threw instead of
+  # dropping, which no cross-reference tool can see because every option involved is wired.
+  #
+  # 99 BOTS AND 3,000 TICKS, measured and not guessed. The four runs that settled it:
+  #
+  #       8 bots x  3,000 ticks     166s    2.9% of triggers reached
+  #      12 bots x 20,000 ticks   1,371s    7.8%
+  #      14 bots x 25,000 ticks   1,862s    8.4%
+  #      99 bots x  3,000 ticks     881s   10.4%   <- more coverage, half the wall clock
+  #
+  # 99 at 3,000 beats 14 at 25,000 on coverage AND time with fewer bot-ticks, because the fixed
+  # per-tick world cost amortises across bots instead of repeating across ticks: 337 bot-ticks a
+  # second against 175. Where they start makes no measurable difference (10.4% from bank spots,
+  # 10.3% from the densest content squares), so no coordinate is passed and they spread.
+  #
+  # NO SEED PASSED EITHER, so the run uses fuzz.ts's own default. A fixed seed is the point: a fault
+  # the nightly finds has to be reproducible by hand with the same command, and every finding prints
+  # its own replay line.
+  #
+  # --gate IS WHAT MAKES IT RED, and only for the two always-wrong classes - a script fault, or a
+  # watcher finding (softlock, corpse, coord, stat, varp, items). Both are zero on this build. The
+  # "options nothing answered" buckets are printed and NOT gated: notrigger is a strict subset of
+  # opsweep's, which is already ratcheted above, so gating it would fail the same bug twice.
+  fuzz:
+    name: the fuzzing bots find nothing new
+    if: ${{ !inputs.notify_test }}
+    runs-on: ubuntu-latest
+    # 90 MINUTES FOR A 15 MINUTE RUN, and the generosity is deliberate. The 881s measurement is from
+    # a box faster than a GitHub standard runner, and a hosted runner is two cores: the same work
+    # could plausibly take three times as long here. A cap is a ceiling and not a cost - the job
+    # ends when the run ends - whereas a fuzz run killed at the cap looks exactly like a fuzz run
+    # that crashed, output that simply stops, which is the trap the sims job above documents for
+    # glassblowing. The first unattended run is what will say how long this actually takes.
+    timeout-minutes: 90
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: engine
+
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Content
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
+        path: content
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: engine/package-lock.json
+
+    - name: Install
+      working-directory: engine
+      run: npm ci
+
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
+
+    - name: Pack the content
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+        BUILD_VERIFY: 'false'
+      run: npx tsx tools/pack/Build.ts
+
+    - name: A login key for this run
+      working-directory: engine
+      run: npx tsx tools/server/rsa.ts
+
+    - name: 99 fuzzing bots for 3,000 ticks
+      working-directory: engine
+      # `shell: bash` AND NOT THE DEFAULT, which is the whole reason this line exists. A run step on
+      # Linux defaults to `bash -e`, with no pipefail - so `tsx ... | tee` would report TEE's exit
+      # status and a red fuzz run would pass silently. Naming bash explicitly gets
+      # `bash --noprofile --norc -eo pipefail`, which fails on the left-hand side.
+      shell: bash
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/fuzz.ts 3000 99 --gate 2>&1 | tee /tmp/fuzz.log
+
+    # THE LOG IS THE DELIVERABLE EVEN ON A GREEN NIGHT. The run leaves a work queue behind - every
+    # option nothing answered, the action histogram, and the trigger coverage - and all of it is in
+    # temporary files that go with the runner. Kept for a fortnight, which is long enough to compare
+    # two nights and short enough not to accumulate.
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fuzz-log
+        path: /tmp/fuzz.log
+        retention-days: 14
+
   # ------------------------------------------------------------------ and say so in Discord
   # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token
   # (Environment.DISCORD_TOKEN, src/server/discord), which belongs to a running server and has
@@ -382,11 +480,11 @@ jobs:
   # readable spelling; only the ${{ secrets.* }} reference has to match GitHub exactly.
   notify:
     name: tell Discord
-    needs: [sims, ratchets]
+    needs: [sims, ratchets, fuzz]
     # needs.*.result rather than failure(), because on a notifier test both of those jobs are
     # SKIPPED and failure() would not fire. !cancelled() keeps it from speaking after a cancel.
     # Both jobs are named: a green sweep with a red ratchet is still a night worth hearing about.
-    if: ${{ !cancelled() && (needs.sims.result == 'failure' || needs.ratchets.result == 'failure' || inputs.notify_test) }}
+    if: ${{ !cancelled() && (needs.sims.result == 'failure' || needs.ratchets.result == 'failure' || needs.fuzz.result == 'failure' || inputs.notify_test) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -407,6 +505,7 @@ jobs:
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
         RATCHETS: ${{ needs.ratchets.result }}
+        FUZZ: ${{ needs.fuzz.result }}
         NOTIFY_TEST: ${{ inputs.notify_test }}
         # DIAGNOSTIC ONLY, and deliberately not used to send anything. 'Settings -> Secrets and
         # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
@@ -434,6 +533,11 @@ jobs:
           body="Newly failing: **${red}**"
         elif [ "$RATCHETS" != "success" ]; then
           body="The sims are fine. The ratchets are not: **opsweep/orphans** found a dead option or an unreachable trigger that is not in its baseline. The run log names it."
+        elif [ "$FUZZ" != "success" ]; then
+          # THE ONE THAT NEEDS NO FOLLOW-UP TO REPRODUCE. Every fuzz finding prints its own replay
+          # line - seed, bot, tick and the last actions before it - and the command is fixed, so the
+          # message can tell whoever reads it exactly what to type.
+          body="The sims and the ratchets are fine. **The fuzzing bots are not**: a script fault or a watcher finding that is not meant to exist."$'\n'"Reproduce with \`npx tsx tools/sim/fuzz.ts 3000 99 --gate\` - the run log names it and prints its replay line. The full log is on the run as the **fuzz-log** artifact."
         else
           body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
         fi
