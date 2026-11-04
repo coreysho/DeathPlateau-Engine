@@ -25,23 +25,52 @@ WHAT IT WILL NOT DO. It cannot tell you the relay itself is gone, because it wou
 For that you want something off both machines - a dead-man's switch like healthchecks.io, which the
 backup job could check into as well. This is the half that needs no third party.
 
-Install on the relay (Debian, which already has python3):
+Install on the relay (Debian, which already has python3). EVERY LINE IS ONE COMMAND and none
+of them opens an editor, because the usual way to do this is `crontab -e` and `nano`, which a
+browser terminal cannot give you. NO HEREDOCS EITHER: this block is indented, and an indented
+`EOF` does not end a heredoc - it hangs the shell waiting for one that never comes.
 
-    scp tools/server/watch-world.py root@216.128.157.152:/usr/local/bin/dp-watch-world
-    ssh root@216.128.157.152 'chmod +x /usr/local/bin/dp-watch-world && mkdir -p /var/lib/dp-watch'
+From the GAME BOX, which can already ssh to the relay for the backup's sake, so the file never
+has to touch a laptop:
 
-    # a webhook for wherever you want to be told: Discord channel -> Edit Channel ->
-    # Integrations -> Webhooks -> New Webhook -> Copy URL
-    ssh root@216.128.157.152
-    cat > /etc/default/dp-watch <<'EOF'
-    WATCH_WEBHOOK=https://discord.com/api/webhooks/...
-    EOF
-    chmod 600 /etc/default/dp-watch
+    cd /opt/deathplateau/engine && git fetch origin 377-wip
+    git show origin/377-wip:tools/server/watch-world.py | ssh root@10.8.0.1 'cat > /usr/local/bin/dp-watch-world'
+    ssh root@10.8.0.1 'chmod +x /usr/local/bin/dp-watch-world && mkdir -p /var/lib/dp-watch'
 
-    # every minute
-    crontab -l > /tmp/c 2>/dev/null || true
-    echo '* * * * * . /etc/default/dp-watch && /usr/local/bin/dp-watch-world >> /var/log/dp-watch.log 2>&1' >> /tmp/c
-    crontab /tmp/c && rm /tmp/c
+ASK IT ONCE BY HAND BEFORE TRUSTING IT TO CRON. This also settles the one thing that differs
+between relays: whether HAProxy is listening on loopback or only on the public address.
+
+    ssh root@10.8.0.1 'WATCH_STATE=/tmp/probe.json /usr/local/bin/dp-watch-world'
+
+    # 'ok - handshake accepted'  -> the default of 127.0.0.1 is right, carry on
+    # a timeout or a refusal     -> check where HAProxy actually listens:
+    #     ssh root@10.8.0.1 'ss -ltnp | grep 43594'
+    #   and if it is bound to the public address only, add WATCH_HOST below
+
+A webhook for wherever you want to be told. In Discord: the channel -> Edit Channel ->
+Integrations -> Webhooks -> New Webhook -> Copy Webhook URL.
+
+    ssh root@10.8.0.1 "printf 'export WATCH_WEBHOOK=%s\nexport WATCH_NAME=%s\n' \"'https://discord.com/api/webhooks/PASTE_YOURS'\" \"'Death Plateau'\" > /etc/default/dp-watch && chmod 600 /etc/default/dp-watch"
+
+    # EXPORT, AND QUOTED, and this is the line most likely to be wrong. `. file` sets a SHELL
+    # variable; a shell variable is not in the environment, so without `export` the probe's
+    # os.environ never sees the webhook and the alert goes to the log and nowhere else - which
+    # looks exactly like a working install until the night you need it. The quotes are for the
+    # space in the name: `WATCH_NAME=Death Plateau` sourced is an attempt to run `Plateau`.
+
+    # prove the webhook before the outage does: point it at a port nothing is on, with no
+    # debounce, and watch the message arrive in the channel
+    ssh root@10.8.0.1 '. /etc/default/dp-watch && WATCH_PORT=1 WATCH_FAILS=1 WATCH_STATE=/tmp/probe.json /usr/local/bin/dp-watch-world'
+    ssh root@10.8.0.1 'rm -f /tmp/probe.json'
+
+Then every minute, and rotate what it writes - a line a minute is 1440 a day, and the log is the
+only place the healthy runs are recorded, so it cannot simply go to /dev/null:
+
+    ssh root@10.8.0.1 "(crontab -l 2>/dev/null; echo '* * * * * . /etc/default/dp-watch && /usr/local/bin/dp-watch-world >> /var/log/dp-watch.log 2>&1') | crontab -"
+    ssh root@10.8.0.1 "printf '/var/log/dp-watch.log {\n  weekly\n  rotate 4\n  compress\n  missingok\n  notifempty\n  copytruncate\n}\n' > /etc/logrotate.d/dp-watch"
+
+    # a couple of minutes later, the log should be filling up with ok lines
+    ssh root@10.8.0.1 'tail -3 /var/log/dp-watch.log'
 
 Settings, all from the environment:
 
