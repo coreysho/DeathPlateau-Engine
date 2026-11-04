@@ -636,6 +636,14 @@ if (rfd) {
     op(p, 2696, 2785, 'loc_12610', 1);
     op(p, 2696, 2785, 'loc_12610', 1);
     check('the crown hauled down: a red banana', H.invCount(p, 'hundred_ilm_red_banana'), 1);
+    // AND PUT THE GREEGREE DOWN AGAIN. Wearing it transmogrifies the player into a gorilla
+    // (p_transmogrify, which is just player.npcId), and a gorilla gets no answer out of a range:
+    // the roast below produced no message at all until this went in. Taking it off in game runs
+    // ~on_unequip -> ~mm_greegree_removed -> ~mm_become_human, and the two halves of that are
+    // the worn slot and npcId, so both are cleared here.
+    p.invSet(InvType.WORN, -1, 0, 3 /* righthand */);
+    (p as unknown as { npcId: number }).npcId = -1;
+    H.tick(1);
     // On foot, the 2006 way: from inside Marim's gate to the temple, down its trapdoor into the crypt,
     // through the crypt to the nut cave's crack (loc_12617), and back up the rope. Monkey Madness wires
     // the trapdoor and the rope (quest_mm/scripts/mm_ladders.rs2).

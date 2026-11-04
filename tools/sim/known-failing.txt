@@ -232,6 +232,20 @@ quest_ball_run       # step 43, the sneak past nora_t_hagg. DIAGNOSED, and it is
                      #
                      # What it needs is for sneakTo to notice the teleport and re-enter the
                      # garden, which means knowing the way in. Left for somebody with the map.
+# THE GELATINNOTH MOTHER IS WHY BOTH audit1 AND quest_hundred_run STOP, and it is one mechanic
+# rather than two bugs. hundred_culinaromancer.rs2 cycles minion 5 through six forms on a
+# 30-tick ring and says what that means: "Each form's defences make its own name the only thing
+# that hurts it", done in the npc config rather than in the combat scripts. So a sim that
+# attacks her with one style does nothing to five forms out of six and cannot kill her inside
+# any budget - audit1 reports "still alive when the sim gave up", quest_hundred_run "killed 60
+# in 884 ticks". The tally is strictly sequential (`if (%hundred_minionskilled_tally !
+# calc($which - 1)) return`), so it stops dead at 4 and the Culinaromancer never appears.
+#
+# Fixing it means a sim that reads her current type and switches attack style to match, which
+# is real work and is why this is the last thing on the list rather than the next. Putting her
+# on 1 hitpoint does not help: a mismatched style does nothing at all, so there is no blow to
+# land.
+
 quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that is fixed - the
                      # crown needs a rope and a gorilla and the run now has both, and gets 51
                      # steps further, through the slicing and the roast. Now step 303, the
