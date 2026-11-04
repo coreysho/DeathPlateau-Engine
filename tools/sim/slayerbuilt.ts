@@ -72,7 +72,13 @@ console.log('\nTHE GATE ON EACH TASK');
     check('  and is given once it is done', can(ELF), true);
 
     check('  a fever spider waits for Rum Deal', can(FEVER), false);
-    H.setVar(p, 'deal_quest', 6);
+    // RUM DEAL IS DONE AT 9, NOT 6. slayer_task.rs2 gates the task on
+    // `%deal_quest < ^deal_complete` and ^deal_complete is 9; 6 is ^deal_spider_in, which is a
+    // whole fever spider in the hopper and three stages short of finishing. So this set the
+    // quest to the middle of itself and then asked why the reward had not arrived. The elf line
+    // above it is right - Regicide's 15 really is its completion - which is why only one of the
+    // two identically-named checks failed.
+    H.setVar(p, 'deal_quest', 9);
     check('  and is given once it is done', can(FEVER), true);
 
     // Two conditions, and the sim is worth more for testing them apart than together.

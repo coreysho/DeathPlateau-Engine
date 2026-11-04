@@ -66,9 +66,6 @@
 #   strength of both printing "not carrying <item>". audit1's was the banana, and is fixed.
 #   audit7 fails at its FIRST step.
 
-audit0               # 108 ok, 1 FAIL, 135s: "a human clicking the bamboo gate is arrested and
-                     # wakes up inside the walls" reads [true,false] - he is arrested and does
-                     # not end up inside. One check, and the only failure in 109
 audit4               # 39 ok, 8 FAIL, 25s. The biggest cluster left, and it looks like two
                      # groups rather than eight problems: THE SOPHANEM GEOGRAPHY (the rocks by
                      # the tent land at 3325,2856 and want 3320,2796, the hole back out at
@@ -92,7 +89,19 @@ lunar                # 7s. no option "Can we sail to Lunar Isle" in multi2, and 
                      # is "Take me back to Pirates' Cove | I'll stay a while" - which is the
                      # conversation for somebody ALREADY on Lunar Isle. The sim's idea of where
                      # the player is standing is wrong, not the dialogue
-slayerbuilt          # 24 ok, 1 FAIL, 7s: "and is given once it is done" reads false
+
+# slayerbuilt is FIXED and off: 25 ok. It set Rum Deal to the MIDDLE of itself and asked why the
+# reward had not arrived - deal_quest 6 is ^deal_spider_in, a fever spider in the hopper and
+# three stages short, while slayer_task.rs2 gates on ^deal_complete, which is 9. The elf line
+# beside it was right all along, which is why only one of two identically-named checks failed.
+#
+# audit0 is FIXED and off: 111 ok. "a human clicking the bamboo gate is arrested and wakes up
+# inside the walls" asked whether Garkor is reachable on foot from where you wake - which is
+# asking whether the cell door is missing. ^mm_jail_cell is 2771,2794 behind a door that wants a
+# lockpick, and the jail rebuild "gave no cell coordinate, no guard and no escape route. It
+# gives all three". The check predated the lock. It is three checks now and they describe the
+# jail instead of denying it: you wake in the cell, the cell holds you, and the far side of its
+# door is inside Marim.
 audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf, audit1.ts:666).
                      # Same shape as audit7's "not carrying deal_blindweed" above, so the two
                      # are probably one bug in how the audit hands itself quest items
