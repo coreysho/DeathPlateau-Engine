@@ -107,7 +107,7 @@ for (const [sx, sz, lv] of [
     [BX + 32, BZ + 32, 0],
     [3290, 2787, 0]
 ] as const) {
-    const p = H.makePlayer(`plunder_seed_${sx}`, sx, sz);
+    const p = H.makePlayer(`pseed${sx}`, sx, sz);
     p.teleport(sx, sz, lv);
     H.tick(2);
 }
