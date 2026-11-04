@@ -83,7 +83,22 @@ audit7               # 14s. FAILS AT ITS FIRST STEP: "Pete rows you out: stage 1
                      # [0,1,true] and wants [1,1,true], so the quest never starts, and
                      # everything after it is a run through a quest that has not begun. The
                      # "not carrying deal_blindweed" is simply where it finally gives up
-gwdstaves            # 6s. "menus not reached: 2" out of useHeld - see the note above about what
+# gwdstaves is FIXED and off: 48 ok. A SECOND a1lib bug, and a bigger one than findNpc.
+# useHeld was a paraphrase of OpHeldUHandler rather than the thing itself, and it was three
+# short: it swapped last_item/last_useitem whether or not the lookup found anything, it
+# passed a raw category where the engine resolves CategoryType.get(...).id, and it had no
+# HANDOVER. Both halves of a use can declare [opheldu,...], only the one clicked second
+# runs, and if that one does not know the pair it declines - which ~displaymessage does at
+# all 787 of its "Nothing interesting happens." sites - and the engine gives the other half
+# a go. The engine's own note says a sweep found 963 pairs that worked one way round only.
+# Saradomin's light on a staff of the dead is one: the staff's trigger is reached first,
+# declines, and useHeld stopped there, so the combine's confirmation never opened.
+#
+# Behind it were two more checks nobody had ever reached, both stale: the staves were
+# asserted to share a battlestaff's category (they are weapon_bladed_staff, which
+# combat.rs2 and player_attackstyles.rs2 handle alongside weapon_staff), and to claim no
+# special attack on the grounds that "Power of Death is not built" - gwd_staves.rs2 builds
+# Power of Death and Power of Light.
                      # that kind of message is worth
 # lunar is FIXED and off: 139 ok. It was an a1lib bug, not the quest. findNpc said it
 # returned "the nearest npc of a type (any floor)" and actually returned the first FLOOR

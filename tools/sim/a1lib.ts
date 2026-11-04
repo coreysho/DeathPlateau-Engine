@@ -1,3 +1,5 @@
+import CategoryType from '#/cache/config/CategoryType.js';
+import { opHeldUAlternate } from '#/engine/script/OpHeldUTrigger.js';
 // Shared helpers for the quest audit sim (audit1.ts): chat driving, loc/npc clicks with real routes,
 // item-on-loc/npc, walkability floods and a dead-op scan over an area.
 import * as H from './harness.js';
@@ -247,21 +249,53 @@ export function useHeld(p: Player, useName: string, onName: string, picks: (numb
         [p.lastItem, p.lastUseItem] = [p.lastUseItem, p.lastItem];
         [p.lastSlot, p.lastUseSlot] = [p.lastUseSlot, p.lastSlot];
     };
+    // THE SAME LOOKUP THE ENGINE DOES, which this was three things short of.
+    // (OpHeldUHandler.ts is the original; this used to be a paraphrase of it.)
+    //
+    //   1. It swapped WHETHER OR NOT the lookup found anything, so a miss left last_item and
+    //      last_useitem the wrong way round for everything after it.
+    //   2. It passed objType.category straight in, where the engine resolves it through
+    //      CategoryType.get(...).id first.
+    //   3. And it had no HANDOVER, which is the one that matters. Both halves of a use can
+    //      declare [opheldu,...], only the one clicked second runs, and if that script does not
+    //      know the pair it declines - which ~displaymessage does at all 787 of its "Nothing
+    //      interesting happens." call sites - and the engine then gives the OTHER half a go.
+    //      The engine's own note puts a number on it: a sweep found 963 pairs of items that
+    //      worked one way round only without this.
+    //
+    //      Saradomin's light on a staff of the dead is one of them. Both declare a trigger, the
+    //      staff's is reached first, it declines, and this file stopped there and reported
+    //      "Nothing interesting happens" - so the combine's confirmation box never opened and
+    //      gwdstaves read it as "menus not reached".
     let script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, objType.id, -1);
     if (!script) {
         script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, useObjType.id, -1);
-        swap();
+        if (script) swap();
     }
-    if (!script && objType.category !== -1) script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, objType.category);
-    if (!script && useObjType.category !== -1) {
-        script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, useObjType.category);
-        swap();
+    const objCategory = objType.category !== -1 ? CategoryType.get(objType.category) : null;
+    if (!script && objCategory) script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, objCategory.id);
+    const useObjCategory = useObjType.category !== -1 ? CategoryType.get(useObjType.category) : null;
+    if (!script && useObjCategory) {
+        script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, useObjCategory.id);
+        if (script) swap();
     }
     if (!script) {
         p.messageGame('Nothing interesting happens.');
         return [];
     }
+    const anyP = p as unknown as { opheldUHandoverAvailable: boolean; opheldUHandoverAsked: boolean; activeScript: unknown };
+    anyP.opheldUHandoverAvailable = opHeldUAlternate(p) !== null;
+    anyP.opheldUHandoverAsked = false;
     p.executeScript(ScriptRunner.init(script, p), true);
+    anyP.opheldUHandoverAvailable = false;
+    if (anyP.opheldUHandoverAsked) {
+        anyP.opheldUHandoverAsked = false;
+        const other = opHeldUAlternate(p);
+        if (other && !anyP.activeScript) {
+            swap();
+            p.executeScript(ScriptRunner.init(other, p), true);
+        }
+    }
     return drive(p, picks);
 }
 export function op(p: Player, x: number, z: number, locName: string, n = 1, picks: (number | string)[] = []) {
