@@ -114,11 +114,23 @@ for (const id of trees) {
             const mark = H.mesgs.length;
             H.opLoc(p as never, x, z, name, op + 1);
             let got: string | null = null;
-            for (let t = 0; t < 40 && got === null; t++) {
+            // A BUDGET BIG ENOUGH FOR THE SLOWEST TREE IN THE GAME, which 40 ticks was not. A magic
+            // tree rolls stat_random against its own success chance every few ticks and fails most
+            // of them even at level 99, so 40 ticks is a coin toss - and because the trees are
+            // walked in instance order, adding four new ones ahead of magictree reshuffled the dice
+            // and turned a passing run into "FAIL magictree gives logs when chopped", with "You
+            // swing your axe at the tree." as the only evidence. A sim whose verdict depends on
+            // where a tree sits in a list is not measuring the content.
+            for (let t = 0; t < 400 && got === null; t++) {
                 H.tick(1);
                 const said = H.mesgs.slice(mark).map(m => m.text);
                 got = said.find(s => /^You get some /.test(s)) ?? null;
-                if (said.some(s => /interesting/i.test(s))) break;
+                // OUT THE MOMENT IT CANNOT WORK, which raising the budget to 400 made matter: an
+                // approach that says "I can't reach that!" is retried from the next tile, and
+                // waiting out the whole budget first made that retry ten times as expensive as it
+                // had been. "Nothing interesting happens" is the same - the option is dead and no
+                // number of ticks changes it.
+                if (said.some(s => /interesting/i.test(s) || /can't reach/i.test(s))) break;
             }
             lastSaid = H.mesgs.slice(mark).map(m => m.text);
             if (lastSaid.some(s => /can't reach/i.test(s))) continue;
@@ -130,11 +142,18 @@ for (const id of trees) {
                 // to a debugname (achey trees say "bark"), so checking the backpack is the honest
                 // test and the one that would catch a row whose product is null.
                 check(`  and the item is in the backpack (${/^You get some (.+)\.$/.exec(got)?.[1] ?? '?'})`, usedSlots(p as never) > 1);
-                // Only the rows with respawnrate 0 - the ordinary trees - always fall on the first
-                // success, so a tree still standing here is not a failure and is not asserted.
+                // THE STUMP IS REPORTED, NOT COUNTED. Only the dbrow rows with respawnrate 0 - the
+                // ordinary trees - always fall on the first success; the rest roll for it, so a tree
+                // still standing is not a failure. `if (fell) ok++` was the first version of that
+                // and it was not an assertion at all: it incremented on luck and was silent
+                // otherwise, so the run's own total moved between two runs of the same commit (185,
+                // then 184) while nothing failed either time. A verdict that drifts with the dice
+                // cannot be read.
                 if (stump !== null && stump !== -1) {
                     const fell = [...World.gameMap.getZone(x, z, level).getAllLocsSafe()].some(l => l.x === x && l.z === z && l.type === stump);
-                    if (fell) ok++;
+                    if (!fell) {
+                        console.log(`  note ${name} did not fall on this success - its row rolls for depletion`);
+                    }
                 }
             }
             chopped = true;
