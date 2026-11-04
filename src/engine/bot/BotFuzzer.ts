@@ -20,6 +20,7 @@ import type ScriptFile from '#/engine/script/ScriptFile.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
+import ScriptState from '#/engine/script/ScriptState.js';
 import Environment from '#/util/Environment.js';
 import { printInfo, printWarning } from '#/util/Logger.js';
 
@@ -322,6 +323,26 @@ export class FuzzBrain {
         this.did = [];
 
         if (this.s.phase === 'dead' || this.s.phase === 'removing') {
+            return;
+        }
+
+        // A CHATBOX PROMPT IS ANSWERED BEFORE ANYTHING ELSE, because nothing else can get through.
+        // While a script sits on p_countdialog or p_namedialog, Player.awaitingChatboxInput is true
+        // and the engine swallows every input the bot sends - so a bot that reaches one and cannot
+        // answer it is wedged for the whole rest of the run, clicking into a void.
+        //
+        // THAT IS NOT HYPOTHETICAL. The first 99-bot nightly reported `a queued script that never
+        // resumes: [oploc3,poh_house_portal]@7` - execution state NAMEDIALOG - from clicking
+        // Friend's house on a house portal and never typing a name. It was the only one of that
+        // run's eighteen softlocks that was neither an artefact nor a bot idling at a bank, and
+        // what it found was this gap rather than anything wrong with the portal.
+        //
+        // It also opens a surface the fuzzer could not reach at all: every Withdraw-X, Buy-X,
+        // Offer-X and Make-X in the game ends in a p_countdialog, and the bot used to wedge on the
+        // first one it clicked.
+        if (bot.awaitingChatboxInput()) {
+            this.answerPrompt();
+            this.finish();
             return;
         }
 
@@ -1390,6 +1411,40 @@ export class FuzzBrain {
      * It is weighted low because an idle tick tests nothing by itself. What it buys is the ticks
      * AFTER it, when something else has decided to act.
      */
+    /**
+     * Answer whichever chatbox prompt is open. See the note in tickInner for why it must be
+     * answered rather than ignored.
+     *
+     * THE AMOUNTS ARE PLAUSIBLE ONES, deliberately. The decoder is g4s, so a real client can send
+     * any signed 32-bit value and nothing bounds it, and a fuzzer that sent 0, -1 and 2^31-1 would
+     * be testing a genuinely interesting surface - item counts that go negative are how
+     * duplication bugs happen. That is a run of its own and wants measuring before it goes near a
+     * nightly gate, so it is written down here and not done here.
+     *
+     * THE NAME IS SOMETIMES ANOTHER BOT'S, which is the only way the prompt's real path gets
+     * walked: p_namedialog in this build is "whose house", "who to add", "who to message", and a
+     * name nobody holds only ever reaches the rejection branch.
+     */
+    private answerPrompt(): void {
+        const bot = this.bot;
+        if (bot.activeScript?.execution === ScriptState.NAMEDIALOG) {
+            const others = [...World.playerLoop.all()].filter(p => p.isBot && p !== bot);
+            const other = this.rng.next() < 0.75 ? this.rng.pick(others) : undefined;
+            const who = other?.username ?? 'nobody' + this.rng.int(1, 999);
+            if (Input.typeName(bot, who)) {
+                this.note(`typed the name ${who}`, 'dialogue');
+                return;
+            }
+        }
+        if (Input.typeCount(bot, this.rng.pick([1, 5, 10, 28, 100, 1000]) ?? 1)) {
+            this.note('typed an amount', 'dialogue');
+            return;
+        }
+        // Neither handler took it - the script moved on between the check and here. Nothing to do,
+        // and saying so keeps it out of the action histogram's `idle` bucket.
+        this.note('prompt closed itself', 'dialogue');
+    }
+
     private loiter(): boolean {
         const bot = this.bot;
         if (bot.containsModalInterface() || bot.delayed) {

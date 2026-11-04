@@ -11,6 +11,7 @@ import Obj from '#/engine/entity/Obj.js';
 import Player from '#/engine/entity/Player.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
+import { toBase37 } from '#/util/JString.js';
 import IfButtonHandler from '#/network/game/client/handler/IfButtonHandler.js';
 import InvButtonHandler from '#/network/game/client/handler/InvButtonHandler.js';
 import MoveClickHandler from '#/network/game/client/handler/MoveClickHandler.js';
@@ -24,6 +25,8 @@ import OpLocTHandler from '#/network/game/client/handler/OpLocTHandler.js';
 import OpLocUHandler from '#/network/game/client/handler/OpLocUHandler.js';
 import OpObjTHandler from '#/network/game/client/handler/OpObjTHandler.js';
 import OpObjUHandler from '#/network/game/client/handler/OpObjUHandler.js';
+import ResumePCountDialogHandler from '#/network/game/client/handler/ResumePCountDialogHandler.js';
+import ResumePNameDialogHandler from '#/network/game/client/handler/ResumePNameDialogHandler.js';
 import ResumePauseButtonHandler from '#/network/game/client/handler/ResumePauseButtonHandler.js';
 import WearOpHandler from '#/network/game/client/handler/WearOpHandler.js';
 import IfButton from '#/network/game/client/model/IfButton.js';
@@ -39,6 +42,8 @@ import OpLocT from '#/network/game/client/model/OpLocT.js';
 import OpLocU from '#/network/game/client/model/OpLocU.js';
 import OpObjT from '#/network/game/client/model/OpObjT.js';
 import OpObjU from '#/network/game/client/model/OpObjU.js';
+import ResumePCountDialog from '#/network/game/client/model/ResumePCountDialog.js';
+import ResumePNameDialog from '#/network/game/client/model/ResumePNameDialog.js';
 import ResumePauseButton from '#/network/game/client/model/ResumePauseButton.js';
 import WearOp from '#/network/game/client/model/WearOp.js';
 import Loc from '#/engine/entity/Loc.js';
@@ -62,6 +67,8 @@ const ifButton = new IfButtonHandler();
 const invButton = new InvButtonHandler();
 const wearOp = new WearOpHandler();
 const resumePause = new ResumePauseButtonHandler();
+const resumeCount = new ResumePCountDialogHandler();
+const resumeName = new ResumePNameDialogHandler();
 const opLocU = new OpLocUHandler();
 const opObjU = new OpObjUHandler();
 const opLocT = new OpLocTHandler();
@@ -315,6 +322,31 @@ export function wornOp(p: BotPlayer, comId: number, slot: number, op: number): b
 /** "Click here to continue", and any other script paused on a button with no options offered. */
 export function resumeDialogue(p: BotPlayer): boolean {
     return resumePause.handle(new ResumePauseButton(), p);
+}
+
+/**
+ * THE AMOUNT PROMPT, and the reason a bot has to be able to answer one. While a script sits on
+ * p_countdialog or p_namedialog, Player.awaitingChatboxInput is true and the engine swallows EVERY
+ * other input the bot sends - so a bot that cannot answer is not merely missing a surface, it is
+ * wedged for the rest of the run. One did exactly that: a 99-bot run reported
+ * `a queued script that never resumes: [oploc3,poh_house_portal]@7`, which is execution state
+ * NAMEDIALOG, from clicking Friend's house on a house portal and never typing a name.
+ *
+ * The decoder is g4s, so a real client can send any signed 32-bit value here and nothing bounds it.
+ * The fuzzer sends plausible amounts only, on purpose: the edge cases (0, negative, 2^31-1) are
+ * worth a run of their own and would want measuring before they are let near a nightly.
+ */
+export function typeCount(p: BotPlayer, amount: number): boolean {
+    return resumeCount.handle(new ResumePCountDialog(amount), p);
+}
+
+/**
+ * The answer to p_namedialog, base37-packed the way a real client packs it - a-z, 0-9 and
+ * underscore, twelve characters at most. Anything outside that cannot survive the round trip, so
+ * callers pass a username-shaped string.
+ */
+export function typeName(p: BotPlayer, name: string): boolean {
+    return resumeName.handle(new ResumePNameDialog(toBase37(name)), p);
 }
 
 /** Pick one of the options a p_choice put on screen. The com must be one the script is waiting on. */
