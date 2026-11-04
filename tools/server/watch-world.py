@@ -150,6 +150,16 @@ STATE = os.environ.get('WATCH_STATE', '/var/lib/dp-watch/state.json')
 NAME = os.environ.get('WATCH_NAME', 'the world')
 PING = os.environ.get('WATCH_PING', '').strip()
 
+# A NAME ON EVERY REQUEST, and this is not politeness. Discord sits behind Cloudflare, which
+# refuses urllib's default `Python-urllib/3.x` with a 403 and Cloudflare error 1010 - "banned
+# based on your browser's signature" - before Discord ever sees the message. The same request
+# with a name on it gets through. Measured both ways against the real endpoint: default UA 403,
+# named UA 404 'Unknown Webhook' from Discord itself on a deliberately fake URL.
+#
+# This is why the test asserts a User-Agent rather than only that a request arrived. A local sink
+# accepts anything, so the first install of this looked perfect and threw every alert away.
+USER_AGENT = 'DeathPlateau-watch-world/1.0 (+https://deathplateau.com)'
+
 HANDSHAKE = bytes([14, 0])  # Client.login's first write: the opcode and a name hash
 REPLY = 17  # eight bytes ignored, the status, then eight of server seed
 STATUS_AT = 8
@@ -216,7 +226,7 @@ def tell(message):
         return
 
     body = json.dumps({'content': message}).encode('utf-8')
-    request = urllib.request.Request(WEBHOOK, data=body, headers={'Content-Type': 'application/json'})
+    request = urllib.request.Request(WEBHOOK, data=body, headers={'Content-Type': 'application/json', 'User-Agent': USER_AGENT})
     try:
         urllib.request.urlopen(request, timeout=TIMEOUT).close()
     except (urllib.error.URLError, OSError) as err:
@@ -244,7 +254,8 @@ def check_in():
 
     try:
         # a HEAD would do, but a GET is what every example uses and what the service documents
-        urllib.request.urlopen(PING, timeout=min(TIMEOUT, 10)).close()
+        request = urllib.request.Request(PING, headers={'User-Agent': USER_AGENT})
+        urllib.request.urlopen(request, timeout=min(TIMEOUT, 10)).close()
     except (urllib.error.URLError, OSError) as err:
         # NOT the url, which carries the check's uuid - anybody holding it can check in on this
         # watcher's behalf and hide its death. The error alone is enough to diagnose with.

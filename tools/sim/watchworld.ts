@@ -89,11 +89,13 @@ function world(mode: Mode): Promise<{ port: number; firstBytes: Promise<number[]
 }
 
 /** Somewhere for the alerts to go, so "it told somebody" can be checked rather than assumed. */
-function sink(): Promise<{ url: string; got: string[]; stop: () => void }> {
+function sink(): Promise<{ url: string; got: string[]; agents: string[]; stop: () => void }> {
     return new Promise(resolve => {
         const got: string[] = [];
+        const agents: string[] = [];
         const server = http.createServer((req, res) => {
             let body = '';
+            agents.push(String(req.headers['user-agent'] ?? ''));
             req.on('data', c => (body += c));
             req.on('end', () => {
                 got.push(JSON.parse(body).content);
@@ -102,7 +104,7 @@ function sink(): Promise<{ url: string; got: string[]; stop: () => void }> {
         });
         server.listen(0, '127.0.0.1', () => {
             const port = (server.address() as net.AddressInfo).port;
-            resolve({ url: `http://127.0.0.1:${port}/hook`, got, stop: () => server.close() });
+            resolve({ url: `http://127.0.0.1:${port}/hook`, got, agents, stop: () => server.close() });
         });
     });
 }
@@ -112,17 +114,19 @@ function sink(): Promise<{ url: string; got: string[]; stop: () => void }> {
  * assertion: hc-ping.com reads a bare url as "alive" and a trailing /fail as "broken", so a test
  * that only counted requests would pass on a watcher that reported the world's outage as its own.
  */
-function switchSink(): Promise<{ url: string; paths: string[]; stop: () => void }> {
+function switchSink(): Promise<{ url: string; paths: string[]; agents: string[]; stop: () => void }> {
     return new Promise(resolve => {
         const paths: string[] = [];
+        const agents: string[] = [];
         const server = http.createServer((req, res) => {
             paths.push(req.url ?? '');
+            agents.push(String(req.headers['user-agent'] ?? ''));
             req.on('data', () => {});
             req.on('end', () => res.writeHead(200).end('OK'));
         });
         server.listen(0, '127.0.0.1', () => {
             const port = (server.address() as net.AddressInfo).port;
-            resolve({ url: `http://127.0.0.1:${port}/some-uuid`, paths, stop: () => server.close() });
+            resolve({ url: `http://127.0.0.1:${port}/some-uuid`, paths, agents, stop: () => server.close() });
         });
     });
 }
@@ -256,6 +260,19 @@ async function main() {
     const noPing = await probe({ WATCH_PORT: String(silentLive.port), WATCH_STATE: path.join(dir, 'n.json') });
     check('no switch configured means no check-in and nothing said about one', [hc.paths.length, /dead-man/i.test(noPing.out)], [4, false]);
     silentLive.stop();
+
+    // ---------------------------------------------------------------- who it says it is
+    //
+    // THE BUG THIS EXISTS FOR. The first install of this worked perfectly and threw every alert
+    // away: Discord is behind Cloudflare, which refuses urllib's default `Python-urllib/3.x` with
+    // a 403 and Cloudflare error 1010 before Discord sees the body. A sink that accepts anything
+    // cannot reproduce that, so the testable property is the one that actually mattered - the
+    // request carries a name of its own, and specifically not the library's.
+    console.log('\nand who it says it is, because one recipient will not take an unnamed request');
+    check('the alert names itself', /DeathPlateau/.test(alerts.agents[0] ?? ''), true);
+    check('...and not as the library, which is what Cloudflare bans', /^Python-urllib/.test(alerts.agents[0] ?? ''), false);
+    check('the check-in names itself too', /DeathPlateau/.test(hc.agents[0] ?? ''), true);
+    check('...and not as the library either', /^Python-urllib/.test(hc.agents[0] ?? ''), false);
 
     hc.stop();
     alerts.stop();
