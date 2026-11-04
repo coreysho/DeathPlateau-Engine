@@ -55,3 +55,7 @@ data/vote/sites.json
 # the release jar the browser runs through CheerpJ (src/web.ts), and whatever bundle came with the
 # server lives here too. None of it is built from this repository.
 public/
+
+# python leaves these beside any script you import or compile; tools/server has one now
+__pycache__/
+*.pyc
