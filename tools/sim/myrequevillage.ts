@@ -66,7 +66,11 @@ function settle(p: Player, picks: number[] = [], max = 250) {
 // the gate, off the map: burgh_fencegate_l at 3485,3244 and _r beside it, and the chest the quest
 // adds on the swamp-road side at 3485,3245
 const GATE: [number, number] = [3485, 3244];
-const CHEST: [number, number] = [3485, 3245];
+// THE CHEST IS ALREADY THERE AND ALREADY OPEN, at 3483,3246. An earlier pass spawned a second,
+// closed one because nobody had looked for the first; myreque2_village.rs2 removed it and says so:
+// "Florin points at it rather than conjuring one, and nothing is added or deleted." This file is
+// what was left behind - it clicked the deleted duplicate at 3485,3245 and died there.
+const CHEST: [number, number] = [3483, 3246];
 
 const p: any = H.makePlayer('myreqvill', GATE[0], GATE[1] + 2);
 H.tick(1);
@@ -190,17 +194,19 @@ opLoc(...GATE, 'burgh_fencegate_l');
 // up on - the village is to the north, so anything at the gate's own row or south of it is outside
 check('the gate is barred from the inside', p.z >= GATE[1], true);
 said = talkTo('burgh_vilager_8');
-check('he asks for something to eat, and a chest appears on your side of the fence', [said.includes('Put something to eat'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_closed')) !== null], [true, true]);
+check('he asks for something to eat, and points at the chest already outside the fence', [said.includes('Put something to eat'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null], [true, true]);
 p.teleport(CHEST[0], CHEST[1] + 1, 0);
 H.tick(1);
-opLoc(...CHEST, 'burgh_quest_food_chest_closed');
-check('the chest opens', World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null, true);
 H.give(p, 'tinderbox', 1);
 useOnLoc('tinderbox', ...CHEST, 'burgh_quest_food_chest_open');
 check('a tinderbox is not food', [H.invCount(p, 'tinderbox'), v(p, 'myreque_2_quest')], [1, 10]);
 H.give(p, 'bread', 1);
 useOnLoc('bread', ...CHEST, 'burgh_quest_food_chest_open');
-check('bread is: the boy takes it, the chest goes, and the gate opens', [H.invCount(p, 'bread'), v(p, 'myreque_2_quest'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null], [0, 12, false]);
+// AND THE CHEST STAYS, because it was never conjured. @m2_feed_florin takes the food and sets
+// the stage; there is no loc_del anywhere in it, which matches what the script says it is doing -
+// "nothing is added or deleted". Expecting it to vanish was the last piece of the old behaviour
+// left in this file.
+check('bread is: the boy takes it, the gate opens, and the chest stays where it always was', [H.invCount(p, 'bread'), v(p, 'myreque_2_quest'), World.getLoc(...CHEST, 0, LocType.getId('burgh_quest_food_chest_open')) !== null], [0, 12, true]);
 p.teleport(GATE[0], GATE[1] + 2, 0);
 H.tick(1);
 opLoc(...GATE, 'burgh_fencegate_l');

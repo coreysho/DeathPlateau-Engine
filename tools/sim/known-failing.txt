@@ -54,18 +54,55 @@
 
 # ---- CHECKS THAT ACTUALLY FAIL. The interesting ones. A count means the sim ran and disagreed
 # with the engine; a message means it could not get far enough to try.
-audit0               # 108 ok, 1 FAIL
-audit4               # 39 ok, 8 FAIL
-audit5               # Error: unexpected menu: multi2
-audit6               # Error: unexpected menu: multi3
-audit7               # Error: not carrying deal_blindweed
-gwdstaves            # Error: menus not reached: 2
-lunar                # no option "Can we sail to Lunar Isle" in multi2
-myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
-slayerbuilt          # 24 ok, 1 FAIL
+# All of these were re-run on 4 November and carry what they said then, not what the first
+# baseline recorded. Two things that block reading them the old way:
+#
+#   AN "unexpected menu" OR "menus not reached" IS ALMOST NEVER THE BUG. It is where a sim gives
+#   up after the state behind the conversation already went wrong, and the real failure is a few
+#   lines above it. audit5 and audit6 both read that way, and audit7 reads that way seventy steps
+#   over.
+#
+#   AND audit1 AND audit7 ARE NOT ONE BUG, which this file used to say they probably were on the
+#   strength of both printing "not carrying <item>". audit1's was the banana, and is fixed.
+#   audit7 fails at its FIRST step.
+
+audit0               # 108 ok, 1 FAIL, 135s: "a human clicking the bamboo gate is arrested and
+                     # wakes up inside the walls" reads [true,false] - he is arrested and does
+                     # not end up inside. One check, and the only failure in 109
+audit4               # 39 ok, 8 FAIL, 25s. The biggest cluster left, and it looks like two
+                     # groups rather than eight problems: THE SOPHANEM GEOGRAPHY (the rocks by
+                     # the tent land at 3325,2856 and want 3320,2796, the hole back out at
+                     # 3324,2796 wants 3324,2856 - the two are each other's answer, so it reads
+                     # like a swapped pair - and nothing inside is reachable on foot), and FOUR
+                     # SUB-AUDITS THAT THREW on dialogue (icslittle, makinghistory, myreque2,
+                     # regicide). Plus "and back: 3473 want 3474", one tile
+audit5               # 8s. "Rarve: rotas compared, head taken, kit given (stage 50)" reads
+                     # [40,0,0,0,0] and wants [50,0,1,1,1] - the quest stays at 40 and none of
+                     # the three rewards arrive. The "unexpected menu: multi2" after it is the
+                     # sim walking into the conversation that stage 40 actually offers
+audit6               # 13s. "white pearls can be picked from the thorny bushes: false", then an
+                     # unexpected multi3 for the same reason
+audit7               # 14s. FAILS AT ITS FIRST STEP: "Pete rows you out: stage 1" reads
+                     # [0,1,true] and wants [1,1,true], so the quest never starts, and
+                     # everything after it is a run through a quest that has not begun. The
+                     # "not carrying deal_blindweed" is simply where it finally gives up
+gwdstaves            # 6s. "menus not reached: 2" out of useHeld - see the note above about what
+                     # that kind of message is worth
+lunar                # 7s. no option "Can we sail to Lunar Isle" in multi2, and what IS offered
+                     # is "Take me back to Pirates' Cove | I'll stay a while" - which is the
+                     # conversation for somebody ALREADY on Lunar Isle. The sim's idea of where
+                     # the player is standing is wrong, not the dialogue
+slayerbuilt          # 24 ok, 1 FAIL, 7s: "and is given once it is done" reads false
 audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf, audit1.ts:666).
                      # Same shape as audit7's "not carrying deal_blindweed" above, so the two
                      # are probably one bug in how the audit hands itself quest items
+# myrequevillage is FIXED and off: 15 ok, 0 failed. THE WISE OLD MAN PATTERN FOR THE THIRD TIME.
+# myreque2_village.rs2: "an earlier pass added a second one because nobody had looked", so the
+# duplicate CLOSED chest at 3485,3245 was removed and the real one - already OPEN, at 3483,3246 -
+# is what Florin points at. This sim clicked the deleted duplicate, asserted that a chest
+# APPEARS, and asserted that it goes again afterwards. All three were the old behaviour: the
+# script says plainly "nothing is added or deleted".
+#
 # gwdanims is FIXED and off: 74 ok, 0 FAIL. It was not her death_anim and it was not the check.
 # She was STILL ALIVE: a probe caught her on 3 hitpoints with active=true at the end of the
 # fight, so there was no death to animate. The sim set her to 1 hitpoint and fought 120 ticks,
