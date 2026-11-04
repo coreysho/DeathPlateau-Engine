@@ -172,9 +172,28 @@ jobs:
           # 161s on this machine, which is inside the 180s cap by nineteen seconds - and a cap a
           # sim only just fits inside is a cap that will kill it on a slower box and look exactly
           # like a failure. Same reason glassblowing has its own.
+          # AND FIVE MORE HAD OUTGROWN IT, found by timing every sim on this machine rather than
+          # waiting for each one to go red in turn. Measured here: lunar 374s, roofall 152s,
+          # animmag 142s, audit3 135s, diaryrewards 124s. Everything from roofall down was inside
+          # the 180s cap by less than a minute, which is the audit7 trap again - a cap a sim only
+          # just fits inside kills it on a slower box and looks exactly like a failure.
+          #
+          # lunar is the one that proved it, and it is worth writing down how it looked, because
+          # it looked exactly like a regression and was not one. It timed out TWICE on a runner
+          # on one night having passed the night before, so the first guess was that something
+          # between the two commits had slowed it. Measured instead: 374s at the new commit, 402s
+          # at the old one - very slightly FASTER after the change. The engine's tick loop was
+          # unchanged too (4000 ticks: 7225ms against 7119ms).
+          #
+          # What it actually is: lunar sits right at the line. These numbers are from a cloud
+          # container that is much slower than the machine the caps above were measured on -
+          # audit1 is 357s up there and 2551s here - so lunar is somewhere near 180s on a runner,
+          # which is a coin toss decided by whichever runner you get. One night it lands under,
+          # the next it times out twice and reads as "fails twice". That is the audit7 trap with
+          # a different sim, and the fix is the same: give it its own cap.
           case "$label" in
-            audit7|glassblowing) cap=600 ;;
-            gwdguards|dpick|gwdanims) cap=1200 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run) cap=600 ;;
+            gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
           esac
