@@ -86,10 +86,45 @@ one and checks where it lands could not be made to tell a real failure from its 
   **3050,3356,2, which is a wall**. One of the 25 is wrong and the naive test cannot say which
   others are.
 
-So the next person needs an approach that uses the engine's own router to pick the tile a player
-would actually stand on, and then asserts the landing on that tile. Until then these stay here:
-the same-tile partner test is good evidence and it is not proof, and lunar_isle.loc records what
-happens when a ladder is put on these categories on evidence alone.
+**The router-based test was then tried, and it does not work either.** `tools/sim/climbladders.ts`
+asks the right question - `findPathToLoc` gives the tile the route ENDS on, which is the tile
+`~climb_ladder` reads via `coord()`, so the landing can be computed with no ticks at all. Three
+versions were measured against the only ground truth available, the two ladders the owner wired on
+purpose and documented as the same-tile pair:
+
+| what it checked | verdict on `loc474_16735`, which works |
+| --- | --- |
+| click from a ring of tiles around the loc | 11 ladders answer "I can't reach that!" from open but unroutable tiles |
+| the level above every tile a player can walk from | 40 of 62 "blocked" |
+| the level above every tile the router ends on | 7 of 13 "blocked" |
+
+The third is the right question and still the wrong rule: a ladder up to a platform or an upper
+floor SHOULD have solid tiles above most of its surroundings, and a player only ever ends on the
+tile the router picks from the side they actually came from. Nothing in the tool knows which side
+that is. A rule that calls a working ladder broken is worse than no rule, so climbladders.ts prints
+and does not judge, with those two ladders at the top as the calibration for what a deliberately
+wired one looks like.
+
+**One thing the tool can say, and it is worth the whole attempt.** A ladder whose landing is solid
+from EVERY interaction tile cannot be a vertical link - there is no side to approach it from that
+works. Ten candidates are in that state - `roguesden_passage_down` at 0 of 32, `champions_arenaladder`,
+`loc_5812`, `osrsloc_26119`, `osrsloc_60732`, `loc_11740`, `loc474_16733` - and three of those ten
+(`wild_laddertop_dungeon`, `loc_12618`, `osrsloc_30179`) declare Climb-down on level 0, where there
+is no level below to telejump to at all. `climbladders.ts` prints them under CANNOT BE A VERTICAL
+LINK and reports the rest.
+
+**That rule validates itself.** `loc474_16733` is one of the three Lunar Isle ladders the owner
+diagnosed by hand and left unwired with the comment "its other half is one tile away rather than
+directly above or below". The tool reaches the same verdict from the map alone, having been told
+nothing about it.
+
+**`loc_11740` is one of them, so the 25 is 24.** It lands on solid ground from its only interaction
+tile.
+
+**The other 24 need somebody who knows the areas, not another tool.** The same-tile partner test in
+`deadladders.ts` is good evidence and is not proof; `loc_11739` climbed from 3050,3355,1 really does
+land at 3050,3356,2, which is a wall. The work is 24 one-line `category=` additions, each wanting a
+look at where its ladder actually goes.
 
 ## The buckets, largest first
 
