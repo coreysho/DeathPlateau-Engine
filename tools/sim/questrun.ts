@@ -1268,7 +1268,7 @@ export function play(m: Manifest, p: Player): Result[] {
             const kill = () => {
                 let npc = null;
                 try {
-                    npc = findNpc(s.untilnpc, p);
+                    npc = findNpc(s.untilnpc, p, true);
                 } catch {
                     npc = null;
                 }
@@ -1590,7 +1590,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (!npc) {
                     for (const name of types) {
                         try {
-                            npc = findNpc(name, p);
+                            npc = findNpc(name, p, true);
                         } catch {
                             npc = null;
                         }
@@ -1759,7 +1759,7 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'talk to ' + s.talk + (s.why ? ' - ' + s.why : '');
             let npc: ReturnType<typeof findNpc> | null = null;
             try {
-                npc = findNpc(s.talk, p);
+                npc = findNpc(s.talk, p, true);
             } catch {
                 npc = null;
             }
@@ -1780,7 +1780,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (a > 0) {
                     H.tick(20);
                     try {
-                        npc = findNpc(s.talk, p);
+                        npc = findNpc(s.talk, p, true);
                     } catch {
                         continue;
                     }
@@ -1816,7 +1816,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     continue;
                 }
                 if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                    dbg('never arrived; player ' + p.x + ',' + p.z + ' npc ' + npc.x + ',' + npc.z);
+                    dbg('never arrived; player ' + p.x + ',' + p.z + ' L' + p.level + ' npc ' + npc.x + ',' + npc.z + ' L' + npc.level);
                     continue;
                 }
                 reached = true;
@@ -1842,7 +1842,13 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             if (!reached) {
-                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + '; player stuck at ' + p.x + ',' + p.z);
+                // THE LEVEL, because without it this message cannot tell the two reasons apart.
+                // "3 tiles off at 3503,9837; player stuck at 3505,9832" reads as a pathing
+                // problem inside one room; the same words describe an npc three tiles away on
+                // another plane, which no amount of walking will ever reach. far is a 2D
+                // distance, so it is the smaller number of the two and the more innocent-looking.
+                const planes = npc.level === p.level ? '' : ' - ON PLANE ' + npc.level + ' while the player is on ' + p.level + ', which no route can cross';
+                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + ' L' + npc.level + '; player stuck at ' + p.x + ',' + p.z + ' L' + p.level + planes);
                 continue;
             }
         } else if ('loc' in s) {
@@ -2080,7 +2086,7 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
             try {
-                npc = findNpc(s.useNpc, p);
+                npc = findNpc(s.useNpc, p, true);
             } catch {
                 npc = null;
             }

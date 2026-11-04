@@ -143,27 +143,44 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
 }
 export const saw = (lines: string[], s: string) => lines.some(l => l.includes(s));
 
-export function findNpc(npcName: string, p: Player): Npc {
-    // THE NEAREST ACROSS FLOORS, which is what the line below this already claimed. It took the
-    // first FLOOR that had one - p.level, then 0, 1, 2, 3 - and returned that, so distance only
-    // decided between npcs that happened to share a storey.
-    //
-    // Captain Bentley is the case that found it. There is one on each dock, "both this config":
-    // Pirates' Cove at 2224,3800 on LEVEL 2, the ship's deck, and Lunar Isle at 2114,3893 on
-    // level 0. A player standing on the Cove at 2202,3806 is 22 tiles from one and 88 from the
-    // other, and this handed back the one 88 tiles away because it was on level 0 first. `talk`
-    // then teleports to whatever it is given, so the sim sailed the player across the sea and
-    // got the conversation for somebody already on Lunar Isle - which is exactly what Bentley
-    // should say to somebody standing on Lunar Isle.
+/**
+ * The nearest npc of a type - and `walking` decides what "nearest" is allowed to mean, because
+ * the two callers of this want opposite things and there is no geometry that serves both.
+ *
+ * THE TELEPORTING CALLER WANTS THE NEAREST ACROSS FLOORS. Captain Bentley is the case: there is
+ * one on each dock, "both this config" - Pirates' Cove up on the ship's deck at 2224,3800 on
+ * LEVEL 2, and Lunar Isle at 2114,3893 on level 0. A player standing on the Cove at 2202,3806 is
+ * 22 tiles from one and 88 from the other, and taking the first FLOOR that had one - p.level,
+ * then 0, 1, 2, 3 - handed back the one 88 tiles away. `talk` teleports to whatever it is given,
+ * so the sim sailed the player across the sea and got the conversation for somebody already on
+ * Lunar Isle, which is exactly what Bentley should say to somebody standing on Lunar Isle.
+ *
+ * THE WALKING CALLER CANNOT CROSS A PLANE AT ALL, so for it the nearest across floors is worse
+ * than useless. The Myreque hideout is the case, and it is the same shape turned inside out:
+ * there is a Veliaf Hurtz in the chamber on plane 3 and another in the same chamber on plane 0,
+ * three tiles away in two dimensions. A player standing on plane 3 was handed the plane-0 one and
+ * walked at it for twenty ticks, and the step reported "3 tiles off" - the smaller, more innocent
+ * of the two numbers - about an npc no route could ever reach. Two quest runs lost themselves
+ * there, one at step 23 and one at step 1.
+ *
+ * So `walking` prefers the player's own plane and only leaves it when that plane has none.
+ */
+export function findNpc(npcName: string, p: Player, walking = false): Npc {
+    const nearestOn = (level: number) => {
+        const npc = H.npcNear(npcName, p.x, p.z, level);
+        return npc ? ([npc, Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z))] as const) : null;
+    };
+    if (walking) {
+        const here = nearestOn(p.level);
+        if (here) return here[0];
+    }
     let best: Npc | null = null;
     let bestD = Infinity;
     for (const level of [p.level, 0, 1, 2, 3]) {
-        const npc = H.npcNear(npcName, p.x, p.z, level);
-        if (!npc) continue;
-        const d = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-        if (d < bestD) {
-            bestD = d;
-            best = npc;
+        const got = nearestOn(level);
+        if (got && got[1] < bestD) {
+            bestD = got[1];
+            best = got[0];
         }
     }
     if (!best) throw new Error('no npc ' + npcName);
