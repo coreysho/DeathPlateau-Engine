@@ -217,7 +217,7 @@ jobs:
           # the next it times out twice and reads as "fails twice". That is the audit7 trap with
           # a different sim, and the fix is the same: give it its own cap.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
@@ -263,6 +263,18 @@ jobs:
             # as an INSTRUMENT: with the dice fixed, a FLAKY line means something still
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
+            #
+            # AND ONE OF THOSE THREE WAS NOT SAMPLING ANYTHING. droprate failed twice in a
+            # row again, and this time the retry said how: exit 124 both times. It is 288s
+            # on this machine against the 180s cap, so the retry was timing it out a second
+            # time and "fails twice" was the cap talking, not the game being sampled. It has
+            # its own cap below now.
+            #
+            # The other two were measured at the same time and are not this: gwdskirmish is
+            # 7s and 18 ok, rdreach is 77s and 21 ok. Whatever they were doing in that run is
+            # gone - most likely the seeding this comment describes, which came after it - so
+            # the three-sim example above stands as history and not as a live diagnosis, and
+            # only droprate's share of it is explained.
             rc2=0
             # shellcheck disable=SC2086
             timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.retry.log" 2>&1 || rc2=$?
