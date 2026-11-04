@@ -208,7 +208,22 @@ function queueFingerprint(bot: BotPlayer): string {
 export function watchSoftLock(bot: BotPlayer, w: WatchState, seed: number, trail: string[]): void {
     const now = World.currentTick;
     const print = fingerprint(bot);
-    if (print !== w.lastFingerprint) {
+    // AN ITEM AUDIT IS NOT A SOFTLOCK, which is what a 99-bot run found and an 8-bot run never did.
+    // beginItemAudit deliberately stops the bot doing anything for up to AUDIT_TICKS while it counts
+    // item moves, and fingerprint() cannot see a single thing that happens in that window - so a bot
+    // that keeps re-entering audits at a bank reported "no effect from any input for 120 ticks" with
+    // a trail that was nothing but `audit open bank at gnomebanker`, over and over. SEVENTEEN of the
+    // eighteen softlocks in a 99 bot x 3,000 tick run were this, every one of them the fuzzer
+    // watching its own instrumentation. BotFuzzer's loiter budget already excludes audits for the
+    // same reason (`!Watch.inItemAudit(this.watch)`); this is the other half of that exclusion.
+    //
+    // The clock is RESET rather than frozen, deliberately: a softlock means a hundred and twenty
+    // ticks of a brain clicking and getting nowhere, so an audit in the middle of the window breaks
+    // the claim whether or not the audit itself was quiet.
+    if (inItemAudit(w)) {
+        w.lastFingerprint = print;
+        w.lastChangeTick = now;
+    } else if (print !== w.lastFingerprint) {
         w.lastFingerprint = print;
         w.lastChangeTick = now;
     } else if (now - w.lastChangeTick === SOFTLOCK_TICKS) {
