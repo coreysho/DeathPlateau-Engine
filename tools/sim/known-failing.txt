@@ -66,8 +66,12 @@ slayerbuilt          # 24 ok, 1 FAIL
 audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf, audit1.ts:666).
                      # Same shape as audit7's "not carrying deal_blindweed" above, so the two
                      # are probably one bug in how the audit hands itself quest items
-gwdanims             # 73 ok, 1 FAIL: "zilyana dies with its own animation" - the other three
-                     # God Wars generals pass the same check, so this is one npc's death_anim
+# gwdanims is FIXED and off: 74 ok, 0 FAIL. It was not her death_anim and it was not the check.
+# She was STILL ALIVE: a probe caught her on 3 hitpoints with active=true at the end of the
+# fight, so there was no death to animate. The sim set her to 1 hitpoint and fought 120 ticks,
+# the killing blow missed, and her own regeneration carried her back up. Fought on her own she
+# plays 4015 exactly as declared - the other three generals pass only because their 120 ticks
+# happened to land. Four goes now, each putting her back on one, stopping the moment she dies.
 brutalarrows         # and it NEVER passed on this machine, whatever this file used to say: 0 of
                      # 3 free-dice runs pass, and seed 1 fails too. It sat for a week under
                      # "passes here, fails on a runner" - a claim nobody had checked.
