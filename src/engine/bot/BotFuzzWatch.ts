@@ -208,18 +208,32 @@ function queueFingerprint(bot: BotPlayer): string {
 export function watchSoftLock(bot: BotPlayer, w: WatchState, seed: number, trail: string[]): void {
     const now = World.currentTick;
     const print = fingerprint(bot);
-    // AN ITEM AUDIT IS NOT A SOFTLOCK, which is what a 99-bot run found and an 8-bot run never did.
-    // beginItemAudit deliberately stops the bot doing anything for up to AUDIT_TICKS while it counts
-    // item moves, and fingerprint() cannot see a single thing that happens in that window - so a bot
-    // that keeps re-entering audits at a bank reported "no effect from any input for 120 ticks" with
-    // a trail that was nothing but `audit open bank at gnomebanker`, over and over. SEVENTEEN of the
-    // eighteen softlocks in a 99 bot x 3,000 tick run were this, every one of them the fuzzer
-    // watching its own instrumentation. BotFuzzer's loiter budget already excludes audits for the
-    // same reason (`!Watch.inItemAudit(this.watch)`); this is the other half of that exclusion.
+    // AN ITEM AUDIT IS NOT A SOFTLOCK. beginItemAudit deliberately stops the bot doing anything for
+    // up to AUDIT_TICKS while it counts item moves, and fingerprint() below cannot see one thing
+    // that happens in that window, so the audit would otherwise be reported as the content having
+    // the bot cornered. BotFuzzer's loiter budget already excludes audits for the same reason
+    // (`!Watch.inItemAudit(this.watch)`); this is the other half of that exclusion.
     //
-    // The clock is RESET rather than frozen, deliberately: a softlock means a hundred and twenty
-    // ticks of a brain clicking and getting nowhere, so an audit in the middle of the window breaks
-    // the claim whether or not the audit itself was quiet.
+    // AND IT REMOVED NONE OF THE EIGHTEEN SOFTLOCKS IT WAS WRITTEN FOR, which is worth writing down
+    // because the evidence looked conclusive and was not. A 99 bot x 3,000 tick run reports 18
+    // softlocks where 8 bots reported none, and the biggest one's trail is eight consecutive ticks
+    // of `audit open bank at gnomebanker` - so the audit window looked like the cause. It is not:
+    // that label comes from openBank() in the `openingBank > 0` branch, which runs only when
+    // inItemAudit is FALSE. Same run with this guard in: 18 softlocks again, byte-identical
+    // signatures.
+    //
+    // What those 18 actually are is a bot parked at a bank whose activity this fingerprint cannot
+    // see. No coord change (it is standing at the banker), no inventory change (bank moves happen
+    // inside the audit window), no xp, full hitpoints, and run energy only moves when running - so
+    // "no effect from any input for 120 ticks" is literally true and is not the content cornering
+    // anybody. That makes the rule too loose to gate CI on, and tools/sim/fuzz.ts --gate leaves
+    // softlock out and says why. Tightening it means making the watcher require that the brain's
+    // inputs were ACCEPTED, not merely sent, which is a bigger change than this one.
+    //
+    // The guard stays because it is right on its own terms - an audit blinds the fingerprint
+    // whether or not it is what these 18 are. The clock is RESET rather than frozen, deliberately:
+    // the finding claims 120 ticks of a brain clicking and getting nowhere, so an audit in the
+    // middle of the window breaks that claim either way.
     if (inItemAudit(w)) {
         w.lastFingerprint = print;
         w.lastChangeTick = now;

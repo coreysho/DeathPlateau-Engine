@@ -386,10 +386,13 @@ jobs:
   # the nightly finds has to be reproducible by hand with the same command, and every finding prints
   # its own replay line.
   #
-  # --gate IS WHAT MAKES IT RED, and only for the two always-wrong classes - a script fault, or a
-  # watcher finding (softlock, corpse, coord, stat, varp, items). Both are zero on this build. The
-  # "options nothing answered" buckets are printed and NOT gated: notrigger is a strict subset of
-  # opsweep's, which is already ratcheted above, so gating it would fail the same bug twice.
+  # --gate IS WHAT MAKES IT RED, and only for what was measured to be zero at this configuration: a
+  # script fault, and the corpse / coord / stat / varp / items watcher findings. Everything else the
+  # run prints is a work queue rather than a verdict - the three "options nothing answered" buckets,
+  # because notrigger is a strict subset of opsweep's and that is already ratcheted above so gating
+  # it would fail the same bug twice; and SOFTLOCK, because the same run reports 18 of those and
+  # they are bots parked at banks whose activity the watcher's fingerprint cannot see. fuzz.ts's own
+  # header has the evidence for both exclusions.
   fuzz:
     name: the fuzzing bots find nothing new
     if: ${{ !inputs.notify_test }}
