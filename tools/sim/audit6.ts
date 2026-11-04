@@ -626,7 +626,13 @@ console.log('SPIRITS OF THE ELID');
 console.log('FORGETTABLE TALE OF A DRUNKEN DWARF');
 {
     const p = player('forget', 2828, 10212, 1);
-    H.setVarBit(p, 'giantdwarf_quest', 60);
+    // TWO REQUIREMENTS, AND ONLY ONE WAS SET. ~forget_veldaban reads The Giant Dwarf AND Fishing
+    // Contest - "it is what gets a human through the White Wolf Mountain pass, and it is on the
+    // quest's requirement list for that reason" - and returns false for either, which hands the
+    // conversation back to The Giant Dwarf's own Veldaban. So he said his Consortium line, nothing
+    // started, and the four checks after this were a run through a quest that had not begun.
+    H.setVarBit(p, 'giantdwarf_quest', 60); // ^gd_complete
+    H.setVarBit(p, 'fishingcompo', 5); // ^fishingcompo_complete
     H.setVarBit(p, 'forget_quest', 0);
     const gd = H.getVarBit(p, 'giantdwarf_quest');
     void gd;

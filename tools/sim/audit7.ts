@@ -1078,6 +1078,10 @@ if (want('tbwt')) {
     p.teleport(2912, 3116, 0);
     H.tick(1);
     H.give(p, 'tinderbox');
+    // AND A KNIFE, which this loop has always used on the poorly cooked karambwan and never been
+    // given: only the clearInv branch below hands one out, and that branch runs after a karambwan
+    // has already cooked properly. The first pass therefore had nothing to cut with.
+    H.give(p, 'knife');
     for (let i = 0; i < 60 && H.invCount(p, 'tbwt_poisonous_karambwan_paste') === 0; i++) {
         if (H.invCount(p, 'tbwt_raw_karambwan') === 0) {
             if (H.invCount(p, 'tbwt_raw_karambwanji') === 0) H.give(p, 'tbwt_raw_karambwanji', 10);
