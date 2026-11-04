@@ -107,6 +107,16 @@ export type session = {
     uid: number;
     ip: string | null;
 };
+export type session_input = {
+    id: Generated<number>;
+    session_uuid: string;
+    timestamp: string;
+    user_actions: number;
+    mouse_moves: number;
+    mouse_clicks: number;
+    camera_moves: number;
+    focus_changes: number;
+};
 export type session_log = {
     id: Generated<number>;
     session_uuid: string;
@@ -142,6 +152,7 @@ export type DB = {
     public_chat: public_chat;
     report: report;
     session: session;
+    session_input: session_input;
     session_log: session_log;
     session_wealth: session_wealth;
 };

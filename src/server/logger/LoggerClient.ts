@@ -61,6 +61,16 @@ export default class LoggerClient extends InternalClient {
         );
     }
 
+    public async inputCounts(msg: Record<string, unknown>) {
+        await this.connect();
+
+        if (!this.ws || !this.wsr || !this.wsr.checkIfWsLive()) {
+            return;
+        }
+
+        this.ws.send(JSON.stringify({ ...msg, type: 'input_counts' }));
+    }
+
     public async inputTrack(session_uuid: string, timestamp: number, buf: string) {
         await this.connect();
 

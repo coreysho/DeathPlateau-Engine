@@ -474,6 +474,16 @@ class World {
             }
         }
 
+        // custom (2026-11-04) - SAY SO WHEN NOTHING IS BEING RECORDED. LoggerThread drops every
+        // message it is handed unless LOGGER_SERVER is set, and that flag defaults to false, so a
+        // world can run for months writing no session_log, no wealth events, no player reports and
+        // no input tracking while the logger's own listener prints "Logger server listening" on
+        // every boot and means nothing by it. There is no way to tell from the outside except by
+        // querying a table and finding it empty.
+        if (!Environment.LOGGER_SERVER) {
+            printWarning('LOGGER_SERVER is not set, so NOTHING is being recorded: no session_log, no wealth events, no player reports, no input tracking or counts. Set LOGGER_SERVER=true in .env to keep an audit trail.');
+        }
+
         printInfo(kleur.green().bold('World ready'));
 
         if (startCycle) {
@@ -2949,6 +2959,29 @@ class World {
             coord: player.coord,
             offender,
             reason
+        });
+    }
+
+    // custom (2026-11-04) - the session's input counts, once, as it ends. Five integers saying how
+    // much the player did and how much the client reported a person doing it. See
+    // InputTracking.mouseMoves for why that pair is the useful one, and tools/server/botcheck.ts
+    // for what reads them.
+    submitInputCounts(player: Player) {
+        const input = player.input;
+        if (input.userActions === 0 && input.telemetry === 0) {
+            // nothing happened in this session - a connection that logged in and straight back out
+            return;
+        }
+
+        this.loggerThread.postMessage({
+            type: 'input_counts',
+            session_uuid: player.session,
+            timestamp: Date.now(),
+            user_actions: input.userActions,
+            mouse_moves: input.mouseMoves,
+            mouse_clicks: input.mouseClicks,
+            camera_moves: input.cameraMoves,
+            focus_changes: input.focusChanges
         });
     }
 

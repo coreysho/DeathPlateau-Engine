@@ -509,6 +509,7 @@ export default class Player extends PathingEntity {
         this.appearanceBuf = null;
         this.isActive = false;
         this.input.flush();
+        World.submitInputCounts(this);
     }
 
     resetEntity(respawn: boolean) {

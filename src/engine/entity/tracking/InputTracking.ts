@@ -23,6 +23,42 @@ export default class InputTracking {
     active: boolean = false;
     buf: Packet = Packet.alloc(1);
 
+    // custom (2026-11-04) - HOW MUCH OF THIS SESSION CAME FROM A HUMAN AT A KEYBOARD, counted for
+    // everybody, always, and costing five integers a player.
+    //
+    // The four below are what the client reports about the person using it: where the cursor went,
+    // where it was clicked, whether the camera was turned, whether the window kept focus. A bot
+    // that drives the real client produces all of it. A bot that speaks the protocol straight at
+    // the server produces NONE of it, because nothing is moving a mouse to report - and that is a
+    // thing you can see without decoding a single byte of what was reported. Hence counters here
+    // rather than in the capture below: the counts are the triage, and the capture - which is off
+    // unless somebody turns it on for a suspect, and costs about a megabyte per player-hour - is
+    // the evidence afterwards.
+    //
+    // THE COUNTS ARE MEANINGLESS ALONE and the fifth is why. Somebody standing in a bank for an
+    // hour moves no mouse either. It is a high action count against a near-zero mouse count that
+    // says something, so actions are counted here beside them rather than inferred later from
+    // session_log, whose rows are written for a chosen few events and would undercount.
+    //
+    // Deliberately NOT an accusation: naive autoclickers and packet bots fall out of this, a
+    // humanised screen-scraper on the real client does not, and no number here should ban anybody
+    // on its own. See tools/server/botcheck.ts, which ranks and leaves the judgement to a person.
+    mouseMoves: number = 0;
+    mouseClicks: number = 0;
+    cameraMoves: number = 0;
+    focusChanges: number = 0;
+    userActions: number = 0;
+
+    /** One thing the player did that the world acted on. NetworkPlayer.read calls this. */
+    userAction(): void {
+        this.userActions++;
+    }
+
+    /** Whether this session looks like nobody was holding the mouse. Read by the report tool. */
+    get telemetry(): number {
+        return this.mouseMoves + this.mouseClicks + this.cameraMoves + this.focusChanges;
+    }
+
     constructor(player: Player) {
         this.player = player;
     }
@@ -46,6 +82,8 @@ export default class InputTracking {
     }
 
     cameraPosition(event: EventCameraPosition) {
+        this.cameraMoves++;
+
         if (!this.active) {
             return;
         }
@@ -60,6 +98,8 @@ export default class InputTracking {
     }
 
     appletFocus(event: EventAppletFocus) {
+        this.focusChanges++;
+
         if (!this.active) {
             return;
         }
@@ -73,6 +113,8 @@ export default class InputTracking {
     }
 
     mouseClick(event: EventMouseClick) {
+        this.mouseClicks++;
+
         if (!this.active) {
             return;
         }
@@ -86,6 +128,8 @@ export default class InputTracking {
     }
 
     mouseMove(event: EventMouseMove) {
+        this.mouseMoves++;
+
         if (!this.active || event.data.length === 0 || event.data.length > 160) {
             return;
         }
