@@ -623,7 +623,9 @@ guard('myreque2', () => {
     // A SPADE AND A PICKAXE AS WELL AS THE BUCKET: "It comes out a bucket at a time and you have
     // nothing to shovel it with" and "Half of it is one piece. You would want a pickaxe." Both
     // refusals are newer than this block, which carried a bucket and nothing else.
-    H.give(p, 'bucket_empty');
+    // ONE bucket, not three: ~m2_rubble_bucket hands back the first EMPTY one it finds, so three
+    // empties make three quarter-full buckets and never a full one.
+    H.give(p, 'bucket_empty', 1);
     H.give(p, 'spade');
     H.give(p, 'rune_pickaxe');
     p.teleport(3493, 3235, 0);
@@ -638,8 +640,22 @@ guard('myreque2', () => {
     H.tick(1);
     op(p, 3491, 3230, 'burgh_inn_climb_over', 1);
     check('the broken back wall is the way in to the rubble and trapdoor', [at(p), connected(0, p.x, p.z, 3491, 3232)], [[3491, 3231, 0], true]);
-    for (let i = 0; i < 3; i++) useOn(p, 3489, 3231, 'burgh_inn_colapsed_wall_multiloc', 'bucket_empty');
-    check('three buckets of rubble clear the inn wall', H.getVarBit(p, 'burgh_inn_colapsed_wall'), 1);
+    // ONE BUCKET, THREE SPADEFULS, AND THEN THE PILE OUTSIDE. Three uses of a bucket on the wall
+    // was the old step; now a bucket FILLS in three passes (empty -> _1 -> _2 -> _3) and the wall
+    // only comes down once three loads have been tipped on the pile south-west of the bar, which
+    // is a trip out over the broken wall and back. The pickaxe and the spade are what let you
+    // break it up at all. quest_myreque2_run walks the trip; this block proves the mechanism and
+    // then takes the shortcut, because what it is for is the trapdoor and the cellar below.
+    p.teleport(3491, 3232, 0);
+    H.tick(1);
+    for (let i = 0; i < 3; i++) useOn(p, 3489, 3231, 'burgh_inn_colapsed_wall_multiloc', 'spade');
+    check('three spadefuls fill one bucket', H.invCount(p, 'burgh_rubble_bucket_3'), 1);
+    p.teleport(3489, 3226, 0);
+    H.tick(1);
+    useOn(p, 3489, 3227, 'burgh_outside_rubble_pile', 'burgh_rubble_bucket_3');
+    check('  and the pile takes it, three loads at once: the wall is down', [H.getVarBit(p, 'burgh_inn_colapsed_wall'), H.invCount(p, 'bucket_empty') > 0], [1, true]);
+    p.teleport(3491, 3231, 0);
+    H.tick(1);
     op(p, 3490, 3232, 'burgh_inn_trapdoor_multiloc', 1);
     check('the trapdoor opens: stage 60', [gv(p, 'myreque_2_quest'), H.getVarBit(p, 'burgh_inn_trapdoor')], [60, 1]);
 

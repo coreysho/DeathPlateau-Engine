@@ -800,7 +800,21 @@ if (want('hauntedmine')) {
     op(p, 2799, 4453, 'hauntedmine_boss_door');
     check('through the door into the chamber, with the key in it', [at(p), reaches(0, p.x, p.z, 2791, 4454)], [[2798, 4453, 0], true]);
     check('the key sits still on its crate (it used to wander off)', [npcAny('hauntedmine_boss_key', p.x, p.z, 0)!.x, npcAny('hauntedmine_boss_key', p.x, p.z, 0)!.z], [2788, 4455]);
+    // AND TREUS DAYTH IS A FIGHT. Reaching for the key used to be a mesbox and he is a level-95
+    // npc now: he walks out of the wall, and he fades out of reach and back every thirty-odd
+    // ticks, so the swing has to wait each fade out rather than hit a ghost that is not there.
+    // The key does not come off the rock while he is up - "it lifts off the rock and drifts away
+    // from your hand. He is not finished."
+    H.equip(p, { rhand: 'rune_scimitar' });
     opNpcHere(p, 'hauntedmine_boss_key');
+    check('reaching for the key brings Treus Dayth out of the wall', npcAny('hauntedmine_boss_ghost', p.x, p.z, 0) !== null, true);
+    for (let t = 0; t < 1200 && v(p, 'hauntedmine') < 5; t++) {
+        const ghost = npcAny('hauntedmine_boss_ghost', p.x, p.z, 0);
+        p.levels[3] = 99;
+        if (ghost && ghost.isActive && !p.target) H.attackNpc(p, ghost);
+        H.tick(1);
+    }
+    H.tick(4);
     check('Treus Dayth: stage 5', v(p, 'hauntedmine'), 5);
     opNpcHere(p, 'hauntedmine_boss_key');
     check('the crystal-mine key', H.invCount(p, 'hauntedmine_reward_key'), 1);
@@ -814,14 +828,18 @@ if (want('hauntedmine')) {
     console.log('The crystal:');
     op(p, 2692, 4436, 'hauntedmine_dark_stairs_top');
     check('west stairs down to the large doors', [walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2773, 4451)], [true, true]);
+    // THE DOORS DO NOT HAND OUT THE SHARD AND DO NOT END THE QUEST. They open the crystal room -
+    // "The whole of the back of this mine is one crystal and it is lit from inside it" - and the
+    // shard comes off an OUTCROP with a chisel, which is where this quest's 35 Crafting is
+    // actually spent and what finishes it.
     op(p, 2773, 4450, 'hauntedmine_rewarddoor_l');
-    check('the key opens the doors: complete, with the shard', [v(p, 'hauntedmine'), H.invCount(p, 'crystalshard_necklace_unstrung')], [6, 1]);
+    check('the key opens the doors onto the crystal', [(v(p, 'hauntedmine_bits') & (1 << 9)) !== 0, p.z < 4450, reaches(0, p.x, p.z, 2798, 4433)], [true, true, true]);
     H.give(p, 'chisel');
+    op(p, 2800, 4430, 'crystalcorner');
+    check('a chisel on the outcrop: the shard, and the quest is complete', [H.invCount(p, 'crystalshard_necklace_unstrung'), v(p, 'hauntedmine')], [1, 6]);
     H.give(p, 'ball_of_wool');
-    useOnHeld(p, 'chisel', 'crystalshard_necklace_unstrung');
-    check('chisel and wool: the Salve amulet', H.invCount(p, 'crystalshard_necklace'), 1);
-    op(p, 2773, 4450, 'hauntedmine_rewarddoor_l');
-    check('the doors now lead into the crystal room', [p.z < 4450, reaches(0, p.x, p.z, 2798, 4433)], [true, true]);
+    useOnHeld(p, 'ball_of_wool', 'crystalshard_necklace_unstrung');
+    check('a ball of wool strings it: the Salve amulet', H.invCount(p, 'crystalshard_necklace'), 1);
     H.clearInv(p);
     H.give(p, 'chisel');
     op(p, 2800, 4430, 'crystalcorner');

@@ -515,20 +515,25 @@ console.log('SPIRITS OF THE ELID');
     check('  and back through the lake door', at(p), [3354, 9557, 0]);
 
     H.give(p, 'rune_pickaxe');
-    // "THROUGH FIRST, THEN THE GOLEM, AND ON ITS OWN TILE" - the door shuts behind you and the
-    // thing on the other side of it stops being a statue, which takes a tick to happen.
+    // THE GOLEM IS FOUGHT INSIDE THIS CLICK, and there is no honest way to catch it standing.
+    // The door spawns it on the far side on npc_setmode(opplayer2), op()'s drive() counts a player
+    // with a combat target as busy, and a maxed player with auto-retaliate kills a golem long
+    // before drive() goes idle - so by the time the click returns the room is empty and
+    // H.npcNear finds nothing. Asking for the npc was asking to see a fight that had already
+    // finished; what PROVES it happened is the bit, which only [ai_queue3,elid_golem_grey] ->
+    // [queue,elid_golem_down] sets, and which npc_find deliberately is not used for because it
+    // "cannot tell killed from despawned twenty minutes later". Measured, not assumed: elid_main
+    // reads 158 on the way in with bit 13 clear, and 1/bit 13 set on the way out.
     op(p, 3374, 9547, 'elid_greygolem_door');
     H.tick(3);
-    check('grey golem door: the key opens it and you go through', [at(p), free(p), !!H.npcNear('elid_golem_grey', p.x, p.z)], [[3375, 9547, 0], true, true]);
+    check('grey golem door: the key opens it, you go through, and its golem is beaten', [at(p), free(p), H.getVarBit(p, 'elid_greygolem')], [[3375, 9547, 0], true, 1]);
     op(p, 3378, 9547, 'elid_waterchannel_mining_multiloc');
     check('  clear the fallen rock (trigger on the multiloc shell)', H.getVarBit(p, 'elid_miningchannel'), 1);
     op(p, 3374, 9547, 'elid_greygolem_door');
     check('  and back out', at(p), [3373, 9547, 0]);
 
     op(p, 3365, 9542, 'elid_whitegolem_door');
-    check('white golem door: through, south', [at(p), free(p)], [[3365, 9541, 0], true]);
-    const wg = H.npcNear('elid_golem_white', p.x, p.z);
-    check('  its golem stands on a free tile', wg ? !isMapBlocked(wg.x, wg.z, 0) : false, true);
+    check('white golem door: through, south, and its golem beaten too', [at(p), free(p), H.getVarBit(p, 'elid_whitegolem')], [[3365, 9541, 0], true, 1]);
     op(p, 3365, 9538, 'elid_waterchannel_thieving_multiloc');
     check('  clear the spike trap', H.getVarBit(p, 'elid_thievingchannel'), 1);
     op(p, 3365, 9542, 'elid_whitegolem_door');
@@ -543,8 +548,14 @@ console.log('SPIRITS OF THE ELID');
     // range - and the walk needs ticks the sim was not giving it. One click with no ticks lands the
     // arrow only when the black golem's door happens to leave the player inside seven tiles, which
     // is why this passed alone and failed in a sweep twenty minutes later.
+    // AND THE GOLEM IS FOUGHT INSIDE THE DOOR CLICK ABOVE, which leaves the player wherever the
+    // fight ended with a combat target still set - and a combat target replaces the interaction
+    // this shot needs. Settle first, then keep asking: the approach has to be walked, and thirty
+    // ticks was not enough for it once a fight was happening first.
+    H.tick(10);
+    p.clearPendingAction();
     const target = findNpc('elid_ranging_target_multinpc', p);
-    for (let t = 0; t < 30 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
+    for (let t = 0; t < 90 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
         if (t % 10 === 0) useOnNpc(p, target, 'bronze_arrow');
         H.tick(1);
     }
