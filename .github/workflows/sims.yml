@@ -100,6 +100,26 @@ jobs:
       working-directory: engine
       run: npx tsx tools/server/rsa.ts
 
+    # AND A DATABASE, for the one sim that needs one - and this is the whole of why
+    # changepassword "fails on a runner and passes on a laptop", which this file has carried as a
+    # mystery and known-failing.txt as its last entry.
+    #
+    # changepassword drives ::changepassword through the REAL account table: it deletes its two
+    # accounts, reads the stored bcrypt hash back to prove an unchanged password really is
+    # unchanged, and checks ::ban and ::mute persist. DB_BACKEND defaults to sqlite, which is
+    # db.sqlite in the working directory, and db.sqlite is gitignored - same as the login key
+    # above, for the same reason and with the same consequence. A laptop has one from running the
+    # server; a fresh checkout has none, so Kysely throws on the first query and dumps the query
+    # object, which is what the shard log shows: a WhereNode with value 'pwtest'.
+    #
+    # Reproduced by moving db.sqlite aside here: the same failure. Migrated from nothing with
+    # this step: 14 ok, 0 failed. It was never the timing problem it had been treated as.
+    #
+    # prisma migrate deploy needs no server for sqlite and creates the file if it is missing.
+    - name: A database for this run
+      working-directory: engine
+      run: npm run sqlite:migrate
+
     - name: Run this shard
       working-directory: engine
       run: |
