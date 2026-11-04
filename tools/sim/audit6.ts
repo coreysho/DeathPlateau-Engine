@@ -570,18 +570,31 @@ console.log('SPIRITS OF THE ELID');
     check('  the genie cannot be walked to with his door shut', reach(0, p.x, p.z)(3371, 9320), false);
     op(p, 3371, 9312, 'elid_genie_door');
     check('  through his door', [at(p), free(p)], [[3371, 9313, 0], true]);
-    check('  the genie, on foot', walkTalk(p, 'elid_genie', [1]), true);
-    check('  the statuette', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_statuette')], [40, 1]);
+    // AND THE GENIE DOES NOT SIMPLY HAND IT OVER: "A trade, because I am a genie and we do not
+    // simply hand things over." What he wants is the SOLES off the mayor's shoes - "I have been
+    // looking up at the bottom of that man's feet through a crack in a rock for sixty years" -
+    // which is a knife, Awusah's shoes and a walk back down here. quest_elid_run.ts does that
+    // trip; what this block is for is the crevice fork, his door and the rope, so the statuette
+    // and everything downstream of it are the run's.
+    const iGenie = H.ifaces.length;
+    const reached = walkTalk(p, 'elid_genie', [1]);
+    const genieSaid = H.ifaces
+        .slice(iGenie)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .join(' ');
+    check('  the genie, on foot, and he wants a trade for her', [reached, genieSaid.includes('oles')], [true, true]);
     op(p, 3371, 9312, 'elid_genie_door');
     op(p, 3373, 9305, 'elid_climbing_rope');
     check('  and the rope back up', at(p), [3374, 2903, 0]);
-    // lose it, get it back
-    H.clearInv(p);
+    // and a statuette lost between here and the plinth can be had again, which is this block's:
+    // "Lost between here and the plinth: there was no way to get it back."
+    H.setVarBit(p, 'elidquest', 40); // past ^elid_channels_done, which is the branch that re-gives it
+    p.teleport(3371, 9313, 0);
+    H.tick(1);
     talk(p, 'elid_genie');
     check('a lost statuette can be had again from the genie', H.invCount(p, 'elid_statuette'), 1);
-    talk(p, 'elid_ghaslor');
-    talk(p, 'elid_mayor');
-    check('Ghaslor, then Awusah', H.getVarBit(p, 'elidquest'), 55);
+    H.setVarBit(p, 'elidquest', 55); // where the run leaves it, with the statuette in hand
     p.teleport(3426, 2929, 0);
     H.tick(1);
     const pray = p.stats[5];
