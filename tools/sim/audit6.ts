@@ -837,40 +837,50 @@ console.log('IN SEARCH OF THE MYREQUE');
     op(p, 3480, 9837, 'thrttavernbasementfalsewall');
     check('Search the false wall: through into the Hollows', [at(p), free(p)], [[3480, 9836, 0], true]);
     check("  the Myreque's door is in reach", reach(0, p.x, p.z)(3500, 9812), true);
+    // THE DOORS DO NOT MOVE UNTIL CURPILE FYOD IS SATISFIED - ^route_bit_curpile, "Curpile Fyod is
+    // satisfied and the doors will open" - and the three questions he asks are reached over a ROPE
+    // BRIDGE in the Hollows, not up the ladder this block used to repair. The content says that in
+    // as many words: "The other ladder_broken in the world is in the cellar under the Hair of the
+    // Dog in Canifis. It is broken there too and NOTHING REPAIRS IT - In Search of the Myreque is
+    // played over a rope bridge in the Hollows, which is a different loc and a different place."
+    // So the three-rung checks were hammering at a ladder the content deliberately leaves broken,
+    // and the door check was reading a player who had not moved - which then made the tunnel check
+    // below pass, because 3500,9811 is where the tunnel comes out and where they were standing.
+    //
+    // Cyreg's boat, the bridge, the three questions and the ending are quest_routequest_run.ts's.
+    // The two landings on either side of their door are this block's, and the refusal is worth a
+    // check of its own while we are here.
+    let fromIf2 = H.ifaces.length;
     op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
-    check('  their door: into the hideout', [at(p), free(p)], [[3505, 9832, 0], true]);
-    check('  Veliaf, on foot', walkTalk(p, 'route_veliaf_hurtz', [1, 1, 1, 1]), true);
-    check('  three questions right: sent for the route', H.getVar(p, 'routequest'), 3);
+    check('  their door does not move until Curpile Fyod is satisfied', [at(p), boxedSince(p, fromIf2, 'do not move')], [[3500, 9811, 0], true]);
+    H.setVar(p, 'routequest_myreque_bits', 1 << 2); // ^route_bit_curpile
+    fromIf2 = H.ifaces.length;
+    op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
+    // ^route_hideout_inside is 3_54_153_49_40 - "3505,9832 on plane 3, six of them alive" - so the
+    // hideout is on LEVEL 3, which is the thing worth asserting about it.
+    check('  and then it is six of them alive on plane 3', [at(p), free(p)], [[3505, 9832, 3], true]);
     op(p, 3505, 9831, 'route_cavewalltunnel');
     check("the hideout's tunnel: back out by the door", [at(p), free(p)], [[3500, 9811, 0], true]);
-
-    // the ladder, Cyreg, Curpile
-    p.teleport(3483, 9842, 0);
-    H.tick(1);
-    H.give(p, 'hammer');
-    H.give(p, 'nails', 10);
-    H.give(p, 'woodplank', 3);
-    for (let i = 0; i < 3; i++) op(p, 3483, 9841, 'ladder_broken');
-    check('three rungs', H.getVarBit(p, 'bridgerung3'), 1);
-    op(p, 3483, 9841, 'ladder_broken');
-    check('  climb it: the south swamp, a free tile', [at(p), free(p)], [[3498, 3382, 0], true]);
-    talk(p, 'route_cyreg_paddlehorn');
-    talk(p, 'route_curpile_fyod');
-    p.teleport(3498, 3376, 0);
-    H.tick(1);
-    op(p, 3498, 3377, 'route_rowboat_hollows');
-    check('the boat under the bank: a free tile by the stalagmite (was blocked)', [at(p), free(p)], [[3491, 9821, 0], true]);
     p.teleport(3505, 9833, 0);
     H.tick(1);
+    // ^route_canifis is 7 - the hellhound dead and Veliaf sending you up to the tavern - and
+    // ^route_complete is 8. The old pair of numbers here (4 and 5) are from before the quest was
+    // renumbered, which is the same stage-number slip audit4 had with ^route_complete.
+    // AND VELIAF DOES NOT FINISH IT. At ^route_canifis he says "Go and look in that tavern. If he
+    // is still sitting in it then he is not finished with us, and if he is gone then he has
+    // somewhere better to be, and I would like to know which" - and what finishes the quest is
+    // the chair in Canifis being empty, which is [label,route_finish] on the stranger.
+    H.setVar(p, 'routequest', 7); // ^route_canifis
     talk(p, 'route_veliaf_hurtz');
-    check('Veliaf: complete', H.getVar(p, 'routequest'), 5);
-    H.clearLogs();
+    check('Veliaf sends you up to the tavern rather than finishing it', H.getVar(p, 'routequest'), 7);
+    // multi_vanstrom_stranger_entity switches on thsfm_vanstrom_hide: "at zero the chair holds
+    // Vanstrom Klause, and after he has shown everybody what he is it holds a stranger. Talk-to
+    // had no trigger in either form, so the quest could not be started at all."
+    H.setVarBit(p, 'thsfm_vanstrom_hide', 1);
+    p.teleport(3493, 3473, 0);
+    H.tick(1);
     talk(p, 'multi_vanstrom_stranger_entity');
-    check(
-        'the man in the tavern chair answers Talk-to',
-        H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('passing through')),
-        true
-    );
+    check('the man in the chair is not him, and that is the end of it: complete', H.getVar(p, 'routequest'), 8);
 }
 
 // ============================================================================== getting there on foot

@@ -20,6 +20,28 @@
 # So the real state was 266 of 303 passing. That figure is from the unseeded baseline and has not
 # been re-taken in full since; the entry count below is the number that is trusted.
 
+# ---- AND IT IS ONE ENTRY NOW. Thirty-seven when the list was built, eleven after the dice were
+# seeded, and one after the eleven were worked through: changepassword, which has never failed on
+# this machine and so cannot be reproduced here. Of the ten that came off:
+#
+#   THREE WERE BUGS IN THE GAME.  a random event ending a temple trek; a lost recording getting
+#                                 the orb back but not the serum its own note promises; and a pair
+#                                 of attack animations with no priority (deployed separately).
+#   ONE WAS A USERNAME COLLISION. toBase37 keeps twelve letters and digits, so mmaggro's two
+#                                 zombie monkeys were the same account and the second login was
+#                                 refused in silence. It had the same effect in four sims that
+#                                 were PASSING - gwd, plunder, deathtoken and fremtrials2 - so the
+#                                 check is in H.makePlayer now.
+#   TWO WERE IN THE QUESTRUN DRIVER. the sneak step held on distance where Nora T. Hagg catches
+#                                 you on sight, and the fight step read the Gelatinnoth Mother's
+#                                 own form change as a death.
+#   AND FIVE WERE AUDITS WHOSE QUESTS HAD BEEN REBUILT UNDER THEM, which is the pattern worth
+#                                 keeping: see the note below.
+#
+# The honest reading of that is that this list was never mostly a list of broken game. It was
+# mostly a list of tests that had stopped describing the game, and the one reliable way to tell
+# the difference was to read the content a check was written about rather than the check.
+
 # THE DICE ARE FIXED NOW, AND THIS LIST HAS BEEN RE-MEASURED AGAINST THEM. Everything above was
 # measured with the suite rolling a fresh dice each run, which is why it would not settle: the
 # fourth CI run had droprate, gwdskirmish, rdreach and fremtrials2 each fail TWICE IN A ROW while
@@ -109,18 +131,36 @@
 # One content fix came out of it: [label,handsand_rarve_done]'s lost-recording branch reserves two
 # inventory slots and its own note says "A fresh orb and serum", and it only ever added the orb.
 
-audit6               # 123 ok, 5 FAIL. Mountain Daughter and Spirits of the Elid are clean now;
-                     # what is left is FORGETTABLE TALE OF A DRUNKEN DWARF, which has been
-                     # rebuilt the same way - "Veldaban, first time: the story (and he remembers
-                     # telling it)" reads 0, and the four checks after it are that block running
-                     # through a quest that has not started. Same treatment as the five above:
-                     # find the first stale check, port the map, give the progression to the run.
-audit7               # Rum Deal, Throne of Miscellania, Garden of Tranquillity and the whole of
-                     # Haunted Mine are clean now - the mine was nine failures from one
-                     # requirement (Priest in Peril) plus a lever puzzle that is a cart run. What
-                     # is left is TAI BWO WANNAI TRIO: "a karambwan off the east coast,
-                     # undercooked into poison paste: 0", and then it throws on the paste it did
-                     # not get.
+# audit6 is FIXED and off: 133 ok, 0 FAIL. Five quest blocks, five stale starts.
+#   MOUNTAIN DAUGHTER  the rockslide is watched, Hamal wants two picks, the bush wants gloves, the
+#                      roots give MUD (which is what makes the tall tree climbable), the cairn is
+#                      five rocks off the goat pen, and the Kendal wants four.
+#   SPIRITS OF THE ELID the cupboard holds two TORN robes and the robe door wants the Ballad of
+#                      Jareesh as well; the genie trades the statuette for the soles off the
+#                      mayor's shoes. And the golem is fought INSIDE the door click, which is why
+#                      the bit and not the npc is what proves it happened.
+#   FORGETTABLE TALE   ~forget_veldaban reads The Giant Dwarf AND Fishing Contest, and only the
+#                      first was set - so Veldaban handed the conversation back to the other quest.
+#   SWAN SONG          100 quest points, One Small Favour and Garden of Tranquillity before Herman
+#                      takes you on; feeding the colony leaves you at ^swan_letter and fetching the
+#                      Wise Old Man is a leg of its own; and the Sea Troll Queen is a 200-hitpoint
+#                      fight that is FIVE TILES ACROSS, with Herman standing inside her square.
+#   IN SEARCH OF THE MYREQUE  the doors do not move until Curpile Fyod is satisfied, and he is
+#                      reached over a rope bridge - the ladder this block hammered at is the one
+#                      the content says "NOTHING REPAIRS". The hideout is on plane 3. Veliaf does
+#                      not finish the quest; the empty chair in Canifis does.
+
+# audit7 is FIXED and off: 204 ok, 0 FAIL, from a fourteen-second first-step failure.
+#   RUM DEAL           the quest does not start until Captain Braindeath's brief, behind Zogre
+#                      Flesh Eaters and Slayer 42; the progression is quest_deal_run's and the
+#                      island's six stairways and two ladders are this block's.
+#   HAUNTED MINE       Priest in Peril first - nine failures from one requirement - and the points
+#                      are a CART RUN now: the fungus goes in the loading cart, the board's start
+#                      lever sends it, and the levers alone move nothing. The valve is not the lift,
+#                      the lift wants a lit fungus in hand, the reward doors open the crystal room
+#                      rather than ending the quest, and Treus Dayth is a level-95 fight.
+#   TAI BWO WANNAI TRIO a karambwan is COOKED, not tinderboxed: the success product of its cooking
+#                      row IS the poorly cooked one, and a knife on that makes the poison paste.
 
 # gwdstaves is FIXED and off: 48 ok. A SECOND a1lib bug, and a bigger one than findNpc.
 # useHeld was a paraphrase of OpHeldUHandler rather than the thing itself, and it was three
