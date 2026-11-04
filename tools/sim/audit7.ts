@@ -296,11 +296,26 @@ if (want('deal')) {
     // away again rather than by leaving it unset - the gate is the claim, not the default.
     p.setLevel(18, 1); // 18 is Slayer
     H.tick(1);
-    let said = talk(p, 'deal_captian_braindeath', [1]);
-    check('without Zogre Flesh Eaters he will not brief you', [v(p, 'deal_quest'), said.some(t => t.includes('whole spider'))], [0, true]);
+    // Read from BEFORE the click, not from drive()'s own mark: talk() waits up to ten ticks for the
+    // script to start and the opening lines of a conversation can land inside that wait, so what
+    // drive() returns is the tail of it.
+    // JOINED, NOT A LIST OF LINES. A ~chatnpc longer than one line is set on line1..line4 as
+    // separate components, so a phrase that straddles the wrap - "...never put a / whole spider in
+    // anything..." - is in neither of them. Searching the joined text is the only way to look for
+    // words rather than for where the client happened to break them.
+    const heardIn = (from: number) =>
+        H.ifaces
+            .slice(from)
+            .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+            .map(i => i.text!)
+            .join(' ');
+    let i0 = H.ifaces.length;
+    talk(p, 'deal_captian_braindeath', [1]);
+    check('without Zogre Flesh Eaters he will not brief you', [v(p, 'deal_quest'), heardIn(i0).includes('whole spider')], [0, true]);
     setVarAny(p, 'zogre', QUEST['zogre_complete']);
-    said = talk(p, 'deal_captian_braindeath', [1]);
-    check('  nor without 42 Slayer, which is the one requirement needed to start', [v(p, 'deal_quest'), said.some(t => t.includes('42 Slayer'))], [0, true]);
+    i0 = H.ifaces.length;
+    talk(p, 'deal_captian_braindeath', [1]);
+    check('  nor without 42 Slayer, which is the one requirement needed to start', [v(p, 'deal_quest'), heardIn(i0).includes('42 Slayer')], [0, true]);
     p.setLevel(18, 42);
     H.tick(1);
     talk(p, 'deal_captian_braindeath', [1]);
@@ -602,6 +617,12 @@ if (want('garden')) {
 if (want('hauntedmine')) {
     console.log('HAUNTED MINE');
     const p = player('hmine', 3444, 3256);
+    // PRIEST IN PERIL FIRST, which is newer than this block. [label,hm_zealot_start] now stops at
+    // "the temple does not explain itself to people the temple has never heard of. Go and be
+    // useful to a priest somewhere and come back" and RETURNS without setting the stage, so every
+    // check below it was running against a quest that had not started - the key, the points, the
+    // valve, the lift, Treus Dayth and the crystal, nine failures from one requirement.
+    setVarAny(p, 'priestperil', QUEST['priestperil_complete']);
     talk(p, 'saradominist_zealot');
     check('the zealot refuses: stage 1', v(p, 'hauntedmine'), 1);
 
@@ -610,7 +631,10 @@ if (want('hauntedmine')) {
     H.setVar(q, 'hauntedmine', 1);
     H.setVar(q, 'hauntedmine_bits', 173);
     for (let i = 0; i < 30 && H.invCount(q, 'hauntedmine_lift_key') === 0; i++) talk(q, 'saradominist_zealot', [], 3);
-    check('the zealot can still be picked with the points already set, and that sets the points stage', [H.invCount(q, 'hauntedmine_lift_key'), v(q, 'hauntedmine')], [1, 3]);
+    // STAGE 2, NOT 3: the key is ^hm_key and that is all the pickpocket sets. ^hm_points is the
+    // CART arriving, which is further down this block. What this check is actually for is the old
+    // deadlock - the key could not be taken once the points were set - and that still holds.
+    check('the zealot can still be picked with the points already set, and the key is stage 2', [H.invCount(q, 'hauntedmine_lift_key'), v(q, 'hauntedmine')], [1, 2]);
 
     for (let i = 0; i < 30 && H.invCount(p, 'hauntedmine_lift_key') === 0; i++) talk(p, 'saradominist_zealot', [], 3);
     check('pickpocketed the key: stage 2', [H.invCount(p, 'hauntedmine_lift_key'), v(p, 'hauntedmine')], [1, 2]);
@@ -657,6 +681,21 @@ if (want('hauntedmine')) {
         [2732, 4529]
     ]);
     check('this side reaches both lever banks and the diagram', [reaches(0, p.x, p.z, 2785, 4517, 200), reaches(0, p.x, p.z, 2768, 4533, 200), reaches(0, p.x, p.z, 2769, 4522, 200)], [true, true, true]);
+    // AND THE CART HAS TO HAVE SOMETHING IN IT. The points were a lever puzzle with no cart in it
+    // when this block was written; they are a cart run now - "sending an empty cart down proves
+    // nothing" - so the fungus goes in the loading cart first and the board's start lever is what
+    // moves the stage. Throwing the levers on their own moves nothing at all, which is what "points
+    // 1, 3, 4, 6 and 8 thrown: stage 3" was reporting as a broken puzzle.
+    p.teleport(2782, 4495, 0);
+    H.tick(1);
+    op(p, 2782, 4494, 'glowing_mushroom');
+    check('a glowing fungus off the pool, the only light down here', H.invCount(p, 'glowing_fungus'), 1);
+    p.teleport(2778, 4505, 0);
+    H.tick(1);
+    useOn(p, 2778, 4506, 'hauntedmine_puzzle_cart', 'glowing_fungus');
+    check('  and into the loading cart, where it stays lit', H.invCount(p, 'glowing_fungus'), 0);
+    p.teleport(2770, 4523, 0);
+    H.tick(1);
     op(p, 2769, 4522, 'hauntedmine_points_info');
     for (const [n, x, z] of [
         [1, 2785, 4517],
@@ -672,7 +711,16 @@ if (want('hauntedmine')) {
         }
         op(p, x, z, 'hauntedmine_point_lever' + n);
     }
-    check('points 1, 3, 4, 6 and 8 thrown: stage 3', [v(p, 'hauntedmine_bits') & 255, v(p, 'hauntedmine')], [173, 3]);
+    check('points 1, 3, 4, 6 and 8 thrown, and the stage has not moved for it', [v(p, 'hauntedmine_bits') & 255, v(p, 'hauntedmine')], [173, 2]);
+    // the start lever is on the board, and only now does it offer one
+    p.teleport(2770, 4523, 0);
+    H.tick(1);
+    op(p, 2769, 4522, 'hauntedmine_points_info', 1, [1]); // "Start the cart."
+    check('the cart runs the right road: stage 3', v(p, 'hauntedmine'), 3);
+    p.teleport(2775, 4537, 0);
+    H.tick(1);
+    op(p, 2774, 4537, 'hauntedmine_puzzle_cart');
+    check('  and the fungus is in it at the far end', H.invCount(p, 'glowing_fungus'), 1);
 
     console.log('Out, and in by the secondary entrance to the valve:');
     p.teleport(3437, 9636, 0);

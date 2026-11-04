@@ -331,22 +331,38 @@ console.log('THE HAND IN THE SAND');
     p.teleport(2600, 3087, 0);
     H.tick(1);
     talk(p, 'zogre_human_zavistic_rarve');
-    check('the scroll buys the scrying orb: stage 50, and the scroll stays with him', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_scroll_magic'), H.invCount(p, 'handsand_wizhead')], [50, 1, 0, 0]);
+    // AND THE SCROLL COMES BACK, which is not an oversight: "Rarve gives you a scrying orb, and
+    // keys the scroll to this room on the way past" - %handsand_tele goes on and the glowing
+    // scroll is the teleport to his room from then on. Measured rather than assumed, because "You
+    // hand Rarve the glowing scroll" reads like he keeps it.
+    check(
+        'the scroll buys the scrying orb: stage 50, and comes back keyed to his room',
+        [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_scroll_magic'), gv(p, 'handsand_tele'), H.invCount(p, 'handsand_wizhead')],
+        [50, 1, 1, 1, 0]
+    );
 
-    // Betty and the lens
-    p.teleport(3014, 3256, 0);
+    // BETTY DOES TWO SEPARATE THINGS and the old version of this block skipped the second one, which
+    // is the half the quest was rebuilt for. She sells the bottled water - for an EMPTY VIAL, and
+    // one talk, not two - and she does not sell the lens at all ("A plain one off a glassblower -
+    // you will not find one in here"). And the rose lens does NOT go into the orb: a scrying orb
+    // needs nothing. It goes between her propped-open doorway and the vial she stands out on the
+    // counter, which is what handsand_counter_multiloc's state 1 is, and that is what makes the
+    // serum. The counter bit therefore comes near the END of her chain rather than at the start of
+    // it, which is why the old first check read 0.
+    p.teleport(3011, 3258, 0);
     H.tick(1);
+    let said2 = talk(p, 'betty');
+    check('with no empty vial she will not give away glass as well', [H.invCount(p, 'handsand_bottle_water'), said2.some(t => t.includes('empty vial'))], [0, true]);
+    H.give(p, 'vial_empty');
     talk(p, 'betty');
-    check('Betty stands the bottle out: counter multi 1', gv(p, 'handsand_counter_multi'), 1);
-    talk(p, 'betty');
-    check('Betty again: bottled water and a lens', [H.invCount(p, 'handsand_bottle_water'), H.invCount(p, 'lens')], [1, 1]);
+    check('an empty vial buys the bottled water', [H.invCount(p, 'handsand_bottle_water'), H.invCount(p, 'vial_empty'), gv(p, 'handsand_serum')], [1, 0, 1]);
     H.give(p, 'redberries');
     H.give(p, 'white_berries');
     useHeld(p, 'handsand_bottle_water', 'redberries');
     check("bottle used ON the redberries (the pie handler's side) makes the juice", [H.invCount(p, 'handsand_redberry_juice'), H.invCount(p, 'redberries')], [1, 0]);
-    // lose the juice: Betty starts the chain again
+    // lose the juice: with an empty vial she starts the chain again
     p.invDel(InvType.INV, ObjType.getId('handsand_redberry_juice'), 1);
-    talk(p, 'betty');
+    H.give(p, 'vial_empty');
     talk(p, 'betty');
     check('juice lost: Betty hands out another bottle', H.invCount(p, 'handsand_bottle_water'), 1);
     H.give(p, 'redberries');
@@ -354,10 +370,30 @@ console.log('THE HAND IN THE SAND');
     check('redberries used on the bottle also works', H.invCount(p, 'handsand_redberry_juice'), 1);
     useHeld(p, 'handsand_redberry_juice', 'white_berries');
     check("juice used ON the white berries (the herblore handler's side) makes the dye", [H.invCount(p, 'handsand_pink_dye'), H.invCount(p, 'white_berries')], [1, 0]);
-    useHeld(p, 'lens', 'handsand_pink_dye');
-    check('lens in the dye: rose tinted lens', H.invCount(p, 'handsand_rose_lens'), 1);
-    useHeld(p, 'handsand_orb_storage', 'handsand_rose_lens');
-    check('lens into the orb: stage 60', [gv(p, 'handsand_quest'), gv(p, 'handsand_serum')], [60, 5]);
+    H.give(p, 'bullseye_lantern_lens');
+    useHeld(p, 'bullseye_lantern_lens', 'handsand_pink_dye');
+    check('a lantern lens in the dye: rose tinted lens', [H.invCount(p, 'handsand_rose_lens'), gv(p, 'handsand_serum')], [1, 4]);
+
+    // AND SOMETHING OUT OF HIS OWN POCKET: "a serum has to know whose mouth it is going into".
+    // The pocket is a stat_random roll, so it is tried until it lands rather than asserted on one
+    // throw - which is the one thing in this chain that is not deterministic.
+    p.teleport(2788, 3178, 0);
+    H.tick(1);
+    for (let i = 0; i < 40 && H.invCount(p, 'handsand_sand') < 1; i++) talk(p, 'handsand_sandy', [], 3);
+    check('a pocketful of the man himself, picked off Sandy (op3)', H.invCount(p, 'handsand_sand'), 1);
+    p.teleport(3011, 3258, 0);
+    H.tick(1);
+    said2 = talk(p, 'betty');
+    check('the lens and the pocketful: she stands a vial out and props the door', [gv(p, 'handsand_counter_multi'), said2.some(t => t.includes('daylight'))], [1, true]);
+    // forceapproach: the counter is reached from its WEST end, not from in front of it
+    p.teleport(3012, 3258, 0);
+    H.tick(1);
+    useOn(p, 3013, 3258, 'handsand_counter_multiloc', 'handsand_rose_lens');
+    check(
+        'the daylight through the lens into the vial: the serum, the lens gone, stage 60',
+        [H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_rose_lens'), H.invCount(p, 'handsand_sand'), gv(p, 'handsand_quest'), gv(p, 'handsand_serum'), gv(p, 'handsand_counter_multi')],
+        [1, 0, 0, 60, 5, 0]
+    );
 
     // the coffee
     p.teleport(2788, 3178, 0);

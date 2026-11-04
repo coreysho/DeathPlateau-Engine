@@ -18,6 +18,7 @@
 import * as H from './harness.ts';
 import { check, R, player } from './a1lib.ts';
 import World from '#/engine/World.js';
+import { isLineOfSight, isMapBlocked } from '#/engine/GameMap.js';
 import type Npc from '#/engine/entity/Npc.js';
 import NpcType from '#/cache/config/NpcType.js';
 import HuntType from '#/cache/config/HuntType.js';
@@ -25,6 +26,27 @@ import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 
 await H.boot();
+
+/**
+ * A tile to stand on beside an npc: free floor, and in its line of sight. BOTH of those matter,
+ * because the hunts here are check_vis=lineofsight - the cache's aggressive pair and mm.hunt both -
+ * so a player dropped on the far side of a wall is a player the npc is right to ignore. The old
+ * "x + size, z" was neither test, and mm_zombie_monkey_large happens to stand with that tile inside
+ * the tunnel wall, which came out as "it does not attack a human standing beside it".
+ */
+function beside(npc: Npc): [number, number] | null {
+    const sz = NpcType.get(npc.type).size ?? 1;
+    const ring: [number, number][] = [];
+    for (let d = 0; d < sz + 1; d++) {
+        ring.push([npc.x + sz, npc.z + d], [npc.x - 1, npc.z + d], [npc.x + d, npc.z + sz], [npc.x + d, npc.z - 1]);
+    }
+    for (const [x, z] of ring) {
+        if (isMapBlocked(x, z, npc.level)) continue;
+        if (!isLineOfSight(npc.level, npc.x, npc.z, x, z)) continue;
+        return [x, z];
+    }
+    return null;
+}
 
 /** Drive the npc's own hunt by hand for a few ticks and say whether it took the player. */
 function hunts(npc: any, p: any, ticks = 10): boolean {
@@ -82,10 +104,14 @@ for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', '
 // ---------------------------------------------------------------- it attacks a human
 console.log('\nAND IT COMES FOR A HUMAN WHO WALKS PAST');
 for (const [name, npc] of guards) {
-    // beside it, not inside it: a size-2 npc occupies x..x+1, so x+1 is its own square - and
-    // read off where it is NOW, which is the point of holding the npc rather than a coordinate
-    const sz = NpcType.get(npc.type).size ?? 1;
-    const p: any = player('human_' + name.slice(3, 14), npc.x + sz, npc.z, npc.level);
+    // beside it, not inside it and not through a wall - and read off where it is NOW, which is
+    // the point of holding the npc rather than a coordinate
+    const tile = beside(npc);
+    if (!tile) {
+        check(`    ${name.padEnd(28)} (no free tile in its line of sight to stand on)`, false, true);
+        continue;
+    }
+    const p: any = player('human_' + name.slice(3, 14), tile[0], tile[1], npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.tick(2);
     const took = hunts(npc, p, 12);
@@ -99,8 +125,8 @@ const greegree = 'mm_monkey_greegree_for_normal_monkey';
 let worn = 0;
 for (const [name, npc] of guards) {
     if (!name.startsWith('mm_') || name.includes('zombie') || name.includes('skeleton')) continue;
-    const sz2 = NpcType.get(npc.type).size ?? 1;
-    const tile: [number, number] = [npc.x + sz2, npc.z];
+    const tile = beside(npc);
+    if (!tile) continue;
     const p: any = player('monkey_' + name.slice(3, 13), tile[0], tile[1], npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.equip(p, { rhand: greegree }); // the quest makes you wield it, and worn is what the hunt reads

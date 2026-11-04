@@ -58,6 +58,13 @@ function player(name: string, x: number, z: number, level = 0) {
 }
 const at = (p: Player) => [p.x, p.z, p.level];
 const saidSince = (p: Player, from: number, s: string) => H.mesgs.slice(from).some(m => m.who === p.username && m.text.includes(s));
+// A ~mesbox IS NOT A mes. The first goes out as an interface with text set on it and lands in
+// H.ifaces; only the second reaches the chatbox and H.mesgs. Three checks here asked saidSince
+// for lines the content says through a mesbox and read "it did not say that" about a refusal that
+// had worked perfectly.
+const boxedSince = (p: Player, from: number, s: string) => H.ifaces.slice(from).some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes(s));
+/** Either channel: a mes in the chatbox or a ~mesbox over it. */
+const toldSince = (p: Player, mesFrom: number, ifaceFrom: number, s: string) => saidSince(p, mesFrom, s) || boxedSince(p, ifaceFrom, s);
 const free = (p: Player) => !isMapBlocked(p.x, p.z, p.level);
 
 function slotOf(p: Player, objName: string) {
@@ -255,8 +262,9 @@ console.log('MOUNTAIN DAUGHTER');
     // - as "back south, free tile" and passed it. A check that passes because nothing happened is
     // worse than the one that failed beside it.
     let from = H.mesgs.length;
+    const fromIf = H.ifaces.length;
     op(p, 2760, 3658, 'mdaughter_rockslide');
-    check('the slide turns an outsider back, and does not move them', [at(p), saidSince(p, from, 'not letting you in')], [[2761, 3657, 0], true]);
+    check('the slide turns an outsider back, and does not move them', [at(p), toldSince(p, from, fromIf, 'not letting you in')], [[2761, 3657, 0], true]);
     H.give(p, 'rope');
     p.teleport(2765, 3665, 0); // the strip of ledge above the path, reached by the west route up
     H.tick(1);
@@ -312,54 +320,85 @@ console.log('MOUNTAIN DAUGHTER');
     // and eating one is the only way anybody has ever got a seed out of a White Pearl
     held(b, 'mdaughter_white_pearl_fruit', 3);
     check('  and eating one leaves the seed', H.invCount(b, 'mdaughter_white_pearl_seed'), 1);
-    talk(p, 'mdaughter_svidi');
-    check('Svidi found', H.getVarBit(p, V), 20);
-    talk(p, 'viking_brundt');
-    check('Brundt writes the guarantee', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_safety_guarantee')], [30, 1]);
-    talk(p, 'mdaughter_svidi');
-    check('Svidi takes it and gives the necklace', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_necklace')], [40, 1]);
-    talk(p, 'mdaughter_hamal');
-    check('Hamal knows the necklace', H.getVarBit(p, V), 50);
+    // THE SPINE OF THIS QUEST IS quest_mdaughter_run.ts'S, and it is no longer the spine this
+    // block was written against. Stage 20 is the pool in the bubbles off the island, not Svidi;
+    // stage 30 is the pool again once Rellekka has its peace and the camp has its food; Brundt
+    // wants the Ancient Rock back before he writes anything and takes half of it; Ragnar has the
+    // necklace at stage 60; the roots give MUD rather than Asleif; and the cairn is five rocks off
+    // the goat pen rather than half a rock. The run plays all of that start to finish and passes,
+    // so the progression is deleted rather than ported. What is kept is the map: the two tent
+    // flaps, the three crossings and the tile each one puts you down on, the two trees on the path
+    // and the Kendal's cave - the geography the run only walks one line through.
+    //
+    // The vars below are set rather than earned for the same reason the stage is: each obstacle is
+    // its own claim, and earning the state again here would only be a second, worse copy of the
+    // run.
 
+    // THE ROOTS GIVE MUD, and the mud is what makes the tall tree climbable: "The geysers have
+    // left the bark wet through... Something would have to be worked into the bark first."
     p.teleport(2808, 3659, 0);
     H.tick(1);
     H.give(p, 'spade');
     op(p, 2808, 3660, 'mdaughter_roots_1');
-    check('dig below the roots: Asleif', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_daughter_corpse')], [60, 1]);
+    check('dig below the roots: a handful of mud', H.invCount(p, 'mdaughter_mud'), 1);
 
     // the Ancient Rock's tent
     p.teleport(2799, 3668, 0);
     H.tick(1);
     H.give(p, 'rune_pickaxe');
+    H.setVarBit(p, 'mdaughter_relations_var', 3); // ^mdaughter_peace_brundt_wants_rock
     check('the Ancient Rock cannot be walked to with the flaps shut', reach(0, p.x, p.z)(2799, 3660), false);
     op(p, 2799, 3665, 'mdaughter_rocktent_door');
     check('  Go-through takes you into the tent', [at(p), free(p)], [[2799, 3665, 0], true]);
     check('  and the rock is in reach from there', reach(0, p.x, p.z)(2799, 3660), true);
     useOn(p, 2799, 3660, 'mdaughter_ancient_rock', 'rune_pickaxe');
-    check('  pickaxe on the Ancient Rock: half a rock', H.invCount(p, 'mdaughter_half_rock'), 1);
+    check('  a pickaxe on the Ancient Rock: half a rock', H.invCount(p, 'mdaughter_half_rock'), 1);
     op(p, 2799, 3665, 'mdaughter_rocktent_door');
     check('  and back out through the flap', [at(p)[1] > 3665, free(p)], [true, true]);
 
-    // the pole, the tree, the vault and the stones
+    // THE THREE CROSSINGS. An axe for the dead tree (a pole, unless you already have one), the mud
+    // for the bark, the pole for the vault and one plank for both flat stones - the plank goes down
+    // and comes back up inside the one click, which is how the quest's single plank does both ways.
     p.teleport(2801, 3703, 0);
     H.tick(1);
+    H.give(p, 'bronze_axe');
     op(p, 2802, 3703, 'mdaughter_passable_tree');
-    check('a pole from the dead tree', H.invCount(p, 'mdaughter_stick'), 1);
+    check('a pole cut from the dead tree', [H.invCount(p, 'mdaughter_stick'), locAt(2802, 3703, 0, 'mdaughter_passable_tree_stump')], [1, true]);
+    H.give(p, 'plank');
     p.teleport(2771, 3680, 0);
     H.tick(1);
+    let from2 = H.mesgs.length;
+    let from2If = H.ifaces.length;
+    op(p, 2772, 3679, 'mdaughter_lake_tree', 3);
+    check('wet bark: you slide back down and stay on the shore', [at(p), toldSince(p, from2, from2If, 'slide back down')], [[2771, 3680, 0], true]);
+    useOn(p, 2772, 3679, 'mdaughter_lake_tree', 'mdaughter_mud');
+    check('  mud worked into the bark', [H.getVarBit(p, 'mdaughter_mud_var'), H.invCount(p, 'mdaughter_mud')], [1, 0]);
     op(p, 2772, 3679, 'mdaughter_lake_tree', 3);
     check('Climb the tall tree: onto the ledge by the rocks', [at(p), free(p)], [[2772, 3684, 0], true]);
     op(p, 2773, 3688, 'mdaughter_polerocks');
     check('vault the rocks with the pole: the north ledge', [at(p), free(p)], [[2773, 3691, 0], true]);
     op(p, 2775, 3691, 'mdaughter_flatstone1');
-    check('jump the flat stones: onto the island', [at(p), free(p)], [[2778, 3691, 0], true]);
+    check('plank the flat stones: onto the island', [at(p), free(p), H.invCount(p, 'plank')], [[2778, 3691, 0], true, 1]);
     check('  the burial ground is in reach', reach(0, p.x, p.z)(2783, 3694), true);
+
+    // THE BURIAL: her necklace on her before she goes in the ground, and five rocks off the goat
+    // pen on top of her. Both of those are the quest's, not this block's, so they are handed over.
     p.teleport(2782, 3693, 0);
     H.tick(1);
+    H.setVarBit(p, V, 60); // ^mdaughter_has_necklace, which is where the burial starts
+    H.give(p, 'mdaughter_daughter_corpse');
+    from2 = H.mesgs.length;
+    from2If = H.ifaces.length;
     held(p, 'mdaughter_daughter_corpse', 3);
-    check('Bury the corpse at the burial ground: a mound', H.getVarBit(p, 'mdaughter_burial_state'), 1);
-    useOn(p, 2783, 3694, 'mdaughter_multimound', 'mdaughter_half_rock');
-    check('the half rock on the mound: a cairn, stage buried', [H.getVarBit(p, 'mdaughter_burial_state'), H.getVarBit(p, V)], [2, 70]);
+    check('without the necklace she does not go in the ground', [H.getVarBit(p, 'mdaughter_burial_state'), toldSince(p, from2, from2If, 'Ragnar kept her necklace')], [0, true]);
+    H.give(p, 'mdaughter_necklace');
+    held(p, 'mdaughter_daughter_corpse', 3);
+    check('Bury the corpse at the burial ground: a mound, and the necklace with her', [H.getVarBit(p, 'mdaughter_burial_state'), H.invCount(p, 'mdaughter_necklace'), H.getVarBit(p, V)], [1, 0, 70]);
+    H.give(p, 'mdaughter_rock', 5);
+    useOn(p, 2783, 3694, 'mdaughter_multimound', 'mdaughter_rock');
+    check('five rocks on the mound: a cairn', H.getVarBit(p, 'mdaughter_burial_state'), 2);
+
+    // and back, which is the half nobody can be left stranded by
     p.teleport(2778, 3691, 0);
     H.tick(1);
     op(p, 2777, 3691, 'mdaughter_flatstone2');
@@ -368,6 +407,8 @@ console.log('MOUNTAIN DAUGHTER');
     check('back off the rocks and round the tree to the shore', [at(p), free(p)], [[2771, 3680, 0], true]);
     // without a pole, the ledge is not a trap
     const np = player('md_nopole', 2771, 3680);
+    H.give(np, 'mdaughter_mud');
+    useOn(np, 2772, 3679, 'mdaughter_lake_tree', 'mdaughter_mud');
     op(np, 2772, 3679, 'mdaughter_lake_tree', 3);
     op(np, 2773, 3688, 'mdaughter_polerocks');
     check('  on the ledge with no pole: sent back to the shore, not stranded', at(np), [2771, 3680, 0]);
@@ -384,6 +425,13 @@ console.log('MOUNTAIN DAUGHTER');
     op(p, 2807, 3703, 'mdaughter_passable_tree');
     op(p, 2807, 3703, 'mdaughter_passable_tree_stump');
     check('  the second tree and its stump', [at(p), free(p)], [[2808, 3703, 0], true]);
+    // THE CAVE OPENS AT ^mdaughter_asked_of_death and the Kendal only talks from there: before it
+    // he says "LEAVE FOOD AND GO". The burial above left this player on 70, which is a later stage
+    // than the one the cave belongs to, so the stage goes back to where this obstacle lives - each
+    // block here sets the state its own claim needs, since the spine is quest_mdaughter_run's.
+    H.setVarBit(p, V, 30); // ^mdaughter_asked_of_death
+    H.setVarBit(p, 'mdaughter_bear_discovery', 0);
+    H.setVarBit(p, 'mdaughter_bear_mayattack', 0);
     H.setVarBit(p, 'mdaughter_bear_multi_state', 1); // what the old fight code left behind
     op(p, 2809, 3703, 'mdaughter_caveentrance');
     check("into the Kendal's cave, on a free tile, and the Kendal visible again", [at(p), free(p), H.getVarBit(p, 'mdaughter_bear_multi_state')], [[2807, 10104, 0], true, 0]);
@@ -393,20 +441,21 @@ console.log('MOUNTAIN DAUGHTER');
     const kt = NpcType.get(kendal.type);
     check('the Kendal has real stats (hp, attack, defence)', [kendal.baseLevels[3], kendal.baseLevels[0], kendal.baseLevels[1]], [50, 65, 60]);
     void kt;
-    talk(p, 'mdaughter_multi_bear', [1]);
-    check('  unmasked, he fights - and the multi stays on the visible Kendal', H.getVarBit(p, 'mdaughter_bear_multi_state'), 0);
+    // FOUR CHOICES, NOT ONE. "It's just me, no one special", then "You mean a sacrifice?", then
+    // "Give me her remains", then "Then I'll take her off your body" - and only the last of them
+    // sets %mdaughter_bear_mayattack. One pick walked into the second menu and threw.
+    talk(p, 'mdaughter_multi_bear', [1, 1, 1, 1]);
+    check('  the whole confession, and he may be attacked', [H.getVarBit(p, 'mdaughter_bear_discovery'), H.getVarBit(p, 'mdaughter_bear_mayattack'), H.getVarBit(p, 'mdaughter_bear_multi_state')], [1, 1, 0]);
     const kx = kendal.x,
         kz = kendal.z;
     const hitsBefore = H.npcHits.length;
     const died = kill(p, kendal);
     check('  a melee player actually hits him', H.npcHits.slice(hitsBefore).length > 0, true);
-    check('  and kills him: stage kendal_dead, bearhead dropped', [died, H.getVarBit(p, V), hasObjOnFloor(kx, kz, 0, 'mdaughter_bear_helmet', p)], [true, 80, true]);
-    H.give(p, 'mdaughter_bear_helmet');
-    p.teleport(2810, 3673, 0);
-    H.tick(1);
-    const atk = p.stats[0];
-    talk(p, 'mdaughter_hamal');
-    check('the bearhead to Hamal: complete, Attack xp', [H.getVarBit(p, V), p.stats[0] > atk], [90, true]);
+    check('  and kills him: stage kendal_dead, bearhead dropped', [died, H.getVarBit(p, V), hasObjOnFloor(kx, kz, 0, 'mdaughter_bear_helmet', p)], [true, 40, true]);
+    // and Asleif is at the foot of the pillars, which is the thing he was standing over. The
+    // ending - Hamal seeing her, Ragnar's necklace, the goat pen and the cairn - is
+    // quest_mdaughter_run's; what this block is for is that the cave gives her up at all.
+    check('  and Asleif is on the floor at the foot of the pillars', hasObjOnFloor(2786, 10081, 0, 'mdaughter_daughter_corpse', p) || hasObjOnFloor(2787, 10082, 0, 'mdaughter_daughter_corpse', p), true);
 }
 
 // ============================================================================== Spirits of the Elid

@@ -402,6 +402,27 @@ guard('icslittle', () => {
     H.tick(1);
     op(p, 3280, 9199, 'loc_6643', 1);
     check('the west doorway lets you through to the jars', [p.z < 9200, reachesNear(0, p.x, p.z, 3286, 9194)], [true, true]);
+    // AND THERE IS A GUARDIAN ON THE SHELVES NOW. "Take the canopic jar. Kill the level 91
+    // guardian that appears, then take the jar" - ics_little_possessedpriest was in the cache at
+    // vislevel 91 with op2=Attack and had never been placed, so the one fight this quest has was
+    // not in it. He comes up the first time a hand goes near a jar and nothing moves off a shelf
+    // until he is down, which is why four jar checks read zero.
+    H.equip(p, { rhand: 'rune_scimitar' });
+    op(p, 3286, 9193, 'ics_little_pot_intestines_multi', 1);
+    const guardian = H.npcNear('ics_little_possessedpriest', p.x, p.z, p.level);
+    check('reaching for a jar brings the possessed priest up', guardian !== null, true);
+    if (guardian) {
+        let gt = 0;
+        H.attackNpc(p, guardian);
+        while (guardian.isActive && gt < 600) {
+            if (!p.target) H.attackNpc(p, guardian);
+            p.levels[3] = 99;
+            H.tick(1);
+            gt++;
+        }
+        H.tick(3);
+        check('  and he goes down to a real fight', [guardian.isActive, gv(p, 'ics_sarcophigi_gotstuffcounter')], [false, 1]);
+    }
     op(p, 3286, 9193, 'ics_little_pot_intestines_multi', 1);
     op(p, 3286, 9194, 'ics_little_pot_liver_multi', 1);
     check('two jars taken, their shelves empty', [H.invCount(p, 'ics_little_canopic_jar_intestines'), H.invCount(p, 'ics_little_canopic_jar_liver'), H.getVarBit(p, 'ics_intestinespot_vis'), H.getVarBit(p, 'ics_liverpot_vis')], [1, 1, 1, 1]);
