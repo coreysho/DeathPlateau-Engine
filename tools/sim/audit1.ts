@@ -19,7 +19,13 @@ const sectionTimes: [string, number][] = [];
 let sectionStart = Date.now();
 let sectionName = '';
 const run = (name: string) => {
-    if (sectionName) sectionTimes.push([sectionName, Date.now() - sectionStart]);
+    if (sectionName) {
+        const ms = Date.now() - sectionStart;
+        sectionTimes.push([sectionName, ms]);
+        // PRINTED AS IT GOES, not only in the summary: a run killed at its cap never reaches the
+        // summary, and the run that gets killed is the one whose timings are wanted.
+        console.log(`  (${sectionName} took ${Math.round(ms / 1000)}s)`);
+    }
     sectionName = '';
     if (want.length !== 0 && !want.includes(name)) return false;
     sectionName = name;

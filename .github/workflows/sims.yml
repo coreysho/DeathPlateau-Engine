@@ -136,8 +136,14 @@ jobs:
           # measurement, which is headroom for a slower box and still a timeout rather than a
           # blank cheque. The cap is a ceiling, not a cost: a sim that finishes early costs what
           # it costs.
+          #
+          # AND audit7 GREW. It used to stop at its first step and take fourteen seconds; now that
+          # Rum Deal, Miscellania, the Garden and the whole of Haunted Mine actually run it takes
+          # 161s on this machine, which is inside the 180s cap by nineteen seconds - and a cap a
+          # sim only just fits inside is a cap that will kill it on a slower box and look exactly
+          # like a failure. Same reason glassblowing has its own.
           case "$n" in
-            glassblowing) cap=600 ;;
+            audit7|glassblowing) cap=600 ;;
             gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
             *) cap=180 ;;
           esac
