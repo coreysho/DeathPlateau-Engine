@@ -61,6 +61,13 @@ export const CHEATS: Cheat[] = [
     // ADMINISTRATOR. Destructive for a live economy, so these stop at 3 and do not promote.
     { name: 'bots', args: '[on|off]', what: "the dev world's bots: what they are all doing, or stop them", rank: 3 },
     { name: 'bot', args: '<spawn|despawn|goto|info|kits|fuzz>', what: 'one bot - spawn it, follow it, read it', rank: 3 },
+    // The other half of ::bot fuzz: its counts name a suspect, and these two watch one. They are
+    // here because the handler runs them and this list is what tells anybody they exist - without
+    // these entries an administrator had both commands and no way to find out, which is what
+    // commandslist caught. The rank is the handler's own (staffModLevel >= 3, the block they sit
+    // in), and there is no staffWorld flag because the handler does not ask for one.
+    { name: 'track', args: '[username]', what: "start capturing a player's input, or list who is being captured", rank: 3 },
+    { name: 'untrack', args: '<username>', what: "stop capturing that player's input", rank: 3 },
     { name: 'faults', args: '[sig|clear]', what: 'the script errors this world has thrown, worst first', rank: 3 },
     { name: 'coverage', args: '[never|write|clear]', what: "which of the build's triggers have ever run", rank: 3 },
     { name: 'bank', what: 'open your bank from anywhere (your bank PIN still applies)', rank: 3 },
