@@ -1441,15 +1441,31 @@ if (run('marim')) {
     console.log("MARIM'S GATE - the way to the three wise monkeys");
     const p = player('marim1', 2802, 2705);
     check('the village is walled off from the Ape Atoll landing', connected(0, 2802, 2705, 2788, 2794, 200), false);
+    // AND THE GATE DOES NOT LET A HUMAN THROUGH ANY MORE, which this block's own comment used to
+    // say it did. The jail has been built since (^mm_jail_cell, 2771,2794): [label,mm_marim_gate]
+    // reads ~mm_is_monkey and sends anybody else to @mm_jail_arrest, which is the quest's own way
+    // of getting you inside the walls. The old pair of checks here walked a human into it and then
+    // asked whether the three wise monkeys were reachable FROM THE CELL - a twenty-one tile pocket
+    // behind a door that wants a lockpick - and reported Marim's geography as broken. Worse, the
+    // check above them passed on the way in: the cell is north of the gate too, so "p.z > 2766"
+    // is true of a player who has just been arrested. The cell's own three checks are audit0's.
     p.teleport(2720, 2764, 0);
     H.tick(2);
-    // Monkey Madness's gate (mm_stage3.rs2) lets anyone through - you arrive a human and have to reach
-    // Garkor before you have a greegree; the elder guards at the palace are what stop a human.
+    let said = H.mesgs.length;
     op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
-    check('through the gate', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
-    check('  and on to the three wise monkeys and the banana tree', [connected(0, p.x, p.z, 2788, 2794, 200), connected(0, p.x, p.z, 2697, 2784, 200)], [true, true]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
-    check('  and back out', p.z < 2766, true);
+    check('a human at the gate is arrested, not let through', [at(p), H.mesgs.slice(said).some(m => m.who === p.username)], [[2771, 2794, 0], true]);
+    // and a monkey walks in, which is what the greegree is for
+    const q = player('marim2', 2720, 2764);
+    // ~mm_is_monkey reads ~mm_greegree_form, which is the mm_transmog_npc param off whatever is
+    // in the right hand - so wearing one is the whole of being a monkey to this gate.
+    H.equip(q, { rhand: 'mm_monkey_greegree_for_normal_monkey' });
+    H.tick(2);
+    said = H.mesgs.length;
+    op(q, 2719, 2766, 'mm_bamboo_largedoor', 1);
+    check('a monkey slips through the gate', [q.z > 2766, walkable(0, q.x, q.z), H.mesgs.slice(said).some(m => m.text.includes('slip through'))], [true, true, true]);
+    check('  and on to the three wise monkeys and the banana tree', [connected(0, q.x, q.z, 2788, 2794, 200), connected(0, q.x, q.z, 2697, 2784, 200)], [true, true]);
+    op(q, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
+    check('  and back out', q.z < 2766, true);
 }
 
 // ==== END

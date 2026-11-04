@@ -112,7 +112,22 @@ jobs:
         newly_red=""
         newly_green=""
         flaky=""
-        i=0
+        # ---- THE WORK LIST, built before anything is sharded, because one file is not always one
+        # piece of work. audit1 is thirteen quests in one file and it takes 2551 SECONDS measured
+        # here, on a machine faster than a runner - so the cap that would cover it (three times
+        # its own measurement, which is this job's rule) is over two hours for one sim, and a cap
+        # that big stops being a timeout at all. It takes section arguments, so it is three pieces
+        # of work instead, grouped off its own per-section timings:
+        #
+        #   watchtower 422s  arrav 370s  hero 343s  mourning 289s  rfd 236s  monk 224s
+        #   demon 205s  waterfall 181s  gobdip 119s  totem 99s  rag 35s  fenk 17s
+        #   scorp 4s  marim 1s
+        #
+        # which groups into 797s, 783s and 965s. Each one gets its own cap AND its own place in
+        # the shard rotation, so they run on three runners at once instead of one runner for
+        # three quarters of an hour.
+        work=/tmp/sim-work.tsv
+        : > "$work"
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
           grep -qE 'process\.exit\([^0-9)]' "$f" || continue
@@ -120,7 +135,22 @@ jobs:
           # broken here, the job simply cannot give these sims what they ask for, and recording
           # them as "failing" would be a lie that also hides a real failure if one ever appears.
           #   pingwire  opens a socket to a live server and fetches /crc0 off its web port
-          case " $SKIP_IN_CI " in *" $(basename "$f" .ts) "*) continue ;; esac
+          b=$(basename "$f" .ts)
+          case " $SKIP_IN_CI " in *" $b "*) continue ;; esac
+          case "$b" in
+            audit1)
+              printf '%s\t%s\t%s\n' "$f" "audit1-watchtower" "watchtower arrav scorp marim" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-hero" "hero mourning totem rag fenk" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-rfd" "rfd monk demon waterfall gobdip" >> "$work"
+              ;;
+            *) printf '%s\t%s\t%s\n' "$f" "$b" "" >> "$work" ;;
+          esac
+        done
+        echo "work items: $(wc -l < "$work")"
+        i=0
+        # `label` is what the output calls this piece of work and what its log is named after;
+        # `n` stays the sim's own name, because known-failing.txt lists sims and not pieces.
+        while IFS="$(printf '\t')" read -r f label args; do
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
@@ -142,9 +172,10 @@ jobs:
           # 161s on this machine, which is inside the 180s cap by nineteen seconds - and a cap a
           # sim only just fits inside is a cap that will kill it on a slower box and look exactly
           # like a failure. Same reason glassblowing has its own.
-          case "$n" in
+          case "$label" in
             audit7|glassblowing) cap=600 ;;
-            gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
+            gwdguards|dpick|gwdanims) cap=1200 ;;
+            audit1-*) cap=2400 ;;
             *) cap=180 ;;
           esac
           # AND TWO OF THEM ASK FOR A SETTING AND REFUSE TO RUN WITHOUT IT. Both say so in one
@@ -157,20 +188,21 @@ jobs:
             *) extra='' ;;
           esac
           rc=0
-          # shellcheck disable=SC2086 - $extra is a deliberate list of VAR=value for env
-          timeout "$cap" env $extra npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          # shellcheck disable=SC2086 - $extra is a deliberate list of VAR=value for env, and
+          # $args a deliberate list of section names for the sim
+          timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
-              echo "::notice title=$n::$n passes now and is still on known-failing.txt"
-              newly_green="$newly_green $n"
+              echo "::notice title=$label::$label passes now and $n is still on known-failing.txt"
+              newly_green="$newly_green $label"
             else
               # SHOW THE DEBT ITS OWN FAILURE. A listed sim used to fail in total silence, which
               # makes every entry on that list undiagnosable from CI: the only way to see why
               # changepassword fails on a runner and passes on a laptop was to take it OFF the
               # list and make the job red on purpose. The group is collapsed, so a quiet night
               # stays quiet and the reason is one click away when somebody wants it.
-              echo "::group::$n (exit $rc, on known-failing.txt)"
-              tail -20 "/tmp/$n.log"
+              echo "::group::$label (exit $rc, $n is on known-failing.txt)"
+              tail -20 "/tmp/$label.log"
               echo "::endgroup::"
             fi
             continue
@@ -188,19 +220,20 @@ jobs:
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
             rc2=0
-            timeout "$cap" env $extra npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            # shellcheck disable=SC2086
+            timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
-              echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
-              flaky="$flaky $n"
+              echo "::notice title=$label::$label failed then passed on a retry - flaky, not counted"
+              flaky="$flaky $label"
               continue
             fi
-            echo "::group::$n (exit $rc, then $rc2 on retry)"
-            tail -40 "/tmp/$n.retry.log"
+            echo "::group::$label (exit $rc, then $rc2 on retry)"
+            tail -40 "/tmp/$label.retry.log"
             echo "::endgroup::"
-            echo "::error title=$n::$n fails twice and is not on known-failing.txt"
-            newly_red="$newly_red $n"
+            echo "::error title=$label::$label fails twice and is not on known-failing.txt"
+            newly_red="$newly_red $label"
           fi
-        done
+        done < "$work"
         [ -n "$flaky" ] && echo "FLAKY, failed then passed:$flaky"
         [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
         # WRITTEN DOWN BEFORE THE EXIT, so the notify job can name the sims rather than say

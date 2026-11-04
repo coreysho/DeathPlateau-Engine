@@ -163,9 +163,32 @@ audit7               # Rum Deal, Throne of Miscellania, Garden of Tranquillity a
 # gives all three". The check predated the lock. It is three checks now and they describe the
 # jail instead of denying it: you wake in the cell, the cell holds you, and the far side of its
 # door is inside Marim.
-audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf, audit1.ts:666).
-                     # Same shape as audit7's "not carrying deal_blindweed" above, so the two
-                     # are probably one bug in how the audit hands itself quest items
+# audit1 is FIXED and off: 307 ok, 0 FAIL, in 2551 seconds. Two causes, and neither was the
+# Gelatinnoth Mother's style-switching mechanic this file spent two entries blaming.
+#
+# SHE WAS FOUGHT BARE-FISTED. The banana step equips mm_monkey_greegree_for_normal_gorilla, which
+# displaced the rune scimitar, and taking the greegree off again left the right hand empty for the
+# rest of the quest. She ended 1400 ticks on 115 and then 67 of her 190 hitpoints across two runs,
+# which is a fist's damage and not a mechanic. With the scimitar back on she reads "killed", the
+# Culinaromancer appears and dies, and Recipe for Disaster finishes with all ten victims, the quest
+# point and the lamp. The fight is now preceded by a check that NAMES the weapon it is fought with.
+#
+# AND MARIM'S GATE ARRESTS YOU. This block's own comment said "the gate lets anyone through"; the
+# jail has been built since, and [label,mm_marim_gate] reads ~mm_is_monkey and sends anybody else
+# to @mm_jail_arrest. So the old pair of checks walked a human into the cell and then asked whether
+# the three wise monkeys were reachable FROM IT - a twenty-one tile pocket behind a door that wants
+# a lockpick - and reported Marim's geography as broken. The check above them passed on the way in,
+# because the cell is north of the gate too and "p.z > 2766" is true of a player who has just been
+# arrested. It is a human who gets arrested and a monkey who slips through now, and the cell's own
+# three checks are audit0's.
+#
+# AND IT IS THREE PIECES OF WORK IN CI, not one. 2551 seconds in one file means the cap this job's
+# own rule asks for - three times the measurement - is over two hours for one sim, and a cap that
+# big stops being a timeout. It takes section arguments, so sims.yml splits it on its own
+# per-section timings (watchtower 422s, arrav 370s, hero 343s, mourning 289s, rfd 236s, monk 224s,
+# demon 205s, waterfall 181s, gobdip 119s, totem 99s, rag 35s, fenk 17s, scorp 4s, marim 1s) into
+# three groups of 797s, 783s and 965s. Each gets its own cap and its own place in the shard
+# rotation, so they run on three runners at once.
 # myrequevillage is FIXED and off: 15 ok, 0 failed. THE WISE OLD MAN PATTERN FOR THE THIRD TIME.
 # myreque2_village.rs2: "an earlier pass added a second one because nobody had looked", so the
 # duplicate CLOSED chest at 3485,3245 was removed and the real one - already OPEN, at 3483,3246 -
