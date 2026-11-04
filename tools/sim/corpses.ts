@@ -1,37 +1,56 @@
-// DOES A DEAD NPC GO AWAY? Asked of the npcs a fuzz run reported as corpses, and of a control group
-// that works, so the answer is a comparison and not a threshold.
+// DOES A DEAD NPC GO AWAY? Asked of the npcs a fuzz run reported as corpses, against a control group
+// that works, in three different situations - because the finding counts alone cannot say whether
+// those npcs are broken or the watcher's threshold is wrong.
 //
 //   npx tsx tools/sim/corpses.ts
 //
-// A 99-bot fuzz run reported four corpses - "still in the world N ticks after its hitpoints reached
-// 0 (npc_del never ran)" - for mm_monkey_guard, mm_oipuis and mm_duke, at 12 and 16 ticks against
-// the watcher's threshold of 10. Two readings were available and the finding counts alone could not
-// separate them: either those npcs do not despawn, or 10 ticks is too tight and the watcher is
-// wrong.
+// A 99-bot run reported four corpses - "still in the world N ticks after its hitpoints reached 0
+// (npc_del never ran)" - for mm_monkey_guard, mm_oipuis and mm_duke, at 12 and 16 ticks against
+// CORPSE_TICKS = 10.
 //
-// WHAT THIS SETTLED. An ordinary monster leaves the world THREE TICKS after its hitpoints reach 0 -
-// goblin, rat and man, the same every run. So CORPSE_TICKS = 10 is three times the norm and the
-// watcher is not crying wolf: 12 and 16 ticks are real anomalies. And mm_duke, killed here where it
-// stands, also goes in three ticks - so whatever produced its corpse in the fuzz run was the
-// situation, not the npc.
+// WHAT THIS SETTLES. An ordinary monster leaves the world THREE TICKS after its hitpoints reach 0,
+// which is what [proc,npc_death] in skill_combat/scripts/npc/npc_death.rs2 should cost:
+// npc_arrivedelay for up to two ticks, then npc_anim, npc_delay(1), npc_del. So CORPSE_TICKS = 10
+// is three times the norm, the watcher is not crying wolf, and 12 and 16 ticks are real anomalies.
+// It also exonerates two of the three suspects: mm_duke and mm_monkey_guard both go in three ticks.
 //
-// WHAT IT DID NOT SETTLE, and says so rather than passing quietly: mm_monkey_guard and mm_oipuis
-// cannot be brought to 0 hitpoints by this probe at all, so it has nothing to say about them. The
-// denominator is printed for that reason - a probe that skips its subject and exits 0 is the trap
+// WHAT IT DOES NOT SETTLE: the cause. Three hypotheses, each the obvious one in turn, each dead:
+//
+//   the npc_findhero chain aborts and takes npc_del with it - which is what the corpse watcher's
+//     own docstring blames for the one live instance it was written for. Ruled out by reading: all
+//     six hooks after the arrivedelay return from THEMSELVES on a failed npc_findhero, not from
+//     npc_death, so a bot that relocated mid-kill does not stop the removal.
+//   npc_arrivedelay waits out a chase route - the one thing a 99-bot world does that a probe does
+//     not, since the bots never stop moving. Ruled out by measurement: killed mid-chase costs at
+//     most ONE extra tick (man 4, goblin and rat still 3).
+//   several attackers at once, so %npc_aggressive_player is not whoever landed the kill - also
+//     something one player cannot produce. Ruled out: a crowd of four changes nothing, and it is
+//     what finally let mm_monkey_guard be killed at all.
+//
+// So the corpse needs something else the fuzz world has and this does not. The untried candidates,
+// in the order they are worth trying: a SPELL kill, which is the bots' single commonest action
+// (61,617 casts in that run, more than any other); an attacker who dies or logs out between the
+// hit and the removal; and an instanced area.
+//
+// mm_oipuis is still untestable here - it cannot be brought to 0 hitpoints even by four max-stat
+// players with dragon scimitars - so this probe says nothing at all about it, and the denominator
+// is printed for that reason. A probe that skips its subject and exits 0 is the trap
 // quest_garden_run fell into, aborting at step 6 and reporting 4 of 5 passing while 83 checks had
 // never run.
 //
-// THREE WRONG TURNS GOT HERE, all of them the probe's own fault and worth leaving written down:
+// FOUR WRONG TURNS GOT HERE, all of them the probe's own and all worth leaving written down:
 //
 //   1. mm_duke died in three ticks on one run and was UNTESTED on the next with nothing changed.
-//      That was an attack roll landing once, and it was briefly reported as a finding. It is not a
-//      measurement until it repeats.
+//      That was an attack roll landing once, and it was briefly reported as a finding. A single
+//      sample is not a measurement.
 //   2. Re-setting hitpoints to 1 every tick, to make the kill certain, stopped EVERYTHING dying -
 //      including the npc that had died before. Reverted.
-//   3. The actual difference was never about those npcs: the controls have trivial defence and die
-//      to an unarmed player at once, while all three suspects carry 130 defence and the probe's
-//      player was holding nothing. Fifty swings, all missing. It wields a dragon scimitar now,
-//      which was enough for mm_duke and not for the other two.
+//   3. The suspects were never unkillable: the controls have trivial defence and die to an unarmed
+//      player at once, while all three carry 130 defence and the probe's player held nothing. It
+//      wields a dragon scimitar now, and a crowd of four got the last one down.
+//   4. A kill the probe never observed at 0 hitpoints was reported as "0 ticks, the same as alone".
+//      That read as a measurement of instant removal; it means only that the death and the removal
+//      both fell between two of the loop's looks. It says "no interval to report" now.
 import * as H from './harness.js';
 import NpcType from '#/cache/config/NpcType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
@@ -94,7 +113,11 @@ function timeToRemoval(name: string): number | null {
             zeroAt = t;
         }
         if (!npc.isActive) {
-            return zeroAt === -1 ? 0 : t - zeroAt;
+            // -2, NOT 0. Reaching here with zeroAt unset means hitpoints were never OBSERVED at 0 -
+            // the death and the removal both happened between two of this loop's looks - so there
+            // is no interval to report. Returning 0 read as "removed instantly, same as alone",
+            // which is a measurement the probe did not make.
+            return zeroAt === -1 ? -2 : t - zeroAt;
         }
     }
     return zeroAt === -1 ? null : -1;
@@ -121,6 +144,150 @@ for (const name of CONTROLS) {
 const worstControl = controlTimes.length ? Math.max(...controlTimes) : 0;
 console.log(`   the slowest ordinary death here is ${worstControl} ticks`);
 
+// ------------------------------------------------------------------ killed while it is chasing
+//
+// WHY THIS SECOND SCENARIO. [proc,npc_death] in skill_combat/scripts/npc/npc_death.rs2 is
+// npc_walk(npc_coord), npc_setmode(none), a handful of hooks, then npc_arrivedelay, then
+// npc_anim(death), npc_delay(1), npc_del. Arrivedelay plus the one tick is where the control
+// group's three ticks come from - so the thing that could stretch it is the ARRIVEDELAY, which
+// waits for the npc's route to finish.
+//
+// The probe above kills an npc standing next to the player. A fuzz run never does: 99 bots walk
+// constantly and an aggressive npc is part-way through a chase when it dies. That is the one
+// difference between the context that reports corpses and the context that does not, so it is the
+// one worth measuring. Every candidate inside the chain was ruled out first - all six hooks after
+// the arrivedelay return from THEMSELVES when npc_findhero fails, not from npc_death, so a bot that
+// relocated mid-kill does not take npc_del with it.
+function timeToRemovalWhileChasing(name: string): number | null {
+    if (NpcType.getId(name) === -1) return null;
+    p.teleport(3222, 3218, 0);
+    H.tick(1);
+    const npc = H.addNpc(name, 3224, 3218);
+    H.tick(1);
+    H.attackNpc(p as never, npc);
+    H.tick(3);
+    // Walk out of its reach so it has a route to run, then come back and finish it mid-chase.
+    p.teleport(3222 + 9, 3218 + 9, 0);
+    H.tick(6);
+    p.teleport(npc.x + 1, npc.z, 0);
+    H.tick(1);
+    npc.levels[NpcStat.HITPOINTS] = 1;
+    let zeroAt = -1;
+    for (let t = 0; t < 400; t++) {
+        if (zeroAt === -1 && npc.isActive && t % 8 === 0) {
+            npc.levels[NpcStat.HITPOINTS] = 1;
+            H.attackNpc(p as never, npc);
+        }
+        H.tick(1);
+        if (zeroAt === -1 && npc.levels[NpcStat.HITPOINTS] === 0) {
+            zeroAt = t;
+        }
+        if (!npc.isActive) {
+            // -2, NOT 0. Reaching here with zeroAt unset means hitpoints were never OBSERVED at 0 -
+            // the death and the removal both happened between two of this loop's looks - so there
+            // is no interval to report. Returning 0 read as "removed instantly, same as alone",
+            // which is a measurement the probe did not make.
+            return zeroAt === -1 ? -2 : t - zeroAt;
+        }
+    }
+    return zeroAt === -1 ? null : -1;
+}
+
+console.log('');
+console.log('-- the control group again, but killed mid-chase');
+for (const name of CONTROLS) {
+    const n = timeToRemovalWhileChasing(name);
+    if (n === null) continue;
+    if (n === -1) {
+        console.log(`  FAIL ${name} was STILL in the world 400 ticks after dying mid-chase`);
+        bad++;
+    } else if (n === -2) {
+        console.log(`  --   ${name} mid-chase: died and was removed between two looks, so no interval to report`);
+    } else if (n > worstControl) {
+        console.log(`  >>>> ${name} took ${n} ticks mid-chase, against ${worstControl} standing still`);
+        ok++;
+    } else {
+        console.log(`  ok   ${name} mid-chase is ${n} ticks, the same as standing still`);
+        ok++;
+    }
+}
+
+// ------------------------------------------------------------- killed with a crowd on it
+//
+// THE LAST CANDIDATE THAT FITS THE CONTEXT. 99 bots in one place means several of them attack the
+// same npc, and npc_death reads %npc_aggressive_player - ONE player - for its death sound, while
+// npc_findhero picks the hero out of whoever damaged it. A kill where the damage came from several
+// players, and the one the npc was aggressive towards is not the one that landed the last hit, is
+// something a single-player probe cannot produce at all.
+function timeToRemovalWithCrowd(name: string, others: { teleport(x: number, z: number, level: number): void }[]): number | null {
+    if (NpcType.getId(name) === -1) return null;
+    p.teleport(3222, 3218, 0);
+    H.tick(1);
+    const npc = H.addNpc(name, 3224, 3218);
+    H.tick(1);
+    // Everybody piles on, so the npc has several attackers and picks one to be aggressive towards.
+    for (const o of others) {
+        o.teleport(npc.x, npc.z + 1, 0);
+    }
+    H.tick(1);
+    for (const o of others) {
+        H.attackNpc(o as never, npc);
+    }
+    H.attackNpc(p as never, npc);
+    H.tick(4);
+    let zeroAt = -1;
+    for (let t = 0; t < 400; t++) {
+        if (zeroAt === -1 && npc.isActive && t % 8 === 0) {
+            npc.levels[NpcStat.HITPOINTS] = 1;
+            H.attackNpc(p as never, npc);
+            for (const o of others) {
+                H.attackNpc(o as never, npc);
+            }
+        }
+        H.tick(1);
+        if (zeroAt === -1 && npc.levels[NpcStat.HITPOINTS] === 0) {
+            zeroAt = t;
+        }
+        if (!npc.isActive) {
+            // -2, NOT 0. Reaching here with zeroAt unset means hitpoints were never OBSERVED at 0 -
+            // the death and the removal both happened between two of this loop's looks - so there
+            // is no interval to report. Returning 0 read as "removed instantly, same as alone",
+            // which is a measurement the probe did not make.
+            return zeroAt === -1 ? -2 : t - zeroAt;
+        }
+    }
+    return zeroAt === -1 ? null : -1;
+}
+
+console.log('');
+console.log('-- the control group again, with three more players hitting it');
+const crowd: { teleport(x: number, z: number, level: number): void }[] = [];
+for (let i = 0; i < 3; i++) {
+    const other = H.makePlayer('mob' + i, 3230 + i, 3218) as unknown as { teleport(x: number, z: number, level: number): void; applyDamage: (d: number) => void };
+    H.tick(1);
+    H.maxOut(other as never);
+    H.equip(other as never, { rhand: 'dragon_scimitar' });
+    other.applyDamage = function () {};
+    crowd.push(other);
+}
+H.tick(2);
+for (const name of CONTROLS) {
+    const n = timeToRemovalWithCrowd(name, crowd);
+    if (n === null) continue;
+    if (n === -1) {
+        console.log(`  FAIL ${name} was STILL in the world 400 ticks after dying in a crowd`);
+        bad++;
+    } else if (n === -2) {
+        console.log(`  --   ${name} in a crowd: died and was removed between two looks, so no interval to report`);
+    } else if (n > worstControl) {
+        console.log(`  >>>> ${name} took ${n} ticks in a crowd, against ${worstControl} alone`);
+        ok++;
+    } else {
+        console.log(`  ok   ${name} in a crowd is ${n} ticks, the same as alone`);
+        ok++;
+    }
+}
+
 console.log('');
 console.log('-- the four the fuzz run reported');
 for (const name of SUSPECTS) {
@@ -131,8 +298,10 @@ for (const name of SUSPECTS) {
         continue;
     }
     if (n === -1) {
-        console.log(`  FAIL ${name} was STILL in the world 120 ticks after dying - npc_del never ran`);
+        console.log(`  FAIL ${name} was STILL in the world 400 ticks after dying - npc_del never ran`);
         bad++;
+    } else if (n === -2) {
+        console.log(`  --   ${name}: died and was removed between two looks, so no interval to report`);
     } else if (n > worstControl) {
         console.log(`  FAIL ${name} took ${n} ticks to leave, against ${worstControl} for an ordinary monster`);
         bad++;
