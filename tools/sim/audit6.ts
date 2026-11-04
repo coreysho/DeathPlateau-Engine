@@ -247,33 +247,71 @@ console.log('MOUNTAIN DAUGHTER');
     H.setVarBit(p, V, 0);
     H.equip(p, { rhand: 'rune_scimitar' });
 
+    // THE SLIDE IS WATCHED, which is the camp's whole point and is newer than this block was.
+    // [oploc1,mdaughter_rockslide] refuses from the SOUTH while the quest has not started - "a
+    // spear comes over it" - and an outsider's way in is a rope round the boulder on the ledge
+    // above. The old pair of checks here opped the slide at stage 0 and read a player who had not
+    // moved as a wrong landing, then read the SECOND op - from the same tile, refused the same way
+    // - as "back south, free tile" and passed it. A check that passes because nothing happened is
+    // worse than the one that failed beside it.
+    let from = H.mesgs.length;
     op(p, 2760, 3658, 'mdaughter_rockslide');
-    check('rockslide from the south: lands north of it, on a free tile', [at(p), free(p)], [[2761, 3660, 0], true]);
-    op(p, 2760, 3658, 'mdaughter_rockslide');
-    check('rockslide from the north: back south, free tile', [at(p), free(p)], [[2761, 3657, 0], true]);
-    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('the slide turns an outsider back, and does not move them', [at(p), saidSince(p, from, 'not letting you in')], [[2761, 3657, 0], true]);
+    H.give(p, 'rope');
+    p.teleport(2765, 3665, 0); // the strip of ledge above the path, reached by the west route up
+    H.tick(1);
+    useOn(p, 2765, 3666, 'mdaughter_cliff_boulder', 'rope');
+    check('  a rope round the cliff boulder drops you into the camp, on a free tile', [p.z > 3660, free(p)], [true, true]);
+    check('  and the rope is coiled up again at the bottom rather than taken', H.invCount(p, 'rope'), 1);
 
     // Hamal is in a tent with a closed flap
     const inTent = reach(0, p.x, p.z);
     check('with the flap shut Hamal cannot be walked to', inTent(2811, 3673), false);
-    const from = H.mesgs.length;
+    from = H.mesgs.length;
+    p.teleport(2804, 3672, 0);
+    H.tick(1);
     op(p, 2805, 3672, 'mdaughter_tent_door');
     check('  the tent flap opens (no "Nothing interesting happens")', [saidSince(p, from, 'Nothing interesting'), locAt(2805, 3672, 0, 'mdaughter_tent_door')], [false, false]);
-    check('  and Hamal answers from across the camp, walking in', walkTalk(p, 'mdaughter_hamal', [1]), true);
+    // TWO MENUS, NOT ONE: a p_choice3 ("Why is everyone so hostile?") and then a p_choice2 ("I
+    // could look for her."), and the second is the one that starts the quest. One pick left the
+    // second menu unanswered, and the throw it caused reads as "unexpected menu: multi3" seventy
+    // lines further on, where the next conversation walked into the opening choice again.
+    check('  and Hamal answers from across the camp, walking in', walkTalk(p, 'mdaughter_hamal', [1, 1]), true);
     check('  quest started', H.getVarBit(p, V), 10);
 
-    // the pearls: the bushes on White Wolf Mountain
+    // AND NOW THE SLIDE LETS YOU THROUGH, which is the last line he says: "I will tell the slide
+    // you may come and go." Landing tiles are what this block is for, and they can only be read
+    // once the camp knows you.
+    p.teleport(2761, 3657, 0);
+    H.tick(1);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('rockslide from the south: lands north of it, on a free tile', [at(p), free(p)], [[2761, 3660, 0], true]);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('  and from the north: back south, free tile', [at(p), free(p)], [[2761, 3657, 0], true]);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+
+    // THE PEARLS, and the thorns are the point of them: [oploc3,mdaughter_white_pearl_bush] reads
+    // inv_getobj(worn, ^wearpos_hands) and takes four hitpoints off anybody reaching in bare.
+    // Forty bare-handed picks came away with nothing, and the check above them said the bush was
+    // broken. Both halves are asserted now, so a glove check that stops working cannot read as a
+    // bush that stopped fruiting.
     const b = player('md_bush', 2849, 3496);
+    from = H.mesgs.length;
+    op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3);
+    check('bare hands come away with nothing, and it says why', [H.invCount(b, 'mdaughter_white_pearl_fruit'), saidSince(b, from, 'thorns go straight through')], [0, true]);
+    H.give(b, 'leather_gloves');
+    H.equip(b, { hands: 'leather_gloves' });
+    H.tick(1);
     let picks = 0;
     for (let i = 0; i < 40 && H.invCount(b, 'mdaughter_white_pearl_fruit') < 3; i++) {
         op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3);
         picks++;
     }
     console.log(`  three white pearls took ${picks} picks of the bush`);
-    check('white pearls can be picked from the thorny bushes', H.invCount(b, 'mdaughter_white_pearl_fruit') >= 3, true);
-    H.give(p, 'mdaughter_white_pearl_fruit', 3);
-    talk(p, 'mdaughter_hamal');
-    check('three pearls: Hamal speaks plainly (relations 1)', [H.getVarBit(p, 'mdaughter_relations_var'), H.invCount(p, 'mdaughter_white_pearl_fruit')], [1, 0]);
+    check('white pearls can be picked from the thorny bushes with gloves on', H.invCount(b, 'mdaughter_white_pearl_fruit') >= 3, true);
+    // and eating one is the only way anybody has ever got a seed out of a White Pearl
+    held(b, 'mdaughter_white_pearl_fruit', 3);
+    check('  and eating one leaves the seed', H.invCount(b, 'mdaughter_white_pearl_seed'), 1);
     talk(p, 'mdaughter_svidi');
     check('Svidi found', H.getVarBit(p, V), 20);
     talk(p, 'viking_brundt');

@@ -300,23 +300,38 @@ console.log('THE HAND IN THE SAND');
     check("desk searched: Sandy's rota, Sandy back at his desk, no rota of Bert's so stage 30", [H.invCount(p, 'handsand_rota_sandy'), gv(p, 'handsand_sandy_multi'), gv(p, 'handsand_quest')], [1, 0, 30]);
     talk(p, 'handsand_bert');
     check("lost Bert's rota: he gives another copy", H.invCount(p, 'handsand_rota_bert'), 1);
-    // the sand pit
+    // THE PIT IS NOT WHERE THE REST OF HIM IS, which this pair of checks was written before.
+    // quest_handsand.rs2 was rebuilt on 2026-10-22 and says so in as many words: "the rest of
+    // Clarence is NOT down here. The hand came up in a sack, and every other sack that week went
+    // out of Yanille to the furnaces on Entrana - which is where Mazion is". Mazion hands the head
+    // over at ^handsand_pit_filled (75), forty-five stages past here, and the pit's spade branch
+    // at ^handsand_rarve now says that in a mesbox. What the pit is good for is a bucket of sand.
     H.give(p, 'spade');
+    H.give(p, 'bucket_empty');
     p.teleport(2543, 3102, 0);
     H.tick(1);
-    useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'spade');
-    check("spade in the sand pit: the wizard's head", H.invCount(p, 'handsand_wizhead'), 1);
-    // Rarve compares the rotas now, then takes the head
+    const dug = useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'spade');
+    check('a spade in the sand pit turns up nothing else, and says where the rest of him went', [H.invCount(p, 'handsand_wizhead'), dug.some(t => t.includes('went out of it in a sack'))], [0, true]);
+    useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'bucket_empty');
+    check('  and a bucket in it gets a bucket of sand, which is what Rarve wants later', [H.invCount(p, 'bucket_sand'), H.invCount(p, 'bucket_empty')], [1, 0]);
+
+    // RARVE TAKES A SCROLL, NOT A HEAD. Two rotas that disagree are "a clerical error, and a
+    // magistrate will say so": what buys the scrying orb is the glowing scroll Bert was handed on
+    // the night he cannot remember, and Bert only parts with it once the rotas are side by side on
+    // his table - he takes both of them in exchange. The orb comes on its own; the truth serum is
+    // Betty's, below, which is why the old check wanting all three at once could never pass.
     p.teleport(2599, 3084, 0);
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
     p.teleport(2600, 3087, 0);
     talk(p, 'zogre_human_zavistic_rarve');
-    check(
-        'Rarve: rotas compared, head taken, kit given (stage 50)',
-        [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_wizhead'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_scroll_magic')],
-        [50, 0, 1, 1, 1]
-    );
+    check('Rarve compares the rotas himself: stage 40, and he asks what else Bert had', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage')], [40, 0]);
+    talk(p, 'handsand_bert');
+    check("  Bert's drawer: the glowing scroll, and he keeps both rotas", [H.invCount(p, 'handsand_scroll_magic'), H.invCount(p, 'handsand_rota_bert') + H.invCount(p, 'handsand_rota_sandy')], [1, 0]);
+    p.teleport(2600, 3087, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('the scroll buys the scrying orb: stage 50, and the scroll stays with him', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_scroll_magic'), H.invCount(p, 'handsand_wizhead')], [50, 1, 0, 0]);
 
     // Betty and the lens
     p.teleport(3014, 3256, 0);
