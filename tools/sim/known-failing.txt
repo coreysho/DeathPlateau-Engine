@@ -20,9 +20,11 @@
 # So the real state was 266 of 303 passing. That figure is from the unseeded baseline and has not
 # been re-taken in full since; the entry count below is the number that is trusted.
 
-# ---- AND IT IS ONE ENTRY NOW. Thirty-seven when the list was built, eleven after the dice were
-# seeded, and one after the eleven were worked through: changepassword, which has never failed on
-# this machine and so cannot be reproduced here. Of the ten that came off:
+# ---- AND IT IS EMPTY NOW. Thirty-seven when the list was built, eleven after the dice were
+# seeded, one after the eleven were worked through, and none after changepassword turned out to
+# need a database that a fresh checkout has no way to have (its note is at the bottom). An empty
+# list is not a finished suite - it means every sim that fails today fails loudly, which is what
+# this file was for. Of the eleven that came off:
 #
 #   THREE WERE BUGS IN THE GAME.  a random event ending a temple trek; a lost recording getting
 #                                 the orb back but not the serum its own note promises; and a pair
@@ -388,24 +390,30 @@
 #                                                             collision. FIXED
 #   quest_ikov_run                                            the roll, and diagnosed below
 #
-# changepassword is the one that survives: it passes here on seed 1 and still failed on a runner
-# in the fifth run, on that same seed. Same engine, same content, same dice, different answer - so
-# whatever it is, it is the environment and not the game.
+# changepassword is FIXED and off, and the list is EMPTY. "Same engine, same content, same dice,
+# different answer - so whatever it is, it is the environment and not the game" was right about
+# where to look and wrong about what to look for. It is not timing at all.
 #
-# STILL HERE, BUT NO LONGER UNLOOKED-AT, and it cannot be reproduced on this machine - which is
-# the whole of what is known about it. What was found by reading is a mechanism that fits the
-# shape exactly: the checks that cross into the login worker were given five seconds, that worker
-# is a tsx-compiled thread which does not exist until the first message reaches it, and a timeout
-# does not cost its own check alone - World.onLoginMessage is what clears the username from
-# World.passwordChanges, so an answer that has not arrived makes every later request read "Your
-# last password change is still being processed." One slow round trip therefore fails every check
-# after it, which is what "passes on one machine and not the other" looks like from here.
+# changepassword is the only sim that uses the REAL account table: it deletes its two accounts,
+# reads the stored bcrypt hash back to prove an unchanged password is unchanged, and checks ::ban
+# and ::mute persist. DB_BACKEND defaults to sqlite, which is db.sqlite in the working directory,
+# and db.sqlite is GITIGNORED - so a laptop has one from running the server and a fresh checkout
+# has none, and Kysely throws on the first query. That is the whole of "passes on a laptop, fails
+# on a runner", and the runner's log said so all along: a query dump with a WhereNode of 'pwtest'.
 #
-# So: a warm-up round trip where nothing is measured, a minute to answer instead of five seconds,
-# and a printed line naming the request that went unanswered and whether the lock is still held.
-# Nothing correct is made to pass by waiting longer - the real work is two bcrypt hashes. If this
-# fails again the next run says which request it was, which is the thing that was missing.
-changepassword
+# Proved both ways rather than argued. db.sqlite moved aside on this machine: the same failure as
+# the runner. Migrated from nothing: 14 ok, 0 failed. sims.yml migrates one now, next to the login
+# key it already makes for exactly the same reason - another gitignored thing a fresh checkout
+# lacks, which killed this job's first run in forty seconds.
+#
+# AND IT CAME OFF ON CI'S WORD, not mine: "NOW PASSING, take them off the list: changepassword".
+#
+# What was done to this sim before that - a warm-up round trip, a minute to answer instead of five
+# seconds, a printed line naming the unanswered request - was all treating a timing problem it
+# never had. It is kept because a minute costs nothing when nothing is wrong and the diagnostic is
+# worth having, but it fixed nothing, and the reasoning above it was a story that fit the shape
+# without ever being tested. The lesson is the one at the top of this file: the log had the answer
+# in it, and it took reading the log instead of reasoning about the sim.
 
 # quest_ikov_run is FIXED and off: all five seeds pass, including the four that never had.
 # [opobj3,ikov_staffofarmardyl] runs npc_huntall(coord, 5, 1) BEFORE it gives you anything and
