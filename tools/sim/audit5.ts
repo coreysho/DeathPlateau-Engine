@@ -431,8 +431,26 @@ console.log('THE HAND IN THE SAND');
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
     p.teleport(2600, 3087, 0);
+    // AND THE QUEST DOES NOT END HERE ANY MORE. Rarve plays the recording and then asks for five
+    // earth runes and a bucket of Yanille sand to refill Bert's pit (^handsand_pit_filled, 75),
+    // and after that for the rest of Clarence, which is on Entrana with Mazion. 80 is three steps
+    // further on than this check thought. quest_handsand_run.ts walks all of it; what is handed
+    // over here is the two items, because the point of THIS check is that he takes the orb.
+    H.give(p, 'earthrune', 5);
+    H.give(p, 'bucket_sand', 1);
     talk(p, 'zogre_human_zavistic_rarve');
-    check('Rarve takes the orb: complete (80), +1 quest point', [gv(p, 'handsand_quest'), qp(p) - qp0], [80, 1]);
+    check('Rarve plays the recording and fills the pit: stage 75, the orb gone', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_recording')], [75, 0]);
+    p.teleport(2817, 3345, 0);
+    H.tick(1);
+    talk(p, 'handsand_naziom');
+    check('Mazion has had the rest of Clarence behind the furnace for a year', H.invCount(p, 'handsand_wizhead'), 1);
+    p.teleport(2599, 3084, 0);
+    H.tick(1);
+    op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
+    p.teleport(2600, 3087, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('Rarve takes the head: complete (80), +1 quest point', [gv(p, 'handsand_quest'), qp(p) - qp0], [80, 1]);
     // the journal has text at the end
     H.ifButton(p, 'questlist:handsand');
     H.tick(1);
@@ -461,8 +479,12 @@ console.log('ONE SMALL FAVOUR');
     H.tick(1);
     op(p, 2699, 3476, 'loc_1750', 1);
     check('ground floor ladder: first floor', p.level, 1);
+    // THE LADDER'S OWN TILE IS 2700,3476 and you land BESIDE it: a climb cannot put you on the
+    // ladder. Measured off the map rather than assumed, which is also where the op below gets its
+    // coordinate - favour_seer_laddertop is at 2700,3476, not 2699,3476, and clicking the wrong
+    // tile threw "no favour_seer_laddertop at 2699,3476,3" and took the rest of the quest with it.
     op(p, 2699, 3476, 'laddermiddle', 2);
-    check('first floor ladder, Climb-up: the weathervane platform on level 3', at(p), [2700, 3476, 3]);
+    check('first floor ladder, Climb-up: beside the ladder on the weathervane platform', at(p), [2700, 3475, 3]);
     check('  and the vane is reachable from there', connected(3, p.x, p.z, 2702, 3475) || connected(3, p.x, p.z, 2701, 3476), true);
     op(p, 2702, 3476, 'osf_weathervane', 5);
     check('Search the vane: three broken parts, stage 10', [gv(p, 'onesmallfavour'), H.invCount(p, 'favour_directionals_broken'), H.invCount(p, 'favour_ornament_broken'), H.invCount(p, 'favour_pillar_broken')], [10, 1, 1, 1]);
@@ -474,9 +496,9 @@ console.log('ONE SMALL FAVOUR');
     // ~climb_ladder, so the player is still walking onto the tile when op() returns - it works from
     // any side, and from any of them it wants about a dozen ticks to finish. Checking straight after
     // the click reads the player a tile short and still on the platform.
-    p.teleport(2700, 3476, 3); // beside it: the two vane searches above leave the player across the platform
+    p.teleport(2700, 3475, 3); // beside it: the two vane searches above leave the player across the platform
     H.tick(1);
-    op(p, 2699, 3476, 'favour_seer_laddertop', 1);
+    op(p, 2700, 3476, 'favour_seer_laddertop', 1);
     H.tick(12);
     check('back down the roof ladder: first floor, inside the room', [at(p), connected(1, p.x, p.z, 2701, 3474)], [[2700, 3476, 1], true]);
     op(p, 2699, 3476, 'laddermiddle', 3);

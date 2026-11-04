@@ -11,7 +11,30 @@ await H.boot();
 H.loginOrder();
 
 const want = process.argv.slice(2);
-const run = (name: string) => want.length === 0 || want.includes(name);
+// AND SAY HOW LONG EACH SECTION TOOK. This sim is thirteen quests and the slowest thing in the
+// suite; "audit1 timed out" says nothing about which of them to look at, and the cap in
+// .github/workflows/sims.yml has to be set from a measurement rather than a guess. One line per
+// section at the end, worst first.
+const sectionTimes: [string, number][] = [];
+let sectionStart = Date.now();
+let sectionName = '';
+const run = (name: string) => {
+    if (sectionName) sectionTimes.push([sectionName, Date.now() - sectionStart]);
+    sectionName = '';
+    if (want.length !== 0 && !want.includes(name)) return false;
+    sectionName = name;
+    sectionStart = Date.now();
+    return true;
+};
+function reportSectionTimes() {
+    if (sectionName) sectionTimes.push([sectionName, Date.now() - sectionStart]);
+    sectionName = '';
+    console.log('');
+    console.log('SECONDS PER SECTION, worst first');
+    for (const [name, ms] of [...sectionTimes].sort((a, b) => b[1] - a[1])) {
+        console.log(`  ${String(Math.round(ms / 1000)).padStart(5)}s  ${name}`);
+    }
+}
 
 /** The quest list row's journal, as text. */
 function journal(p: Player, com: string): string {
@@ -1424,5 +1447,6 @@ if (run('marim')) {
 }
 
 // ==== END
+reportSectionTimes();
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

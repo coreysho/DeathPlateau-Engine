@@ -1,5 +1,4 @@
 import CategoryType from '#/cache/config/CategoryType.js';
-import { toBase37 } from '#/util/JString.js';
 import { opHeldUAlternate } from '#/engine/script/OpHeldUTrigger.js';
 // Shared helpers for the quest audit sim (audit1.ts): chat driving, loc/npc clicks with real routes,
 // item-on-loc/npc, walkability floods and a dead-op scan over an area.
@@ -46,18 +45,8 @@ let bucket = 1;
  * Every sim in this directory builds usernames out of whatever it is iterating over, so the check
  * belongs here rather than in any one of them.
  */
-const usernames = new Map<string, string>();
 export function player(name: string, x: number, z: number, level = 0) {
-    // TWELVE CHARACTERS, AND THE REST IS DROPPED. toBase37 stops at 12 and skips every character
-    // that is not a letter or a digit, so 'human_zombie_monkey_small' and
-    // 'human_zombie_monkey_large' are the SAME account. Two names that collide mean the second
-    // login is refused as a duplicate, which is where this check comes from.
-    const key = String(toBase37(name));
-    const clash = usernames.get(key);
-    if (clash !== undefined && clash !== name) {
-        throw new Error(`username "${name}" is the same account as "${clash}": toBase37 keeps only the first 12 letters and digits`);
-    }
-    usernames.set(key, name);
+    // the colliding-name half of this lives in H.makePlayer, so every sim gets it
     const p = H.makePlayer(name, x, z, bucket++);
     H.tick(1);
     if (!p.isActive || !p.isValid()) {

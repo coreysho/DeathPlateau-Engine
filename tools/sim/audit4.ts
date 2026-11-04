@@ -499,48 +499,31 @@ guard('makinghistory', () => {
     check('the outpost is shut: Jorral cannot be reached on foot', reachesNear(0, 2430, 3347, 2437, 3347), false);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
     check('the front doors let you in', [p.x >= 2434, reachesNear(0, p.x, p.z, 2437, 3347)], [true, true]);
+    // STAGE 1 AND NO SCROLL. He hands nothing over at the start any more: the quest is three
+    // strands now - a trader, a warrior and a ghost, each with its own progress var - and
+    // makinghistory_scroll1 is the timeline you bring BACK from Droalak. quest_makinghistory_run
+    // plays all three and passes, so the strands below have been deleted rather than ported and
+    // what is kept is this block's map: the outpost doors, Melina's door and the museum.
     talkHere(p, 'makinghistory_jorral', [1, 1]);
-    check('Jorral: started, the timeline', [gv(p, 'makinghistory_prog'), H.invCount(p, 'makinghistory_scroll1')], [1, 1]);
+    check('Jorral starts it: stage 1, and he hands over nothing', [gv(p, 'makinghistory_prog'), H.invCount(p, 'makinghistory_scroll1')], [1, 0]);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
     check('and back out', p.x <= 2433, true);
 
-    p.teleport(2641, 3673, 0);
-    H.tick(1);
-    talk(p, 'viking_fur_monger');
-    check('the fur trader: the sealed letter', [gv(p, 'makinghistory_trader_prog'), H.invCount(p, 'makinghistory_letter2')], [4, 1]);
-    del(p, 'makinghistory_letter2');
-    talk(p, 'viking_fur_monger');
-    check('a lost letter is copied out again', H.invCount(p, 'makinghistory_letter2'), 1);
-    p.teleport(2675, 3673, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_blanin');
-    p.teleport(2658, 3702, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_dron');
-    p.teleport(2675, 3673, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_blanin');
-    check('Blanin, Dron, Blanin: the letter to the king', [gv(p, 'makinghistory_warr_prog'), H.invCount(p, 'makinghistory_letter1')], [4, 1]);
-
+    // Melina's door is this block's, because no run walks it: she is shut in and Droalak cannot
+    // be talked round without getting in to her.
     H.equip(p, { front: 'amulet_of_ghostspeak' });
     p.teleport(3676, 3475, 0);
     H.tick(1);
     check('Melina is shut in her house', connected(0, p.x, p.z, 3674, 3483), false);
     op(p, 3676, 3476, 'ahoy_harbour_door', 1);
     check('her door lets you in', connected(0, p.x, p.z, 3674, 3483), true);
-    for (const who of ['makinghistory_droalak_multi', 'makinghistory_melina_multi', 'makinghistory_droalak_multi', 'makinghistory_melina_multi', 'makinghistory_droalak_multi']) {
-        p.teleport(who.includes('droalak') ? 3659 : 3674, who.includes('droalak') ? 3469 : 3482, 0);
-        H.tick(1);
-        talk(p, who);
-    }
-    check("Droalak and Melina, reconciled: Bennath's journal", [gv(p, 'makinghistory_ghost_prog'), H.invCount(p, 'makinghistory_journal')], [5, 1]);
 
+    // and the museum, which opens at the end. The three strands that get there are the run's.
     p.teleport(2430, 3347, 0);
     H.tick(1);
+    sv(p, 'makinghistory_prog', 4); // ^mh_complete
+    sv(p, 'makinghistory_objloc', 1);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
-    talkHere(p, 'makinghistory_jorral');
-    H.tick(3);
-    check('Jorral: complete, 3 QP, the museum opens', [gv(p, 'makinghistory_prog'), gv(p, 'qp') >= 3, H.getVarBit(p, 'makinghistory_objloc')], [3, true, 1]);
     check('the storeroom is behind a shut door', reachesNear(0, p.x, p.z, 2437, 3344), false);
     p.teleport(2436, 3346, 0);
     H.tick(1);
@@ -583,9 +566,14 @@ guard('myreque2', () => {
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
     check('  and back in once he has', f.x, 3474);
 
-    sv(p, 'routequest', 5); // ^route_complete
+    // ^route_complete IS 8, NOT 5. In Search of the Myreque was renumbered and this kept setting
+    // 5, so [label,myreque2_veliaf] took the `%routequest < ^route_complete` branch and sent the
+    // player to @myreque2_veliaf_idle - a line of dialogue with no choice in it - and the pick
+    // this step was holding had nowhere to land. "menus not reached: 1" was the whole block
+    // falling over on a stage number.
+    sv(p, 'routequest', 8); // ^route_complete
     const v0 = player('myreque2v', 3505, 9837);
-    sv(v0, 'routequest', 5);
+    sv(v0, 'routequest', 8);
     talk(v0, 'route_veliaf_hurtz', [1]);
     check('Veliaf in the Hollows starts it: stage 10', gv(v0, 'myreque_2_quest'), 10);
     sv(p, 'myreque_2_quest', 10);

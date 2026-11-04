@@ -694,10 +694,10 @@ if (want('hauntedmine')) {
     H.tick(1);
     useOn(p, 2778, 4506, 'hauntedmine_puzzle_cart', 'glowing_fungus');
     check('  and into the loading cart, where it stays lit', H.invCount(p, 'glowing_fungus'), 0);
-    p.teleport(2770, 4523, 0);
-    H.tick(1);
     // "Not yet." - with a loaded cart the board offers to start the run, and this first read is
     // only here for the diagram; the run itself is below, after the points are thrown.
+    p.teleport(2770, 4523, 0);
+    H.tick(1);
     op(p, 2769, 4522, 'hauntedmine_points_info', 1, [2]);
     for (const [n, x, z] of [
         [1, 2785, 4517],
@@ -706,7 +706,14 @@ if (want('hauntedmine')) {
         [6, 2768, 4533],
         [8, 2770, 4533]
     ] as [number, number, number][]) {
-        // the two banks are a long walk apart - further than one click's path search - so walk over first
+        // THREE BANKS, THREE WALKS. op() gives a click three idle ticks and these levers are
+        // sixteen tiles apart in a twisting chamber, so a click made from the wrong end of it is
+        // a player still walking when the step moves on - which is how 1, 3 and 4 came out
+        // unthrown (160 instead of 173) once the board read above moved the player west.
+        if (n === 1) {
+            p.teleport(2784, 4516, 0);
+            H.tick(1);
+        }
         if (n === 6) {
             p.teleport(2767, 4532, 0);
             H.tick(1);

@@ -455,7 +455,9 @@ console.log('MOUNTAIN DAUGHTER');
     // and Asleif is at the foot of the pillars, which is the thing he was standing over. The
     // ending - Hamal seeing her, Ragnar's necklace, the goat pen and the cairn - is
     // quest_mdaughter_run's; what this block is for is that the cave gives her up at all.
-    check('  and Asleif is on the floor at the foot of the pillars', hasObjOnFloor(2786, 10081, 0, 'mdaughter_daughter_corpse', p) || hasObjOnFloor(2787, 10082, 0, 'mdaughter_daughter_corpse', p), true);
+    // ^mdaughter_corpse_pile is 0_43_157_36_30, which is 2788,10078: "nothing in the map puts her
+    // there, so she goes on the floor when the thing that carried her off is dead".
+    check('  and Asleif is on the floor at the foot of the pillars', hasObjOnFloor(2788, 10078, 0, 'mdaughter_daughter_corpse', p), true);
 }
 
 // ============================================================================== Spirits of the Elid
@@ -469,9 +471,20 @@ console.log('SPIRITS OF THE ELID');
     check('Ghaslor', H.getVarBit(p, 'elidquest'), 20);
     p.teleport(3419, 2930, 0);
     H.tick(1);
+    // TWO TORN ROBES, AND A NEEDLE AND THREAD. The cupboard used to hand out the finished robes;
+    // it hands out elid_robetop_torn and elid_robebottoms_torn now - "This robe is too torn to
+    // wear.", which is what the cache says about them and what they were referenced by nothing
+    // for - and sewing both of them is what reaches ^elid_has_robes. The whole of the rest of
+    // this quest block was failing because the player never had a wearable robe.
     op(p, 3420, 2930, 'elid_cupboard_closed_withrobes');
     op(p, 3420, 2930, 'elid_cupboard_open_withrobes', 2);
-    check('robes from the cupboard', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_robetop'), H.invCount(p, 'elid_robebottoms')], [25, 1, 1]);
+    check('torn robes from the cupboard, and the stage has not moved for them', [H.invCount(p, 'elid_robetop_torn'), H.invCount(p, 'elid_robebottoms_torn'), H.getVarBit(p, 'elidquest')], [1, 1, 20]);
+    H.give(p, 'needle');
+    H.give(p, 'thread', 2);
+    useHeld(p, 'needle', 'elid_robetop_torn');
+    check('  one sewn: still 20, because the shrine wants both', [H.invCount(p, 'elid_robetop'), H.getVarBit(p, 'elidquest')], [1, 20]);
+    useHeld(p, 'needle', 'elid_robebottoms_torn');
+    check('robes from the cupboard, sewn: stage 25', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_robetop'), H.invCount(p, 'elid_robebottoms')], [25, 1, 1]);
     H.clearInv(p);
     H.equip(p, { torso: 'elid_robetop', legs: 'elid_robebottoms' });
     p.teleport(3374, 2904, 0);
