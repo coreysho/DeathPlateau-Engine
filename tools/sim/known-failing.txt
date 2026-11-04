@@ -244,7 +244,13 @@ quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that 
 # single sim rather than a crowd to hide in.
 changepassword
 
-# quest_ikov_run: DIAGNOSED, and it is the sim's manifest that is wrong, not the content.
+# quest_ikov_run is FIXED and off: all five seeds pass, including the four that never had.
+# [opobj3,ikov_staffofarmardyl] runs npc_huntall(coord, 5, 1) BEFORE it gives you anything and
+# refuses while any guardian_of_armadyl is within five tiles with line of sight - they all have
+# a wanderrange, so whether one was in reach at the click was the dice. The manifest had "a
+# Guardian objects" AFTER the take instead of in the way of it. Clearing the Guardian first
+# fixes it, plus walking back to the table afterwards: the fight carries the player off it, and
+# "nothing on the floor nearby" is the take looking four tiles from where the fight ended.
 #
 # Step 93 clicks Take on the staff of Armadyl and the staff stays on the table. The manifest
 # assumes the lift always works and puts "a Guardian objects" AFTER it. The content does the
