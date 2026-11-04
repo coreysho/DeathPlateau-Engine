@@ -51,6 +51,36 @@
 #   DP_OFFSITE      rsync destination      default root@10.8.0.1:/var/backups/deathplateau
 #   DP_KEEP         archives to retain     default 14, at both ends
 #   DP_SKIP_OFFSITE set it to keep the archive local, for a dry run
+#   DP_PING         a dead-man's switch   default empty, which checks in nowhere
+#
+# THE SWITCH, and why a backup needs one more than most jobs. This exits non-zero and says why, but
+# it says it into a log ON THE MACHINE IT IS PROTECTING, and nothing reads that log. A backup job
+# that quietly stops running is invisible by its nature: everything looks exactly as it did, and
+# you find out on the one day it matters. So DP_PING is a URL that expects to hear from this every
+# night and complains when it does not.
+#
+# It is checked into on SUCCESS, carrying this run's own output - so the healthchecks event holds
+# the archive sizes and where they went, which is the log, off the box, where you can still read
+# it when the box is gone. On failure it signals /fail immediately instead of letting the grace
+# period lapse, so a broken backup tells you tonight rather than tomorrow.
+#
+# Set it up at healthchecks.io (free for 20 checks; 'New Check' -> name it 'dp-backup-offsite'):
+#
+#   period      1 day       the cron job above runs at 04:00
+#   grace       2 hours     a late start, a slow upload, a reboot that delays cron
+#
+# Then put the URL where the cron job will see it, in a file only root can read - the same
+# treatment as the archive, because anybody holding this URL can check in on the backup's behalf
+# and keep its death hidden:
+#
+#   printf 'export DP_PING=%s\n' "'https://hc-ping.com/YOUR-UUID-HERE'" > /etc/default/dp-backup
+#   chmod 600 /etc/default/dp-backup
+#   # and change the cron line to source it first:
+#   #   0 4 * * * . /etc/default/dp-backup && /usr/local/bin/dp-backup-offsite >> /var/log/dp-backup.log 2>&1
+#
+# export, NOT a bare assignment. `. file` sets a shell variable, and a shell variable is not in
+# the environment, so the script would never see it and would check in nowhere - looking installed
+# and doing nothing, which is the failure this is meant to prevent.
 #
 # TO RESTORE, and this has been done rather than only written down. Stop the world first: the
 # engine holds every character in memory and rewrites the saves at logout, so a restore under a
@@ -91,15 +121,49 @@ ENGINE=$ROOT/engine
 LOCAL=${DP_LOCAL_DIR:-/var/backups/dp-offsite}
 OFFSITE=${DP_OFFSITE:-root@10.8.0.1:/var/backups/deathplateau}
 KEEP=${DP_KEEP:-14}
+PING=${DP_PING:-}
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 
-say() { printf '%s  %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
-die() { say "FAILED: $*"; exit 1; }
+# Everything this run says, kept so the check-in can carry it. The log on this box is the first
+# place to look, but it is ON THE BOX - and the night the box is gone is the night you want to
+# read it. Four lines of archive sizes in the healthchecks event is that, off-site.
+RUNLOG=$(mktemp)
+STAGE=
+trap 'rm -rf "$RUNLOG" ${STAGE:+"$STAGE"}' EXIT
+
+# `|| true` because a `tee` that fails must not take the whole backup down with it under set -e
+say() { printf '%s  %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$RUNLOG" || true; }
+
+# WHICHEVER CLIENT THE BOX HAS, for the same reason the off-site leg takes rsync or scp: the first
+# real run of this script died on `rsync: command not found`, and assuming a binary is how that
+# happened. node is the one certainty here, since the snapshots above already need it.
+check_in() {
+    [ -n "$PING" ] || return 0
+    url=$PING${1:+/$1}
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsS -m 10 --retry 3 --data-binary @"$RUNLOG" -o /dev/null "$url" 2>/dev/null \
+            || say "WARNING: could not check in with the dead-man's switch"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -T 10 -t 3 --post-file="$RUNLOG" -O /dev/null "$url" \
+            || say "WARNING: could not check in with the dead-man's switch"
+    else
+        node -e 'const fs = require("node:fs");
+            fetch(process.argv[1], { method: "POST", body: fs.readFileSync(process.argv[2]) })
+                .then(r => process.exit(r.ok ? 0 : 1))
+                .catch(() => process.exit(1));
+        ' "$url" "$RUNLOG" || say "WARNING: could not check in with the dead-man's switch"
+    fi
+}
+
+# SAY IT, THEN SIGNAL IT, THEN GO. The failure line has to be in RUNLOG before the check-in posts
+# it, or the alert arrives with no reason attached - and a /fail is immediate, where waiting for
+# the grace period to lapse would cost hours.
+die() { say "FAILED: $*"; check_in fail; exit 1; }
 
 [ -d "$ENGINE" ] || die "no engine at $ENGINE"
 
 STAGE=$(mktemp -d)
-trap 'rm -rf "$STAGE"' EXIT
 
 mkdir -p "$LOCAL"
 chmod 700 "$LOCAL"
@@ -179,3 +243,5 @@ fi
 # ---- and here
 cd "$LOCAL" && ls -t dp-*.tar.gz | tail -n +$((KEEP + 1)) | xargs -r rm --
 say "done, keeping $KEEP archive(s) at each end"
+
+check_in

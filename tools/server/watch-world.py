@@ -21,9 +21,32 @@ forwarded port, one probe covers the engine, the WireGuard link, HAProxy, and th
 lights. Running it on the game box instead still beats nothing, and the one thing it can never tell
 you is the thing most likely to happen.
 
-WHAT IT WILL NOT DO. It cannot tell you the relay itself is gone, because it would be gone with it.
-For that you want something off both machines - a dead-man's switch like healthchecks.io, which the
-backup job could check into as well. This is the half that needs no third party.
+WHAT IT WILL NOT DO ALONE. It cannot tell you the relay itself is gone, because it would be gone
+with it. That is what WATCH_PING is for: a URL off both machines that expects to hear from this
+every minute and complains when it does not. It is checked in UNCONDITIONALLY, whatever the world
+is doing - see check_in() for why that is the whole point - so the two signals never overlap:
+
+    the webhook goes quiet and says nothing   ->   the world is fine
+    the webhook speaks                        ->   the world is down, and here is why
+    the PING stops                            ->   the RELAY is gone, or cron is, or this script is
+
+Set it up at healthchecks.io (free for 20 checks; 'New Check' -> name it 'dp-watch-world'):
+
+    period      1 minute    how often this is expected to check in
+    grace       10 minutes  how much silence to forgive first - a reboot, a blip, a slow ping
+
+so you hear about it after about ten minutes of the relay being unreachable rather than after one.
+Add Discord to the healthchecks project too (Integrations -> Discord) and both halves land in the
+same channel. Copy the check's ping URL into /etc/default/dp-watch alongside the webhook:
+
+    export WATCH_PING='https://hc-ping.com/YOUR-UUID-HERE'
+
+TREAT THAT URL AS A SECRET, not because it reads anything - it cannot - but because anybody holding
+it can check in on this watcher's behalf and keep its death hidden. It lives in a 0600 file for
+that reason, and this script never prints it, not even when the ping fails.
+
+One ping a minute is inside the service's documented limit of five per minute per check. Do not run
+this more often than that without raising the period to match.
 
 Install on the relay (Debian, which already has python3). EVERY LINE IS ONE COMMAND and none
 of them opens an editor, because the usual way to do this is `crontab -e` and `nano`, which a
@@ -63,6 +86,14 @@ Integrations -> Webhooks -> New Webhook -> Copy Webhook URL.
     ssh root@10.8.0.1 '. /etc/default/dp-watch && WATCH_PORT=1 WATCH_FAILS=1 WATCH_STATE=/tmp/probe.json /usr/local/bin/dp-watch-world'
     ssh root@10.8.0.1 'rm -f /tmp/probe.json'
 
+And the dead-man's switch, which is a separate line so you can leave it out. Create the check at
+healthchecks.io first - period 1 minute, grace 10 minutes - and append its ping URL:
+
+    ssh root@10.8.0.1 "printf 'export WATCH_PING=%s\n' \"'https://hc-ping.com/YOUR-UUID-HERE'\" >> /etc/default/dp-watch"
+
+    # the next run should turn the check green at healthchecks.io within seconds
+    ssh root@10.8.0.1 '. /etc/default/dp-watch && WATCH_STATE=/tmp/probe.json /usr/local/bin/dp-watch-world && rm -f /tmp/probe.json'
+
 Then every minute, and rotate what it writes - a line a minute is 1440 a day, and the log is the
 only place the healthy runs are recorded, so it cannot simply go to /dev/null:
 
@@ -81,6 +112,7 @@ Settings, all from the environment:
     WATCH_TIMEOUT   seconds per probe       default 10
     WATCH_STATE     where it remembers      default /var/lib/dp-watch/state.json
     WATCH_NAME      what to call the world  default 'the world'
+    WATCH_PING      a dead-man's switch     default empty, which checks in nowhere
 
 WHAT THE PROBE COSTS THE WORLD. World.onClientData answers opcode 14 by sending eight zero bytes,
 then the status, then eight of seed, and in between it counts the attempt against
@@ -116,6 +148,7 @@ FAILS = int(os.environ.get('WATCH_FAILS', '3'))
 TIMEOUT = float(os.environ.get('WATCH_TIMEOUT', '10'))
 STATE = os.environ.get('WATCH_STATE', '/var/lib/dp-watch/state.json')
 NAME = os.environ.get('WATCH_NAME', 'the world')
+PING = os.environ.get('WATCH_PING', '').strip()
 
 HANDSHAKE = bytes([14, 0])  # Client.login's first write: the opcode and a name hash
 REPLY = 17  # eight bytes ignored, the status, then eight of server seed
@@ -191,6 +224,33 @@ def tell(message):
         say('WARNING: could not reach the webhook (%s)' % err)
 
 
+def check_in():
+    """Tell the dead-man's switch this ran - WHATEVER the world is doing.
+
+    UNCONDITIONAL, and that is the entire design. The obvious thing is to check in only when the
+    world is healthy, and it is wrong: a world outage would then stop the pings too, so the one
+    question this is here to answer - IS THE RELAY STILL THERE - would give the same answer as the
+    thing the webhook already told you about. One signal per failure, or neither can be trusted.
+
+    So: the webhook says 'the world is down', and silence here says 'the watcher is not running' -
+    which is the relay being gone, cron being broken, or this script itself having died. All three
+    are invisible from the relay, and all three are now covered by the same missed ping.
+
+    LAST THING IN THE RUN, deliberately. A check-in at the top would survive a crash in the probe
+    and report health on a watcher that is not watching anything.
+    """
+    if not PING:
+        return
+
+    try:
+        # a HEAD would do, but a GET is what every example uses and what the service documents
+        urllib.request.urlopen(PING, timeout=min(TIMEOUT, 10)).close()
+    except (urllib.error.URLError, OSError) as err:
+        # NOT the url, which carries the check's uuid - anybody holding it can check in on this
+        # watcher's behalf and hide its death. The error alone is enough to diagnose with.
+        say('WARNING: could not check in with the dead-man\'s switch (%s)' % err)
+
+
 def main():
     healthy, detail = probe()
     fails, down = load()
@@ -203,19 +263,24 @@ def main():
         else:
             say('ok - %s' % detail)
         save(0, False)
-        return 0
-
-    fails += 1
-    if down:
-        say('still down (%d in a row): %s' % (fails, detail))
-    elif fails >= FAILS:
-        tell('%s is not answering on %s:%d - %s in a row. Last: %s' % (NAME, HOST, PORT, checks(fails), detail))
-        down = True
+        code = 0
     else:
-        say('failed (%d of %d before saying anything): %s' % (fails, FAILS, detail))
+        fails += 1
+        if down:
+            say('still down (%d in a row): %s' % (fails, detail))
+        elif fails >= FAILS:
+            tell('%s is not answering on %s:%d - %s in a row. Last: %s' % (NAME, HOST, PORT, checks(fails), detail))
+            down = True
+        else:
+            say('failed (%d of %d before saying anything): %s' % (fails, FAILS, detail))
 
-    save(fails, down)
-    return 1
+        save(fails, down)
+        code = 1
+
+    # ONE PLACE, after both branches: a check-in inside the healthy branch would stop the moment
+    # the world went down, which is exactly the opposite of what a dead-man's switch is for.
+    check_in()
+    return code
 
 
 if __name__ == '__main__':
