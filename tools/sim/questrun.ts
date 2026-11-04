@@ -27,7 +27,7 @@ import Player from '#/engine/entity/Player.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import World from '#/engine/World.js';
-import { canTravel } from '#/engine/GameMap.js';
+import { canTravel, isLineOfSight } from '#/engine/GameMap.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { BlockWalk } from '#/engine/entity/BlockWalk.js';
 import LocType from '#/cache/config/LocType.js';
@@ -1409,21 +1409,39 @@ export function play(m: Manifest, p: Player): Result[] {
                     blocked = 'no route from ' + p.x + ',' + p.z + ' to ' + tx + ',' + tz;
                     return false;
                 }
+                // DISTANCE IS NOT WHAT CATCHES YOU, SIGHT IS, which is why the hold below used to
+                // time out every single time and walk anyway. [ai_timer,nora_t_hagg] is
+                // huntall(npc_coord, 3, 0) and then lineofsight(npc_coord, coord) - "move around
+                // the edge, using the hedges as cover" is the wiki telling you the hedges break
+                // the line, and a garden that size never has her more than eight tiles off, so a
+                // distance-only wait is a wait that can never end. Being caught is not recoverable
+                // either: the catch deletes the shed key AND the ball and puts %ballquest back to
+                // ^ball_started, so there is no retry that can win - the step has to not be seen.
+                const seen = (nx: number, nz: number, tx: number, tz: number) => Math.max(Math.abs(nx - tx), Math.abs(nz - tz)) <= keepOut && isLineOfSight(p.level, nx, nz, tx, tz);
                 for (const [sx, sz] of legs) {
-                    // hold while the npc is within range of the tile being left OR the one being
-                    // stepped onto - checking only the next tile let her walk into the player
+                    // hold while she can see the tile being left OR the one being stepped onto -
+                    // checking only the next tile let her walk into the player
                     for (let w = 0; w < 60; w++) {
                         const npc = H.npcNear(s.past, p.x, p.z, p.level);
                         if (!npc) break;
-                        const dNext = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
-                        const dHere = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-                        if (dNext > keepOut && dHere > keepOut) break;
+                        if (!seen(npc.x, npc.z, sx, sz) && !seen(npc.x, npc.z, p.x, p.z)) break;
                         H.tick(1);
                         waited++;
                     }
                     for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
+                        const wasX = p.x;
+                        const wasZ = p.z;
                         H.walkTo(p, sx, sz);
                         H.tick(1);
+                        // A TELEPORT, NOT A STEP. A running player covers at most two tiles a tick,
+                        // so anything further is somebody else moving them - and walking on down a
+                        // route computed before that happened is how this step spent all three of
+                        // its attempts without noticing. Say so, rather than reporting the tile the
+                        // stale route gave up on.
+                        if (Math.max(Math.abs(p.x - wasX), Math.abs(p.z - wasZ)) > 2) {
+                            blocked = 'moved from ' + wasX + ',' + wasZ + ' to ' + p.x + ',' + p.z + ' in one tick - thrown out of the leg, not walked';
+                            return false;
+                        }
                     }
                     if (p.x !== sx || p.z !== sz) {
                         blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;

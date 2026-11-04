@@ -340,6 +340,30 @@ console.log("ICTHLARIN'S LITTLE HELPER");
 guard('icslittle', () => {
     const p = player('icslittle', 3326, 2856);
     check('Sophanem is walled: no way in on foot', connected(0, 3326, 2856, 3281, 2771), false);
+    // THE ROCKS ARE THE WANDERER'S TO SHOW YOU, and that gate is newer than this block was.
+    // [oploc1,ics_little_entrance_multi] refuses while the cache's own ics_ent_open is 0 and the
+    // quest has not started: "The woman camped north-east of the city walked it last; she would
+    // know." So the op did nothing, the player never left the sand, and the three checks that
+    // followed - the landing, everything inside being on foot, and the hole in the wall - were all
+    // reporting that one refusal as broken geography. The hole is the clearest case: it is INSIDE
+    // the east wall, so from out here the route can only get within three tiles of it, and
+    // "[3324,2796]" was a player standing outside a wall waiting for a click that could not land.
+    //
+    // She wants Gertrude's Cat finished, a cat in your arms, a tinderbox and a full waterskin.
+    const refused = op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
+    check('the rocks are not obvious until somebody has walked them with you', [at(p), refused.some(t => t.includes('would know'))], [[3325, 2856, 0], true]);
+    sv(p, 'fluffs', 6); // ^fluffs_complete: Gertrude's Cat
+    H.give(p, 'growncatobject'); // any obj in the `cat` category - ~icslittle_has_cat is inv_totalcat
+    H.give(p, 'tinderbox');
+    H.give(p, 'water_skin4');
+    // She is a multinpc on ics_ent_open and ics_metsphinx, so which of the five shells is the one
+    // actually standing in the sand depends on those vars; take whichever is there.
+    const wanderer = ['ics_little_multi_wanderer', 'ics_little_multi_wanderer1', 'ics_little_multi_wanderer2', 'ics_little_redheadlady', 'ics_little_redheadlady_normeyes'].find(n => H.npcNear(n, 3326, 2856, 0) !== null);
+    check('the Wanderer is camped north-east of the city', wanderer !== undefined, true);
+    if (wanderer) talk(p, wanderer, [1]);
+    check('  she takes a tinderbox and a waterskin and shows you the way', [gv(p, 'ics_ent_open'), H.invCount(p, 'tinderbox'), H.invCount(p, 'water_skin4')], [1, 0, 0]);
+    p.teleport(3326, 2856, 0);
+    H.tick(1);
     op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
     check('the rocks by the tent lead into Sophanem', [at(p), walkable(0, p.x, p.z)], [[3320, 2796, 0], true]);
     check(
