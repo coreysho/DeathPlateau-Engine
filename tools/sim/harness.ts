@@ -322,6 +322,16 @@ export function clearInv(p: Player) {
     }
 }
 
+/**
+ * The debugname of whatever is worn in a wearpos, or null for an empty slot. The equip side of
+ * invCount: a check about a fight can then name the weapon it was fought with instead of taking
+ * it on trust, which is how an unarmed player once got reported as an unkillable boss.
+ */
+export function wornName(p: Player, wearpos: number): string | null {
+    const obj = p.getInventory(InvType.WORN)?.get(wearpos);
+    return obj ? (ObjType.get(obj.id).debugname ?? null) : null;
+}
+
 export function give(p: Player, objName: string, count = 1) {
     const obj = ObjType.getId(objName);
     if (obj === -1) throw new Error('no such obj: ' + objName);

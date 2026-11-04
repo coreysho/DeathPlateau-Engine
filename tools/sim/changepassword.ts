@@ -42,18 +42,38 @@ const cheat = new ClientCheatHandler();
 const p = H.makePlayer('pwtest', 3222, 3222, 1);
 H.tick(2);
 
-// the login thread answers asynchronously: wait until the player is told something, or give up
+// the login thread answers asynchronously: wait until the player is told something, or give up.
+//
+// A MINUTE, NOT FIVE SECONDS, and it is not generosity. The checks that cross into the login
+// worker are the only ones here that can time out, and a timeout does not cost its own check
+// alone: World.onLoginMessage is what removes the username from World.passwordChanges (World.ts),
+// so an answer that has not arrived leaves the username in that set, and every later
+// requestPasswordChange returns false and reads "Your last password change is still being
+// processed." One slow round trip therefore fails every check after it. This sim was the last
+// entry in known-failing.txt that behaved differently on a runner than here on the same seed,
+// which is the shape of a wait that is long enough on one machine and not the other.
+//
+// The real work is two bcrypt hashes - milliseconds. Nothing correct is made to pass by waiting
+// longer; only a loaded machine is given room to answer at all.
+const ANSWER_WAIT_MS = 60_000;
 async function say(player: Player, text: string): Promise<string> {
     H.mesgs.length = 0;
     cheat.handle(new ClientCheat(text), player);
-    for (let i = 0; i < 100; i++) {
-        const last = H.mesgs.filter(m => m.who === player.username).map(m => m.text);
-        if (last.length > 0 && last[last.length - 1] !== 'Checking your password...') {
-            return last[last.length - 1];
+    const said = () => H.mesgs.filter(m => m.who === player.username).map(m => m.text);
+    const deadline = Date.now() + ANSWER_WAIT_MS;
+    while (Date.now() < deadline) {
+        const lines = said();
+        if (lines.length > 0 && lines[lines.length - 1] !== 'Checking your password...') {
+            return lines[lines.length - 1];
         }
-        // the reply is a message event from the login thread - it needs the event loop, not a tick
-        await new Promise(r => setTimeout(r, 50));
+        // the reply is a message event from the login thread - it needs the event loop, not a tick.
+        // realSetTimeout, because the override above is still in force.
+        await new Promise(r => realSetTimeout(r, 50));
     }
+    // Printed rather than swallowed: if this ever happens again the next run says which request
+    // went unanswered and whether the world is still holding the lock, instead of leaving a wall
+    // of "still being processed" to work backwards from.
+    console.log(`  --   nothing came back for "${text}" in ${ANSWER_WAIT_MS / 1000}s; said so far ${JSON.stringify(said())}, still in World.passwordChanges: ${World.passwordChanges.has(player.username)}`);
     return '(no answer)';
 }
 const cool = () => H.tick(9);
@@ -72,6 +92,14 @@ check('same as the current one', await say(p, 'changepassword oldpass1 oldpass1 
 cool();
 check('the username', await say(p, 'changepassword oldpass1 pwtest pwtest'), 'Your password cannot be your username.');
 cool();
+// WARM THE LOGIN WORKER before anything is timed against it. Every check above is answered
+// inside ClientCheatHandler without leaving the game thread; this is the first that posts to the
+// login thread, and that thread is a tsx-compiled worker which does not exist until the first
+// message reaches it. On a cold machine the compile is the round trip, not the hashing. Paid here,
+// where nothing is being measured and a wrong current password cannot change anything.
+await say(p, 'changepassword notmine1 warmup12 warmup12');
+cool();
+
 const before = await hashOf('pwtest');
 check('wrong current password', await say(p, 'changepassword notmine1 newpass1 newpass1'), 'That is not your current password. Your password has not been changed.');
 check('... and the stored hash is untouched', (await hashOf('pwtest')) === before, true);

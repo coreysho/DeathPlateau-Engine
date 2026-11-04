@@ -18,28 +18,13 @@
 import * as H from './harness.ts';
 import { check, R, player } from './a1lib.ts';
 import World from '#/engine/World.js';
+import type Npc from '#/engine/entity/Npc.js';
 import NpcType from '#/cache/config/NpcType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import InvType from '#/cache/config/InvType.js';
 
 await H.boot();
-
-/** The nearest live npc of this type to a tile. */
-function near(name: string, x: number, z: number, level = 0, r = 24) {
-    const id = NpcType.getId(name);
-    let best: any = null;
-    let bd = 1e9;
-    for (const npc of World.npcs) {
-        if (!npc || !npc.isActive || npc.type !== id || npc.level !== level) continue;
-        const d = Math.max(Math.abs(npc.x - x), Math.abs(npc.z - z));
-        if (d <= r && d < bd) {
-            bd = d;
-            best = npc;
-        }
-    }
-    return best;
-}
 
 /** Drive the npc's own hunt by hand for a few ticks and say whether it took the player. */
 function hunts(npc: any, p: any, ticks = 10): boolean {
@@ -60,7 +45,17 @@ function hunts(npc: any, p: any, ticks = 10): boolean {
 
 // ---------------------------------------------------------------- the island's guards
 console.log('\nAPE ATOLL, TO A HUMAN');
-const guards: [string, number, number][] = [];
+// THE NPC ITSELF, NOT WHERE IT WAS. This list used to hold coordinates read once, and the two
+// loops below then looked the npc up again within two tiles of them and stood the player beside
+// the REMEMBERED tile. Three of the seven that actually spawn - mm_zombie_monkey_small,
+// mm_zombie_monkey_large and mm_skeleton, the ones in Zooknock's tunnel - have no moverestrict,
+// so they wander while the first loop works through the list ahead of them. By their turn the
+// player was being put down beside a tile the npc had left, outside its huntrange of 5, and the
+// check reported "it does not attack a human standing beside it" about a human who was not. That
+// is the whole of this sim's one-in-three: the four mm_ archers and guards are moverestrict=nomove
+// and never missed. Worse than the failure, a wander of more than two tiles made the radius-2
+// lookup return nothing and the npc was skipped in silence.
+const guards: [string, Npc][] = [];
 for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', 'mm_ravine_archer', 'mm_religious_guard', 'mm_oipuis', 'mm_ouhai', 'mm_uodai', 'mm_uyoro', 'mm_zombie_monkey_small', 'mm_zombie_monkey_large', 'mm_skeleton']) {
     const id = NpcType.getId(name);
     let found: any = null;
@@ -79,19 +74,18 @@ for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', '
         console.log(`  --   ${name.padEnd(28)} has no static spawn anywhere, so nothing to hunt with`);
         continue;
     }
-    guards.push([name, found.x, found.z]);
+    guards.push([name, found]);
     const type = NpcType.get(id);
     check(`${name.padEnd(28)} has a huntmode`, (type as unknown as { huntmode: number }).huntmode !== -1, true);
 }
 
 // ---------------------------------------------------------------- it attacks a human
 console.log('\nAND IT COMES FOR A HUMAN WHO WALKS PAST');
-for (const [name, x, z] of guards) {
-    const npc = near(name, x, z, 0, 2);
-    if (!npc) continue;
-    // beside it, not inside it: a size-2 npc occupies x..x+1, so x+1 is its own square
+for (const [name, npc] of guards) {
+    // beside it, not inside it: a size-2 npc occupies x..x+1, so x+1 is its own square - and
+    // read off where it is NOW, which is the point of holding the npc rather than a coordinate
     const sz = NpcType.get(npc.type).size ?? 1;
-    const p: any = player('human_' + name.slice(3, 14), x + sz, z, npc.level);
+    const p: any = player('human_' + name.slice(3, 14), npc.x + sz, npc.z, npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.tick(2);
     const took = hunts(npc, p, 12);
@@ -103,12 +97,11 @@ for (const [name, x, z] of guards) {
 console.log('\nAND LEAVES A MONKEY ALONE');
 const greegree = 'mm_monkey_greegree_for_normal_monkey';
 let worn = 0;
-for (const [name, x, z] of guards) {
+for (const [name, npc] of guards) {
     if (!name.startsWith('mm_') || name.includes('zombie') || name.includes('skeleton')) continue;
-    const npc = near(name, x, z, 0, 2);
-    if (!npc) continue;
     const sz2 = NpcType.get(npc.type).size ?? 1;
-    const p: any = player('monkey_' + name.slice(3, 13), x + sz2, z, npc.level);
+    const tile: [number, number] = [npc.x + sz2, npc.z];
+    const p: any = player('monkey_' + name.slice(3, 13), tile[0], tile[1], npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.equip(p, { rhand: greegree }); // the quest makes you wield it, and worn is what the hunt reads
     H.tick(2);
@@ -130,6 +123,19 @@ for (const [name, x, z] of guards) {
     const took = hunts(npc, p, 12);
     check(`    ${name.padEnd(28)} ignores a player wearing a greegree`, took, false);
     H.despawn(p);
+
+    // THE CONTROL, ON THE SAME TILE, because "it did not attack me" is also what a hunt that was
+    // never able to fire looks like - out of range, no line of sight, or the npc still inside the
+    // eight ticks of %npc_lastcombat that the loop above left on it (check_notcombat_self, mm.hunt).
+    // Any of those would let the greegree take credit for somebody else's silence. A bare player
+    // standing where the monkey stood, hunted straight after, is the thing that makes the line
+    // above mean the greegree.
+    H.tick(10);
+    const bare: any = player('control_' + name.slice(3, 12), tile[0], tile[1], npc.level);
+    H.setVar(bare, 'tutorial', 1000);
+    H.tick(2);
+    check('      and that same tile without one is hunted', hunts(npc, bare, 12), true);
+    H.despawn(bare);
 }
 check('the greegree was actually worn for those', worn > 0, true);
 

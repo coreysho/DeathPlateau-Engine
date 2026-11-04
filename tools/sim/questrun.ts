@@ -1599,6 +1599,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 // CHANGES TYPE - npc_changetype(delrith_weakened) - so he stays a valid npc and the
                 // loop would have run its 900 ticks on a demon that had already been beaten.
                 const type0 = npc.type;
+                // UNLESS THE NEW TYPE IS ALSO ONE THIS STEP NAMED. The rule above is for Delrith,
+                // who changes into something the step did not ask for; the Gelatinnoth Mother
+                // changes into another of HER OWN six forms every thirty ticks
+                // (npc_changetype_keepall, hundred_culinaromancer.rs2), and all six are named in
+                // quest_hundred_run's one fight step because they are one npc. Reading that as a
+                // death ended every round after at most thirty ticks and reported a kill: "killed
+                // 60 in 884 ticks and hundred_minionskilled_tally is 4" is sixty rounds of her
+                // turning over, not sixty corpses. Let her turn, and the round runs its 900 ticks.
+                const sameFight = new Set(types.map(nm => NpcType.getId(nm)));
                 // CAN THE PLAYER EVEN GET TO IT? A fight that lands no hit in 150 ticks is not a
                 // long fight, it is a wall: the first Rag and Bone Man run picked a goblin in a
                 // sealed part of the Goblin Cave and spent 27,000 ticks - thirty rounds of 900 -
@@ -1613,7 +1622,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 // is not a wall, however long it takes.
                 let everAdjacent = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
-                    if (!npc.isValid() || npc.type !== type0) {
+                    if (!npc.isValid() || (npc.type !== type0 && !sameFight.has(npc.type))) {
                         d = true;
                         break;
                     }

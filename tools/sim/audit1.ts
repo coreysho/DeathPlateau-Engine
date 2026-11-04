@@ -641,8 +641,16 @@ if (rfd) {
     // the roast below produced no message at all until this went in. Taking it off in game runs
     // ~on_unequip -> ~mm_greegree_removed -> ~mm_become_human, and the two halves of that are
     // the worn slot and npcId, so both are cleared here.
+    //
+    // AND THE SCIMITAR BACK IN THAT HAND. Equipping the greegree displaced it, and clearing the
+    // slot left the player bare-fisted for the rest of the quest - including the Culinaromancer's
+    // five minions and the Gelatinnoth Mother. That is the whole of why her fight was lost: she
+    // ended 1400 ticks on 115 and then 67 of her 190 hitpoints (two runs), which is a fist's
+    // damage, not a rune scimitar's.
     p.invSet(InvType.WORN, -1, 0, 3 /* righthand */);
     (p as unknown as { npcId: number }).npcId = -1;
+    H.tick(1);
+    H.equip(p, { rhand: 'rune_scimitar' });
     H.tick(1);
     // On foot, the 2006 way: from inside Marim's gate to the temple, down its trapdoor into the crypt,
     // through the crypt to the nut cave's crack (loc_12617), and back up the rope. Monkey Madness wires
@@ -720,6 +728,10 @@ if (rfd) {
     const start = qp(p);
     talk(p, 'hundred_aris', [1]);
     check('Aris puts you in the arena, a walkable tile', [p.level, walkable(2, p.x, p.z)], [2, true]);
+    // THE SETUP, NAMED, not the consequence. Every fight below is a claim about the minions and
+    // none of them means anything if the player walked in bare-fisted - which is exactly what
+    // happened once already, and what it reported was "the Gelatinnoth Mother does not die".
+    check('  the player is holding the rune scimitar for all of this', H.wornName(p, 3), 'rune_scimitar');
     const order = ['hundred_minion1', 'hundred_minion2', 'hundred_minion3', 'hundred_minion4', 'hundred_minion5_air', 'hundred_culinaromancer_final'];
     for (const [i, name] of order.entries()) {
         let npc = H.npcNear(name, p.x, p.z, 2);
