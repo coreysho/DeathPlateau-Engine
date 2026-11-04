@@ -59,30 +59,69 @@
 #
 #   AN "unexpected menu" OR "menus not reached" IS ALMOST NEVER THE BUG. It is where a sim gives
 #   up after the state behind the conversation already went wrong, and the real failure is a few
-#   lines above it. audit5 and audit6 both read that way, and audit7 reads that way seventy steps
-#   over.
+#   lines above it. Held for every one of the five audits: audit7's was a quest start that had
+#   moved behind two requirements, audit6's was a missing second pick in Hamal's opening, audit5's
+#   was a head that had moved to Entrana, audit4's was a Wanderer who had to show you the rocks.
 #
-#   AND audit1 AND audit7 ARE NOT ONE BUG, which this file used to say they probably were on the
-#   strength of both printing "not carrying <item>". audit1's was the banana, and is fixed.
-#   audit7 fails at its FIRST step.
+#   AND NEITHER IS A "not carrying <item>" THROW. This file used to guess that audit1 and audit7
+#   were one bug "in how the audit hands itself quest items" on the strength of both printing
+#   one. They were two different quest starts.
 
-audit4               # 39 ok, 8 FAIL, 25s. The biggest cluster left, and it looks like two
-                     # groups rather than eight problems: THE SOPHANEM GEOGRAPHY (the rocks by
-                     # the tent land at 3325,2856 and want 3320,2796, the hole back out at
-                     # 3324,2796 wants 3324,2856 - the two are each other's answer, so it reads
-                     # like a swapped pair - and nothing inside is reachable on foot), and FOUR
-                     # SUB-AUDITS THAT THREW on dialogue (icslittle, makinghistory, myreque2,
-                     # regicide). Plus "and back: 3473 want 3474", one tile
-audit5               # 8s. "Rarve: rotas compared, head taken, kit given (stage 50)" reads
-                     # [40,0,0,0,0] and wants [50,0,1,1,1] - the quest stays at 40 and none of
-                     # the three rewards arrive. The "unexpected menu: multi2" after it is the
-                     # sim walking into the conversation that stage 40 actually offers
-audit6               # 13s. "white pearls can be picked from the thorny bushes: false", then an
-                     # unexpected multi3 for the same reason
-audit7               # 14s. FAILS AT ITS FIRST STEP: "Pete rows you out: stage 1" reads
-                     # [0,1,true] and wants [1,1,true], so the quest never starts, and
-                     # everything after it is a run through a quest that has not begun. The
-                     # "not carrying deal_blindweed" is simply where it finally gives up
+# THE ONE THING EVERY AUDIT ENTRY HERE TURNED OUT TO BE. Not one of audit1, audit4, audit5,
+# audit6 or audit7 was a bug in the game. Each of them holds a block per quest, and the quest
+# audits have been rebuilding those quests underneath them for weeks: a start that moved behind a
+# requirement, a reward that moved to a different npc, a lever puzzle that became a cart run, a
+# mesbox that became a real fight. A block written against the old shape fails at its FIRST stale
+# check and then runs the rest of itself through a quest that never started, which is why these
+# read as "the quest does not progress" and end in an unexpected menu seventy steps from the
+# cause. The per-quest questruns (quest_deal_run, quest_mdaughter_run, quest_handsand_run,
+# quest_hauntedmine_run, quest_makinghistory_run, quest_elid_run, quest_myreque2_run) all pass,
+# and they are what owns quest PROGRESSION now. What these audits are for is the map - the stairs,
+# ladders, doors, landings and reachability that a run only walks one line through - plus the
+# "lose the item and get it back" checks no run makes. Where a block duplicated a run it has been
+# deleted rather than ported.
+
+# audit4 is FIXED and off: 112 ok, 0 FAIL, from 39 ok 8 FAIL. Six causes, each one closing a
+# cluster: the rocks into Sophanem are the Wanderer's to show you (Gertrude's Cat, a cat, a
+# tinderbox and a waterskin) and the "hole in the wall" is INSIDE the east wall, so from outside
+# the route can only get within three tiles of it - "[3324,2796]" was a player against a wall
+# waiting for a click that could not land; the canopic jars have a level 91 guardian on them, the
+# one fight that quest has and was never placed; the ceremony wants a willow symbol cut by the
+# carpenter; Making History wants Priest in Peril and The Restless Ghost and is three strands now;
+# ^route_complete is 8 and this kept setting 5; Iorwerth answers a ~p_choice5 about the bomb at
+# stage 7; Gadderanks is a real fight; and the inn's collapsed wall is a bucket job - one bucket,
+# three spadefuls, one trip to the pile, because ~m2_rubble_bucket hands back the first EMPTY
+# bucket it finds and three of them make three quarter-full ones.
+#
+# Two of its checks were passing for the wrong reason and now are not: the Burgh fence refusing to
+# let an unfed player back IN was being read as a broken shortcut, and it is the content's own
+# point ("NOT A WAY ROUND FLORIN").
+
+# audit5 is FIXED and off: 79 ok, 0 FAIL. The wizard's head is not in the pit - "the rest of
+# Clarence is NOT down here... every other sack that week went out of Yanille to the furnaces on
+# Entrana" - and Mazion hands it over at stage 75, forty-five stages past where this was digging
+# for it. Rarve takes Bert's glowing scroll rather than a head and gives the scrying orb alone,
+# and the scroll comes BACK keyed as a teleport to his room. Betty does two things and the old
+# block skipped the second: an empty vial buys the bottled water, the lens is a glassblower's, and
+# the rose lens goes between her propped-open doorway and the vial on her counter rather than into
+# the orb. The One Small Favour ladder is at 2700,3476 and a climb puts you BESIDE it.
+#
+# One content fix came out of it: [label,handsand_rarve_done]'s lost-recording branch reserves two
+# inventory slots and its own note says "A fresh orb and serum", and it only ever added the orb.
+
+audit6               # 123 ok, 5 FAIL. Mountain Daughter and Spirits of the Elid are clean now;
+                     # what is left is FORGETTABLE TALE OF A DRUNKEN DWARF, which has been
+                     # rebuilt the same way - "Veldaban, first time: the story (and he remembers
+                     # telling it)" reads 0, and the four checks after it are that block running
+                     # through a quest that has not started. Same treatment as the five above:
+                     # find the first stale check, port the map, give the progression to the run.
+audit7               # Rum Deal, Throne of Miscellania, Garden of Tranquillity and the whole of
+                     # Haunted Mine are clean now - the mine was nine failures from one
+                     # requirement (Priest in Peril) plus a lever puzzle that is a cart run. What
+                     # is left is TAI BWO WANNAI TRIO: "a karambwan off the east coast,
+                     # undercooked into poison paste: 0", and then it throws on the paste it did
+                     # not get.
+
 # gwdstaves is FIXED and off: 48 ok. A SECOND a1lib bug, and a bigger one than findNpc.
 # useHeld was a paraphrase of OpHeldUHandler rather than the thing itself, and it was three
 # short: it swapped last_item/last_useitem whether or not the lookup found anything, it
