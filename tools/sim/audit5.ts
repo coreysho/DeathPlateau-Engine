@@ -505,7 +505,7 @@ console.log('ONE SMALL FAVOUR');
     check('first floor ladder, Climb-down: ground floor', p.level, 0);
     op(p, 2699, 3476, 'loc_1750', 1);
     op(p, 2699, 3476, 'laddermiddle', 1, [1]);
-    check('first floor ladder, Climb (menu) -> up: the platform too', at(p), [2700, 3476, 3]);
+    check('first floor ladder, Climb (menu) -> up: beside the ladder on the platform too', at(p), [2700, 3475, 3]);
 
     // the three craftspeople
     // Jimmy is in the H.A.M. hideout's cell

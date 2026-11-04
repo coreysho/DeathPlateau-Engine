@@ -602,8 +602,17 @@ guard('myreque2', () => {
     check('all of it done: the tithe arrives (stage 40)', [gv(p, 'myreque_2_quest'), gv(p, 'blood_tithe_visible')], [40, 1]);
     p.teleport(3514, 3239, 0);
     H.tick(1);
+    // GADDERANKS IS A REAL FIGHT NOW, and it was a mesbox when this check was written: "Four lines
+    // of narration, twelve points of self-damage and a stage change, for the fight this quest is
+    // remembered for - while the cache was holding three npcs for it and using none of them." He
+    // spawns with two Vampyre Juvinates and falls over rather than dying, and the stage moves when
+    // they are down. The talk below only starts it, so it cannot be followed by a stage check -
+    // quest_myreque2_run fights it and passes, and this block is the map, so the stage is set.
     talk(p, 'burgh_gadderanks_multinpc');
-    check('Gadderanks beaten: stage 50, Veliaf where the villager was', [gv(p, 'myreque_2_quest'), gv(p, 'blood_tithe_visible')], [50, 2]);
+    check('Gadderanks turns round, and he does not turn round alone', H.npcNear('burgh_gadderanks_attackable', p.x, p.z, 0) !== null, true);
+    H.tick(8);
+    sv(p, 'myreque_2_quest', 50); // ^m2_tithe_broken, which the fight reaches
+    sv(p, 'blood_tithe_visible', 2);
     p.teleport(3513, 3239, 0);
     H.tick(1);
     op(p, 3513, 3238, 'burgh_ladder_generalstore_up', 1);
@@ -611,7 +620,12 @@ guard('myreque2', () => {
     op(p, 3513, 3238, 'burgh_ladder_generalstore_down', 1);
     check('store ladder down: beside it, and out to the street', [at(p), walkable(0, p.x, p.z), reachesNear(0, p.x, p.z, 3517, 3241)], [[3513, 3239, 0], true, true]);
 
+    // A SPADE AND A PICKAXE AS WELL AS THE BUCKET: "It comes out a bucket at a time and you have
+    // nothing to shovel it with" and "Half of it is one piece. You would want a pickaxe." Both
+    // refusals are newer than this block, which carried a bucket and nothing else.
     H.give(p, 'bucket_empty');
+    H.give(p, 'spade');
+    H.give(p, 'rune_pickaxe');
     p.teleport(3493, 3235, 0);
     H.tick(1);
     check('the pocket beside the rubble and trapdoor cannot be reached from the street', connected(0, p.x, p.z, 3491, 3232), false);
@@ -628,6 +642,7 @@ guard('myreque2', () => {
     check('three buckets of rubble clear the inn wall', H.getVarBit(p, 'burgh_inn_colapsed_wall'), 1);
     op(p, 3490, 3232, 'burgh_inn_trapdoor_multiloc', 1);
     check('the trapdoor opens: stage 60', [gv(p, 'myreque_2_quest'), H.getVarBit(p, 'burgh_inn_trapdoor')], [60, 1]);
+
     op(p, 3490, 3232, 'burgh_inn_trapdoor_multiloc', 1);
     check('down into the cellar, beside the ladder, not in it', [at(p), walkable(0, p.x, p.z)], [[3490, 9631, 0], true]);
     check('the cellar reaches Veliaf and the chest', [reachesNear(0, p.x, p.z, 3494, 9628), reachesNear(0, p.x, p.z, 3493, 9632)], [true, true]);

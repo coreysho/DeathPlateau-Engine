@@ -768,11 +768,28 @@ if (want('hauntedmine')) {
     // ticks op() happens to spend left the stage at 3 and the player on the surface about one run in
     // three, and the level-5 check below went with it. Same class as audit6's arrow across the
     // channel - these [ap*] triggers all want the approach, not just the click.
-    for (let t = 0; t < 8 && v(p, 'hauntedmine') < 4; t++) {
+    // AND THE VALVE IS NOT THE LIFT. [label,hm_lift_valve] sets ^hm_bit_valve and starts the tank
+    // filling; what sets ^hm_bottom is riding the lift down afterwards, before the mischievous
+    // ghost shuts the valve again. This loop opped the valve eight times waiting for a stage the
+    // valve does not write, and then asked whether the player was on level 5 without ever
+    // clicking the lift.
+    for (let t = 0; t < 8 && !(v(p, 'hauntedmine_bits') & (1 << 12)); t++) {
         op(p, 2808, 4496, 'hauntedmine_lift_valve');
         H.tick(4);
     }
-    check('valve: the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
+    check('the valve turns and the tank starts filling', (v(p, 'hauntedmine_bits') & (1 << 12)) !== 0, true);
+    // AND A FUNGUS IN HAND FOR THE RIDE. "The lift goes down into water in the dark, and nothing
+    // you are carrying will stay lit down there." The one taken out of the cart went to ash on the
+    // way out of the cave - ~hm_fungus_to_ash, "the one thing the fungus does not survive" - and
+    // this block leaves and re-enters by the secondary entrance, so it needs another off the pool.
+    p.teleport(2782, 4495, 0);
+    H.tick(1);
+    op(p, 2782, 4494, 'glowing_mushroom');
+    check('  and another fungus off the pool, because the last one went out in the open air', H.invCount(p, 'glowing_fungus'), 1);
+    p.teleport(2806, 4493, 0);
+    H.tick(1);
+    op(p, 2807, 4494, 'lift_side_l');
+    check('and the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
     check('level 5 reaches both staircases down', [reaches(0, p.x, p.z, 2746, 4437), reaches(0, p.x, p.z, 2692, 4437)], [true, true]);
 
     console.log('Treus Dayth:');

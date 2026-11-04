@@ -487,6 +487,11 @@ console.log('SPIRITS OF THE ELID');
     check('robes from the cupboard, sewn: stage 25', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_robetop'), H.invCount(p, 'elid_robebottoms')], [25, 1, 1]);
     H.clearInv(p);
     H.equip(p, { torso: 'elid_robetop', legs: 'elid_robebottoms' });
+    // AND THE BALLAD, which the robe door wants as well as the robes: "You are dressed for the
+    // shrine and you do not know a word anybody down here would recognise." Ghaslor hands it over
+    // above and the clearInv on the line before this threw it away, so the door below stayed shut
+    // and every check past it was reporting a player who had not moved.
+    H.give(p, 'elid_ballad');
     p.teleport(3374, 2904, 0);
     H.tick(1);
     op(p, 3373, 2904, 'elid_crevice_clickzone');
@@ -501,7 +506,7 @@ console.log('SPIRITS OF THE ELID');
     op(p, 3373, 2904, 'elid_crevice_clickzone');
 
     op(p, 3353, 9544, 'elid_underground_robe_door');
-    check('the robe door (robes on): through to the hub', [at(p), free(p)], [[3353, 9545, 0], true]);
+    check('the robe door (robes and ballad): through to the hub', [at(p), free(p)], [[3353, 9545, 0], true]);
     op(p, 3354, 9558, 'elid_underground_lake_door');
     check('the lake door: through to the spirits', [at(p), free(p)], [[3354, 9559, 0], true]);
     check('  the spirits are talked to on foot', walkTalk(p, 'elid_waterspirit'), true);
@@ -510,7 +515,10 @@ console.log('SPIRITS OF THE ELID');
     check('  and back through the lake door', at(p), [3354, 9557, 0]);
 
     H.give(p, 'rune_pickaxe');
+    // "THROUGH FIRST, THEN THE GOLEM, AND ON ITS OWN TILE" - the door shuts behind you and the
+    // thing on the other side of it stops being a statue, which takes a tick to happen.
     op(p, 3374, 9547, 'elid_greygolem_door');
+    H.tick(3);
     check('grey golem door: the key opens it and you go through', [at(p), free(p), !!H.npcNear('elid_golem_grey', p.x, p.z)], [[3375, 9547, 0], true, true]);
     op(p, 3378, 9547, 'elid_waterchannel_mining_multiloc');
     check('  clear the fallen rock (trigger on the multiloc shell)', H.getVarBit(p, 'elid_miningchannel'), 1);
