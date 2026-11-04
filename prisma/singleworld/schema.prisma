@@ -204,6 +204,32 @@ model report {
     reason   Int
 }
 
+// How much of a session came from a person at a keyboard. One row as each session ends.
+//
+// The client reports where the cursor went, where it was clicked, whether the camera was turned
+// and whether the window kept focus. A bot driving the real client produces all of it; a bot
+// speaking the protocol straight at the server produces none, because nothing is moving a mouse to
+// report. A high user_actions against a near-zero sum of the rest is the signal - neither half
+// means anything alone, since somebody standing in a bank moves no mouse either.
+//
+// Counted for everybody and costing five integers a player. input_report below is the FULL capture,
+// which is off unless somebody turns it on for a suspect and costs about a megabyte per
+// player-hour. This table is the triage that says who is worth that.
+model session_input {
+    id Int @id @default(autoincrement())
+
+    session_uuid String
+    timestamp    DateTime
+
+    user_actions  Int
+    mouse_moves   Int
+    mouse_clicks  Int
+    camera_moves  Int
+    focus_changes Int
+
+    @@index([session_uuid])
+}
+
 model input_report {
     id Int @id @default(autoincrement())
 
