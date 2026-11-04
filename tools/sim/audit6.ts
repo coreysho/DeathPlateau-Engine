@@ -632,7 +632,7 @@ console.log('FORGETTABLE TALE OF A DRUNKEN DWARF');
     // conversation back to The Giant Dwarf's own Veldaban. So he said his Consortium line, nothing
     // started, and the four checks after this were a run through a quest that had not begun.
     H.setVarBit(p, 'giantdwarf_quest', 60); // ^gd_complete
-    H.setVarBit(p, 'fishingcompo', 5); // ^fishingcompo_complete
+    H.setVar(p, 'fishingcompo', 5); // ^fishingcompo_complete (a varp, not a varbit)
     H.setVarBit(p, 'forget_quest', 0);
     const gd = H.getVarBit(p, 'giantdwarf_quest');
     void gd;
@@ -685,6 +685,14 @@ console.log('SWAN SONG');
 {
     const p = player('swan', 2345, 3649);
     H.setVarBit(p, 'swansong', 0);
+    // THREE REQUIREMENTS, AND NONE OF THEM WAS SET. "THE REQUIREMENTS WERE NOT CHECKED. OSRS
+    // wants 100 quest points, One Small Favour and Garden of Tranquillity before Herman will take
+    // you on, and this took anybody who said the right thing" - that is the content's own note on
+    // the branch it added. Each refusal returns before the ~p_choice2, so the pick this step was
+    // holding had no menu to land on: "menus not reached: 1".
+    H.setVar(p, 'qp', 100); // ^swan_req_questpoints
+    H.setVar(p, 'onesmallfavour', 70); // ^osf_complete (a varp)
+    H.setVarBit(p, 'garden_quest', 50); // ^garden_complete
     op(p, 2344, 3651, 'loc_14922');
     check('the crawl-hole before the quest: Herman will not let you', at(p)[1] < 3653, true);
     talk(p, 'swan_multioutside', [1]);
@@ -746,20 +754,66 @@ console.log('SWAN SONG');
     }
     check("monkfish from the colony's spots", H.getVarBit(p, 'swansong_fish') >= 5, true);
     talk(p, 'swan_herman');
-    check('fed; the letter goes; the Wise Old Man arrives', H.getVarBit(p, 'swansong'), 30);
-    talk(p, 'swan_multioutside');
-    talk(p, 'swan_multioutside');
-    check('he looks at them, and the ambush', H.getVarBit(p, 'swansong'), 65);
-    talk(p, 'swan_arnold');
-    check('Arnold: the book and the bone seeds', [H.getVarBit(p, 'swansong'), H.invCount(p, 'swan_army')], [80, 1]);
-    H.give(p, 'bones', 5);
-    for (let i = 0; i < 5; i++) useHeld(p, 'bones', 'swan_army');
-    check('five bones into the packet', H.getVarBit(p, 'swansong_bones'), 5);
-    held(p, 'swan_army', 4);
-    check('planted', H.getVarBit(p, 'swansong'), 90);
-    p.levels[3] = 10;
+    // STAGE 20, NOT 30. ^swan_letter is where feeding them leaves you; ^swan_wom is the Wise Old
+    // Man STANDING OUTSIDE, and getting him there is a leg of its own now: "It used to set
+    // ^swan_wom in the same breath, because the man it is addressed to was placed nowhere on the
+    // map - he is npc 2253 and Draynor had no Wise Old Man at all. He is at 3088,3251 now, so the
+    // quest does what Herman says it does: the letter goes out, and you go and fetch him."
+    check('fed, and the letter goes out on the tide: stage 20', H.getVarBit(p, 'swansong'), 20);
+    // That fetch, the ambush, the coma, Arnold's book, the bone seeds and the planting are all
+    // quest_swansong_run.ts's, which plays 109 of 109. What is kept here is the battle, because
+    // no run fights it on ten hitpoints.
+    H.setVarBit(p, 'swansong', 90); // ^swan_planted
+    H.setVarBit(p, 'swansong_bones', 7); // ^swan_bones_needed
+    // AND THE QUEEN IS A FIGHT, NOT A PARAGRAPH, which is the other half of what this block was
+    // written before: "She is level 170 with an Attack op and had no statblock at all - the
+    // seventh npc in this pass with a level, an op and nothing behind it - and this label used to
+    // narrate her death with two mesboxes and thirty-four points of ~damage_self." So the old
+    // check here - "fought on 10 hitpoints: through it, still standing" - was asserting that a
+    // player survived some self-damage, and there is no self-damage any more. What there is is
+    // 200 hitpoints that have to be taken off her.
+    H.equip(p, { rhand: 'rune_scimitar' });
     talk(p, 'swan_herman');
-    check('the battle, fought on 10 hitpoints: through it, still standing', [H.getVarBit(p, 'swansong'), p.levels[3] >= 1, p.x > 2300 && p.z > 3600], [190, true, true]);
+    check('the battle starts, and she comes out of the water: stage 100', [H.getVarBit(p, 'swansong'), findNpc('swan_seatroll_queen', p) !== null], [100, true]);
+    const queen = findNpc('swan_seatroll_queen', p);
+    check('  200 hitpoints and level 170, not a mesbox', [queen.baseLevels[3], NpcType.get(queen.type).vislevel], [200, 170]);
+    // AND SHE IS FIVE TILES ACROSS, which is why the first version of this fight landed nothing in
+    // nine hundred ticks: she is npc_add'ed at 2344,3646 and so occupies 2344..2348 by 3646..3650,
+    // and Herman - where this block's player is standing - is at 2345,3649, INSIDE her. A player
+    // inside an npc's footprint cannot swing at it. Stand clear of the square first.
+    const qsz = NpcType.get(queen.type).size ?? 1;
+    let stand: [number, number] | null = null;
+    for (let d = -1; d <= qsz && !stand; d++) {
+        for (const [x, z] of [
+            [queen.x - 1, queen.z + d],
+            [queen.x + qsz, queen.z + d],
+            [queen.x + d, queen.z - 1],
+            [queen.x + d, queen.z + qsz]
+        ] as [number, number][]) {
+            if (!isMapBlocked(x, z, 0)) {
+                stand = [x, z];
+                break;
+            }
+        }
+    }
+    check('  and there is a tile to stand on beside her five-tile square', stand !== null, true);
+    if (stand) {
+        p.teleport(stand[0], stand[1], 0);
+        H.tick(1);
+    }
+    let qt = 0;
+    const qhits = H.npcHits.length;
+    H.attackNpc(p, queen);
+    while (queen.isActive && qt < 900) {
+        if (!p.target) H.attackNpc(p, queen);
+        p.levels[3] = 99;
+        H.tick(1);
+        qt++;
+    }
+    check('  a melee player actually hits her', H.npcHits.length > qhits, true);
+    H.tick(6);
+    talk(p, 'swan_herman');
+    check('  she goes back into the water and does not come up: stage 190', [queen.isActive, H.getVarBit(p, 'swansong')], [false, 190]);
     talk(p, 'swan_herman');
     check('Herman: complete', H.getVarBit(p, 'swansong'), 200);
 

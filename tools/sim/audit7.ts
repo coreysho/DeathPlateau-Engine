@@ -1077,29 +1077,36 @@ if (want('tbwt')) {
     console.log('Tamayu:');
     p.teleport(2912, 3116, 0);
     H.tick(1);
-    H.give(p, 'tinderbox');
-    // AND A KNIFE, which this loop has always used on the poorly cooked karambwan and never been
-    // given: only the clearInv branch below hands one out, and that branch runs after a karambwan
-    // has already cooked properly. The first pass therefore had nothing to cut with.
+    // A KARAMBWAN IS COOKED, NOT TINDERBOXED. This loop used a tinderbox ON the raw karambwan,
+    // which is not an op the content has anywhere: a tinderbox lights logs.
+    // cooking_generic_tbwt_raw_karambwan is an ordinary cooking row whose SUCCESS product is
+    // tbwt_poorly_cooked_karambwan - "You cook the karambwan. The outside is done and the inside
+    // is not" - and it is the knife on THAT which makes the poison paste. So nothing was ever
+    // cooked, there was never a poorly cooked one to cut, and sixty passes of the loop produced
+    // nothing. (The knife it cuts with was also never handed out; only the branch that runs after
+    // a karambwan has already cooked properly gave one.)
+    //
+    // Where it is cooked is not part of the claim, so it is cooked on Lumbridge's range.
     H.give(p, 'knife');
-    for (let i = 0; i < 60 && H.invCount(p, 'tbwt_poisonous_karambwan_paste') === 0; i++) {
-        if (H.invCount(p, 'tbwt_raw_karambwan') === 0) {
-            if (H.invCount(p, 'tbwt_raw_karambwanji') === 0) H.give(p, 'tbwt_raw_karambwanji', 10);
-            useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
-            H.opheld(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji', 1);
-            drive(p);
-        }
-        if (H.invCount(p, 'tbwt_raw_karambwan') > 0) useOnHeld(p, 'tinderbox', 'tbwt_raw_karambwan');
-        if (H.invCount(p, 'tbwt_poorly_cooked_karambwan') > 0) useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
-        if (H.invCount(p, 'tbwt_cooked_karambwan') > 0) {
-            H.clearInv(p);
-            H.give(p, 'tinderbox');
-            H.give(p, 'knife');
-            H.give(p, 'tbwt_karambwan_vessel');
-            H.give(p, 'tbwt_raw_karambwanji', 5);
-        }
+    H.give(p, 'tbwt_raw_karambwanji', 10);
+    for (let i = 0; i < 8 && H.invCount(p, 'tbwt_raw_karambwan') === 0; i++) {
+        if (H.invCount(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji') === 0) useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
+        H.opheld(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji', 1);
+        drive(p);
+        H.tick(4);
     }
-    check('a karambwan off the east coast, undercooked into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
+    check('a karambwan off the east coast, with a baited vessel', H.invCount(p, 'tbwt_raw_karambwan') > 0, true);
+    p.teleport(3230, 3197, 0);
+    H.tick(2);
+    for (let i = 0; i < 6 && H.invCount(p, 'tbwt_poorly_cooked_karambwan') === 0; i++) {
+        p.clearPendingAction();
+        H.tick(1);
+        useOn(p, 3230, 3196, 'range', 'tbwt_raw_karambwan');
+        H.tick(8);
+    }
+    check('  cooked on a range: the outside done and the inside not', H.invCount(p, 'tbwt_poorly_cooked_karambwan'), 1);
+    useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
+    check('  and a knife works it into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
     H.give(p, 'iron_spear');
     useOnHeld(p, 'iron_spear', 'tbwt_poisonous_karambwan_paste');
     check('a karambwan-poisoned spear', H.invCount(p, 'tbwt_iron_spear_kp'), 1);
