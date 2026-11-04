@@ -447,6 +447,21 @@ guard('icslittle', () => {
     H.tick(1);
     op(p, 3306, 9199, 'loc_6643', 1);
     check('the east doorway lets you into the ceremony', [p.z < 9200, reachesNear(0, p.x, p.z, 3307, 9196)], [true, true]);
+    // AND A SYMBOL CUT FOR THE RITE, which is newer than this block: "a symbol cut for the rite.
+    // The carpenter east of the embalmer does that, out of willow" - and he takes willow logs for
+    // it. Without it the ceremony priest asks for it and RETURNS, so the stage sat at 19 and the
+    // two checks after it went with that.
+    const ceremonyTile = at(p);
+    p.teleport(3312, 2767, 0);
+    H.tick(1);
+    H.give(p, 'willow_logs');
+    talk(p, 'ics_little_carpenter');
+    check('the carpenter cuts the holy symbol out of willow', [H.invCount(p, 'ics_little_holy_symbol'), gv(p, 'ics_metcarpenter')], [1, 1]);
+    del(p, 'ics_little_holy_symbol');
+    talk(p, 'ics_little_carpenter');
+    check('  and a lost symbol is cut again', H.invCount(p, 'ics_little_holy_symbol'), 1);
+    p.teleport(ceremonyTile[0], ceremonyTile[1], ceremonyTile[2]);
+    H.tick(1);
     talkHere(p, 'ics_little_hipriest_ceremony');
     check('jars placed, Icthlarin arrives: stage 24', gv(p, 'ics_little_var'), 24);
     talkHere(p, 'ics_little_hipriest_ceremony');
@@ -475,6 +490,12 @@ guard('icslittle', () => {
 console.log('MAKING HISTORY');
 guard('makinghistory', () => {
     const p = player('mhistory', 2430, 3347);
+    // PRIEST IN PERIL AND THE RESTLESS GHOST, both newer than this block. ~mh_requirements stops
+    // [label,mh_start] between its two choices - "One of the three people you would have to find
+    // is on the other side of the Salve", "one of them is a ghost" - so the second pick had no
+    // menu to land on and the whole block threw "menus not reached: 1".
+    sv(p, 'priestperil', 60); // ^priestperil_complete
+    sv(p, 'prieststart', 5); // ^priest_complete
     check('the outpost is shut: Jorral cannot be reached on foot', reachesNear(0, 2430, 3347, 2437, 3347), false);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
     check('the front doors let you in', [p.x >= 2434, reachesNear(0, p.x, p.z, 2437, 3347)], [true, true]);
@@ -548,11 +569,19 @@ guard('myreque2', () => {
     sv(p, 'myreque_2_quest', 12); // ^m2_fed
     op(p, 3484, 3244, 'burgh_fencegate_r', 1);
     check('the gate lets you into the village', [p.z <= 3243, reachesNear(0, p.x, p.z, 3490, 3241), reachesNear(0, p.x, p.z, 3517, 3241)], [true, true, true]);
+    // THE FENCE IS NOT A WAY ROUND FLORIN, which is the whole of its own comment: "hopping it got
+    // you in without ever feeding him, which is the one thing the walkthrough makes you do to get
+    // in at all. Out is always allowed; in needs the gate to have been opened for you once." So an
+    // unfed player hops OUT and cannot hop back, and "and back: 3473" was the fence doing its job.
+    // Both directions are asked now, of a player on each side of that rule.
     const f = player('myreque2f', 3475, 3221);
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
-    check('the low fence can be jumped', f.x, 3473);
+    check('the low fence can be jumped outwards by anybody', f.x, 3473);
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
-    check('and back', f.x, 3474);
+    check('  and not back in before Florin has been fed', f.x, 3473);
+    sv(f, 'myreque_2_quest', 12); // ^m2_fed
+    op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
+    check('  and back in once he has', f.x, 3474);
 
     sv(p, 'routequest', 5); // ^route_complete
     const v0 = player('myreque2v', 3505, 9837);
@@ -705,8 +734,24 @@ guard('regicide', () => {
     H.clearInv(q);
     talk(q, 'lord_iorwerth');
     check('out of barrels and limestone: he tops both up', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
-    talk(q, 'lord_iorwerth');
-    check('...once - with them in hand he just points at the book', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
+    // ...ONCE, AND THEN HE ANSWERS THE FIVE QUESTIONS. At ^regicide_has_book ~regicide_resupply
+    // takes the first talk and the one after it falls into [label,regicide_iorwerth_components] -
+    // a ~p_choice5, which is a step of the quest in its own right ("he used to say 'it is all in
+    // the book', and the book is a page of flavour about fire oil with no recipe in it"). A talk
+    // with no pick walked into it and threw "unexpected menu: multi5", and everything below here
+    // went with it.
+    const asked: string[] = [];
+    for (const [n, word] of [
+        [1, 'quicklime'],
+        [2, 'sulphur'],
+        [3, 'naphtha'],
+        [4, 'barrel'],
+        [5, 'fuse']
+    ] as [number, string][]) {
+        const said = talk(q, 'lord_iorwerth', [n]).join(' ');
+        asked.push(said.length > 40 ? word : word + ' (no answer)');
+    }
+    check('...once - with them in hand he answers the five questions about the bomb instead', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone'), asked.join(' ')], [3, 1, 'quicklime sulphur naphtha barrel fuse']);
     sv(q, 'regicide_quest', 9);
     H.clearInv(q);
     talk(q, 'lord_iorwerth');

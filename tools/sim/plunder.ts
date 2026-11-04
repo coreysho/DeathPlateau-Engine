@@ -212,11 +212,16 @@ console.log('== the way in: four doors in Sophanem, one of them real, and it mov
     // Which one is the way in is read off the world clock, so it is the same for everybody and
     // changes every twenty-five minutes. Ticking the world is too slow to test, so the proc is
     // asked directly with the clock moved under it.
+    // ONE PLAYER, ASKED SEVEN TIMES. This made a new one on every call and gave each of them the
+    // same name, so only the first ever logged in: toBase37 keeps twelve characters and a repeat
+    // of a name already in the world is refused. The procs answered anyway - they do not need a
+    // logged-in player - so every check below passed while measuring players that were not there,
+    // "two players at the same moment agree" included.
+    const clocker = player('plundclock', 3290, 2787);
     const clockOf = (ticks: number): number => {
         const orig = World.currentTick;
         (World as unknown as { currentTick: number }).currentTick = ticks;
-        const p = player('plunder_clock', 3290, 2787);
-        const out = H.runProc(p, '[proc,plunder_way_in]')[0];
+        const out = H.runProc(clocker, '[proc,plunder_way_in]')[0];
         (World as unknown as { currentTick: number }).currentTick = orig;
         return out;
     };
@@ -629,7 +634,7 @@ console.log('== the sceptre ends the run, and the mummy fills it again');
 // ---------------------------------------------------------------------------------------------
 console.log('== five minutes, and then the pyramid puts you out');
 {
-    const p = player('plunder_clockout', 1927, 4425);
+    const p = player('plundclockout', 1927, 4425);
     p.teleport(1927, 4425, 0);
     p.setLevel(THIEVING, 99);
     H.tick(1);

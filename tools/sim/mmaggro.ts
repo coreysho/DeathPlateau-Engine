@@ -42,15 +42,41 @@ function beside(npc: Npc): [number, number] | null {
     }
     for (const [x, z] of ring) {
         if (isMapBlocked(x, z, npc.level)) continue;
+        // BOTH WAYS ROUND, because isLineOfSight is not symmetric: it walks the wall flags from
+        // the source outwards, and a wall on the far side of a tile boundary stops one direction
+        // and not the other. HuntIterator asks it from the PLAYER to the npc
+        // (ScriptIterators.ts), so that is the direction that decides, and asking only the other
+        // one picked a tile the hunt could not see out of - which is how mm_zombie_monkey_large
+        // came out as an npc that does not attack a human standing right beside it.
         if (!isLineOfSight(npc.level, npc.x, npc.z, x, z)) continue;
+        if (!isLineOfSight(npc.level, x, z, npc.x, npc.z)) continue;
         return [x, z];
     }
     return null;
 }
 
-/** Drive the npc's own hunt by hand for a few ticks and say whether it took the player. */
+/**
+ * Drive the npc's own hunt by hand for a few ticks and say whether it took the player.
+ *
+ * AND KEEP THE PLAYER BESIDE IT, which is the claim being made. These npcs have no moverestrict
+ * and they wander while this loop runs: a tile chosen beside the npc goes stale inside the four
+ * ticks between choosing it and the first hunt, and the tunnel's corners break the line of sight
+ * the hunt needs long before the five tiles of huntrange run out. mm_zombie_monkey_large was the
+ * one that wandered far enough often enough to be reported as an npc that does not attack - a
+ * probe put a player next to the SAME npc at the SAME moment and it took the target on the first
+ * tick. Pinned the way templetrek pins its escort, for the same reason.
+ */
 function hunts(npc: any, p: any, ticks = 10): boolean {
     for (let t = 0; t < ticks; t++) {
+        const tile = beside(npc);
+        if (tile && (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > 1 || !isLineOfSight(npc.level, npc.x, npc.z, p.x, p.z))) {
+            p.teleport(tile[0], tile[1], npc.level);
+            // AND A TICK TO LAND IT. HuntIterator walks the ZONES around the npc and reads each
+            // one's getAllPlayersSafe list; a teleport moves the player's coordinates and nothing
+            // else until the player is processed, so a hunt run in the same tick looks for them in
+            // the zone they just left.
+            H.tick(1);
+        }
         if (npc.huntMode !== -1 && npc.isValid()) {
             const hunt = HuntType.get(npc.huntMode);
             if (hunt) {
@@ -102,6 +128,15 @@ for (const name of ['mm_monkey_guard', 'mm_monkey_archer', 'mm_posted_archer', '
 }
 
 // ---------------------------------------------------------------- it attacks a human
+//
+// ONE NAME PER NPC, AND TWELVE CHARACTERS OF IT. These players were named
+// 'human_' + name.slice(3, 14), and mm_zombie_monkey_small and mm_zombie_monkey_large both slice
+// to 'zombie_monk' - so both asked for 'human_zombie_monk', which is seventeen characters of a
+// twelve-character username and the same seventeen twice. The second login was simply refused,
+// and the check reported an npc that would not attack a human standing beside it about a human
+// who was never there: p.isActive false, and nothing in the output said so. A running index is
+// all the name has to carry.
+let who = 0;
 console.log('\nAND IT COMES FOR A HUMAN WHO WALKS PAST');
 for (const [name, npc] of guards) {
     // beside it, not inside it and not through a wall - and read off where it is NOW, which is
@@ -111,11 +146,22 @@ for (const [name, npc] of guards) {
         check(`    ${name.padEnd(28)} (no free tile in its line of sight to stand on)`, false, true);
         continue;
     }
-    const p: any = player('human_' + name.slice(3, 14), tile[0], tile[1], npc.level);
+    const p: any = player('hunted' + ++who, tile[0], tile[1], npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.tick(2);
     const took = hunts(npc, p, 12);
     check(`    ${name.padEnd(28)} attacks a human standing beside it`, took, true);
+    if (!took) {
+        // Named rather than left to be guessed at. The last thing this reported as an npc that
+        // would not attack was a player who had never logged in, and "it did not hunt me" looks
+        // identical either way.
+        console.log(
+            `         it was at ${npc.x},${npc.z} L${npc.level} huntMode=${npc.huntMode} huntrange=${npc.huntrange}` +
+                `, the player at ${p.x},${p.z} L${p.level} distance ${Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z))}` +
+                `, los both ways ${isLineOfSight(npc.level, npc.x, npc.z, p.x, p.z) && isLineOfSight(npc.level, p.x, p.z, npc.x, npc.z)}` +
+                `, the player is logged in ${p.isActive && p.isValid()}, tick ${World.currentTick}`
+        );
+    }
     H.despawn(p);
 }
 
@@ -127,7 +173,7 @@ for (const [name, npc] of guards) {
     if (!name.startsWith('mm_') || name.includes('zombie') || name.includes('skeleton')) continue;
     const tile = beside(npc);
     if (!tile) continue;
-    const p: any = player('monkey_' + name.slice(3, 13), tile[0], tile[1], npc.level);
+    const p: any = player('monkey' + ++who, tile[0], tile[1], npc.level);
     H.setVar(p, 'tutorial', 1000);
     H.equip(p, { rhand: greegree }); // the quest makes you wield it, and worn is what the hunt reads
     H.tick(2);
@@ -157,7 +203,7 @@ for (const [name, npc] of guards) {
     // standing where the monkey stood, hunted straight after, is the thing that makes the line
     // above mean the greegree.
     H.tick(10);
-    const bare: any = player('control_' + name.slice(3, 12), tile[0], tile[1], npc.level);
+    const bare: any = player('control' + ++who, tile[0], tile[1], npc.level);
     H.setVar(bare, 'tutorial', 1000);
     H.tick(2);
     check('      and that same tile without one is hunted', hunts(npc, bare, 12), true);

@@ -140,46 +140,46 @@ audit1               # Error: not carrying hundred_ilm_red_banana (a1lib slotOf,
 # the killing blow missed, and her own regeneration carried her back up. Fought on her own she
 # plays 4015 exactly as declared - the other three generals pass only because their 120 ticks
 # happened to land. Four goes now, each putting her back on one, stopping the moment she dies.
-brutalarrows         # and it NEVER passed on this machine, whatever this file used to say: 0 of
-                     # 3 free-dice runs pass, and seed 1 fails too. It sat for a week under
-                     # "passes here, fails on a runner" - a claim nobody had checked.
+# brutalarrows is FIXED and off: 50 ok, 0 failed. Stringing a bow goes through ~skillmulti1 now
+# ("Stringing had no panel at all: it strung the whole inventory and gave the player no say in
+# it", skill_fletching/scripts/bows.rs2), and 'skillmulti1' does not start with 'multi' - so this
+# sim's settle() fell past its menu handler and resumed the panel without pressing a button, which
+# returns null and makes nothing. That is the whole of "a bowstring finishes it: [0,1,0]".
 
 # ---- CHECKS THAT DEPEND ON THE ROLL. These pass on most dice and fail on seed 1, measured
 # rather than assumed. A fixed dice did not break them; it stopped them hiding. Each one is a
 # single assertion resting on where a wandering npc happened to be, or on which branch a roll
 # took, and each is fixable inside its own sim without touching the content.
-mmaggro              # 2 of 3 free-dice runs pass, seed 1 fails - a genuine one-in-three
-templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named checks go with it:
-                     # the trek lands you at 1952,4764 instead of Burgh de Rott at 3480,3243, the
-                     # escort survives, and the pack is not emptied.
-                     #
-                     # NOT DIAGNOSED, and an attempt was made and reverted. What IS measured, so
-                     # the next person does not repeat it:
-                     #
-                     #   - the snakes sit ADJACENT to the escort (distance 1) for all 120 ticks of
-                     #     the final loop and never bite it; its health goes 2 -> 3, which is
-                     #     regeneration, so nothing is touching it at all
-                     #   - [queue,trek_escort_watch] is alive and re-queueing the whole time, and
-                     #     trek_route and trek_event_done are both still what the test expects
-                     #   - there are ZERO escorts of that type within 40 tiles of the player: the
-                     #     player sits at 1952,4764 and the escort at 2004,5034, ~270 tiles apart,
-                     #     and every bite goes through [proc,trek_maul_escort] which begins with
-                     #     `npc_find(coord, $escort, 40, 0)` FROM THE PLAYER'S COORD
-                     #
-                     # That last one looks like the answer and is not. Standing the player beside
-                     # the escort does not fix it: on seed 1 the player is pulled straight back to
-                     # 1952,4764, the room's entry square, and on seed 42 it makes things WORSE -
-                     # "left among the monsters, they are mauled" starts failing, having passed
-                     # before. So the distance is a symptom and the room geometry is doing
-                     # something this test does not model. Reverted rather than left half-done.
-                     #
-                     # The failure MESSAGE is the other half of why this sat unlooked-at. "you are
-                     # back in Burgh de Rott: [1952,4764,...]" reads as the trek refusing to send
-                     # you home, and is really the player standing exactly where the test left
-                     # them, rooms away from the villager it is waiting to watch die. Same shape as
-                     # trollromance's "Arrg dies: defeated: 35", which was a corpse in Lumbridge:
-                     # a check reporting the consequence it watches instead of the setup that never
-                     # happened.
+# mmaggro is FIXED and off: 23 ok, 0 FAIL. AND IT WAS NOT THE ROLL. The players were named
+# 'human_' + npcName.slice(3, 14), and toBase37 keeps only the first twelve letters and digits -
+# so mm_zombie_monkey_small and mm_zombie_monkey_large both asked for the same account. The second
+# login was refused as a duplicate, and the check reported an Ape Atoll monkey that would not
+# attack a human standing beside it about a human who had never logged in. p.isActive was false
+# and nothing in the output said so. a1lib's player() now throws on a colliding name or a login
+# that did not take, which found the same collision silently in deathtoken, gwd and plunder.
+# Two real fixes went in alongside it: the sim held coordinates read once and stood the player
+# beside the REMEMBERED tile (the three npcs in Zooknock's tunnel wander), and the tile beside an
+# npc has to be floor AND in its line of sight, because both hunts here are check_vis=lineofsight.
+# The greegree half gained a control - a bare player on the same tile, hunted straight after -
+# because "it did not attack me" is also what a hunt that could never fire looks like.
+# templetrek is FIXED and off: all checks passed. AND IT WAS A BUG IN THE GAME, not in the sim -
+# the one thing this list kept insisting it was not. The failing leg ended with the player standing
+# at 1952,4764 and the escort 270 tiles behind it in room 1, and that tile is ^macro_quiz_landing:
+# the Quiz Master's podium. A RANDOM EVENT had taken the player out of the trek.
+#
+# macro_event_area already excluded the duel arena, the gnomeball field, the fishing trawler and
+# tutorial island. A temple trek is the same kind of place and was simply missing from the list:
+# fourteen rooms of instanced map, an escort on playerfollow, and a reward that is lost the moment
+# that escort is left behind. The escort stays in the room, [queue,trek_escort_watch] keeps running
+# on a player who is not there, and the trek is over. ~in_templetrek goes on that list now.
+#
+# Everything this entry recorded as measured was true and none of it was the cause, which is worth
+# keeping: the snakes adjacent to an escort they never bite, the live watch queue, the 270-tile gap
+# - all of it is what being teleported out of a trek looks like from inside the room you are no
+# longer in. The dead theory it also records (standing the player beside the escort) stays dead.
+#
+# templetrek deliberately does NOT suppress random events for itself. Not suppressing them is what
+# found this.
 
 # trollromance came OFF this list by being fixed rather than excused, and it is worth saying what
 # was behind it: three bugs, not one. talkTo never followed Tenzing when he wandered out of range;
@@ -208,49 +208,49 @@ templetrek           # 3 of 3 free-dice runs pass, seed 1 fails. Three named che
 #                      house, and standing the player there only got them stuck five tiles away.
 #                      Measured rather than believed.
 #
-# The two that are left have moved, not been fixed - both are further on than they were and
-# stopped somewhere new:
+# Both of the two that were left here have since been fixed. Their notes are below, kept because
+# what each one turned out to be is worth more than the fact that it is gone.
 
 # blastfurnace is FIXED and off: 38 ok. It was not a bug at all, and I called it one twice
 # before reading the content. blast_furnace.rs2 removed that Crafting XP on purpose - "the XP
 # rewarded breaking them on purpose: pump, burst, mend, repeat, for ever" - so the sim was
 # asserting a closed exploit. It now asserts that mending pays nothing, and says why.
-quest_ball_run       # step 43, the sneak past nora_t_hagg. DIAGNOSED, and it is the questrun
-                     # driver rather than the content. Nora catches the player mid-leg and
-                     # teleports them out of the garden, and sneakTo walks a route computed
-                     # BEFORE the throw-out: the probe caught the player at 2929,3456 still
-                     # being walked toward 2906,3460, 23 tiles away. The outer retry then
-                     # re-routes from outside the hedge, where there is no way back in, so all
-                     # three attempts are spent before anybody notices.
-                     #
-                     # Two things were tried and did not fix it: waiting longer (240 ticks
-                     # instead of 60 - she is never more than 8 tiles away in a garden that
-                     # size, so the wait always times out and the player walks anyway) and
-                     # making an empty route a failure instead of a silent arrival. That second
-                     # one is kept - it was a real driver bug, and it is why this step used to
-                     # report "ended up at 2907,3458" as though the player had strolled there.
-                     #
-                     # What it needs is for sneakTo to notice the teleport and re-enter the
-                     # garden, which means knowing the way in. Left for somebody with the map.
-# THE GELATINNOTH MOTHER IS WHY BOTH audit1 AND quest_hundred_run STOP, and it is one mechanic
-# rather than two bugs. hundred_culinaromancer.rs2 cycles minion 5 through six forms on a
-# 30-tick ring and says what that means: "Each form's defences make its own name the only thing
-# that hurts it", done in the npc config rather than in the combat scripts. So a sim that
-# attacks her with one style does nothing to five forms out of six and cannot kill her inside
-# any budget - audit1 reports "still alive when the sim gave up", quest_hundred_run "killed 60
-# in 884 ticks". The tally is strictly sequential (`if (%hundred_minionskilled_tally !
-# calc($which - 1)) return`), so it stops dead at 4 and the Culinaromancer never appears.
-#
-# Fixing it means a sim that reads her current type and switches attack style to match, which
-# is real work and is why this is the last thing on the list rather than the next. Putting her
-# on 1 hitpoint does not help: a mismatched style does nothing at all, so there is no blow to
-# land.
 
-quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that is fixed - the
-                     # crown needs a rope and a gorilla and the run now has both, and gets 51
-                     # steps further, through the slicing and the roast. Now step 303, the
-                     # Gelatinnoth Mother: 60 minions killed in 884 ticks and the tally reads 4
-                     # of 5, so one of the six forms is not counting
+# quest_ball_run is FIXED and off: all checks passed. DISTANCE IS NOT WHAT CATCHES YOU, SIGHT IS,
+# which is why the hold in questrun's sneak step timed out every single time and walked anyway.
+# [ai_timer,nora_t_hagg] is huntall(npc_coord, 3, 0) and then lineofsight(npc_coord, coord), and
+# "move around the edge, using the hedges as cover" is the wiki saying the hedges break the line.
+# Her garden never has her more than eight tiles off, so a distance-only wait could never end.
+# The step reads line of sight now, and notices being moved: a running player covers at most two
+# tiles a tick, so a bigger jump is somebody else moving them, and walking on down a route
+# computed before that happened is the whole of "ended up at 2907,3458". There is no winning
+# retry either - the catch deletes the shed key AND the ball and puts %ballquest back to
+# ^ball_started - so the step has to not be seen, which it now is not.
+#
+# The dead theories this entry recorded stay recorded: waiting longer does nothing, and the empty
+# route being a silent arrival was a real driver bug and that fix is kept.
+
+# THE GELATINNOTH MOTHER WAS NOT HER MECHANIC, which this file said twice and was wrong about
+# both times. quest_hundred_run is FIXED and off: 255 of 255, quest complete. questrun's fight
+# step read ANY change of npc type as a death - a rule that exists for Delrith, who is beaten down
+# and then npc_changetype'd into something the step never named. She changes into another of her
+# OWN six forms every thirty ticks (npc_changetype_keepall), and the run names all six in one
+# fight step because they are one npc, so every round ended inside thirty ticks claiming a kill.
+# "killed 60 in 884 ticks and hundred_minionskilled_tally is 4" was sixty rounds of her turning
+# over, not sixty corpses. A change into a type the step itself named is no longer a death.
+#
+# audit1's half of it was not her either: it was an empty hand. The banana step equips the gorilla
+# greegree, which displaced the rune scimitar, and taking the greegree off again left the slot
+# bare for the rest of the quest. She ended 1400 ticks on 115 and then 67 of her 190 hitpoints
+# across two runs, which is a fist's damage. The fight is now preceded by a check that names the
+# weapon it is fought with.
+#
+# What this entry had right is the content: five of her six forms carry magicdefence=5 with every
+# other defence at 1000 and hundred_minion5_melee is the mirror of it, so a sim holding one weapon
+# really cannot out-damage her inside ^hundred_boss_lifetime. Nothing about that needed changing.
+
+# quest_hundred_run is FIXED and off: 255 of 255 checks passed, hundred_main_quest_var finished
+# at 5 - COMPLETE. See the Gelatinnoth Mother note above.
 
 # ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
 # four sims as "not known to be broken - known to be slower than the job is willing to wait",
@@ -270,14 +270,28 @@ quest_hundred_run    # WAS step 277 "not carrying hundred_ilm_red_banana"; that 
 # those seven turned out to be nothing of the kind:
 #
 #   quest_druidspirit_run, quest_myreque2_run, quest_rag_run  pass on a runner now - off the list
-#   brutalarrows                                              never passed here either - moved up
-#   mmaggro                                                   the roll, not the machine - moved up
+#   brutalarrows                                              never passed here either - FIXED
+#   mmaggro                                                   not the roll at all: a username
+#                                                             collision. FIXED
 #   quest_ikov_run                                            the roll, and diagnosed below
 #
 # changepassword is the one that survives: it passes here on seed 1 and still failed on a runner
 # in the fifth run, on that same seed. Same engine, same content, same dice, different answer - so
-# whatever it is, it is the environment and not the game. Nobody has looked yet, and it is now a
-# single sim rather than a crowd to hide in.
+# whatever it is, it is the environment and not the game.
+#
+# STILL HERE, BUT NO LONGER UNLOOKED-AT, and it cannot be reproduced on this machine - which is
+# the whole of what is known about it. What was found by reading is a mechanism that fits the
+# shape exactly: the checks that cross into the login worker were given five seconds, that worker
+# is a tsx-compiled thread which does not exist until the first message reaches it, and a timeout
+# does not cost its own check alone - World.onLoginMessage is what clears the username from
+# World.passwordChanges, so an answer that has not arrived makes every later request read "Your
+# last password change is still being processed." One slow round trip therefore fails every check
+# after it, which is what "passes on one machine and not the other" looks like from here.
+#
+# So: a warm-up round trip where nothing is measured, a minute to answer instead of five seconds,
+# and a printed line naming the request that went unanswered and whether the lock is still held.
+# Nothing correct is made to pass by waiting longer - the real work is two bcrypt hashes. If this
+# fails again the next run says which request it was, which is the thing that was missing.
 changepassword
 
 # quest_ikov_run is FIXED and off: all five seeds pass, including the four that never had.

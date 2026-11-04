@@ -1,4 +1,5 @@
 import CategoryType from '#/cache/config/CategoryType.js';
+import { toBase37 } from '#/util/JString.js';
 import { opHeldUAlternate } from '#/engine/script/OpHeldUTrigger.js';
 // Shared helpers for the quest audit sim (audit1.ts): chat driving, loc/npc clicks with real routes,
 // item-on-loc/npc, walkability floods and a dead-op scan over an area.
@@ -32,9 +33,36 @@ export const check = (what: string, got: unknown, want: unknown) => {
 };
 
 let bucket = 1;
+/**
+ * A logged-in player at a tile, or a throw saying why not.
+ *
+ * THE LOGIN IS CHECKED, because a login that quietly does not happen is indistinguishable from
+ * the game being broken. mmaggro named its players 'human_' + npcName.slice(3, 14), which made
+ * 'human_zombie_monk' out of BOTH mm_zombie_monkey_small and mm_zombie_monkey_large - seventeen
+ * characters of a twelve-character username, and the same seventeen twice. The second login was
+ * refused, and the sim reported it as an Ape Atoll monkey that would not attack a human standing
+ * beside it. Nothing in its output mentioned the player at all.
+ *
+ * Every sim in this directory builds usernames out of whatever it is iterating over, so the check
+ * belongs here rather than in any one of them.
+ */
+const usernames = new Map<string, string>();
 export function player(name: string, x: number, z: number, level = 0) {
+    // TWELVE CHARACTERS, AND THE REST IS DROPPED. toBase37 stops at 12 and skips every character
+    // that is not a letter or a digit, so 'human_zombie_monkey_small' and
+    // 'human_zombie_monkey_large' are the SAME account. Two names that collide mean the second
+    // login is refused as a duplicate, which is where this check comes from.
+    const key = String(toBase37(name));
+    const clash = usernames.get(key);
+    if (clash !== undefined && clash !== name) {
+        throw new Error(`username "${name}" is the same account as "${clash}": toBase37 keeps only the first 12 letters and digits`);
+    }
+    usernames.set(key, name);
     const p = H.makePlayer(name, x, z, bucket++);
     H.tick(1);
+    if (!p.isActive || !p.isValid()) {
+        throw new Error(`"${name}" did not log in at ${x},${z} - isActive ${p.isActive}, isValid ${p.isValid()}` + ' (a duplicate username, or a tile in an unallocated zone)');
+    }
     if (level) p.teleport(x, z, level);
     H.maxOut(p);
     H.clearInv(p);

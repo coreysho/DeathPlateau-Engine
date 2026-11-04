@@ -696,7 +696,9 @@ if (want('hauntedmine')) {
     check('  and into the loading cart, where it stays lit', H.invCount(p, 'glowing_fungus'), 0);
     p.teleport(2770, 4523, 0);
     H.tick(1);
-    op(p, 2769, 4522, 'hauntedmine_points_info');
+    // "Not yet." - with a loaded cart the board offers to start the run, and this first read is
+    // only here for the diagram; the run itself is below, after the points are thrown.
+    op(p, 2769, 4522, 'hauntedmine_points_info', 1, [2]);
     for (const [n, x, z] of [
         [1, 2785, 4517],
         [3, 2786, 4517],
