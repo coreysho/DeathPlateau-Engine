@@ -41,6 +41,14 @@
 #   AND FIVE WERE AUDITS WHOSE QUESTS HAD BEEN REBUILT UNDER THEM, which is the pattern worth
 #                                 keeping: see the note below.
 #
+# HOW MUCH THE COLLISION WAS HIDING, measured by counting the renames fitName now prints. Four of
+# the twenty-three were sims nobody had any complaint about, and they were the worst of it: basalt
+# renamed 59 players, opheld2 61, coursefall 55. Those are loops over every jumping spot, every
+# held item and every course tile, and each one was running its whole loop against the one account
+# that got in first - so a single case was being measured scores of times and reported as scores
+# of cases. Nothing in their output said so, because a refused login is silent and the sims never
+# asked whether the player was there. a1lib's player() asks now.
+#
 # The honest reading of that is that this list was never mostly a list of broken game. It was
 # mostly a list of tests that had stopped describing the game, and the one reliable way to tell
 # the difference was to read the content a check was written about rather than the check.
