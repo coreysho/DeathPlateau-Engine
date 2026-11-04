@@ -173,10 +173,15 @@ jobs:
           # sim only just fits inside is a cap that will kill it on a slower box and look exactly
           # like a failure. Same reason glassblowing has its own.
           # AND FIVE MORE HAD OUTGROWN IT, found by timing every sim on this machine rather than
-          # waiting for each one to go red in turn. Measured here: lunar 374s, roofall 152s,
-          # animmag 142s, audit3 135s, diaryrewards 124s. Everything from roofall down was inside
-          # the 180s cap by less than a minute, which is the audit7 trap again - a cap a sim only
+          # waiting for each one to go red in turn. Measured here: lunar 374s, quest_hundred_run
+          # 268s (255 of 255 checks, so it is green and slow, not broken), roofall 152s, animmag
+          # 142s, audit3 135s, diaryrewards 124s. Two are already OVER 180s and the rest are
+          # inside it by less than a minute, which is the audit7 trap again - a cap a sim only
           # just fits inside kills it on a slower box and looks exactly like a failure.
+          #
+          # That two of them are over the cap here and neither has ever been reported red says
+          # the same thing lunar does from the other direction: a runner is a good deal faster
+          # than this container, so these caps are generous there and honest here.
           #
           # lunar is the one that proved it, and it is worth writing down how it looked, because
           # it looked exactly like a regression and was not one. It timed out TWICE on a runner
