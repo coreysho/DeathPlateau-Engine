@@ -464,6 +464,41 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 return handleFaultsCommand(player, args);
             }
 
+            // custom (2026-11-04) - turn the input capture on for somebody, which until now
+            // NOTHING COULD DO. InputTracking has recorded the cursor, clicks, camera and focus
+            // into input_report since long before any of this, gated on input.active - and the
+            // only thing that ever set it was a player being reported (World.processReport). The
+            // RELAY_TRACK opcode exists, the friend server relays it, and no caller was ever
+            // written: so a suspect found by ::botcheck's counts could not be watched.
+            //
+            // It costs about a megabyte per player-hour, which is why it is per-player and off by
+            // default rather than on for the world. ::track with no name lists who is being
+            // watched, so it cannot be left on by accident and forgotten.
+            if (cmd === 'track' || cmd === 'untrack') {
+                const want = args.join('_').toLowerCase();
+
+                if (cmd === 'track' && want.length === 0) {
+                    const on: string[] = [];
+                    for (const other of World.playerLoop.all()) {
+                        if (isClientConnected(other) && other.input.active) {
+                            on.push(other.displayName);
+                        }
+                    }
+                    player.messageGame(on.length > 0 ? `Capturing input for: ${on.join(', ')}` : 'Capturing input for nobody.');
+                    return true;
+                }
+
+                const target = World.getPlayerByUsername(want);
+                if (!target || !isClientConnected(target)) {
+                    player.messageGame(`${want} is not online.`);
+                    return true;
+                }
+
+                target.input.active = cmd === 'track';
+                player.messageGame(`${cmd === 'track' ? 'Capturing' : 'No longer capturing'} input for ${target.displayName}.`);
+                return true;
+            }
+
             // custom (2026-09-29) - which of the build's triggers have ever run
             // (engine/script/ScriptCoverage.ts). The never-reached list is a to-do list nobody can
             // write by hand: there is no way to read off the source which triggers a player can
