@@ -20,6 +20,31 @@
 // ONE PAIR GOES IN AND ONE PAIR MUST COME OUT, however many times it is worn. That is the only
 // assertion here, and it is made after every single cycle so the run says WHEN it first diverges
 // rather than only that it did.
+// WHAT ELSE WAS SWEPT FOR THE SAME BUG, and why none of it found a second one. Written down so the
+// next person does not repeat four searches that came back clean:
+//
+//   every hook in [proc,on_unequip]      the boots were the only one wrong. ~castlewars_flag_drop
+//                                        already opens with `if (inv_total($inv, $obj) < 1) return`
+//                                        - the exact guard added here, so the right shape was
+//                                        already in the codebase. The greegree, Ghosts Ahoy
+//                                        bedsheet, Easter ring and runecraft hooks touch no items
+//                                        at all.
+//   op handlers that swap obj A for B    86 of them, 31 with no inv_total guard - and NOT 31 bugs.
+//                                        An [opheldN,x] fires once per click, which is the whole
+//                                        difference: the boots handler has no yield and no second
+//                                        click, it was on_unequip running twice inside ONE unequip.
+//   swaps that yield before deleting     47, split 25 guarded to 22 not. p_delay sets p.delayed and
+//                                        the engine refuses a delayed player's input, so the yield
+//                                        is a protection rather than a gap, and the 25 look like
+//                                        convention rather than necessity.
+//   item-swapping procs by caller count  over-selects and finds nothing. ~shilo_sandscoop has three
+//                                        callers and is fine: they are three separate [oplocu,sandN]
+//                                        triggers, one fires per click, each guarded on last_useitem.
+//
+// THE PROPERTY THAT MATTERED - "this proc runs more than once for one logical action" - is not
+// visible to any of those. Static call-site counting cannot see it and neither can a grep. What
+// caught it was the fuzzer's item-conservation watcher, holding totals still over a window while
+// the bot equipped and unequipped, and that is the general protection against the next one.
 import * as H from './harness.js';
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
