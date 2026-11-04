@@ -1,4 +1,4 @@
-# The 298 pass/fail simulations in tools/sim, which nothing ran automatically.
+# The three hundred-odd pass/fail simulations in tools/sim, which nothing ran automatically.
 #
 # WHY NOT ON EVERY PUSH. They are about two and a half hours end to end - each boots a world,
 # and the audit sweeps are minutes each - against four minutes for the whole of the client's

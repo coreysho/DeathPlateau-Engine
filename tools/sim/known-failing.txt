@@ -27,11 +27,14 @@
 #   THREE WERE BUGS IN THE GAME.  a random event ending a temple trek; a lost recording getting
 #                                 the orb back but not the serum its own note promises; and a pair
 #                                 of attack animations with no priority (deployed separately).
-#   ONE WAS A USERNAME COLLISION. toBase37 keeps twelve letters and digits, so mmaggro's two
-#                                 zombie monkeys were the same account and the second login was
-#                                 refused in silence. It had the same effect in four sims that
-#                                 were PASSING - gwd, plunder, deathtoken and fremtrials2 - so the
-#                                 check is in H.makePlayer now.
+#   ONE WAS A USERNAME COLLISION. toBase37 reads the first twelve CHARACTERS of a name - not the
+#                                 first twelve letters and digits: a separator in there holds its
+#                                 place and counts as zero. So mmaggro's two zombie monkeys were
+#                                 the same account and the second login was refused in silence.
+#                                 It had the same effect in TWENTY-THREE sims, four of which were
+#                                 PASSING while measuring one account's worth of a loop - so
+#                                 H.makePlayer puts every name through fitName now, and
+#                                 tools/sim/fitnames.ts measures fitName itself without a world.
 #   TWO WERE IN THE QUESTRUN DRIVER. the sneak step held on distance where Nora T. Hagg catches
 #                                 you on sight, and the fight step read the Gelatinnoth Mother's
 #                                 own form change as a death.
@@ -253,7 +256,7 @@
 # single assertion resting on where a wandering npc happened to be, or on which branch a roll
 # took, and each is fixable inside its own sim without touching the content.
 # mmaggro is FIXED and off: 23 ok, 0 FAIL. AND IT WAS NOT THE ROLL. The players were named
-# 'human_' + npcName.slice(3, 14), and toBase37 keeps only the first twelve letters and digits -
+# 'human_' + npcName.slice(3, 14), and toBase37 reads the first twelve CHARACTERS of a name -
 # so mm_zombie_monkey_small and mm_zombie_monkey_large both asked for the same account. The second
 # login was refused as a duplicate, and the check reported an Ape Atoll monkey that would not
 # attack a human standing beside it about a human who had never logged in. p.isActive was false

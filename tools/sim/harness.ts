@@ -231,28 +231,17 @@ export function clearLogs() {
     mesgs.length = 0;
 }
 
+import { fitName } from './fitname.js';
+export { fitName };
+
 /**
  * Create a maxed player standing at (x, z). `ip` decides their bucket in World.playerLoop.
  *
- * AND REFUSE A NAME THAT IS ALREADY AN ACCOUNT HERE. toBase37 keeps only the first twelve letters
- * and digits, so 'mm_zombie_monkey_small' and 'mm_zombie_monkey_large' are the same account, as
- * are 'frem_sigmund', 'frem_sigmund_lost' and 'frem_sigmund_old'. The world refuses the duplicate
- * login and says nothing, and the sim carries on holding a Player that was never in it - which
- * mmaggro reported as an Ape Atoll monkey that would not attack a human standing beside it, with
- * distance 1, line of sight both ways, and p.isActive false. Five sims had it.
- *
- * Checked here rather than in any one sim, because every sim in this directory builds usernames
- * out of whatever it is iterating over.
+ * The name is put through fitName first, so two labels can never quietly become one account.
  */
-const taken = new Map<string, string>();
 export function makePlayer(name: string, x: number, z: number, ip: number = 2130706433): Player {
-    const key = String(toBase37(name));
-    const clash = taken.get(key);
-    if (clash !== undefined && clash !== name) {
-        throw new Error(`username "${name}" is the same account as "${clash}": toBase37 keeps only the first 12 letters and digits`);
-    }
-    taken.set(key, name);
-    const p = new Player(name, toBase37(name), BigInt(Math.floor(Math.random() * 1e9)));
+    const username = fitName(name);
+    const p = new Player(username, toBase37(username), BigInt(Math.floor(Math.random() * 1e9)));
     p.teleport(x, z, 0);
     (p as any).__ip = ip;
     World.newPlayers.add(p);

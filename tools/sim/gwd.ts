@@ -961,8 +961,8 @@ console.log('\nTHE ARMIES DROP SOMETHING');
     // nothing at all, and the mage has 7. So one kill proving nothing is not a failure - it is the
     // table. Up to three of each are killed, and the check is that SOME kill drops.
     // AND A NAME SHORT ENOUGH TO BE ITS OWN ACCOUNT. These were named `loot_${kind}_${attempt}`,
-    // and toBase37 keeps only the first twelve letters and digits - so every one of the twelve
-    // players in this loop was "lootgwdspiri" and eleven of their logins were refused. The kills
+    // and toBase37 reads the first twelve CHARACTERS of the name - so every one of the twelve
+    // players in this loop was "loot_gwd_spi" and eleven of their logins were refused. The kills
     // still happened and the drops still landed, so the section passed while measuring one
     // account's worth of them.
     let lootWho = 0;

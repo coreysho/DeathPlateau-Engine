@@ -46,7 +46,7 @@ let bucket = 1;
  * belongs here rather than in any one of them.
  */
 export function player(name: string, x: number, z: number, level = 0) {
-    // the colliding-name half of this lives in H.makePlayer, so every sim gets it
+    // the colliding-name half of this lives in H.fitName, which makePlayer calls for every sim
     const p = H.makePlayer(name, x, z, bucket++);
     H.tick(1);
     if (!p.isActive || !p.isValid()) {
