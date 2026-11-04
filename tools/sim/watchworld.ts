@@ -107,6 +107,26 @@ function sink(): Promise<{ url: string; got: string[]; stop: () => void }> {
     });
 }
 
+/**
+ * Stand-in for the dead-man's switch, which records the PATH of each check-in. The path is the
+ * assertion: hc-ping.com reads a bare url as "alive" and a trailing /fail as "broken", so a test
+ * that only counted requests would pass on a watcher that reported the world's outage as its own.
+ */
+function switchSink(): Promise<{ url: string; paths: string[]; stop: () => void }> {
+    return new Promise(resolve => {
+        const paths: string[] = [];
+        const server = http.createServer((req, res) => {
+            paths.push(req.url ?? '');
+            req.on('data', () => {});
+            req.on('end', () => res.writeHead(200).end('OK'));
+        });
+        server.listen(0, '127.0.0.1', () => {
+            const port = (server.address() as net.AddressInfo).port;
+            resolve({ url: `http://127.0.0.1:${port}/some-uuid`, paths, stop: () => server.close() });
+        });
+    });
+}
+
 async function main() {
     // SAY SO ONCE, rather than failing eighteen checks in a way that reads like a broken probe.
     // The watcher is python because the relay it runs on has python and nothing else; a box
@@ -204,6 +224,40 @@ async function main() {
     const singular = await probe({ WATCH_PORT: '1', WATCH_STATE: path.join(dir, 'j.json'), WATCH_FAILS: '1' });
     check('it counts in english', singular.out.includes('1 check in a row'), true);
 
+    // ---------------------------------------------------------------- the dead-man's switch
+    console.log("\nand the dead-man's switch, which answers a different question");
+    const hc = await switchSink();
+
+    const live = await world('serving');
+    await probe({ WATCH_PORT: String(live.port), WATCH_STATE: path.join(dir, 'k.json'), WATCH_PING: hc.url });
+    check('a healthy run checks in', hc.paths, ['/some-uuid']);
+    live.stop();
+
+    // THE ONE THAT MATTERS. Check in only when the world is healthy and an outage stops the
+    // pings too - so the switch would report the relay as gone every time the world went down,
+    // and the one thing it exists to tell you becomes indistinguishable from the thing the
+    // webhook already said. The watcher must keep checking in while the world is dead.
+    const deadWorld = { WATCH_PORT: '1', WATCH_STATE: path.join(dir, 'l.json'), WATCH_PING: hc.url };
+    await probe(deadWorld);
+    await probe(deadWorld);
+    await probe(deadWorld);
+    check('a run against a DEAD world still checks in, every time', hc.paths.length, 4);
+    check(
+        '...and never as a failure, because the world is not what this watches',
+        hc.paths.filter(p => p.includes('fail')),
+        []
+    );
+
+    const hcDown = await probe({ WATCH_PORT: '1', WATCH_STATE: path.join(dir, 'm.json'), WATCH_PING: 'http://127.0.0.1:1/gone' });
+    check('a switch that is itself unreachable warns and leaves the verdict alone', [hcDown.code, hcDown.out.includes("could not check in with the dead-man's switch")], [1, true]);
+    check('...and does not print the url, which is a credential', hcDown.out.includes('127.0.0.1:1/gone'), false);
+
+    const silentLive = await world('serving');
+    const noPing = await probe({ WATCH_PORT: String(silentLive.port), WATCH_STATE: path.join(dir, 'n.json') });
+    check('no switch configured means no check-in and nothing said about one', [hc.paths.length, /dead-man/i.test(noPing.out)], [4, false]);
+    silentLive.stop();
+
+    hc.stop();
     alerts.stop();
     fs.rmSync(dir, { recursive: true, force: true });
 
