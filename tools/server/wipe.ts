@@ -32,8 +32,10 @@
  *
  *   the save file        data/players/<profile>/<name>.sav - levels, items, bank, quests, varps,
  *                        position, appearance. MOVED, not deleted: see below.
- *   hiscore              both tables. They are derived from the save, so leaving them would show
- *                        a maxed board full of characters that no longer exist.
+ *   hiscore              both tables, AND FOR STAFF TOO - the one thing staff do not keep. They
+ *                        are derived from the save, so leaving them would show a maxed board full
+ *                        of characters that no longer exist; and a staff row would be pre-launch
+ *                        progress ranked against players who start at nothing.
  *   collection_log       the same.
  *   friendlist           a fresh account has no friends list. (ignorelist goes with it.)
  *
@@ -249,9 +251,14 @@ async function main() {
 
     // ---------------------------------------------------------------- the derived rows
     const ids = players.map(a => a.id);
+    // THE HISCORES GO FOR EVERYONE, staff included, which is the one place staff are not exempt.
+    // They keep their characters, so a staff row on the board is months of pre-launch progress
+    // ranked against players who start at nothing. updateHiscores stopped writing them at all for
+    // staffmodlevel > 0 on the same day; this clears what is already there.
+    const everyone = accounts.map(a => a.id);
     if (ids.length > 0) {
-        const hiscores = await db.deleteFrom('hiscore').where('account_id', 'in', ids).where('profile', '=', profile).executeTakeFirst();
-        const large = await db.deleteFrom('hiscore_large').where('account_id', 'in', ids).where('profile', '=', profile).executeTakeFirst();
+        const hiscores = await db.deleteFrom('hiscore').where('account_id', 'in', everyone).where('profile', '=', profile).executeTakeFirst();
+        const large = await db.deleteFrom('hiscore_large').where('account_id', 'in', everyone).where('profile', '=', profile).executeTakeFirst();
         const log = await db.deleteFrom('collection_log').where('account_id', 'in', ids).where('profile', '=', profile).executeTakeFirst();
         const friends = await db.deleteFrom('friendlist').where('account_id', 'in', ids).where('profile', '=', profile).executeTakeFirst();
         const ignores = await db.deleteFrom('ignorelist').where('account_id', 'in', ids).where('profile', '=', profile).executeTakeFirst();
