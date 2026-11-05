@@ -105,6 +105,40 @@ function describe(params: Record<string, string>): string {
     return ` - it carried: ${names.join(', ')}`;
 }
 
+/** Anything whose NAME suggests it authenticates the caller. Never printed, whatever it holds. */
+const SECRETISH = /secret|key|token|hash|pass|sig/i;
+
+/**
+ * The same, with the values, for the one error where the values are the whole point.
+ *
+ * A VOTE THAT NAMED NOBODY cannot be traced from the names of its parameters: every such line
+ * looks identical, and the only way to work out who it was is to match the timestamp against a
+ * player saying "I voted about then". On 5 November that cost an exchange with a player and a
+ * read of three separate logs to conclude what this line could have said outright.
+ *
+ * THE SECRET IS NEVER PRINTED - not redacted at the call site, where somebody would eventually
+ * forget, but here, by name, for every parameter that looks like a credential. The one thing a
+ * journal must not become is a place where the shared secret can be read back.
+ *
+ * Values are truncated, because a site is free to send whatever it likes and a log line that
+ * wraps forty times is a log line nobody reads.
+ */
+function describeWithValues(params: Record<string, string>): string {
+    const names = Object.keys(params);
+    if (names.length === 0) {
+        return ' - it carried no parameters at all';
+    }
+    const shown = names.map(name => {
+        if (SECRETISH.test(name)) {
+            return `${name}=<hidden>`;
+        }
+        const raw = params[name];
+        const value = raw === undefined || raw === null ? '' : String(raw);
+        return `${name}=${JSON.stringify(value.length > 64 ? `${value.slice(0, 64)}\u2026` : value)}`;
+    });
+    return ` - it carried: ${shown.join(', ')}`;
+}
+
 export default class VoteService {
     static ledger(): VoteBook {
         if (!book) {
@@ -239,7 +273,7 @@ export default class VoteService {
         const claimed = (params[site.callback.userParam] ?? '').trim();
         const username = toSafeName(claimed);
         if (!claimed.length || claimed.length > 12 || username === 'invalid_name' || NOT_A_PLAYER.has(username)) {
-            printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describe(params)}`);
+            printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describeWithValues(params)}`);
             // 400 rather than 200: unlike a validator's empty ping, this one got past the secret,
             // so it is a real caller sending something we cannot pay. Say so.
             return { status: 400, body: 'no player' };
