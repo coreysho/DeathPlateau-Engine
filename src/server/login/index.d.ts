@@ -6,6 +6,9 @@ interface LoginResponse {
     lowMemory: boolean;
     reconnecting: boolean;
     staffmodlevel?: number;
+    // custom (2026-11-06) - the Veteran rank. Optional like staffmodlevel, and read as 0 when
+    // a login server older than the column does not send it.
+    veteran?: number;
     muted_until?: any | null;
     save: Uint8Array | null;
     account_id: number;

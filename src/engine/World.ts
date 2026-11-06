@@ -1190,6 +1190,19 @@ class World {
                     Uint8Array.from([
                         2,
                         // the rank the client echoes its own lines with - see ChatCrown
+                        //
+                        // NO VETERAN HERE, and it is not an oversight. The client keeps this byte
+                        // as Client.staffmodlevel and gates three moderator things on it: the
+                        // "Report abuse" option on a chat line and the mute option on the report
+                        // interface (>= 1), and ::clientdrop / ::lag / ::prefetchmusic (>= 2).
+                        // Crown 7 would pass all of them, so a veteran would be offered a
+                        // moderator's menu. The server would refuse whatever they clicked, but
+                        // being shown it is wrong on its own.
+                        //
+                        // The veteran emblem reaches the client in the appearance instead
+                        // (Player.chatIcons), which is where every other player's icons come from
+                        // and which carries no rights with it. This byte is only a fallback for
+                        // the local player's own lines before an appearance has been read.
                         chatCrown(player.staffModLevel),
                         1 // mouse tracking can only be enabled on login
                     ])
@@ -2359,7 +2372,7 @@ class World {
                 return;
             }
 
-            const { username, lowMemory, reconnecting, staffmodlevel, muted_until, members, messageCount } = msg;
+            const { username, lowMemory, reconnecting, staffmodlevel, veteran, muted_until, members, messageCount } = msg;
             const save = msg.save ?? new Uint8Array();
 
             // if (reconnecting && !this.getPlayerByUsername(username)) {
@@ -2385,6 +2398,7 @@ class World {
                 // the player has no outbound stream yet.
                 player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
+                player.veteran = (veteran ?? 0) > 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
                 player.members = members;
