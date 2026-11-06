@@ -140,6 +140,39 @@ console.log('\n== the upper chain: Agility 71, 1st floor to the 2nd and back');
     H.despawn(down);
 }
 
+// THE STAIRCASES WERE NOT DEAD CLICKS, WHICH IS WHY THE SWEEP ABOVE WALKED PAST THEM. Each of the
+// four already had an [oploc1] in ladders+stairs/scripts/stairs.rs2 - a switch_coord whose only arm
+// was "case default : @unhandled_stairs(loc_coord)", which prints "Unhandled stairs: loc_4493 at
+// ..." and leaves the player standing there. deadLocOps only knows whether a trigger EXISTS, so a
+// loc answered by a handler that does nothing reads as fine. Reported from play once the doors and
+// the chains were working: "the staircases in the slayer tower do not".
+console.log('\n== and both staircases, which answered and did nothing');
+{
+    const climb = (name: string, from: [number, number, number], loc: string, at: [number, number]) => {
+        const p: any = player(name, from[0], from[1], from[2]);
+        H.maxOut(p);
+        H.tick(1);
+        H.clearLogs();
+        H.opLoc(p, at[0], at[1], loc, 1);
+        for (let k = 0; k < 12; k++) H.tick(1);
+        const said = A.mesOf(p);
+        const out = { at: [p.x, p.z, p.level] as [number, number, number], unhandled: said.some(m => m.includes('Unhandled stairs')) };
+        H.despawn(p);
+        return out;
+    };
+    // The flight just inside the front door: one square, ground floor to the 1st and back.
+    const aUp = climb('stsa1', [3433, 3537, 0], 'loc_4493', [3434, 3537]);
+    check('the ground floor stairs go up', aUp.at, [3433, 3537, 1]);
+    check('  without the unhandled message', aUp.unhandled, false);
+    check('  and come back down', climb('stsa2', [3433, 3537, 1], 'loc_4494', [3434, 3537]).at, [3433, 3537, 0]);
+
+    // The other flight has its two ends two squares apart, so up moves you east and down west.
+    const bUp = climb('stsb1', [3412, 3540, 1], 'loc_4495', [3413, 3540]);
+    check('the 1st floor stairs go up', bUp.at, [3417, 3540, 2]);
+    check('  without the unhandled message', bUp.unhandled, false);
+    check('  and come back down', climb('stsb2', [3417, 3540, 2], 'loc_4496', [3415, 3540]).at, [3412, 3540, 1]);
+}
+
 console.log('\n== and a slip costs hitpoints rather than the climb');
 {
     // 2-5 damage on a failure, and you arrive anyway. Climb it until a slip happens.
