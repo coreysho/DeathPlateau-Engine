@@ -33,6 +33,12 @@ built and works today.
      Where the site lets you end the url yourself - Top100Arena asks for one ending `?postback=`
      and appends the voter to it - the ordinary query form is simpler: give them
      `.../callback?key=SECRET&postback=` and set `secretParam` to `key`.
+
+     **A site that SIGNS instead of echoing** - RuneRank sends an HMAC-SHA256 of its own fields and
+     never transmits the key - needs `callback.hmac` rather than `secretParam`: name the parameter
+     holding the digest and the fields that went into it, in the order the site joins them.
+     `secret` is then the signing key. This is the strongest of the three: the player's name is
+     inside what was signed, so a captured callback cannot be edited into somebody else's.
    - **We call it.** Fill in `check.url` with `{user}` and `{key}` where they go, and
      `check.success` with how to read a yes out of the answer. The player then claims by asking the
      Vote clerk.
