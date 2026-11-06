@@ -271,8 +271,21 @@ export default class VoteService {
             }
             const signed = fields.map(field => params[field]).join(separator ?? ':');
             const expected = createHmac('sha256', site.callback.secret).update(signed).digest('hex');
-            authentic = timingSafeEqual(expected, (params[param] ?? '').toLowerCase());
-            where = `the ${param} signature`;
+            const got = (params[param] ?? '').toLowerCase();
+            authentic = timingSafeEqual(expected, got);
+            where = `"${param}"`;
+
+            // A MISMATCH HAS TWO CAUSES AND THE LOG MUST SEPARATE THEM: the key is wrong, or what
+            // we signed is not what they signed. The string that went into the digest is printed
+            // because every part of it already arrived in the clear, and seeing it is the only way
+            // to catch a field in the wrong order or a value read differently. The digests are
+            // shown as short prefixes - enough to tell "completely different" from "same shape",
+            // and they are derived values, never the key.
+            if (!authentic) {
+                printError(
+                    `vote: ${siteId} signed "${signed}" and got ${expected.slice(0, 12)}…, but the callback carried ${got.slice(0, 12) || '(nothing)'}… - either ${site.callback.secret.length > 0 ? 'the key differs' : 'there is no key'}, or the fields are not the ones they sign`
+                );
+            }
         } else {
             const secretParam = site.callback.secretParam ?? 'secret';
             const given = pathSecret ?? params[secretParam] ?? '';

@@ -121,7 +121,7 @@ console.log('a signed callback');
 // String(1757404800) and String(false), not the number and the boolean.
 const sign = (v: Record<string, string>) => createHmac('sha256', 'correct-horse').update([v.vote_id, v.server_id, v.username, v.timestamp].join(':')).digest('hex');
 
-const vote = (over: Partial<Record<string, string>> = {}) => {
+const vote = (over: Partial<Record<string, string>> = {}): Record<string, string> => {
     const v: Record<string, string> = {
         vote_id: `evt-${n++}`,
         server_id: 'srv-1',
