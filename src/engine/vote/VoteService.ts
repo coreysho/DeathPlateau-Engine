@@ -1,3 +1,5 @@
+import { createHmac } from 'crypto';
+
 import VoteBook, { CreditResult } from '#/engine/vote/VoteBook.js';
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
 import World from '#/engine/World.js';
@@ -252,10 +254,32 @@ export default class VoteService {
         // It is the SAME secret either way - this is where it was found, not a second credential - and
         // when the path is used it is authoritative: a wrong one there does not fall back to a
         // parameter. It is also never logged, because only `params` is ever printed.
-        const secretParam = site.callback.secretParam ?? 'secret';
-        const given = pathSecret ?? params[secretParam] ?? '';
-        if (!timingSafeEqual(given, site.callback.secret)) {
-            const where = pathSecret === undefined ? `"${secretParam}"` : 'the url path';
+        //
+        // A SIGNED CALLBACK IS CHECKED DIFFERENTLY, because there is no secret in it to compare.
+        // RuneRank sends an HMAC of its own fields and keeps the key; rebuilding the digest over
+        // the same fields is the only way to know it was them. It is the stronger of the two: a
+        // captured callback cannot be edited into another player's name, because the name was
+        // signed.
+        let authentic: boolean;
+        let where: string;
+        if (site.callback.hmac) {
+            const { param, fields, separator } = site.callback.hmac;
+            const missing = fields.filter(field => params[field] === undefined);
+            if (missing.length > 0) {
+                printError(`vote: ${siteId} signed callback is missing ${missing.join(', ')}, which the signature covers${describe(params)}`);
+                return { status: 200, body: 'unknown' };
+            }
+            const signed = fields.map(field => params[field]).join(separator ?? ':');
+            const expected = createHmac('sha256', site.callback.secret).update(signed).digest('hex');
+            authentic = timingSafeEqual(expected, (params[param] ?? '').toLowerCase());
+            where = `the ${param} signature`;
+        } else {
+            const secretParam = site.callback.secretParam ?? 'secret';
+            const given = pathSecret ?? params[secretParam] ?? '';
+            authentic = timingSafeEqual(given, site.callback.secret);
+            where = pathSecret === undefined ? `"${secretParam}"` : 'the url path';
+        }
+        if (!authentic) {
             printError(`vote: ${siteId} callback with a wrong secret - expected it in ${where}${describe(params)}`);
             return { status: 200, body: 'unknown' };
         }

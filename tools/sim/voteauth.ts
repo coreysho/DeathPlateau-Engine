@@ -1,7 +1,12 @@
 /**
- * The shared secret in the URL path: TopG's shape, and that the old shape still works.
+ * How a vote callback proves it is the site: all three shapes, and that none of them lets the
+ * others through.
  *
- *   npx tsx tools/sim/votepathsecret.ts
+ *   npx tsx tools/sim/voteauth.ts
+ *
+ *   a parameter   most toplists echo a shared secret back at us
+ *   the path      TopG sends no secret at all, and appends its own query to our url
+ *   a signature   RuneRank signs its fields with HMAC-SHA256 and never transmits the key
  *
  * WHY THE PATH AT ALL. TopG's callback is `?p_resp=NAME&ip=IP` and carries no secret - they
  * authenticate by source address, which is no use behind a tunnel. Nor can the secret go in the
@@ -13,6 +18,7 @@
  * a temporary sites.json and a temporary ledger, because what is being tested is which secret is
  * believed and which is not.
  */
+import { createHmac } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -46,6 +52,23 @@ fs.writeFileSync(
             tickets: 1,
             cooldownHours: 12,
             callback: { secret: 'env:VOTE_TEST_KEY', userParam: 'p_resp' }
+        },
+        {
+            // RuneRank's shape: it signs rather than echoing, dedupes on its own vote_id, and
+            // sends test=true from the dashboard's "Send test vote" button.
+            id: 'runerankish',
+            name: 'RuneRank-shaped',
+            url: 'https://runerank.com/vote/x',
+            playerUrl: 'https://runerank.com/vote/x?username={user}',
+            tickets: 1,
+            cooldownHours: 12,
+            callback: {
+                secret: 'env:VOTE_TEST_KEY',
+                userParam: 'username',
+                refParam: 'vote_id',
+                require: { test: 'false' },
+                hmac: { param: 'signature', fields: ['vote_id', 'server_id', 'username', 'timestamp'] }
+            }
         }
     ])
 );
@@ -91,6 +114,48 @@ console.log('the path wins when both are present');
 // a wrong path secret does not quietly fall back to a parameter that happens to be right.
 check('wrong path beats a right parameter', VoteService.fromCallback('withparam', { key: 'correct-horse', u: who() }, 'nope').body, 'unknown');
 check('right path beats a wrong parameter', VoteService.fromCallback('withparam', { key: 'nope', u: who() }, 'correct-horse').body, 'ok');
+
+console.log('a signed callback');
+// Built the way RuneRank documents it: the hex HMAC of the four fields joined by colons. The
+// values are strings here because that is what fastify's body becomes by the time it arrives -
+// String(1757404800) and String(false), not the number and the boolean.
+const sign = (v: Record<string, string>) => createHmac('sha256', 'correct-horse').update([v.vote_id, v.server_id, v.username, v.timestamp].join(':')).digest('hex');
+
+const vote = (over: Partial<Record<string, string>> = {}) => {
+    const v: Record<string, string> = {
+        vote_id: `evt-${n++}`,
+        server_id: 'srv-1',
+        username: who(),
+        timestamp: '1757404800',
+        test: 'false',
+        ...over
+    };
+    return { ...v, signature: sign(v) };
+};
+
+check('a correct signature credits', VoteService.fromCallback('runerankish', vote()).body, 'ok');
+
+// THE POINT OF SIGNING. Take a genuine callback and change who it was for: the signature still
+// belongs to the old name, so it no longer matches. A shared secret could not catch this.
+const genuine = vote();
+check('a tampered username is refused', VoteService.fromCallback('runerankish', { ...genuine, username: 'someoneelse' }).body, 'unknown');
+
+const wrongKey = vote();
+wrongKey.signature = createHmac('sha256', 'wrong-key').update([wrongKey.vote_id, wrongKey.server_id, wrongKey.username, wrongKey.timestamp].join(':')).digest('hex');
+check('a signature made with another key is refused', VoteService.fromCallback('runerankish', wrongKey).body, 'unknown');
+
+const short = vote();
+delete (short as Partial<Record<string, string>>).timestamp;
+check('a missing signed field is refused', VoteService.fromCallback('runerankish', short).body, 'unknown');
+
+// Their dashboard's test button. It must answer 2xx so the delivery is not retried for 24 hours,
+// and must never pay anybody.
+check('a test vote is ignored, not refused', VoteService.fromCallback('runerankish', vote({ test: 'true' })).body, 'ignored');
+
+// Retries reuse the vote_id, so the second delivery of the same vote must not pay twice.
+const once = vote();
+check('the first delivery credits', VoteService.fromCallback('runerankish', once).body, 'ok');
+check('the same vote_id again is a duplicate', VoteService.fromCallback('runerankish', once).body, 'duplicate');
 
 console.log('an unknown site still says nothing useful');
 check('unknown site with a right secret', VoteService.fromCallback('nosuchsite', { u: who() }, 'correct-horse').body, 'unknown');
