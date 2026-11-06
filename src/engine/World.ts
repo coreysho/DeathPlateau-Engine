@@ -76,7 +76,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
 import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
@@ -92,12 +92,14 @@ import {
     trackCycleZoneTime,
     trackNpcCount,
     trackPlayerCount,
+    trackPlayerPacketsPerTick,
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
-import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
+import { fromBase37, toBase37, toDisplayName, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
-import { printDebug, printError, printInfo } from '#/util/Logger.js';
+import Ping from '#/network/game/server/model/Ping.js';
+import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
 import OnDemand from './OnDemand.js';
 import { ObjDelayedRequest } from './entity/ObjDelayedRequest.js';
 import DbTableIndex from '#/cache/config/DbTableIndex.js';
@@ -189,8 +191,12 @@ class World {
     readonly objDelayedQueue: LinkList<ObjDelayedRequest> = new LinkList();
 
     // debug data
-    readonly lastCycleStats: Uint16Array = new Uint16Array(12);
-    readonly cycleStats: Uint16Array = new Uint16Array(12);
+    // custom (2026-11-03) - 13 entries for PACKETS_OUT_MAX, and Uint32 because Uint16 was already
+    // too narrow for the one that was here: BANDWIDTH_OUT counts BYTES per tick, and 65535 of them
+    // is 150 packets of 437, so a busy tick wrapped silently and lostcity_cycle_bandwidth_out_bytes
+    // under-reported by whole multiples of 64 KB with nothing to say it had.
+    readonly lastCycleStats: Uint32Array = new Uint32Array(13);
+    readonly cycleStats: Uint32Array = new Uint32Array(13);
 
     tickRate: number = World.TICKRATE; // speeds up when we're processing server shutdown
     currentTick: number = 0; // the current tick of the game world.
@@ -208,6 +214,11 @@ class World {
     // custom (2026-09-27) - the bot manager (engine/bot/BotManager.ts) plugs in here when NODE_BOTS is
     // set. A hook rather than an import so the world does not depend on the bots at all.
     bots: BotHooks | null = null;
+
+    // how often a slow tick may be written to the log, and how many went unsaid since (processPings' neighbour)
+    static readonly SLOW_TICK_WARN_INTERVAL: number = 30000;
+    private slowTickCount: number = 0;
+    private lastSlowTickWarning: number = 0;
 
     loginAddressAttempts: TTLCache<string, number> = new TTLCache({ ttl: 60000 });
     loginDeviceAttempts: TTLCache<string, number> = new TTLCache({ ttl: 15000 });
@@ -463,6 +474,16 @@ class World {
             }
         }
 
+        // custom (2026-11-04) - SAY SO WHEN NOTHING IS BEING RECORDED. LoggerThread drops every
+        // message it is handed unless LOGGER_SERVER is set, and that flag defaults to false, so a
+        // world can run for months writing no session_log, no wealth events, no player reports and
+        // no input tracking while the logger's own listener prints "Logger server listening" on
+        // every boot and means nothing by it. There is no way to tell from the outside except by
+        // querying a table and finding it empty.
+        if (!Environment.LOGGER_SERVER) {
+            printWarning('LOGGER_SERVER is not set, so NOTHING is being recorded: no session_log, no wealth events, no player reports, no input tracking or counts. Set LOGGER_SERVER=true in .env to keep an audit trail.');
+        }
+
         printInfo(kleur.green().bold('World ready'));
 
         if (startCycle) {
@@ -543,6 +564,10 @@ class World {
             // - stat changes
             // - afk zones changes
             // - flush packets
+            // custom (2026-11-03) - measure the round trip to each client, before the flush below
+            // so the probe rides out with everything else this tick.
+            this.processPings();
+
             this.processClientsOut();
 
             // cleanup
@@ -598,6 +623,28 @@ class World {
 
             this.cycleStats[WorldStat.CYCLE] = Date.now() - start; // set the main logic stat here, before telemetry.
 
+            // custom (2026-11-03) - say so when the world runs late. A tick is 600ms; longer than that
+            // and every player feels it, wherever they are. Nothing used to be logged at all, so the
+            // only way to know was to be told the game felt laggy. Throttled, with the count of the
+            // overruns that were swallowed in between, because a struggling world would otherwise
+            // write a line every tick and make the journal part of the problem.
+            if (this.cycleStats[WorldStat.CYCLE] > this.tickRate && this.tickRate > 0) {
+                this.slowTickCount++;
+                if (Date.now() - this.lastSlowTickWarning >= World.SLOW_TICK_WARN_INTERVAL) {
+                    const since = this.slowTickCount;
+                    this.slowTickCount = 0;
+                    this.lastSlowTickWarning = Date.now();
+                    printWarning(
+                        `tick ${this.currentTick} took ${this.cycleStats[WorldStat.CYCLE]}ms (over the ${this.tickRate}ms budget)` +
+                            ` - ${since} slow tick${since === 1 ? '' : 's'} since the last warning.` +
+                            ` world ${this.cycleStats[WorldStat.WORLD]} | in ${this.cycleStats[WorldStat.CLIENT_IN]} | npcs ${this.cycleStats[WorldStat.NPC]}` +
+                            ` | players ${this.cycleStats[WorldStat.PLAYER]} | zones ${this.cycleStats[WorldStat.ZONE]} | out ${this.cycleStats[WorldStat.CLIENT_OUT]}` +
+                            ` | cleanup ${this.cycleStats[WorldStat.CLEANUP]} ms, ${this.getHumanPlayerCount()} players,` +
+                            ` up to ${this.cycleStats[WorldStat.PACKETS_OUT_MAX]} packets to one client`
+                    );
+                }
+            }
+
             this.lastCycleStats[WorldStat.CYCLE] = this.cycleStats[WorldStat.CYCLE];
             this.lastCycleStats[WorldStat.WORLD] = this.cycleStats[WorldStat.WORLD];
             this.lastCycleStats[WorldStat.CLIENT_IN] = this.cycleStats[WorldStat.CLIENT_IN];
@@ -610,6 +657,7 @@ class World {
             this.lastCycleStats[WorldStat.CLEANUP] = this.cycleStats[WorldStat.CLEANUP];
             this.lastCycleStats[WorldStat.BANDWIDTH_IN] = this.cycleStats[WorldStat.BANDWIDTH_IN];
             this.lastCycleStats[WorldStat.BANDWIDTH_OUT] = this.cycleStats[WorldStat.BANDWIDTH_OUT];
+            this.lastCycleStats[WorldStat.PACKETS_OUT_MAX] = this.cycleStats[WorldStat.PACKETS_OUT_MAX];
 
             // push stats to prometheus
             if (Environment.NODE_PRODUCTION) {
@@ -1142,6 +1190,19 @@ class World {
                     Uint8Array.from([
                         2,
                         // the rank the client echoes its own lines with - see ChatCrown
+                        //
+                        // NO VETERAN HERE, and it is not an oversight. The client keeps this byte
+                        // as Client.staffmodlevel and gates three moderator things on it: the
+                        // "Report abuse" option on a chat line and the mute option on the report
+                        // interface (>= 1), and ::clientdrop / ::lag / ::prefetchmusic (>= 2).
+                        // Crown 7 would pass all of them, so a veteran would be offered a
+                        // moderator's menu. The server would refuse whatever they clicked, but
+                        // being shown it is wrong on its own.
+                        //
+                        // The veteran emblem reaches the client in the appearance instead
+                        // (Player.chatIcons), which is where every other player's icons come from
+                        // and which carries no rights with it. This byte is only a fallback for
+                        // the local player's own lines before an appearance has been read.
                         chatCrown(player.staffModLevel),
                         1 // mouse tracking can only be enabled on login
                     ])
@@ -1167,6 +1228,19 @@ class World {
                         }
                     }
                     this.playerLoop.add(key, player);
+                } else {
+                    // custom (2026-11-03) - AND AN ADDRESS THAT IS NEITHER OF THOSE. normalizeAddress
+                    // answers 'unknown' when a socket has no remoteAddress, which Node does for one
+                    // already destroyed by the time the connection event fires, and that string holds
+                    // no '.' and no ':' - so neither branch above ran and the player was not added to
+                    // the loop AT ALL. Logged in, greeted, saved, holding a session, and then never
+                    // ticked: no input read, no logout processing, no cleanup, until a restart.
+                    //
+                    // Everything here buckets by address so that one address cannot take more than
+                    // its turn; an address we cannot read is one bucket shared by all of them, which
+                    // is the cautious end of that same rule. Found by a sim whose stub socket left
+                    // remoteAddress at its default - see tools/sim/packetcount.ts.
+                    this.playerLoop.add(0n, player);
                 }
             } else {
                 // 127.0.0.1
@@ -1190,6 +1264,7 @@ class World {
                 continue;
             }
             ClanChat.onLogin(player);
+            this.veteranCape(player, player.veteran);
 
             if (this.shutdownTick != -1) {
                 player.write(new UpdateRebootTimer(this.shutdownTick - this.currentTick));
@@ -1359,6 +1434,7 @@ class World {
         const start: number = Date.now();
 
         this.cycleStats[WorldStat.BANDWIDTH_OUT] = 0; // reset bandwidth counter
+        this.cycleStats[WorldStat.PACKETS_OUT_MAX] = 0; // ...and the per-tick packet high-water mark
 
         for (const player of this.playerLoop.all()) {
             if (!isClientConnected(player)) {
@@ -1409,6 +1485,20 @@ class World {
         // - reset players
         for (const player of this.playerLoop.all()) {
             player.resetEntity(false);
+
+            // custom (2026-11-03) - HOW CLOSE THIS CLIENT CAME TO FALLING BEHIND. Counted here, at
+            // the end of the tick, because messages are written throughout one (a script's say,
+            // processClientsOut's info packets) and the figure is the tick's whole output.
+            if (isClientConnected(player)) {
+                const sent = player.packetsThisTick;
+                player.packetsThisTick = 0;
+                if (sent > this.cycleStats[WorldStat.PACKETS_OUT_MAX]) {
+                    this.cycleStats[WorldStat.PACKETS_OUT_MAX] = sent;
+                }
+                if (Environment.NODE_PRODUCTION) {
+                    trackPlayerPacketsPerTick.observe(sent);
+                }
+            }
 
             // - reset invs (players)
             for (const inv of player.invs.values()) {
@@ -2176,6 +2266,33 @@ class World {
         this.loginRequests.delete(client.uuid);
     }
 
+    // custom (2026-11-03) - the latency probe. Every NODE_PING_TICKS ticks each connected client is
+    // sent a sequence byte and answers with it (PongHandler), which is the only honest way to know
+    // what a player's connection is actually costing them - a tunnel or a bad route shows up here and
+    // nowhere else. The number travels back out on the next probe for the client to draw.
+    private processPings(): void {
+        if (Environment.NODE_PING_TICKS <= 0 || this.currentTick % Environment.NODE_PING_TICKS !== 0) {
+            return;
+        }
+
+        const now = Date.now();
+        for (const player of this.playerLoop.all()) {
+            if (player.isBot || !isClientConnected(player)) {
+                continue;
+            }
+
+            // the previous probe never came back - write it off rather than leave a stale number on
+            // screen for ever, and rather than match a late answer to the wrong send
+            if (player.pingSentAt !== -1) {
+                player.pingMs = -1;
+            }
+
+            player.pingSeq = (player.pingSeq + 1) & 0xff;
+            player.pingSentAt = now;
+            player.write(new Ping(player.pingSeq, player.pingMs < 0 ? 0xffff : player.pingMs));
+        }
+    }
+
     rebuild() {
         if (this.devThread) {
             this.devThread.postMessage({
@@ -2256,7 +2373,7 @@ class World {
                 return;
             }
 
-            const { username, lowMemory, reconnecting, staffmodlevel, muted_until, members, messageCount } = msg;
+            const { username, lowMemory, reconnecting, staffmodlevel, veteran, muted_until, members, messageCount } = msg;
             const save = msg.save ?? new Uint8Array();
 
             // if (reconnecting && !this.getPlayerByUsername(username)) {
@@ -2282,6 +2399,7 @@ class World {
                 // the player has no outbound stream yet.
                 player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
+                player.veteran = (veteran ?? 0) > 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
                 player.members = members;
@@ -2353,6 +2471,42 @@ class World {
             } else {
                 player.messageGame(`Cancelled ${count} saved logins. You will have to type your password next time.`);
             }
+        } else if (isVeteranResponse(msg)) {
+            const { staff, username, result, veteran } = msg;
+            this.veteranRequests.delete(username);
+
+            // A player who is online gets it now rather than on their next login. The icon rides
+            // the appearance block, so rebuilding that is the whole of showing it - without this
+            // the account row is right and nobody can see it until they relog.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.veteran = veteran;
+                // Only when an appearance has been built already. buildAppearance(-1) reads no
+                // worn inventory at all, so rebuilding one that early would send everyone a
+                // player with no equipment on; a player who has not got that far yet picks the
+                // flag up from the first build instead, which is as soon as anyone could see it.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                this.veteranCape(target, veteran);
+                target.messageGame(veteran ? 'You have been given the Veteran rank, for helping test the server.' : 'Your Veteran rank has been removed.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`veteran: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`veteran: ${name} could not be changed right now. Please try again.`);
+            } else if (veteran) {
+                who.messageGame(`veteran: ${name} now has the Veteran rank.`);
+            } else {
+                who.messageGame(`veteran: ${name} no longer has the Veteran rank.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2392,6 +2546,90 @@ class World {
             username: player.username
         });
         return true;
+    }
+
+    // custom (2026-11-06) - ::veteran (ClientCheatHandler). One change at a time per account, the
+    // way a password change is held. Keyed by the account being changed and not by the staff member
+    // running it, so two administrators cannot race on the same name.
+    veteranRequests: Set<string> = new Set();
+
+    // custom (2026-11-06) - looked up once; -2 means "not looked up yet", which is distinct from
+    // the -1 ObjType.getId returns for a build that does not have the cape in it.
+    private static veteranCapeObj: number = -2;
+
+    /**
+     * Give a veteran their cape, or take it back from somebody who is no longer one.
+     *
+     * Called at login as well as on the grant, so a cape that was dropped, destroyed or lost on
+     * death costs a relog and nothing else. That is the whole reclaim mechanism: an untradeable
+     * cosmetic that the server hands back is simpler than an npc to collect it from, and there is
+     * nothing to exploit in being given a second copy of something nobody can trade.
+     *
+     * INTO THE BANK BY PREFERENCE. A cape added to a full inventory would fall on the floor -
+     * which is how quest items have been lost here before - and a player logging in has no idea
+     * it is coming. The bank cannot drop it, and the first login after a grant is not a moment to
+     * be rummaging in somebody's backpack.
+     */
+    veteranCape(player: Player, give: boolean): void {
+        if (World.veteranCapeObj === -2) {
+            World.veteranCapeObj = ObjType.getId('veteran_cape');
+        }
+        const obj = World.veteranCapeObj;
+        if (obj === -1) {
+            return;
+        }
+
+        const bank = InvType.getId('bank');
+        const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
+        const have = held.reduce((n, inv) => n + player.invTotal(inv, obj), 0);
+
+        if (!give) {
+            for (const inv of held) {
+                const n = player.invTotal(inv, obj);
+                if (n > 0) {
+                    player.invDel(inv, obj, n);
+                }
+            }
+            if (have > 0) {
+                player.buildAppearance(player.appearanceInv);
+                player.messageGame('Your Veteran cape has been taken back.');
+            }
+            return;
+        }
+
+        if (have > 0) {
+            return;
+        }
+
+        if (bank !== -1 && player.invFreeSpace(bank) > 0) {
+            player.invAdd(bank, obj, 1);
+            player.messageGame('Your Veteran cape is in your bank.');
+        } else if (player.invFreeSpace(InvType.INV) > 0) {
+            player.invAdd(InvType.INV, obj, 1);
+            player.messageGame('Your Veteran cape has been added to your inventory.');
+        } else {
+            // Nowhere safe to put it. Say so rather than dropping it, and try again next login.
+            player.messageGame('Your Veteran cape could not be given to you - your bank and inventory are both full.');
+        }
+    }
+
+    /** Returns the safe name the request was filed under, or null if one is already in flight. */
+    requestVeteran(staff: string, username: string, veteran: boolean): string | null {
+        // The account table stores the base37 round trip, which is also what ::veteran is likely to
+        // be typed as - "Bob Smith" and "bob_smith" are the same account and both have to find it.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.veteranRequests.has(safeName)) {
+            return null;
+        }
+
+        this.veteranRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_veteran',
+            staff,
+            username: safeName,
+            veteran
+        });
+        return safeName;
     }
 
     requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {
@@ -2856,6 +3094,29 @@ class World {
             coord: player.coord,
             offender,
             reason
+        });
+    }
+
+    // custom (2026-11-04) - the session's input counts, once, as it ends. Five integers saying how
+    // much the player did and how much the client reported a person doing it. See
+    // InputTracking.mouseMoves for why that pair is the useful one, and tools/server/botcheck.ts
+    // for what reads them.
+    submitInputCounts(player: Player) {
+        const input = player.input;
+        if (input.userActions === 0 && input.telemetry === 0) {
+            // nothing happened in this session - a connection that logged in and straight back out
+            return;
+        }
+
+        this.loggerThread.postMessage({
+            type: 'input_counts',
+            session_uuid: player.session,
+            timestamp: Date.now(),
+            user_actions: input.userActions,
+            mouse_moves: input.mouseMoves,
+            mouse_clicks: input.mouseClicks,
+            camera_moves: input.cameraMoves,
+            focus_changes: input.focusChanges
         });
     }
 

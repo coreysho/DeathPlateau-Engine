@@ -112,8 +112,21 @@ console.log('\nAND THEY PLAY: every npc is fought to the death, and what it play
         // the second cuts its remaining hitpoints to one so the kill lands inside a sim's
         // patience. The death itself is still a real death, which is what plays the animation.
         if (!A.fight(p, npc, 300)) {
-            npc.levels[NpcStat.HITPOINTS] = 1;
-            A.fight(p, npc, 120);
+            // AND KEEP PUTTING HER BACK ON ONE, because one go at it is a coin toss. Zilyana
+            // ended a full run on 3 hitpoints and still alive - hp set to 1, the 120 ticks spent
+            // without a landing blow, and her own regeneration carrying her back up - so the
+            // check below reported "zilyana dies with its own animation: false" about an npc
+            // that had not died. Her animation was never the problem: fought on her own she
+            // plays 4015 exactly as declared, and the other three generals only pass because
+            // their 120 ticks happened to land.
+            //
+            // Four goes, each resetting the hitpoint, and it stops the moment she is gone. The
+            // kill is still a real kill landed by the combat code, which is what plays the
+            // animation - the same argument ROUNDS_WORTH above already makes.
+            for (let a = 0; a < 4 && npc.isActive; a++) {
+                npc.levels[NpcStat.HITPOINTS] = 1;
+                if (A.fight(p, npc, 120)) break;
+            }
         }
         H.tick(6);
         const seen = new Set(H.npcAnims.filter(a => a.who === name).map(a => a.seq));

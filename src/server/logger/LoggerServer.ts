@@ -72,6 +72,23 @@ export default class LoggerServer {
 
                             break;
                         }
+                        case 'input_counts': {
+                            const { session_uuid, timestamp, user_actions, mouse_moves, mouse_clicks, camera_moves, focus_changes } = msg;
+
+                            await db
+                                .insertInto('session_input')
+                                .values({
+                                    session_uuid,
+                                    timestamp: toDbDate(timestamp),
+                                    user_actions,
+                                    mouse_moves,
+                                    mouse_clicks,
+                                    camera_moves,
+                                    focus_changes
+                                })
+                                .execute();
+                            break;
+                        }
                         case 'input_track': {
                             const { session_uuid, timestamp, buf } = msg;
 

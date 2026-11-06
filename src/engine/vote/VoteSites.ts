@@ -74,6 +74,25 @@ export type VoteSite = {
          */
         resetParam?: string;
         /**
+         * For a site that SIGNS the callback instead of echoing the secret back.
+         *
+         * RuneRank sends an HMAC-SHA256 of its own fields, joined in a fixed order, and never
+         * transmits the key at all - so there is nothing to compare `secret` against directly.
+         * `secret` is then the SIGNING key rather than a password, and this says how to rebuild
+         * the digest: which parameter holds it, which fields went into it, and what joined them.
+         *
+         * Strictly better than a shared secret where it exists: a captured callback cannot be
+         * edited and replayed as another player, because the name is inside what was signed.
+         */
+        hmac?: {
+            /** Which parameter carries the hex digest. RuneRank: "signature". */
+            param: string;
+            /** The fields whose values are joined, IN ORDER. RuneRank: vote_id, server_id, username, timestamp. */
+            fields: string[];
+            /** What joins them. Default ":". */
+            separator?: string;
+        };
+        /**
          * Parameters that must arrive with these exact values or the vote is ignored.
          *
          * RSPS List sends voted=1 for a real vote and voted=0 for a failed or duplicated one, down
@@ -144,6 +163,15 @@ function faults(site: Partial<VoteSite>, index: number): string[] {
     }
     if (site.check && !site.check.success?.contains && !site.check.success?.json) {
         out.push(`${at}.check.success must say how to read a yes: "contains", or "json" and "equals"`);
+    }
+    if (site.callback?.hmac) {
+        const hmac = site.callback.hmac;
+        if (typeof hmac.param !== 'string' || !hmac.param.length) {
+            out.push(`${at}.callback.hmac.param must name the parameter carrying the signature`);
+        }
+        if (!Array.isArray(hmac.fields) || hmac.fields.length === 0 || hmac.fields.some(f => typeof f !== 'string')) {
+            out.push(`${at}.callback.hmac.fields must be the names of the signed fields, in the order the site joins them`);
+        }
     }
     if (site.callback && typeof site.callback.userParam !== 'string') {
         out.push(`${at}.callback.userParam must name the parameter the site puts the player's name in`);

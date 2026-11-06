@@ -266,12 +266,60 @@ void NpcType;
 
 // ======================================================================================= Rum Deal
 if (want('deal')) {
+    // RUM DEAL, and what is left here is the ISLAND rather than the quest. quest_deal_run.ts plays
+    // all nine stages on foot and passes; this block's progression half was written against the
+    // version that was replaced, and had been asserting a quest that no longer exists: six
+    // intimidated swabs as stage 2, the blindweed seed in the broom cupboard, the tap fixed with
+    // the wrench as stage 3, Captain Donnie as a bait merchant, five ingredients in the hopper as
+    // stage 4, five pulls of the lever, complete at stage 6, and a pair of Slayer gloves. The
+    // current quest is nine stages, the seed comes from Braindeath's brief, the cupboard holds a
+    // rake and a dibber, the five sea creatures go in the PRESSURE BARREL, the wrench exorcises
+    // the CONTROLS, and the gloves were taken out on purpose because the Slayer shop sells them.
+    // Every one of those checks failed, and the first one failing is why: nothing after it had a
+    // started quest to work with, so the gate, the patch and the fishing spot were all reporting
+    // their own stage gates as broken geography.
+    //
+    // THE STAIRS, LADDERS, JETTY AND PATCH REACHABILITY ALL PASSED and are the reason to keep this
+    // block rather than delete it. They are the geography quest_deal_run only walks one route
+    // through: it uses the southern stairway and the two ladders, and never touches the other four
+    // stairways at all.
     console.log('RUM DEAL');
     const p = player('rumdeal', 3681, 3537);
     talk(p, 'deal_pete');
-    check('Pete rows you out: stage 1, on the jetty on the brewery floor', [v(p, 'deal_quest'), p.level, walkable(p.level, p.x, p.z)], [1, 1, true]);
+    // STAGE 0, not 1. "The quest does not start until he has given the brief, which is what the
+    // Slayer requirement gates" - quest_deal.rs2's own comment. The crossing is free to anybody.
+    check('Pete rows you out, and the quest has not started: stage 0, the jetty on the brewery floor', [v(p, 'deal_quest'), p.level, walkable(p.level, p.x, p.z)], [0, 1, true]);
     check('the jetty walks to Captain Braindeath', reaches(1, p.x, p.z, 2144, 5106), true);
+
+    console.log("Captain Braindeath's brief, and the two things in front of it:");
+    // maxOut has already given the player 99 Slayer, so the Slayer gate is tested by taking it
+    // away again rather than by leaving it unset - the gate is the claim, not the default.
+    p.setLevel(18, 1); // 18 is Slayer
+    H.tick(1);
+    // Read from BEFORE the click, not from drive()'s own mark: talk() waits up to ten ticks for the
+    // script to start and the opening lines of a conversation can land inside that wait, so what
+    // drive() returns is the tail of it.
+    // JOINED, NOT A LIST OF LINES. A ~chatnpc longer than one line is set on line1..line4 as
+    // separate components, so a phrase that straddles the wrap - "...never put a / whole spider in
+    // anything..." - is in neither of them. Searching the joined text is the only way to look for
+    // words rather than for where the client happened to break them.
+    const heardIn = (from: number) =>
+        H.ifaces
+            .slice(from)
+            .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+            .map(i => i.text!)
+            .join(' ');
+    let i0 = H.ifaces.length;
     talk(p, 'deal_captian_braindeath', [1]);
+    check('without Zogre Flesh Eaters he will not brief you', [v(p, 'deal_quest'), heardIn(i0).includes('whole spider')], [0, true]);
+    setVarAny(p, 'zogre', QUEST['zogre_complete']);
+    i0 = H.ifaces.length;
+    talk(p, 'deal_captian_braindeath', [1]);
+    check('  nor without 42 Slayer, which is the one requirement needed to start', [v(p, 'deal_quest'), heardIn(i0).includes('42 Slayer')], [0, true]);
+    p.setLevel(18, 42);
+    H.tick(1);
+    talk(p, 'deal_captian_braindeath', [1]);
+    check('the brief: stage 1 and a blindweed seed', [v(p, 'deal_quest'), H.invCount(p, 'deal_blindweed_seed')], [1, 1]);
 
     console.log('Down the outside stairs to the crew:');
     p.teleport(2137, 5090, 1);
@@ -281,9 +329,12 @@ if (want('deal')) {
     for (const s of ['a', 'b', 'c', 'd', 'e', 'f']) {
         const sw = npcAny('deal_pirate_' + s, p.x, p.z, 0)!;
         check(`swab ${s} can be walked to`, reaches(0, p.x, p.z, sw.x, sw.z), true);
-        talk(p, 'deal_pirate_' + s, [], 3);
+        talk(p, 'deal_pirate_' + s, [], 3); // op3 is Intimidate
     }
-    check('all six intimidated: stage 2', v(p, 'deal_quest'), 2);
+    // AND IT IS NOT A STAGE, which is the correction the content makes in as many words:
+    // "Intimidating one gets it off you - which is what the walkthrough uses it for - and it is
+    // not a stage of the quest, which is what the version this replaces made it."
+    check('all six intimidated, and the quest has not moved for it', [vb(p, 'deal_multi_pirate_a'), vb(p, 'deal_multi_pirate_f'), v(p, 'deal_quest')], [1, 1, 1]);
     for (const [bx, tx] of [
         [2137, 2137],
         [2149, 2149],
@@ -297,50 +348,48 @@ if (want('deal')) {
         check('and back down', [p.level, reaches(0, p.x, p.z, 2154, 5076)], [0, true]);
     }
 
-    console.log('The cellar: wrench and seed:');
+    console.log('The cellar: the farming kit:');
     p.teleport(2140, 5106, 1);
     H.tick(1);
     op(p, 2139, 5105, 'deal_laddertop');
     check('the north-west ladder goes down to the cellar', [p.level, walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2157, 5094)], [0, true, true]);
+    // forceapproach=east, and the OPEN cupboard is the one that can be searched: op1 opens it, op2
+    // on deal_broomcupboard_open searches it, op3 shuts it again.
+    p.teleport(2158, 5093, 0);
+    H.tick(1);
     op(p, 2157, 5093, 'deal_broomcupboard');
-    check('broom cupboard: wrench and blindweed seed', [H.invCount(p, 'deal_wrench'), H.invCount(p, 'deal_blindweed_seed')], [1, 1]);
+    check('the cupboard opens', locAt('deal_broomcupboard_open', 0, 2157, 5093) !== null, true);
+    op(p, 2157, 5093, 'deal_broomcupboard_open', 2);
+    check('  and holds the rake and the seed dibber', [H.invCount(p, 'rake'), H.invCount(p, 'dibber')], [1, 1]);
+    op(p, 2157, 5093, 'deal_broomcupboard_open', 3);
+    check('  and shuts again', locAt('deal_broomcupboard', 0, 2157, 5093) !== null, true);
     op(p, 2139, 5105, 'deal_ladder_up');
     check('and back up the ladder', [p.level, reaches(1, p.x, p.z, 2144, 5106)], [1, true]);
-    talk(p, 'deal_davey');
-    check('Davey blesses the wrench', H.invCount(p, 'deal_wrench_blessed'), 1);
-    p.teleport(2144, 5094, 1);
-    H.tick(1);
-    op(p, 2142, 5093, 'deal_brewvat_tap');
-    check('the tap is fixed: stage 3', v(p, 'deal_quest'), 3);
 
-    console.log('The ingredients:');
+    console.log('The weed patch:');
     p.teleport(2163, 5090, 1);
     H.tick(1);
     op(p, 2163, 5088, 'deal_stairs_top');
-    p.teleport(2161, 5067, 0);
-    H.tick(1);
     check('the blindweed patch can be walked to from the stairs', reaches(0, 2163, 5087, 2162, 5070), true);
-    for (let i = 0; i < 3; i++) op(p, 2162, 5069, 'deal_blindweed', 2);
-    check('three passes of weeding clear the patch (it starts at weeds3)', vb(p, 'deal_farming'), 3);
-    op(p, 2162, 5069, 'deal_blindweed', 2);
-    op(p, 2162, 5069, 'deal_blindweed', 2);
+    p.teleport(2161, 5069, 0);
+    H.tick(1);
+    for (let i = 0; i < 3; i++) useOn(p, 2162, 5069, 'deal_blindweed', 'rake');
+    check('three passes of the rake clear the patch (it starts at weeds3)', vb(p, 'deal_farming'), 3);
+    useOn(p, 2162, 5069, 'deal_blindweed', 'deal_blindweed_seed');
+    H.tick(56); // ^deal_grow_ticks is 50, and it comes up on its own
+    check('  dibbed, and up on its own', vb(p, 'deal_farming'), 5);
     op(p, 2162, 5069, 'deal_blindweed', 1);
     check('weed, plant, grow, pick: a blindweed', H.invCount(p, 'deal_blindweed'), 1);
-    talk(p, 'deal_captian_donnie');
-    check('Donnie hands over the sluglings', H.invCount(p, 'deal_slugling'), 1);
-    H.give(p, 'net');
-    const squid = H.npcNear('deal_squid', 2162, 5061, 0)!;
-    p.teleport(2161, 5067, 0);
-    H.tick(1);
-    check('a karamthulhu spot is reachable from the ground', opNpcHere(p, 'deal_squid', 1), true);
-    check('a karamthulhu', H.invCount(p, 'deal_karamthulhu'), 1);
-    void squid;
 
     console.log("Through 50% Luke's gate to the stagnant lake:");
     p.teleport(2129, 5090, 0);
     H.tick(1);
     check("the west stairs foot is in Luke's yard", reaches(0, 2128, 5095, 2120, 5097), true);
-    p.teleport(2121, 5094, 0);
+    // The gate TELEPORTS rather than opening, and which side it puts you on is read off the
+    // player's own z against the gate's: south of it you land on its tile, north of it one north.
+    // Beside it, not four tiles off - op() gives the walk three idle ticks, and this check used to
+    // report the gate as shut when what it had measured was a player still walking to it.
+    p.teleport(2121, 5098, 0);
     H.tick(1);
     op(p, 2120, 5098, 'deal_gate_closed');
     check('the gate lets you through to the north', [at(p), reaches(0, p.x, p.z, 2134, 5160)], [[2120, 5099, 0], true]);
@@ -349,7 +398,7 @@ if (want('deal')) {
     H.tick(1);
     useOn(p, 2133, 5161, 'deal_stagnant', 'bucket_empty');
     check('a bucket of stagnant water', H.invCount(p, 'deal_stagnant_bucket'), 1);
-    p.teleport(2120, 5100, 0);
+    p.teleport(2120, 5099, 0);
     H.tick(1);
     op(p, 2120, 5098, 'deal_gate_closed');
     check('and back through the gate', [at(p), reaches(0, p.x, p.z, 2154, 5076)], [[2120, 5098, 0], true]);
@@ -366,20 +415,23 @@ if (want('deal')) {
     op(p, 2152, 5109, 'deal_stairs_top');
     check('and back down', [p.level, walkable(0, p.x, p.z)], [0, true]);
 
-    console.log('The hopper room:');
-    H.give(p, 'deal_spider_body');
+    console.log('The fishing spot and the hopper room:');
+    // The spot is gated on ^deal_water_in, three stages of brewing away, and brewing is
+    // quest_deal_run's job rather than this one's. The stage is set rather than earned so that
+    // "can a player on the south shore reach the spot" is the only thing the answer can be about.
+    H.setVar(p, 'deal_quest', 3); // ^deal_water_in
+    H.give(p, 'net');
+    p.teleport(2161, 5067, 0);
+    H.tick(1);
+    check('a karamthulhu spot is reachable from the ground', opNpcHere(p, 'deal_squid', 1), true);
+    check('  and it gives a sea creature of one kind or the other', H.invCount(p, 'deal_karamthulhu') + H.invCount(p, 'deal_slugling'), 1);
     p.teleport(2163, 5094, 1);
     H.tick(1);
     op(p, 2163, 5092, 'deal_ladder_up');
     check('the south-east ladder climbs to the hopper room', [p.level, reaches(2, p.x, p.z, 2141, 5104)], [2, true]);
-    for (const it of ['deal_blindweed', 'deal_stagnant_bucket', 'deal_spider_body', 'deal_karamthulhu', 'deal_slugling']) useOn(p, 2142, 5102, 'deal_hopper', it);
-    check('all five in the hopper: stage 4', v(p, 'deal_quest'), 4);
-    for (let i = 0; i < 5; i++) op(p, 2141, 5103, 'deal_multi_lever');
-    check('five pulls and the spirit: stage 5', v(p, 'deal_quest'), 5);
+    check('  and the barrel and the lever are up there with the hopper', [locAt('deal_pressure', 2, 2141, 5102) !== null, locAt('deal_hopper', 2, 2142, 5102) !== null], [true, true]);
     op(p, 2163, 5092, 'deal_laddertop');
     check('back down to the brewery floor', p.level, 1);
-    talk(p, 'deal_captian_braindeath');
-    check('Braindeath: complete, with the Slayer gloves', [v(p, 'deal_quest'), H.invCount(p, 'deal_slayer_gloves')], [6, 1]);
     talk(p, 'deal_island_pete');
     check('Pete rows you home', [p.x > 3600, p.level], [true, 0]);
 }
@@ -565,6 +617,12 @@ if (want('garden')) {
 if (want('hauntedmine')) {
     console.log('HAUNTED MINE');
     const p = player('hmine', 3444, 3256);
+    // PRIEST IN PERIL FIRST, which is newer than this block. [label,hm_zealot_start] now stops at
+    // "the temple does not explain itself to people the temple has never heard of. Go and be
+    // useful to a priest somewhere and come back" and RETURNS without setting the stage, so every
+    // check below it was running against a quest that had not started - the key, the points, the
+    // valve, the lift, Treus Dayth and the crystal, nine failures from one requirement.
+    setVarAny(p, 'priestperil', QUEST['priestperil_complete']);
     talk(p, 'saradominist_zealot');
     check('the zealot refuses: stage 1', v(p, 'hauntedmine'), 1);
 
@@ -573,7 +631,10 @@ if (want('hauntedmine')) {
     H.setVar(q, 'hauntedmine', 1);
     H.setVar(q, 'hauntedmine_bits', 173);
     for (let i = 0; i < 30 && H.invCount(q, 'hauntedmine_lift_key') === 0; i++) talk(q, 'saradominist_zealot', [], 3);
-    check('the zealot can still be picked with the points already set, and that sets the points stage', [H.invCount(q, 'hauntedmine_lift_key'), v(q, 'hauntedmine')], [1, 3]);
+    // STAGE 2, NOT 3: the key is ^hm_key and that is all the pickpocket sets. ^hm_points is the
+    // CART arriving, which is further down this block. What this check is actually for is the old
+    // deadlock - the key could not be taken once the points were set - and that still holds.
+    check('the zealot can still be picked with the points already set, and the key is stage 2', [H.invCount(q, 'hauntedmine_lift_key'), v(q, 'hauntedmine')], [1, 2]);
 
     for (let i = 0; i < 30 && H.invCount(p, 'hauntedmine_lift_key') === 0; i++) talk(p, 'saradominist_zealot', [], 3);
     check('pickpocketed the key: stage 2', [H.invCount(p, 'hauntedmine_lift_key'), v(p, 'hauntedmine')], [1, 2]);
@@ -620,7 +681,24 @@ if (want('hauntedmine')) {
         [2732, 4529]
     ]);
     check('this side reaches both lever banks and the diagram', [reaches(0, p.x, p.z, 2785, 4517, 200), reaches(0, p.x, p.z, 2768, 4533, 200), reaches(0, p.x, p.z, 2769, 4522, 200)], [true, true, true]);
-    op(p, 2769, 4522, 'hauntedmine_points_info');
+    // AND THE CART HAS TO HAVE SOMETHING IN IT. The points were a lever puzzle with no cart in it
+    // when this block was written; they are a cart run now - "sending an empty cart down proves
+    // nothing" - so the fungus goes in the loading cart first and the board's start lever is what
+    // moves the stage. Throwing the levers on their own moves nothing at all, which is what "points
+    // 1, 3, 4, 6 and 8 thrown: stage 3" was reporting as a broken puzzle.
+    p.teleport(2782, 4495, 0);
+    H.tick(1);
+    op(p, 2782, 4494, 'glowing_mushroom');
+    check('a glowing fungus off the pool, the only light down here', H.invCount(p, 'glowing_fungus'), 1);
+    p.teleport(2778, 4505, 0);
+    H.tick(1);
+    useOn(p, 2778, 4506, 'hauntedmine_puzzle_cart', 'glowing_fungus');
+    check('  and into the loading cart, where it stays lit', H.invCount(p, 'glowing_fungus'), 0);
+    // "Not yet." - with a loaded cart the board offers to start the run, and this first read is
+    // only here for the diagram; the run itself is below, after the points are thrown.
+    p.teleport(2770, 4523, 0);
+    H.tick(1);
+    op(p, 2769, 4522, 'hauntedmine_points_info', 1, [2]);
     for (const [n, x, z] of [
         [1, 2785, 4517],
         [3, 2786, 4517],
@@ -628,14 +706,30 @@ if (want('hauntedmine')) {
         [6, 2768, 4533],
         [8, 2770, 4533]
     ] as [number, number, number][]) {
-        // the two banks are a long walk apart - further than one click's path search - so walk over first
+        // THREE BANKS, THREE WALKS. op() gives a click three idle ticks and these levers are
+        // sixteen tiles apart in a twisting chamber, so a click made from the wrong end of it is
+        // a player still walking when the step moves on - which is how 1, 3 and 4 came out
+        // unthrown (160 instead of 173) once the board read above moved the player west.
+        if (n === 1) {
+            p.teleport(2784, 4516, 0);
+            H.tick(1);
+        }
         if (n === 6) {
             p.teleport(2767, 4532, 0);
             H.tick(1);
         }
         op(p, x, z, 'hauntedmine_point_lever' + n);
     }
-    check('points 1, 3, 4, 6 and 8 thrown: stage 3', [v(p, 'hauntedmine_bits') & 255, v(p, 'hauntedmine')], [173, 3]);
+    check('points 1, 3, 4, 6 and 8 thrown, and the stage has not moved for it', [v(p, 'hauntedmine_bits') & 255, v(p, 'hauntedmine')], [173, 2]);
+    // the start lever is on the board, and only now does it offer one
+    p.teleport(2770, 4523, 0);
+    H.tick(1);
+    op(p, 2769, 4522, 'hauntedmine_points_info', 1, [1]); // "Start the cart."
+    check('the cart runs the right road: stage 3', v(p, 'hauntedmine'), 3);
+    p.teleport(2775, 4537, 0);
+    H.tick(1);
+    op(p, 2774, 4537, 'hauntedmine_puzzle_cart');
+    check('  and the fungus is in it at the far end', H.invCount(p, 'glowing_fungus'), 1);
 
     console.log('Out, and in by the secondary entrance to the valve:');
     p.teleport(3437, 9636, 0);
@@ -674,11 +768,28 @@ if (want('hauntedmine')) {
     // ticks op() happens to spend left the stage at 3 and the player on the surface about one run in
     // three, and the level-5 check below went with it. Same class as audit6's arrow across the
     // channel - these [ap*] triggers all want the approach, not just the click.
-    for (let t = 0; t < 8 && v(p, 'hauntedmine') < 4; t++) {
+    // AND THE VALVE IS NOT THE LIFT. [label,hm_lift_valve] sets ^hm_bit_valve and starts the tank
+    // filling; what sets ^hm_bottom is riding the lift down afterwards, before the mischievous
+    // ghost shuts the valve again. This loop opped the valve eight times waiting for a stage the
+    // valve does not write, and then asked whether the player was on level 5 without ever
+    // clicking the lift.
+    for (let t = 0; t < 8 && !(v(p, 'hauntedmine_bits') & (1 << 12)); t++) {
         op(p, 2808, 4496, 'hauntedmine_lift_valve');
         H.tick(4);
     }
-    check('valve: the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
+    check('the valve turns and the tank starts filling', (v(p, 'hauntedmine_bits') & (1 << 12)) !== 0, true);
+    // AND A FUNGUS IN HAND FOR THE RIDE. "The lift goes down into water in the dark, and nothing
+    // you are carrying will stay lit down there." The one taken out of the cart went to ash on the
+    // way out of the cave - ~hm_fungus_to_ash, "the one thing the fungus does not survive" - and
+    // this block leaves and re-enters by the secondary entrance, so it needs another off the pool.
+    p.teleport(2782, 4495, 0);
+    H.tick(1);
+    op(p, 2782, 4494, 'glowing_mushroom');
+    check('  and another fungus off the pool, because the last one went out in the open air', H.invCount(p, 'glowing_fungus'), 1);
+    p.teleport(2806, 4493, 0);
+    H.tick(1);
+    op(p, 2807, 4494, 'lift_side_l');
+    check('and the lift goes down onto the level-5 track, stage 4', [v(p, 'hauntedmine'), walkable(0, p.x, p.z), p.z < 4460], [4, true, true]);
     check('level 5 reaches both staircases down', [reaches(0, p.x, p.z, 2746, 4437), reaches(0, p.x, p.z, 2692, 4437)], [true, true]);
 
     console.log('Treus Dayth:');
@@ -689,7 +800,21 @@ if (want('hauntedmine')) {
     op(p, 2799, 4453, 'hauntedmine_boss_door');
     check('through the door into the chamber, with the key in it', [at(p), reaches(0, p.x, p.z, 2791, 4454)], [[2798, 4453, 0], true]);
     check('the key sits still on its crate (it used to wander off)', [npcAny('hauntedmine_boss_key', p.x, p.z, 0)!.x, npcAny('hauntedmine_boss_key', p.x, p.z, 0)!.z], [2788, 4455]);
+    // AND TREUS DAYTH IS A FIGHT. Reaching for the key used to be a mesbox and he is a level-95
+    // npc now: he walks out of the wall, and he fades out of reach and back every thirty-odd
+    // ticks, so the swing has to wait each fade out rather than hit a ghost that is not there.
+    // The key does not come off the rock while he is up - "it lifts off the rock and drifts away
+    // from your hand. He is not finished."
+    H.equip(p, { rhand: 'rune_scimitar' });
     opNpcHere(p, 'hauntedmine_boss_key');
+    check('reaching for the key brings Treus Dayth out of the wall', npcAny('hauntedmine_boss_ghost', p.x, p.z, 0) !== null, true);
+    for (let t = 0; t < 1200 && v(p, 'hauntedmine') < 5; t++) {
+        const ghost = npcAny('hauntedmine_boss_ghost', p.x, p.z, 0);
+        p.levels[3] = 99;
+        if (ghost && ghost.isActive && !p.target) H.attackNpc(p, ghost);
+        H.tick(1);
+    }
+    H.tick(4);
     check('Treus Dayth: stage 5', v(p, 'hauntedmine'), 5);
     opNpcHere(p, 'hauntedmine_boss_key');
     check('the crystal-mine key', H.invCount(p, 'hauntedmine_reward_key'), 1);
@@ -703,14 +828,18 @@ if (want('hauntedmine')) {
     console.log('The crystal:');
     op(p, 2692, 4436, 'hauntedmine_dark_stairs_top');
     check('west stairs down to the large doors', [walkable(0, p.x, p.z), reaches(0, p.x, p.z, 2773, 4451)], [true, true]);
+    // THE DOORS DO NOT HAND OUT THE SHARD AND DO NOT END THE QUEST. They open the crystal room -
+    // "The whole of the back of this mine is one crystal and it is lit from inside it" - and the
+    // shard comes off an OUTCROP with a chisel, which is where this quest's 35 Crafting is
+    // actually spent and what finishes it.
     op(p, 2773, 4450, 'hauntedmine_rewarddoor_l');
-    check('the key opens the doors: complete, with the shard', [v(p, 'hauntedmine'), H.invCount(p, 'crystalshard_necklace_unstrung')], [6, 1]);
+    check('the key opens the doors onto the crystal', [(v(p, 'hauntedmine_bits') & (1 << 9)) !== 0, p.z < 4450, reaches(0, p.x, p.z, 2798, 4433)], [true, true, true]);
     H.give(p, 'chisel');
+    op(p, 2800, 4430, 'crystalcorner');
+    check('a chisel on the outcrop: the shard, and the quest is complete', [H.invCount(p, 'crystalshard_necklace_unstrung'), v(p, 'hauntedmine')], [1, 6]);
     H.give(p, 'ball_of_wool');
-    useOnHeld(p, 'chisel', 'crystalshard_necklace_unstrung');
-    check('chisel and wool: the Salve amulet', H.invCount(p, 'crystalshard_necklace'), 1);
-    op(p, 2773, 4450, 'hauntedmine_rewarddoor_l');
-    check('the doors now lead into the crystal room', [p.z < 4450, reaches(0, p.x, p.z, 2798, 4433)], [true, true]);
+    useOnHeld(p, 'ball_of_wool', 'crystalshard_necklace_unstrung');
+    check('a ball of wool strings it: the Salve amulet', H.invCount(p, 'crystalshard_necklace'), 1);
     H.clearInv(p);
     H.give(p, 'chisel');
     op(p, 2800, 4430, 'crystalcorner');
@@ -948,25 +1077,36 @@ if (want('tbwt')) {
     console.log('Tamayu:');
     p.teleport(2912, 3116, 0);
     H.tick(1);
-    H.give(p, 'tinderbox');
-    for (let i = 0; i < 60 && H.invCount(p, 'tbwt_poisonous_karambwan_paste') === 0; i++) {
-        if (H.invCount(p, 'tbwt_raw_karambwan') === 0) {
-            if (H.invCount(p, 'tbwt_raw_karambwanji') === 0) H.give(p, 'tbwt_raw_karambwanji', 10);
-            useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
-            H.opheld(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji', 1);
-            drive(p);
-        }
-        if (H.invCount(p, 'tbwt_raw_karambwan') > 0) useOnHeld(p, 'tinderbox', 'tbwt_raw_karambwan');
-        if (H.invCount(p, 'tbwt_poorly_cooked_karambwan') > 0) useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
-        if (H.invCount(p, 'tbwt_cooked_karambwan') > 0) {
-            H.clearInv(p);
-            H.give(p, 'tinderbox');
-            H.give(p, 'knife');
-            H.give(p, 'tbwt_karambwan_vessel');
-            H.give(p, 'tbwt_raw_karambwanji', 5);
-        }
+    // A KARAMBWAN IS COOKED, NOT TINDERBOXED. This loop used a tinderbox ON the raw karambwan,
+    // which is not an op the content has anywhere: a tinderbox lights logs.
+    // cooking_generic_tbwt_raw_karambwan is an ordinary cooking row whose SUCCESS product is
+    // tbwt_poorly_cooked_karambwan - "You cook the karambwan. The outside is done and the inside
+    // is not" - and it is the knife on THAT which makes the poison paste. So nothing was ever
+    // cooked, there was never a poorly cooked one to cut, and sixty passes of the loop produced
+    // nothing. (The knife it cuts with was also never handed out; only the branch that runs after
+    // a karambwan has already cooked properly gave one.)
+    //
+    // Where it is cooked is not part of the claim, so it is cooked on Lumbridge's range.
+    H.give(p, 'knife');
+    H.give(p, 'tbwt_raw_karambwanji', 10);
+    for (let i = 0; i < 8 && H.invCount(p, 'tbwt_raw_karambwan') === 0; i++) {
+        if (H.invCount(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji') === 0) useOnHeld(p, 'tbwt_raw_karambwanji', 'tbwt_karambwan_vessel');
+        H.opheld(p, 'tbwt_karambwan_vessel_loaded_with_karambwanji', 1);
+        drive(p);
+        H.tick(4);
     }
-    check('a karambwan off the east coast, undercooked into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
+    check('a karambwan off the east coast, with a baited vessel', H.invCount(p, 'tbwt_raw_karambwan') > 0, true);
+    p.teleport(3230, 3197, 0);
+    H.tick(2);
+    for (let i = 0; i < 6 && H.invCount(p, 'tbwt_poorly_cooked_karambwan') === 0; i++) {
+        p.clearPendingAction();
+        H.tick(1);
+        useOn(p, 3230, 3196, 'range', 'tbwt_raw_karambwan');
+        H.tick(8);
+    }
+    check('  cooked on a range: the outside done and the inside not', H.invCount(p, 'tbwt_poorly_cooked_karambwan'), 1);
+    useOnHeld(p, 'knife', 'tbwt_poorly_cooked_karambwan');
+    check('  and a knife works it into poison paste', H.invCount(p, 'tbwt_poisonous_karambwan_paste'), 1);
     H.give(p, 'iron_spear');
     useOnHeld(p, 'iron_spear', 'tbwt_poisonous_karambwan_paste');
     check('a karambwan-poisoned spear', H.invCount(p, 'tbwt_iron_spear_kp'), 1);

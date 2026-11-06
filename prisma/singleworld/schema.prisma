@@ -28,6 +28,15 @@ model account {
     banned_until DateTime?
 
     staffmodlevel Int     @default(0)
+    // custom (2026-11-06) - helped test the server before launch. Shows a bronze emblem beside
+    // the name in chat (ChatCrown, crown 7) and nothing else: it grants no powers and is not a
+    // staffmodlevel, because every rank check in the engine reads "at least" and a veteran must
+    // not pass any of them.
+    //
+    // ON THE ACCOUNT RATHER THAN IN THE SAVE, which is the whole reason it is here: the launch
+    // wipe moves character saves away and keeps account rows, so a perm varp would have thrown
+    // the rank away on the day it started to mean something.
+    veteran       Int     @default(0)
     members       Boolean @default(false)
 }
 
@@ -72,6 +81,19 @@ model account_login {
     logout_time DateTime?
 
     @@id([profile, account_id])
+}
+
+/// Which items an account has in its collection log, one row per item. The hiscore table
+/// carries how far along somebody is as a single number, because that can be ranked; which items
+/// is a set 803 wide and belongs in rows.
+model collection_log {
+    profile    String @default("main")
+    account_id Int
+    obj        Int
+    count      Int
+
+    @@id([profile, account_id, obj])
+    @@index([profile, account_id])
 }
 
 model hiscore {
@@ -189,6 +211,32 @@ model report {
     coord    Int
     offender String
     reason   Int
+}
+
+// How much of a session came from a person at a keyboard. One row as each session ends.
+//
+// The client reports where the cursor went, where it was clicked, whether the camera was turned
+// and whether the window kept focus. A bot driving the real client produces all of it; a bot
+// speaking the protocol straight at the server produces none, because nothing is moving a mouse to
+// report. A high user_actions against a near-zero sum of the rest is the signal - neither half
+// means anything alone, since somebody standing in a bank moves no mouse either.
+//
+// Counted for everybody and costing five integers a player. input_report below is the FULL capture,
+// which is off unless somebody turns it on for a suspect and costs about a megabyte per
+// player-hour. This table is the triage that says who is worth that.
+model session_input {
+    id Int @id @default(autoincrement())
+
+    session_uuid String
+    timestamp    DateTime
+
+    user_actions  Int
+    mouse_moves   Int
+    mouse_clicks  Int
+    camera_moves  Int
+    focus_changes Int
+
+    @@index([session_uuid])
 }
 
 model input_report {

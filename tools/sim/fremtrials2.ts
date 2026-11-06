@@ -442,7 +442,7 @@ console.log('SIGMUND  the chain of favours, every link');
     H.despawn(p);
 
     // losing the goods
-    const q = player('frem_sigmund_lost', 17, 30);
+    const q = player('fremsiglost', 17, 30);
     setStep(q, 18); // Peer has traded: should be holding the weather forecast
     t = talk(q, 'viking_hallifred', menu(8));
     check('lost the forecast: Swensen will not trade', [has(t, "It isn't for me"), step(q)], [true, 18]);
@@ -456,7 +456,7 @@ console.log('SIGMUND  the chain of favours, every link');
     H.despawn(q);
 
     // part way back under the old version, holding the old item
-    const o = player('frem_sigmund_old', 38, 25);
+    const o = player('fremsigold', 38, 25);
     setStep(o, 14);
     H.give(o, 'viking_promissary_note'); // the old Askeladden handed out the fiscal statement
     t = talk(o, 'viking_longhall_barkeep', menu(12));

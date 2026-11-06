@@ -688,11 +688,19 @@ console.log('\n-- interference stops the ammunition coming back too');
         for (let i = 0; i < 4000; i++) if (A.runProcProtected(s, '[proc,ranged_ammo_saved]')[0] === 1) saved++;
         return Math.round((saved * 1000) / 4000) / 10;
     };
-    truthy('bare chested, the accumulator saves 72%', Math.abs(saveRateWith('avas_accumulator') - 72) < 3, saveRateWith('avas_accumulator'));
+    // ONE MEASUREMENT PER CHECK, held in a variable. These read saveRateWith(...) twice on one
+    // line - once for the condition and once for the number printed beside it - so the number in
+    // the output came from a SECOND four-thousand-roll run of the same case, and the condition was
+    // never tested against the figure it reported. It also asked for the same username twice: the
+    // second login was refused as a duplicate and that run rolled four thousand times for a
+    // player who was never in the world.
+    const bare = saveRateWith('avas_accumulator');
+    truthy('bare chested, the accumulator saves 72%', Math.abs(bare - 72) < 3, bare);
     check('in a rune platebody it saves nothing', saveRateWith('avas_accumulator', 'rune_platebody'), 0);
     check("and in Ahrim's robetop, which the wiki names, nothing either", saveRateWith('avas_accumulator', 'barrows_ahrim_body'), 0);
     // ...and the armour that does not interfere still works
-    truthy('studded leather is fine', Math.abs(saveRateWith('avas_accumulator', 'studded_body') - 72) < 3, saveRateWith('avas_accumulator', 'studded_body'));
+    const studded = saveRateWith('avas_accumulator', 'studded_body');
+    truthy('studded leather is fine', Math.abs(studded - 72) < 3, studded);
 }
 
 // --------------------------------------------------------------- BREAK OR FLOOR
@@ -713,11 +721,14 @@ console.log('\n-- what becomes of a shot that did not come back');
         return (falls * 100) / 8000;
     };
     // Read as a share of the shots that were NOT saved, which is what the proc is asked about.
-    truthy('no device: 80% of a spent shot falls, 20% breaks', Math.abs(floorRate(null) - 80) < 3, floorRate(null).toFixed(1));
+    const none = floorRate(null);
+    truthy('no device: 80% of a spent shot falls, 20% breaks', Math.abs(none - 80) < 3, none.toFixed(1));
     // attractor: 40 left over, 20 of it on the floor -> half
-    truthy('attractor: half of what it does not save falls', Math.abs(floorRate('avas_attractor') - 50) < 3, floorRate('avas_attractor').toFixed(1));
+    const attractor = floorRate('avas_attractor');
+    truthy('attractor: half of what it does not save falls', Math.abs(attractor - 50) < 3, attractor.toFixed(1));
     // accumulator: 28 left over, 8 of it on the floor
-    truthy('accumulator: 8 of its 28 fall', Math.abs(floorRate('avas_accumulator') - 800 / 28) < 3, floorRate('avas_accumulator').toFixed(1));
+    const accumulator = floorRate('avas_accumulator');
+    truthy('accumulator: 8 of its 28 fall', Math.abs(accumulator - 800 / 28) < 3, accumulator.toFixed(1));
 }
 
 // =============================================================== the Accumulator max cape

@@ -27,7 +27,7 @@ import Player from '#/engine/entity/Player.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import World from '#/engine/World.js';
-import { canTravel } from '#/engine/GameMap.js';
+import { canTravel, isLineOfSight } from '#/engine/GameMap.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { BlockWalk } from '#/engine/entity/BlockWalk.js';
 import LocType from '#/cache/config/LocType.js';
@@ -1268,7 +1268,7 @@ export function play(m: Manifest, p: Player): Result[] {
             const kill = () => {
                 let npc = null;
                 try {
-                    npc = findNpc(s.untilnpc, p);
+                    npc = findNpc(s.untilnpc, p, true);
                 } catch {
                     npc = null;
                 }
@@ -1398,21 +1398,50 @@ export function play(m: Manifest, p: Player): Result[] {
             // walk it again, further out of her way. Three goes, re-routing from wherever the
             // throw-out left the player.
             const sneakTo = (tx: number, tz: number): boolean => {
-                for (const [sx, sz] of route(p.level, p.x, p.z, tx, tz, 96, 0)) {
-                    // hold while the npc is within range of the tile being left OR the one being
-                    // stepped onto - checking only the next tile let her walk into the player
+                // AN EMPTY ROUTE IS NOT AN ARRIVAL. route() returns nothing when there is no way
+                // from here to there, and walking a zero-step path "succeeded" - so being thrown
+                // out of the garden mid-leg ended the attempt as a win, the retry never ran, and
+                // the step reported "ended up at 2907,3458" as though the player had strolled
+                // there. That is 13 tiles south of the fountain, outside the hedge, which is
+                // exactly where Nora T. Hagg puts people she catches.
+                const legs = route(p.level, p.x, p.z, tx, tz, 96, 0);
+                if (!legs.length && (p.x !== tx || p.z !== tz)) {
+                    blocked = 'no route from ' + p.x + ',' + p.z + ' to ' + tx + ',' + tz;
+                    return false;
+                }
+                // DISTANCE IS NOT WHAT CATCHES YOU, SIGHT IS, which is why the hold below used to
+                // time out every single time and walk anyway. [ai_timer,nora_t_hagg] is
+                // huntall(npc_coord, 3, 0) and then lineofsight(npc_coord, coord) - "move around
+                // the edge, using the hedges as cover" is the wiki telling you the hedges break
+                // the line, and a garden that size never has her more than eight tiles off, so a
+                // distance-only wait is a wait that can never end. Being caught is not recoverable
+                // either: the catch deletes the shed key AND the ball and puts %ballquest back to
+                // ^ball_started, so there is no retry that can win - the step has to not be seen.
+                const seen = (nx: number, nz: number, tx: number, tz: number) => Math.max(Math.abs(nx - tx), Math.abs(nz - tz)) <= keepOut && isLineOfSight(p.level, nx, nz, tx, tz);
+                for (const [sx, sz] of legs) {
+                    // hold while she can see the tile being left OR the one being stepped onto -
+                    // checking only the next tile let her walk into the player
                     for (let w = 0; w < 60; w++) {
                         const npc = H.npcNear(s.past, p.x, p.z, p.level);
                         if (!npc) break;
-                        const dNext = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
-                        const dHere = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-                        if (dNext > keepOut && dHere > keepOut) break;
+                        if (!seen(npc.x, npc.z, sx, sz) && !seen(npc.x, npc.z, p.x, p.z)) break;
                         H.tick(1);
                         waited++;
                     }
                     for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
+                        const wasX = p.x;
+                        const wasZ = p.z;
                         H.walkTo(p, sx, sz);
                         H.tick(1);
+                        // A TELEPORT, NOT A STEP. A running player covers at most two tiles a tick,
+                        // so anything further is somebody else moving them - and walking on down a
+                        // route computed before that happened is how this step spent all three of
+                        // its attempts without noticing. Say so, rather than reporting the tile the
+                        // stale route gave up on.
+                        if (Math.max(Math.abs(p.x - wasX), Math.abs(p.z - wasZ)) > 2) {
+                            blocked = 'moved from ' + wasX + ',' + wasZ + ' to ' + p.x + ',' + p.z + ' in one tick - thrown out of the leg, not walked';
+                            return false;
+                        }
                     }
                     if (p.x !== sx || p.z !== sz) {
                         blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;
@@ -1561,7 +1590,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (!npc) {
                     for (const name of types) {
                         try {
-                            npc = findNpc(name, p);
+                            npc = findNpc(name, p, true);
                         } catch {
                             npc = null;
                         }
@@ -1588,6 +1617,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 // CHANGES TYPE - npc_changetype(delrith_weakened) - so he stays a valid npc and the
                 // loop would have run its 900 ticks on a demon that had already been beaten.
                 const type0 = npc.type;
+                // UNLESS THE NEW TYPE IS ALSO ONE THIS STEP NAMED. The rule above is for Delrith,
+                // who changes into something the step did not ask for; the Gelatinnoth Mother
+                // changes into another of HER OWN six forms every thirty ticks
+                // (npc_changetype_keepall, hundred_culinaromancer.rs2), and all six are named in
+                // quest_hundred_run's one fight step because they are one npc. Reading that as a
+                // death ended every round after at most thirty ticks and reported a kill: "killed
+                // 60 in 884 ticks and hundred_minionskilled_tally is 4" is sixty rounds of her
+                // turning over, not sixty corpses. Let her turn, and the round runs its 900 ticks.
+                const sameFight = new Set(types.map(nm => NpcType.getId(nm)));
                 // CAN THE PLAYER EVEN GET TO IT? A fight that lands no hit in 150 ticks is not a
                 // long fight, it is a wall: the first Rag and Bone Man run picked a goblin in a
                 // sealed part of the Goblin Cave and spent 27,000 ticks - thirty rounds of 900 -
@@ -1602,7 +1640,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 // is not a wall, however long it takes.
                 let everAdjacent = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
-                    if (!npc.isValid() || npc.type !== type0) {
+                    if (!npc.isValid() || (npc.type !== type0 && !sameFight.has(npc.type))) {
                         d = true;
                         break;
                     }
@@ -1721,7 +1759,7 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'talk to ' + s.talk + (s.why ? ' - ' + s.why : '');
             let npc: ReturnType<typeof findNpc> | null = null;
             try {
-                npc = findNpc(s.talk, p);
+                npc = findNpc(s.talk, p, true);
             } catch {
                 npc = null;
             }
@@ -1742,7 +1780,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (a > 0) {
                     H.tick(20);
                     try {
-                        npc = findNpc(s.talk, p);
+                        npc = findNpc(s.talk, p, true);
                     } catch {
                         continue;
                     }
@@ -1778,7 +1816,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     continue;
                 }
                 if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                    dbg('never arrived; player ' + p.x + ',' + p.z + ' npc ' + npc.x + ',' + npc.z);
+                    dbg('never arrived; player ' + p.x + ',' + p.z + ' L' + p.level + ' npc ' + npc.x + ',' + npc.z + ' L' + npc.level);
                     continue;
                 }
                 reached = true;
@@ -1804,7 +1842,13 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             if (!reached) {
-                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + '; player stuck at ' + p.x + ',' + p.z);
+                // THE LEVEL, because without it this message cannot tell the two reasons apart.
+                // "3 tiles off at 3503,9837; player stuck at 3505,9832" reads as a pathing
+                // problem inside one room; the same words describe an npc three tiles away on
+                // another plane, which no amount of walking will ever reach. far is a 2D
+                // distance, so it is the smaller number of the two and the more innocent-looking.
+                const planes = npc.level === p.level ? '' : ' - ON PLANE ' + npc.level + ' while the player is on ' + p.level + ', which no route can cross';
+                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + ' L' + npc.level + '; player stuck at ' + p.x + ',' + p.z + ' L' + p.level + planes);
                 continue;
             }
         } else if ('loc' in s) {
@@ -2042,7 +2086,7 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
             try {
-                npc = findNpc(s.useNpc, p);
+                npc = findNpc(s.useNpc, p, true);
             } catch {
                 npc = null;
             }

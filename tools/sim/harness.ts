@@ -231,9 +231,17 @@ export function clearLogs() {
     mesgs.length = 0;
 }
 
-/** Create a maxed player standing at (x, z). `ip` decides their bucket in World.playerLoop. */
+import { fitName } from './fitname.js';
+export { fitName };
+
+/**
+ * Create a maxed player standing at (x, z). `ip` decides their bucket in World.playerLoop.
+ *
+ * The name is put through fitName first, so two labels can never quietly become one account.
+ */
 export function makePlayer(name: string, x: number, z: number, ip: number = 2130706433): Player {
-    const p = new Player(name, toBase37(name), BigInt(Math.floor(Math.random() * 1e9)));
+    const username = fitName(name);
+    const p = new Player(username, toBase37(username), BigInt(Math.floor(Math.random() * 1e9)));
     p.teleport(x, z, 0);
     (p as any).__ip = ip;
     World.newPlayers.add(p);
@@ -320,6 +328,16 @@ export function clearInv(p: Player) {
     for (let i = 0; i < inv.capacity; i++) {
         if (inv.get(i)) p.invDelSlot(InvType.INV, i);
     }
+}
+
+/**
+ * The debugname of whatever is worn in a wearpos, or null for an empty slot. The equip side of
+ * invCount: a check about a fight can then name the weapon it was fought with instead of taking
+ * it on trust, which is how an unarmed player once got reported as an unkillable boss.
+ */
+export function wornName(p: Player, wearpos: number): string | null {
+    const obj = p.getInventory(InvType.WORN)?.get(wearpos);
+    return obj ? (ObjType.get(obj.id).debugname ?? null) : null;
 }
 
 export function give(p: Player, objName: string, count = 1) {

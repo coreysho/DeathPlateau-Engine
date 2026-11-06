@@ -11,6 +11,7 @@ export type account = {
     muted_until: string | null;
     banned_until: string | null;
     staffmodlevel: Generated<number>;
+    veteran: Generated<number>;
     members: Generated<number>;
 };
 export type account_login = {
@@ -30,6 +31,12 @@ export type account_token = {
     expires: string;
     uid: number | null;
     created_ip: string | null;
+};
+export type collection_log = {
+    profile: Generated<string>;
+    account_id: number;
+    obj: number;
+    count: number;
 };
 export type friendlist = {
     account_id: number;
@@ -101,6 +108,16 @@ export type session = {
     uid: number;
     ip: string | null;
 };
+export type session_input = {
+    id: Generated<number>;
+    session_uuid: string;
+    timestamp: string;
+    user_actions: number;
+    mouse_moves: number;
+    mouse_clicks: number;
+    camera_moves: number;
+    focus_changes: number;
+};
 export type session_log = {
     id: Generated<number>;
     session_uuid: string;
@@ -125,6 +142,7 @@ export type DB = {
     account: account;
     account_login: account_login;
     account_token: account_token;
+    collection_log: collection_log;
     friendlist: friendlist;
     hiscore: hiscore;
     hiscore_large: hiscore_large;
@@ -135,6 +153,7 @@ export type DB = {
     public_chat: public_chat;
     report: report;
     session: session;
+    session_input: session_input;
     session_log: session_log;
     session_wealth: session_wealth;
 };

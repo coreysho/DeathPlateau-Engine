@@ -40,7 +40,9 @@ export default {
     // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
     // without a rebuild, if a cutover has to be rolled back in a hurry. (Not across 380: the
     // old clients' key is gone, so rolling back past it also means LOGIN_RSA_KEY_PATH=the old pem.)
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 382),
+    //   383 = PING / PONG (server prot 1, client prot 2, 2026-11-03). An older client has no length
+    //         for opcode 1 and would read the probe's payload as its next packets.
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 384),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),
@@ -134,6 +136,9 @@ export default {
     // custom (2026-10-19) - ticks without real input (an action, chat, a click, a camera move) before a
     // live world logs a player out; three times this and it does not wait for combat to end. 1000 = 10
     // minutes. 0 = off. Production only; administrators (3+) are never logged out for it. World.processLogouts
+    // custom (2026-11-03) - how often to measure each client's round trip, in ticks (5 = every 3s).
+    // 0 turns it off, and the client then shows no ping. World.processPings
+    NODE_PING_TICKS: tryParseInt(process.env.NODE_PING_TICKS, 5),
     NODE_IDLE_LOGOUT_TICKS: tryParseInt(process.env.NODE_IDLE_LOGOUT_TICKS, 1000),
     // custom (2026-09-27) - addresses (and IPv4 CIDRs), comma separated, of a proxy or tunnel in front of
     // the game and web ports that sends PROXY protocol, so players keep their own addresses. Empty = off.

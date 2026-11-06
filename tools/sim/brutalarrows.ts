@@ -45,6 +45,18 @@ function settle(p: Player, picks: number[] = [], max = 120) {
             idle = 0;
             const names = p.resumeButtons.map((id: number) => Component.get(id).comName ?? '');
             const open = p.modalChat === -1 ? '' : (Component.get(p.modalChat).comName ?? '');
+            // A MAKE-X PANEL IS NOT AN OPTION LIST, and 'skillmulti1' does not start with 'multi'.
+            // Stringing a bow goes through ~skillmulti1 now (skill_fletching/scripts/bows.rs2 -
+            // "Stringing had no panel at all: it strung the whole inventory and gave the player no
+            // say in it"), and resuming that panel without pressing a button returns null and makes
+            // nothing - which is exactly what "a bowstring finishes it: [0,1,0]" was. com_6 is
+            // Make 1 on a one-product panel; 3 is All, 4 is X, 5 is 5.
+            if (open.startsWith('skillmulti')) {
+                const pick = picks.shift();
+                if (pick === undefined) throw new Error('unexpected make-x panel: ' + open + ': ' + names.filter(Boolean).join(' | '));
+                H.choose(p, `${open}:com_${pick}`);
+                continue;
+            }
             const multi = open.startsWith('multi') ? names.find((n: string) => n.startsWith(open + ':')) : null;
             if (multi) {
                 const pick = picks.shift();
@@ -186,7 +198,7 @@ said = use('knife', 'achey_tree_logs', [1]); // the second option: Comp Ogre Bow
 check('with wolf bones in your hands it asks, and makes the bow', [H.invCount(p, 'unstrung_zogre_bow'), H.invCount(p, 'wolf_bones'), (p.stats[9] - xp) / 10], [1, 0, 45]);
 H.give(p, 'bow_string', 1);
 xp = p.stats[9];
-said = use('bow_string', 'unstrung_zogre_bow');
+said = use('bow_string', 'unstrung_zogre_bow', [6]); // skillmulti1: Make 1
 check('a bowstring finishes it', [H.invCount(p, 'zogre_bow'), H.invCount(p, 'unstrung_zogre_bow'), (p.stats[9] - xp) / 10], [1, 0, 45]);
 
 console.log('');

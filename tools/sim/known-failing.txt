@@ -17,65 +17,409 @@
 # SQLite files under data/ and because '../content' pointed at an empty directory skeleton on
 # the machine doing the measuring. Only the 37 that failed both times are here.
 #
-# So the real state is 266 of 303 passing.
+# So the real state was 266 of 303 passing. That figure is from the unseeded baseline and has not
+# been re-taken in full since; the entry count below is the number that is trusted.
 
-# THE DICE ARE FIXED NOW, AND THIS LIST PREDATES THAT. Every measurement above was taken with
-# the suite rolling a fresh dice each run, which is why it would not settle: the fourth CI run
-# had droprate, gwdskirmish and rdreach each fail TWICE in a row, with all three passing on a
-# laptop, and a retry-once could not absorb that. The cause was not state leaking between sims
-# - each one is its own process - it was two unseeded generators: the module-global JavaRandom
-# behind the content's `random` op, and the engine's own direct Math.random calls for npc
-# wander steps and hunt targets. gwdskirmish counted 52 npcs in the god chamber on one run and
-# 50 on the next for exactly that reason.
+# ---- AND IT IS EMPTY NOW. Thirty-seven when the list was built, eleven after the dice were
+# seeded, one after the eleven were worked through, and none after changepassword turned out to
+# need a database that a fresh checkout has no way to have (its note is at the bottom). An empty
+# list is not a finished suite - it means every sim that fails today fails loudly, which is what
+# this file was for. Of the eleven that came off:
 #
-# Both are seeded from tools/sim/harness.ts now, and a sim's output is byte-identical run to
-# run. So THIS LIST IS DUE A FRESH MEASUREMENT under the fixed dice, and some of it will be
-# wrong until that happens: quest_ikov_run, listed below as passing locally, fails on four of
-# five seeds once the dice stop moving - it was never passing, it was being sampled.
+#   THREE WERE BUGS IN THE GAME.  a random event ending a temple trek; a lost recording getting
+#                                 the orb back but not the serum its own note promises; and a pair
+#                                 of attack animations with no priority (deployed separately).
+#   ONE WAS A USERNAME COLLISION. toBase37 reads the first twelve CHARACTERS of a name - not the
+#                                 first twelve letters and digits: a separator in there holds its
+#                                 place and counts as zero. So mmaggro's two zombie monkeys were
+#                                 the same account and the second login was refused in silence.
+#                                 It had the same effect in TWENTY-THREE sims, four of which were
+#                                 PASSING while measuring one account's worth of a loop - so
+#                                 H.makePlayer puts every name through fitName now, and
+#                                 tools/sim/fitnames.ts measures fitName itself without a world.
+#   TWO WERE IN THE QUESTRUN DRIVER. the sneak step held on distance where Nora T. Hagg catches
+#                                 you on sight, and the fight step read the Gelatinnoth Mother's
+#                                 own form change as a death.
+#   AND FIVE WERE AUDITS WHOSE QUESTS HAD BEEN REBUILT UNDER THEM, which is the pattern worth
+#                                 keeping: see the note below.
 #
-# To re-measure one entry: SIM_SEED=random for the old free-running behaviour, SIM_SEED=<n> for
-# a different dice. A failure that survives several seeds is real.
+# HOW MUCH THE COLLISION WAS HIDING, measured by counting the renames fitName now prints. Four of
+# the twenty-three were sims nobody had any complaint about, and they were the worst of it: basalt
+# renamed 59 players, opheld2 61, coursefall 55. Those are loops over every jumping spot, every
+# held item and every course tile, and each one was running its whole loop against the one account
+# that got in first - so a single case was being measured scores of times and reported as scores
+# of cases. Nothing in their output said so, because a refused login is silent and the sims never
+# asked whether the player was there. a1lib's player() asks now.
+#
+# The honest reading of that is that this list was never mostly a list of broken game. It was
+# mostly a list of tests that had stopped describing the game, and the one reliable way to tell
+# the difference was to read the content a check was written about rather than the check.
+
+# THE DICE ARE FIXED NOW, AND THIS LIST HAS BEEN RE-MEASURED AGAINST THEM. Everything above was
+# measured with the suite rolling a fresh dice each run, which is why it would not settle: the
+# fourth CI run had droprate, gwdskirmish, rdreach and fremtrials2 each fail TWICE IN A ROW while
+# all four passed on a laptop, so retry-once could not absorb it. The cause was not state leaking
+# between sims - each one is its own process - it was two unseeded generators: the module-global
+# JavaRandom behind the content's `random` op, and the engine's own direct Math.random calls for
+# npc wander steps and hunt targets. gwdskirmish counted 52 npcs in the god chamber on one run and
+# 50 on the next for exactly that reason. Both are seeded from tools/sim/harness.ts now.
+#
+# THE FIFTH RUN WAS THE FIRST SEEDED ONE, and it is the measurement this list now records:
+#
+#   - ZERO flaky sims across all eight shards. The retry is still in the job and never fired once.
+#     That is the thing to watch: it is an instrument now, and a FLAKY line means something STILL
+#     varies between two runs of one commit.
+#   - CI AND THIS MACHINE AGREE, six for six. templetrek and trollromance fail in both;
+#     droprate, gwdskirmish, rdreach and fremtrials2 pass in both. The disagreement that made this
+#     file worthless for a week is gone.
+#   - Five entries came off: fletching, quest_rag_run, randomevents, quest_myreque2_run,
+#     quest_druidspirit_run.
+#
+# AND A FIXED DICE DOES NOT ONLY REVEAL BUGS - IT ALSO PINS DOWN FRAGILE CHECKS, which is the
+# honest way to read the two new entries. templetrek and trollromance pass three times out of
+# three on a free dice and fail every time on seed 1. They are not bugs the seed uncovered; they
+# are assertions that depend on the roll, and they would have failed some nights anyway. Seed 1 is
+# deliberately NOT shopped around for a kinder number: a seed chosen to make the suite look good
+# is a measurement tuned to flatter itself. A sim that loses on seed 1 is fragile, full stop, and
+# the fix is to make the check roll-independent the way gwdskirmish's startX check already was.
+#
+# To re-measure one entry: SIM_SEED=random for the old free-running behaviour, SIM_SEED=<n> for a
+# different dice. Several seeds failing means the sim is broken; one seed failing means the check
+# depends on the roll. Both belong here; they are different debts.
 
 # ---- CHECKS THAT ACTUALLY FAIL. The interesting ones. A count means the sim ran and disagreed
 # with the engine; a message means it could not get far enough to try.
-audit0               # 108 ok, 1 FAIL
-audit4               # 39 ok, 8 FAIL
-audit5               # Error: unexpected menu: multi2
-audit6               # Error: unexpected menu: multi3
-audit7               # Error: not carrying deal_blindweed
-gwdstaves            # Error: menus not reached: 2
-lunar                # no option "Can we sail to Lunar Isle" in multi2
-myrequevillage       # Error: no burgh_quest_food_chest_closed at 3485,3245
-slayerbuilt          # 24 ok, 1 FAIL
+# All of these were re-run on 4 November and carry what they said then, not what the first
+# baseline recorded. Two things that block reading them the old way:
+#
+#   AN "unexpected menu" OR "menus not reached" IS ALMOST NEVER THE BUG. It is where a sim gives
+#   up after the state behind the conversation already went wrong, and the real failure is a few
+#   lines above it. Held for every one of the five audits: audit7's was a quest start that had
+#   moved behind two requirements, audit6's was a missing second pick in Hamal's opening, audit5's
+#   was a head that had moved to Entrana, audit4's was a Wanderer who had to show you the rocks.
+#
+#   AND NEITHER IS A "not carrying <item>" THROW. This file used to guess that audit1 and audit7
+#   were one bug "in how the audit hands itself quest items" on the strength of both printing
+#   one. They were two different quest starts.
 
-# ---- SIMS AHEAD OF THE CONTENT. These read configuration that is on no branch here, so they
-# cannot pass until the content catches up - or until somebody decides they were abandoned.
-randomevents         # TypeError: Cannot read properties of null (reading 'x')
+# THE ONE THING EVERY AUDIT ENTRY HERE TURNED OUT TO BE. Not one of audit1, audit4, audit5,
+# audit6 or audit7 was a bug in the game. Each of them holds a block per quest, and the quest
+# audits have been rebuilding those quests underneath them for weeks: a start that moved behind a
+# requirement, a reward that moved to a different npc, a lever puzzle that became a cart run, a
+# mesbox that became a real fight. A block written against the old shape fails at its FIRST stale
+# check and then runs the rest of itself through a quest that never started, which is why these
+# read as "the quest does not progress" and end in an unexpected menu seventy steps from the
+# cause. The per-quest questruns (quest_deal_run, quest_mdaughter_run, quest_handsand_run,
+# quest_hauntedmine_run, quest_makinghistory_run, quest_elid_run, quest_myreque2_run) all pass,
+# and they are what owns quest PROGRESSION now. What these audits are for is the map - the stairs,
+# ladders, doors, landings and reachability that a run only walks one line through - plus the
+# "lose the item and get it back" checks no run makes. Where a block duplicated a run it has been
+# deleted rather than ported.
 
-# ---- FAIL WITH NOTHING TO SAY. Worth a look each; none of them printed a reason.
-blastfurnace
-chatchars
-quest_ball_run
-quest_garden_run
-quest_hundred_run
-quest_swansong_run
-securityfixes
-staffrules
+# audit4 is FIXED and off: 112 ok, 0 FAIL, from 39 ok 8 FAIL. Six causes, each one closing a
+# cluster: the rocks into Sophanem are the Wanderer's to show you (Gertrude's Cat, a cat, a
+# tinderbox and a waterskin) and the "hole in the wall" is INSIDE the east wall, so from outside
+# the route can only get within three tiles of it - "[3324,2796]" was a player against a wall
+# waiting for a click that could not land; the canopic jars have a level 91 guardian on them, the
+# one fight that quest has and was never placed; the ceremony wants a willow symbol cut by the
+# carpenter; Making History wants Priest in Peril and The Restless Ghost and is three strands now;
+# ^route_complete is 8 and this kept setting 5; Iorwerth answers a ~p_choice5 about the bomb at
+# stage 7; Gadderanks is a real fight; and the inn's collapsed wall is a bucket job - one bucket,
+# three spadefuls, one trip to the pile, because ~m2_rubble_bucket hands back the first EMPTY
+# bucket it finds and three of them make three quarter-full ones.
+#
+# Two of its checks were passing for the wrong reason and now are not: the Burgh fence refusing to
+# let an unfed player back IN was being read as a broken shortcut, and it is the content's own
+# point ("NOT A WAY ROUND FLORIN").
 
-# ---- LONGER THAN THE 180 SECOND CAP. Not known to be broken - known to be slower than the job
-# is willing to wait. If one of these is worth running, it needs its own timeout rather than a
-# bigger cap for all 303.
-audit1
-dpick
-gwdanims
-gwdguards
+# audit5 is FIXED and off: 79 ok, 0 FAIL. The wizard's head is not in the pit - "the rest of
+# Clarence is NOT down here... every other sack that week went out of Yanille to the furnaces on
+# Entrana" - and Mazion hands it over at stage 75, forty-five stages past where this was digging
+# for it. Rarve takes Bert's glowing scroll rather than a head and gives the scrying orb alone,
+# and the scroll comes BACK keyed as a teleport to his room. Betty does two things and the old
+# block skipped the second: an empty vial buys the bottled water, the lens is a glassblower's, and
+# the rose lens goes between her propped-open doorway and the vial on her counter rather than into
+# the orb. The One Small Favour ladder is at 2700,3476 and a climb puts you BESIDE it.
+#
+# One content fix came out of it: [label,handsand_rarve_done]'s lost-recording branch reserves two
+# inventory slots and its own note says "A fresh orb and serum", and it only ever added the orb.
 
-# ---- FOUND BY THE FIRST CI RUN, not by the machine that built this list. Each of these passes
-# here and fails on a GitHub runner; none of them has been diagnosed.
-brutalarrows
-changepassword
-mmaggro
-quest_druidspirit_run
-quest_ikov_run
-quest_myreque2_run
-quest_rag_run
+# audit6 is FIXED and off: 133 ok, 0 FAIL. Five quest blocks, five stale starts.
+#   MOUNTAIN DAUGHTER  the rockslide is watched, Hamal wants two picks, the bush wants gloves, the
+#                      roots give MUD (which is what makes the tall tree climbable), the cairn is
+#                      five rocks off the goat pen, and the Kendal wants four.
+#   SPIRITS OF THE ELID the cupboard holds two TORN robes and the robe door wants the Ballad of
+#                      Jareesh as well; the genie trades the statuette for the soles off the
+#                      mayor's shoes. And the golem is fought INSIDE the door click, which is why
+#                      the bit and not the npc is what proves it happened.
+#   FORGETTABLE TALE   ~forget_veldaban reads The Giant Dwarf AND Fishing Contest, and only the
+#                      first was set - so Veldaban handed the conversation back to the other quest.
+#   SWAN SONG          100 quest points, One Small Favour and Garden of Tranquillity before Herman
+#                      takes you on; feeding the colony leaves you at ^swan_letter and fetching the
+#                      Wise Old Man is a leg of its own; and the Sea Troll Queen is a 200-hitpoint
+#                      fight that is FIVE TILES ACROSS, with Herman standing inside her square.
+#   IN SEARCH OF THE MYREQUE  the doors do not move until Curpile Fyod is satisfied, and he is
+#                      reached over a rope bridge - the ladder this block hammered at is the one
+#                      the content says "NOTHING REPAIRS". The hideout is on plane 3. Veliaf does
+#                      not finish the quest; the empty chair in Canifis does.
+
+# audit7 is FIXED and off: 204 ok, 0 FAIL, from a fourteen-second first-step failure.
+#   RUM DEAL           the quest does not start until Captain Braindeath's brief, behind Zogre
+#                      Flesh Eaters and Slayer 42; the progression is quest_deal_run's and the
+#                      island's six stairways and two ladders are this block's.
+#   HAUNTED MINE       Priest in Peril first - nine failures from one requirement - and the points
+#                      are a CART RUN now: the fungus goes in the loading cart, the board's start
+#                      lever sends it, and the levers alone move nothing. The valve is not the lift,
+#                      the lift wants a lit fungus in hand, the reward doors open the crystal room
+#                      rather than ending the quest, and Treus Dayth is a level-95 fight.
+#   TAI BWO WANNAI TRIO a karambwan is COOKED, not tinderboxed: the success product of its cooking
+#                      row IS the poorly cooked one, and a knife on that makes the poison paste.
+
+# gwdstaves is FIXED and off: 48 ok. A SECOND a1lib bug, and a bigger one than findNpc.
+# useHeld was a paraphrase of OpHeldUHandler rather than the thing itself, and it was three
+# short: it swapped last_item/last_useitem whether or not the lookup found anything, it
+# passed a raw category where the engine resolves CategoryType.get(...).id, and it had no
+# HANDOVER. Both halves of a use can declare [opheldu,...], only the one clicked second
+# runs, and if that one does not know the pair it declines - which ~displaymessage does at
+# all 787 of its "Nothing interesting happens." sites - and the engine gives the other half
+# a go. The engine's own note says a sweep found 963 pairs that worked one way round only.
+# Saradomin's light on a staff of the dead is one: the staff's trigger is reached first,
+# declines, and useHeld stopped there, so the combine's confirmation never opened.
+#
+# Behind it were two more checks nobody had ever reached, both stale: the staves were
+# asserted to share a battlestaff's category (they are weapon_bladed_staff, which
+# combat.rs2 and player_attackstyles.rs2 handle alongside weapon_staff), and to claim no
+# special attack on the grounds that "Power of Death is not built" - gwd_staves.rs2 builds
+# Power of Death and Power of Light.
+                     # that kind of message is worth
+# lunar is FIXED and off: 139 ok. It was an a1lib bug, not the quest. findNpc said it
+# returned "the nearest npc of a type (any floor)" and actually returned the first FLOOR
+# that had one, so distance only decided between npcs sharing a storey. There is a
+# Captain Bentley on each dock - Pirates' Cove at 2224,3800 on LEVEL 2, the ship's deck,
+# and Lunar Isle at 2114,3893 on level 0 - and a player standing on the Cove, 22 tiles
+# from one and 88 from the other, was handed the far one because level 0 came first.
+# talk() teleports to whatever it is given, so the sim sailed itself to Lunar Isle and
+# then complained that Bentley was talking like somebody was on Lunar Isle.
+                     # is "Take me back to Pirates' Cove | I'll stay a while" - which is the
+                     # conversation for somebody ALREADY on Lunar Isle. The sim's idea of where
+                     # the player is standing is wrong, not the dialogue
+
+# slayerbuilt is FIXED and off: 25 ok. It set Rum Deal to the MIDDLE of itself and asked why the
+# reward had not arrived - deal_quest 6 is ^deal_spider_in, a fever spider in the hopper and
+# three stages short, while slayer_task.rs2 gates on ^deal_complete, which is 9. The elf line
+# beside it was right all along, which is why only one of two identically-named checks failed.
+#
+# audit0 is FIXED and off: 111 ok. "a human clicking the bamboo gate is arrested and wakes up
+# inside the walls" asked whether Garkor is reachable on foot from where you wake - which is
+# asking whether the cell door is missing. ^mm_jail_cell is 2771,2794 behind a door that wants a
+# lockpick, and the jail rebuild "gave no cell coordinate, no guard and no escape route. It
+# gives all three". The check predated the lock. It is three checks now and they describe the
+# jail instead of denying it: you wake in the cell, the cell holds you, and the far side of its
+# door is inside Marim.
+# audit1 is FIXED and off: 307 ok, 0 FAIL, in 2551 seconds. Two causes, and neither was the
+# Gelatinnoth Mother's style-switching mechanic this file spent two entries blaming.
+#
+# SHE WAS FOUGHT BARE-FISTED. The banana step equips mm_monkey_greegree_for_normal_gorilla, which
+# displaced the rune scimitar, and taking the greegree off again left the right hand empty for the
+# rest of the quest. She ended 1400 ticks on 115 and then 67 of her 190 hitpoints across two runs,
+# which is a fist's damage and not a mechanic. With the scimitar back on she reads "killed", the
+# Culinaromancer appears and dies, and Recipe for Disaster finishes with all ten victims, the quest
+# point and the lamp. The fight is now preceded by a check that NAMES the weapon it is fought with.
+#
+# AND MARIM'S GATE ARRESTS YOU. This block's own comment said "the gate lets anyone through"; the
+# jail has been built since, and [label,mm_marim_gate] reads ~mm_is_monkey and sends anybody else
+# to @mm_jail_arrest. So the old pair of checks walked a human into the cell and then asked whether
+# the three wise monkeys were reachable FROM IT - a twenty-one tile pocket behind a door that wants
+# a lockpick - and reported Marim's geography as broken. The check above them passed on the way in,
+# because the cell is north of the gate too and "p.z > 2766" is true of a player who has just been
+# arrested. It is a human who gets arrested and a monkey who slips through now, and the cell's own
+# three checks are audit0's.
+#
+# AND IT IS THREE PIECES OF WORK IN CI, not one. 2551 seconds in one file means the cap this job's
+# own rule asks for - three times the measurement - is over two hours for one sim, and a cap that
+# big stops being a timeout. It takes section arguments, so sims.yml splits it on its own
+# per-section timings (watchtower 422s, arrav 370s, hero 343s, mourning 289s, rfd 236s, monk 224s,
+# demon 205s, waterfall 181s, gobdip 119s, totem 99s, rag 35s, fenk 17s, scorp 4s, marim 1s) into
+# three groups of 797s, 783s and 965s. Each gets its own cap and its own place in the shard
+# rotation, so they run on three runners at once.
+# myrequevillage is FIXED and off: 15 ok, 0 failed. THE WISE OLD MAN PATTERN FOR THE THIRD TIME.
+# myreque2_village.rs2: "an earlier pass added a second one because nobody had looked", so the
+# duplicate CLOSED chest at 3485,3245 was removed and the real one - already OPEN, at 3483,3246 -
+# is what Florin points at. This sim clicked the deleted duplicate, asserted that a chest
+# APPEARS, and asserted that it goes again afterwards. All three were the old behaviour: the
+# script says plainly "nothing is added or deleted".
+#
+# gwdanims is FIXED and off: 74 ok, 0 FAIL. It was not her death_anim and it was not the check.
+# She was STILL ALIVE: a probe caught her on 3 hitpoints with active=true at the end of the
+# fight, so there was no death to animate. The sim set her to 1 hitpoint and fought 120 ticks,
+# the killing blow missed, and her own regeneration carried her back up. Fought on her own she
+# plays 4015 exactly as declared - the other three generals pass only because their 120 ticks
+# happened to land. Four goes now, each putting her back on one, stopping the moment she dies.
+# brutalarrows is FIXED and off: 50 ok, 0 failed. Stringing a bow goes through ~skillmulti1 now
+# ("Stringing had no panel at all: it strung the whole inventory and gave the player no say in
+# it", skill_fletching/scripts/bows.rs2), and 'skillmulti1' does not start with 'multi' - so this
+# sim's settle() fell past its menu handler and resumed the panel without pressing a button, which
+# returns null and makes nothing. That is the whole of "a bowstring finishes it: [0,1,0]".
+
+# ---- CHECKS THAT DEPEND ON THE ROLL. These pass on most dice and fail on seed 1, measured
+# rather than assumed. A fixed dice did not break them; it stopped them hiding. Each one is a
+# single assertion resting on where a wandering npc happened to be, or on which branch a roll
+# took, and each is fixable inside its own sim without touching the content.
+# mmaggro is FIXED and off: 23 ok, 0 FAIL. AND IT WAS NOT THE ROLL. The players were named
+# 'human_' + npcName.slice(3, 14), and toBase37 reads the first twelve CHARACTERS of a name -
+# so mm_zombie_monkey_small and mm_zombie_monkey_large both asked for the same account. The second
+# login was refused as a duplicate, and the check reported an Ape Atoll monkey that would not
+# attack a human standing beside it about a human who had never logged in. p.isActive was false
+# and nothing in the output said so. a1lib's player() now throws on a colliding name or a login
+# that did not take, which found the same collision silently in deathtoken, gwd and plunder.
+# Two real fixes went in alongside it: the sim held coordinates read once and stood the player
+# beside the REMEMBERED tile (the three npcs in Zooknock's tunnel wander), and the tile beside an
+# npc has to be floor AND in its line of sight, because both hunts here are check_vis=lineofsight.
+# The greegree half gained a control - a bare player on the same tile, hunted straight after -
+# because "it did not attack me" is also what a hunt that could never fire looks like.
+# templetrek is FIXED and off: all checks passed. AND IT WAS A BUG IN THE GAME, not in the sim -
+# the one thing this list kept insisting it was not. The failing leg ended with the player standing
+# at 1952,4764 and the escort 270 tiles behind it in room 1, and that tile is ^macro_quiz_landing:
+# the Quiz Master's podium. A RANDOM EVENT had taken the player out of the trek.
+#
+# macro_event_area already excluded the duel arena, the gnomeball field, the fishing trawler and
+# tutorial island. A temple trek is the same kind of place and was simply missing from the list:
+# fourteen rooms of instanced map, an escort on playerfollow, and a reward that is lost the moment
+# that escort is left behind. The escort stays in the room, [queue,trek_escort_watch] keeps running
+# on a player who is not there, and the trek is over. ~in_templetrek goes on that list now.
+#
+# Everything this entry recorded as measured was true and none of it was the cause, which is worth
+# keeping: the snakes adjacent to an escort they never bite, the live watch queue, the 270-tile gap
+# - all of it is what being teleported out of a trek looks like from inside the room you are no
+# longer in. The dead theory it also records (standing the player beside the escort) stays dead.
+#
+# templetrek deliberately does NOT suppress random events for itself. Not suppressing them is what
+# found this.
+
+# trollromance came OFF this list by being fixed rather than excused, and it is worth saying what
+# was behind it: three bugs, not one. talkTo never followed Tenzing when he wandered out of range;
+# the max-hit measurement topped health up only below 60 while Arrg can deal 76 in a tick; and the
+# kill loop had no top-up at all, so the player died and respawned in Lumbridge while the loop went
+# on swinging at a troll 300 tiles away. That last one printed as "Arrg dies: defeated: 35 (want
+# 40)" - a message that blames the quest's stage transition for a corpse two regions away, which is
+# why nobody had got to the bottom of it. Twelve seeds pass now.
+
+# ---- WHAT WAS LEFT OF "FAIL WITH NOTHING TO SAY". Eight sims sat here under "worth a look
+# each; none of them printed a reason", because a listed sim used to fail in silence. Run,
+# diagnosed and then fixed, six are gone:
+#
+#   securityfixes      asked for NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20 in plain English
+#                      and was marked failed for asking. sims.yml passes it now. 21 ok.
+#   staffrules         the same. 16 ok.
+#   chatchars          asserted ENGINE_REVISION is EXACTLY 381, the number its own round
+#                      introduced, so the next bump broke it. Now a floor, >= 381, which is what
+#                      the round actually bought: an older client is turned away. 21 ok.
+#   quest_garden_run   88 of 88
+#   quest_swansong_run 109 of 109
+#                      Both looked for [wise_old_man] and Draynor has none: he is [wom_multi],
+#                      the multinpc that resolves to him, after a duplicate was deleted from
+#                      maps/m48_50.jm2. ONE WORD each. The tile was right all along - the script's
+#                      comment says he is indoors at 3088,3255 and he is not, he is out by the
+#                      house, and standing the player there only got them stuck five tiles away.
+#                      Measured rather than believed.
+#
+# Both of the two that were left here have since been fixed. Their notes are below, kept because
+# what each one turned out to be is worth more than the fact that it is gone.
+
+# blastfurnace is FIXED and off: 38 ok. It was not a bug at all, and I called it one twice
+# before reading the content. blast_furnace.rs2 removed that Crafting XP on purpose - "the XP
+# rewarded breaking them on purpose: pump, burst, mend, repeat, for ever" - so the sim was
+# asserting a closed exploit. It now asserts that mending pays nothing, and says why.
+
+# quest_ball_run is FIXED and off: all checks passed. DISTANCE IS NOT WHAT CATCHES YOU, SIGHT IS,
+# which is why the hold in questrun's sneak step timed out every single time and walked anyway.
+# [ai_timer,nora_t_hagg] is huntall(npc_coord, 3, 0) and then lineofsight(npc_coord, coord), and
+# "move around the edge, using the hedges as cover" is the wiki saying the hedges break the line.
+# Her garden never has her more than eight tiles off, so a distance-only wait could never end.
+# The step reads line of sight now, and notices being moved: a running player covers at most two
+# tiles a tick, so a bigger jump is somebody else moving them, and walking on down a route
+# computed before that happened is the whole of "ended up at 2907,3458". There is no winning
+# retry either - the catch deletes the shed key AND the ball and puts %ballquest back to
+# ^ball_started - so the step has to not be seen, which it now is not.
+#
+# The dead theories this entry recorded stay recorded: waiting longer does nothing, and the empty
+# route being a silent arrival was a real driver bug and that fix is kept.
+
+# THE GELATINNOTH MOTHER WAS NOT HER MECHANIC, which this file said twice and was wrong about
+# both times. quest_hundred_run is FIXED and off: 255 of 255, quest complete. questrun's fight
+# step read ANY change of npc type as a death - a rule that exists for Delrith, who is beaten down
+# and then npc_changetype'd into something the step never named. She changes into another of her
+# OWN six forms every thirty ticks (npc_changetype_keepall), and the run names all six in one
+# fight step because they are one npc, so every round ended inside thirty ticks claiming a kill.
+# "killed 60 in 884 ticks and hundred_minionskilled_tally is 4" was sixty rounds of her turning
+# over, not sixty corpses. A change into a type the step itself named is no longer a death.
+#
+# audit1's half of it was not her either: it was an empty hand. The banana step equips the gorilla
+# greegree, which displaced the rune scimitar, and taking the greegree off again left the slot
+# bare for the rest of the quest. She ended 1400 ticks on 115 and then 67 of her 190 hitpoints
+# across two runs, which is a fist's damage. The fight is now preceded by a check that names the
+# weapon it is fought with.
+#
+# What this entry had right is the content: five of her six forms carry magicdefence=5 with every
+# other defence at 1000 and hundred_minion5_melee is the mirror of it, so a sim holding one weapon
+# really cannot out-damage her inside ^hundred_boss_lifetime. Nothing about that needed changing.
+
+# quest_hundred_run is FIXED and off: 255 of 255 checks passed, hundred_main_quest_var finished
+# at 5 - COMPLETE. See the Gelatinnoth Mother note above.
+
+# ---- THEY WERE NEVER TOO SLOW TO RUN, ONLY TOO SLOW FOR ONE CAP. This section used to hold
+# four sims as "not known to be broken - known to be slower than the job is willing to wait",
+# with a note that nobody had timed them. Timed now, on a machine faster than a runner:
+#
+#   gwdguards  322s  23 ok, 0 FAIL   - passes. OFF THE LIST.
+#   dpick      396s   6 ok, 0 FAIL   - passes. OFF THE LIST.
+#   audit1     357s  throws          - real, below
+#   gwdanims   433s  73 ok, 1 FAIL   - real, below
+#
+# So half of that section was passing sims that nobody had ever seen finish, exactly like
+# glassblowing. All four have their own cap in sims.yml now and actually run; the two that fail
+# have moved up to the section above, with what they say rather than how long they take.
+
+# ---- A GENUINE MACHINE DIFFERENCE, and now the only one. This section held seven sims that
+# "pass here and fail on a GitHub runner", none of them diagnosed. With the dice fixed, six of
+# those seven turned out to be nothing of the kind:
+#
+#   quest_druidspirit_run, quest_myreque2_run, quest_rag_run  pass on a runner now - off the list
+#   brutalarrows                                              never passed here either - FIXED
+#   mmaggro                                                   not the roll at all: a username
+#                                                             collision. FIXED
+#   quest_ikov_run                                            the roll, and diagnosed below
+#
+# changepassword is FIXED and off, and the list is EMPTY. "Same engine, same content, same dice,
+# different answer - so whatever it is, it is the environment and not the game" was right about
+# where to look and wrong about what to look for. It is not timing at all.
+#
+# changepassword is the only sim that uses the REAL account table: it deletes its two accounts,
+# reads the stored bcrypt hash back to prove an unchanged password is unchanged, and checks ::ban
+# and ::mute persist. DB_BACKEND defaults to sqlite, which is db.sqlite in the working directory,
+# and db.sqlite is GITIGNORED - so a laptop has one from running the server and a fresh checkout
+# has none, and Kysely throws on the first query. That is the whole of "passes on a laptop, fails
+# on a runner", and the runner's log said so all along: a query dump with a WhereNode of 'pwtest'.
+#
+# Proved both ways rather than argued. db.sqlite moved aside on this machine: the same failure as
+# the runner. Migrated from nothing: 14 ok, 0 failed. sims.yml migrates one now, next to the login
+# key it already makes for exactly the same reason - another gitignored thing a fresh checkout
+# lacks, which killed this job's first run in forty seconds.
+#
+# AND IT CAME OFF ON CI'S WORD, not mine: "NOW PASSING, take them off the list: changepassword".
+#
+# What was done to this sim before that - a warm-up round trip, a minute to answer instead of five
+# seconds, a printed line naming the unanswered request - was all treating a timing problem it
+# never had. It is kept because a minute costs nothing when nothing is wrong and the diagnostic is
+# worth having, but it fixed nothing, and the reasoning above it was a story that fit the shape
+# without ever being tested. The lesson is the one at the top of this file: the log had the answer
+# in it, and it took reading the log instead of reasoning about the sim.
+
+# quest_ikov_run is FIXED and off: all five seeds pass, including the four that never had.
+# [opobj3,ikov_staffofarmardyl] runs npc_huntall(coord, 5, 1) BEFORE it gives you anything and
+# refuses while any guardian_of_armadyl is within five tiles with line of sight - they all have
+# a wanderrange, so whether one was in reach at the click was the dice. The manifest had "a
+# Guardian objects" AFTER the take instead of in the way of it. Clearing the Guardian first
+# fixes it, plus walking back to the table afterwards: the fight carries the player off it, and
+# "nothing on the floor nearby" is the take looking four tiles from where the fight ended.
+#

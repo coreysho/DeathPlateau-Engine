@@ -58,6 +58,13 @@ function player(name: string, x: number, z: number, level = 0) {
 }
 const at = (p: Player) => [p.x, p.z, p.level];
 const saidSince = (p: Player, from: number, s: string) => H.mesgs.slice(from).some(m => m.who === p.username && m.text.includes(s));
+// A ~mesbox IS NOT A mes. The first goes out as an interface with text set on it and lands in
+// H.ifaces; only the second reaches the chatbox and H.mesgs. Three checks here asked saidSince
+// for lines the content says through a mesbox and read "it did not say that" about a refusal that
+// had worked perfectly.
+const boxedSince = (p: Player, from: number, s: string) => H.ifaces.slice(from).some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes(s));
+/** Either channel: a mes in the chatbox or a ~mesbox over it. */
+const toldSince = (p: Player, mesFrom: number, ifaceFrom: number, s: string) => saidSince(p, mesFrom, s) || boxedSince(p, ifaceFrom, s);
 const free = (p: Player) => !isMapBlocked(p.x, p.z, p.level);
 
 function slotOf(p: Player, objName: string) {
@@ -247,81 +254,151 @@ console.log('MOUNTAIN DAUGHTER');
     H.setVarBit(p, V, 0);
     H.equip(p, { rhand: 'rune_scimitar' });
 
+    // THE SLIDE IS WATCHED, which is the camp's whole point and is newer than this block was.
+    // [oploc1,mdaughter_rockslide] refuses from the SOUTH while the quest has not started - "a
+    // spear comes over it" - and an outsider's way in is a rope round the boulder on the ledge
+    // above. The old pair of checks here opped the slide at stage 0 and read a player who had not
+    // moved as a wrong landing, then read the SECOND op - from the same tile, refused the same way
+    // - as "back south, free tile" and passed it. A check that passes because nothing happened is
+    // worse than the one that failed beside it.
+    let from = H.mesgs.length;
+    const fromIf = H.ifaces.length;
     op(p, 2760, 3658, 'mdaughter_rockslide');
-    check('rockslide from the south: lands north of it, on a free tile', [at(p), free(p)], [[2761, 3660, 0], true]);
-    op(p, 2760, 3658, 'mdaughter_rockslide');
-    check('rockslide from the north: back south, free tile', [at(p), free(p)], [[2761, 3657, 0], true]);
-    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('the slide turns an outsider back, and does not move them', [at(p), toldSince(p, from, fromIf, 'not letting you in')], [[2761, 3657, 0], true]);
+    H.give(p, 'rope');
+    p.teleport(2765, 3665, 0); // the strip of ledge above the path, reached by the west route up
+    H.tick(1);
+    useOn(p, 2765, 3666, 'mdaughter_cliff_boulder', 'rope');
+    check('  a rope round the cliff boulder drops you into the camp, on a free tile', [p.z > 3660, free(p)], [true, true]);
+    check('  and the rope is coiled up again at the bottom rather than taken', H.invCount(p, 'rope'), 1);
 
     // Hamal is in a tent with a closed flap
     const inTent = reach(0, p.x, p.z);
     check('with the flap shut Hamal cannot be walked to', inTent(2811, 3673), false);
-    const from = H.mesgs.length;
+    from = H.mesgs.length;
+    p.teleport(2804, 3672, 0);
+    H.tick(1);
     op(p, 2805, 3672, 'mdaughter_tent_door');
     check('  the tent flap opens (no "Nothing interesting happens")', [saidSince(p, from, 'Nothing interesting'), locAt(2805, 3672, 0, 'mdaughter_tent_door')], [false, false]);
-    check('  and Hamal answers from across the camp, walking in', walkTalk(p, 'mdaughter_hamal', [1]), true);
+    // TWO MENUS, NOT ONE: a p_choice3 ("Why is everyone so hostile?") and then a p_choice2 ("I
+    // could look for her."), and the second is the one that starts the quest. One pick left the
+    // second menu unanswered, and the throw it caused reads as "unexpected menu: multi3" seventy
+    // lines further on, where the next conversation walked into the opening choice again.
+    check('  and Hamal answers from across the camp, walking in', walkTalk(p, 'mdaughter_hamal', [1, 1]), true);
     check('  quest started', H.getVarBit(p, V), 10);
 
-    // the pearls: the bushes on White Wolf Mountain
+    // AND NOW THE SLIDE LETS YOU THROUGH, which is the last line he says: "I will tell the slide
+    // you may come and go." Landing tiles are what this block is for, and they can only be read
+    // once the camp knows you.
+    p.teleport(2761, 3657, 0);
+    H.tick(1);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('rockslide from the south: lands north of it, on a free tile', [at(p), free(p)], [[2761, 3660, 0], true]);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+    check('  and from the north: back south, free tile', [at(p), free(p)], [[2761, 3657, 0], true]);
+    op(p, 2760, 3658, 'mdaughter_rockslide');
+
+    // THE PEARLS, and the thorns are the point of them: [oploc3,mdaughter_white_pearl_bush] reads
+    // inv_getobj(worn, ^wearpos_hands) and takes four hitpoints off anybody reaching in bare.
+    // Forty bare-handed picks came away with nothing, and the check above them said the bush was
+    // broken. Both halves are asserted now, so a glove check that stops working cannot read as a
+    // bush that stopped fruiting.
     const b = player('md_bush', 2849, 3496);
+    from = H.mesgs.length;
+    op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3);
+    check('bare hands come away with nothing, and it says why', [H.invCount(b, 'mdaughter_white_pearl_fruit'), saidSince(b, from, 'thorns go straight through')], [0, true]);
+    H.give(b, 'leather_gloves');
+    H.equip(b, { hands: 'leather_gloves' });
+    H.tick(1);
     let picks = 0;
     for (let i = 0; i < 40 && H.invCount(b, 'mdaughter_white_pearl_fruit') < 3; i++) {
         op(b, 2849, 3497, 'mdaughter_white_pearl_bush', 3);
         picks++;
     }
     console.log(`  three white pearls took ${picks} picks of the bush`);
-    check('white pearls can be picked from the thorny bushes', H.invCount(b, 'mdaughter_white_pearl_fruit') >= 3, true);
-    H.give(p, 'mdaughter_white_pearl_fruit', 3);
-    talk(p, 'mdaughter_hamal');
-    check('three pearls: Hamal speaks plainly (relations 1)', [H.getVarBit(p, 'mdaughter_relations_var'), H.invCount(p, 'mdaughter_white_pearl_fruit')], [1, 0]);
-    talk(p, 'mdaughter_svidi');
-    check('Svidi found', H.getVarBit(p, V), 20);
-    talk(p, 'viking_brundt');
-    check('Brundt writes the guarantee', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_safety_guarantee')], [30, 1]);
-    talk(p, 'mdaughter_svidi');
-    check('Svidi takes it and gives the necklace', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_necklace')], [40, 1]);
-    talk(p, 'mdaughter_hamal');
-    check('Hamal knows the necklace', H.getVarBit(p, V), 50);
+    check('white pearls can be picked from the thorny bushes with gloves on', H.invCount(b, 'mdaughter_white_pearl_fruit') >= 3, true);
+    // and eating one is the only way anybody has ever got a seed out of a White Pearl
+    held(b, 'mdaughter_white_pearl_fruit', 3);
+    check('  and eating one leaves the seed', H.invCount(b, 'mdaughter_white_pearl_seed'), 1);
+    // THE SPINE OF THIS QUEST IS quest_mdaughter_run.ts'S, and it is no longer the spine this
+    // block was written against. Stage 20 is the pool in the bubbles off the island, not Svidi;
+    // stage 30 is the pool again once Rellekka has its peace and the camp has its food; Brundt
+    // wants the Ancient Rock back before he writes anything and takes half of it; Ragnar has the
+    // necklace at stage 60; the roots give MUD rather than Asleif; and the cairn is five rocks off
+    // the goat pen rather than half a rock. The run plays all of that start to finish and passes,
+    // so the progression is deleted rather than ported. What is kept is the map: the two tent
+    // flaps, the three crossings and the tile each one puts you down on, the two trees on the path
+    // and the Kendal's cave - the geography the run only walks one line through.
+    //
+    // The vars below are set rather than earned for the same reason the stage is: each obstacle is
+    // its own claim, and earning the state again here would only be a second, worse copy of the
+    // run.
 
+    // THE ROOTS GIVE MUD, and the mud is what makes the tall tree climbable: "The geysers have
+    // left the bark wet through... Something would have to be worked into the bark first."
     p.teleport(2808, 3659, 0);
     H.tick(1);
     H.give(p, 'spade');
     op(p, 2808, 3660, 'mdaughter_roots_1');
-    check('dig below the roots: Asleif', [H.getVarBit(p, V), H.invCount(p, 'mdaughter_daughter_corpse')], [60, 1]);
+    check('dig below the roots: a handful of mud', H.invCount(p, 'mdaughter_mud'), 1);
 
     // the Ancient Rock's tent
     p.teleport(2799, 3668, 0);
     H.tick(1);
     H.give(p, 'rune_pickaxe');
+    H.setVarBit(p, 'mdaughter_relations_var', 3); // ^mdaughter_peace_brundt_wants_rock
     check('the Ancient Rock cannot be walked to with the flaps shut', reach(0, p.x, p.z)(2799, 3660), false);
     op(p, 2799, 3665, 'mdaughter_rocktent_door');
     check('  Go-through takes you into the tent', [at(p), free(p)], [[2799, 3665, 0], true]);
     check('  and the rock is in reach from there', reach(0, p.x, p.z)(2799, 3660), true);
     useOn(p, 2799, 3660, 'mdaughter_ancient_rock', 'rune_pickaxe');
-    check('  pickaxe on the Ancient Rock: half a rock', H.invCount(p, 'mdaughter_half_rock'), 1);
+    check('  a pickaxe on the Ancient Rock: half a rock', H.invCount(p, 'mdaughter_half_rock'), 1);
     op(p, 2799, 3665, 'mdaughter_rocktent_door');
     check('  and back out through the flap', [at(p)[1] > 3665, free(p)], [true, true]);
 
-    // the pole, the tree, the vault and the stones
+    // THE THREE CROSSINGS. An axe for the dead tree (a pole, unless you already have one), the mud
+    // for the bark, the pole for the vault and one plank for both flat stones - the plank goes down
+    // and comes back up inside the one click, which is how the quest's single plank does both ways.
     p.teleport(2801, 3703, 0);
     H.tick(1);
+    H.give(p, 'bronze_axe');
     op(p, 2802, 3703, 'mdaughter_passable_tree');
-    check('a pole from the dead tree', H.invCount(p, 'mdaughter_stick'), 1);
+    check('a pole cut from the dead tree', [H.invCount(p, 'mdaughter_stick'), locAt(2802, 3703, 0, 'mdaughter_passable_tree_stump')], [1, true]);
+    H.give(p, 'plank');
     p.teleport(2771, 3680, 0);
     H.tick(1);
+    let from2 = H.mesgs.length;
+    let from2If = H.ifaces.length;
+    op(p, 2772, 3679, 'mdaughter_lake_tree', 3);
+    check('wet bark: you slide back down and stay on the shore', [at(p), toldSince(p, from2, from2If, 'slide back down')], [[2771, 3680, 0], true]);
+    useOn(p, 2772, 3679, 'mdaughter_lake_tree', 'mdaughter_mud');
+    check('  mud worked into the bark', [H.getVarBit(p, 'mdaughter_mud_var'), H.invCount(p, 'mdaughter_mud')], [1, 0]);
     op(p, 2772, 3679, 'mdaughter_lake_tree', 3);
     check('Climb the tall tree: onto the ledge by the rocks', [at(p), free(p)], [[2772, 3684, 0], true]);
     op(p, 2773, 3688, 'mdaughter_polerocks');
     check('vault the rocks with the pole: the north ledge', [at(p), free(p)], [[2773, 3691, 0], true]);
     op(p, 2775, 3691, 'mdaughter_flatstone1');
-    check('jump the flat stones: onto the island', [at(p), free(p)], [[2778, 3691, 0], true]);
+    check('plank the flat stones: onto the island', [at(p), free(p), H.invCount(p, 'plank')], [[2778, 3691, 0], true, 1]);
     check('  the burial ground is in reach', reach(0, p.x, p.z)(2783, 3694), true);
+
+    // THE BURIAL: her necklace on her before she goes in the ground, and five rocks off the goat
+    // pen on top of her. Both of those are the quest's, not this block's, so they are handed over.
     p.teleport(2782, 3693, 0);
     H.tick(1);
+    H.setVarBit(p, V, 60); // ^mdaughter_has_necklace, which is where the burial starts
+    H.give(p, 'mdaughter_daughter_corpse');
+    from2 = H.mesgs.length;
+    from2If = H.ifaces.length;
     held(p, 'mdaughter_daughter_corpse', 3);
-    check('Bury the corpse at the burial ground: a mound', H.getVarBit(p, 'mdaughter_burial_state'), 1);
-    useOn(p, 2783, 3694, 'mdaughter_multimound', 'mdaughter_half_rock');
-    check('the half rock on the mound: a cairn, stage buried', [H.getVarBit(p, 'mdaughter_burial_state'), H.getVarBit(p, V)], [2, 70]);
+    check('without the necklace she does not go in the ground', [H.getVarBit(p, 'mdaughter_burial_state'), toldSince(p, from2, from2If, 'Ragnar kept her necklace')], [0, true]);
+    H.give(p, 'mdaughter_necklace');
+    held(p, 'mdaughter_daughter_corpse', 3);
+    check('Bury the corpse at the burial ground: a mound, and the necklace with her', [H.getVarBit(p, 'mdaughter_burial_state'), H.invCount(p, 'mdaughter_necklace'), H.getVarBit(p, V)], [1, 0, 70]);
+    H.give(p, 'mdaughter_rock', 5);
+    useOn(p, 2783, 3694, 'mdaughter_multimound', 'mdaughter_rock');
+    check('five rocks on the mound: a cairn', H.getVarBit(p, 'mdaughter_burial_state'), 2);
+
+    // and back, which is the half nobody can be left stranded by
     p.teleport(2778, 3691, 0);
     H.tick(1);
     op(p, 2777, 3691, 'mdaughter_flatstone2');
@@ -330,6 +407,8 @@ console.log('MOUNTAIN DAUGHTER');
     check('back off the rocks and round the tree to the shore', [at(p), free(p)], [[2771, 3680, 0], true]);
     // without a pole, the ledge is not a trap
     const np = player('md_nopole', 2771, 3680);
+    H.give(np, 'mdaughter_mud');
+    useOn(np, 2772, 3679, 'mdaughter_lake_tree', 'mdaughter_mud');
     op(np, 2772, 3679, 'mdaughter_lake_tree', 3);
     op(np, 2773, 3688, 'mdaughter_polerocks');
     check('  on the ledge with no pole: sent back to the shore, not stranded', at(np), [2771, 3680, 0]);
@@ -346,6 +425,13 @@ console.log('MOUNTAIN DAUGHTER');
     op(p, 2807, 3703, 'mdaughter_passable_tree');
     op(p, 2807, 3703, 'mdaughter_passable_tree_stump');
     check('  the second tree and its stump', [at(p), free(p)], [[2808, 3703, 0], true]);
+    // THE CAVE OPENS AT ^mdaughter_asked_of_death and the Kendal only talks from there: before it
+    // he says "LEAVE FOOD AND GO". The burial above left this player on 70, which is a later stage
+    // than the one the cave belongs to, so the stage goes back to where this obstacle lives - each
+    // block here sets the state its own claim needs, since the spine is quest_mdaughter_run's.
+    H.setVarBit(p, V, 30); // ^mdaughter_asked_of_death
+    H.setVarBit(p, 'mdaughter_bear_discovery', 0);
+    H.setVarBit(p, 'mdaughter_bear_mayattack', 0);
     H.setVarBit(p, 'mdaughter_bear_multi_state', 1); // what the old fight code left behind
     op(p, 2809, 3703, 'mdaughter_caveentrance');
     check("into the Kendal's cave, on a free tile, and the Kendal visible again", [at(p), free(p), H.getVarBit(p, 'mdaughter_bear_multi_state')], [[2807, 10104, 0], true, 0]);
@@ -355,20 +441,23 @@ console.log('MOUNTAIN DAUGHTER');
     const kt = NpcType.get(kendal.type);
     check('the Kendal has real stats (hp, attack, defence)', [kendal.baseLevels[3], kendal.baseLevels[0], kendal.baseLevels[1]], [50, 65, 60]);
     void kt;
-    talk(p, 'mdaughter_multi_bear', [1]);
-    check('  unmasked, he fights - and the multi stays on the visible Kendal', H.getVarBit(p, 'mdaughter_bear_multi_state'), 0);
+    // FOUR CHOICES, NOT ONE. "It's just me, no one special", then "You mean a sacrifice?", then
+    // "Give me her remains", then "Then I'll take her off your body" - and only the last of them
+    // sets %mdaughter_bear_mayattack. One pick walked into the second menu and threw.
+    talk(p, 'mdaughter_multi_bear', [1, 1, 1, 1]);
+    check('  the whole confession, and he may be attacked', [H.getVarBit(p, 'mdaughter_bear_discovery'), H.getVarBit(p, 'mdaughter_bear_mayattack'), H.getVarBit(p, 'mdaughter_bear_multi_state')], [1, 1, 0]);
     const kx = kendal.x,
         kz = kendal.z;
     const hitsBefore = H.npcHits.length;
     const died = kill(p, kendal);
     check('  a melee player actually hits him', H.npcHits.slice(hitsBefore).length > 0, true);
-    check('  and kills him: stage kendal_dead, bearhead dropped', [died, H.getVarBit(p, V), hasObjOnFloor(kx, kz, 0, 'mdaughter_bear_helmet', p)], [true, 80, true]);
-    H.give(p, 'mdaughter_bear_helmet');
-    p.teleport(2810, 3673, 0);
-    H.tick(1);
-    const atk = p.stats[0];
-    talk(p, 'mdaughter_hamal');
-    check('the bearhead to Hamal: complete, Attack xp', [H.getVarBit(p, V), p.stats[0] > atk], [90, true]);
+    check('  and kills him: stage kendal_dead, bearhead dropped', [died, H.getVarBit(p, V), hasObjOnFloor(kx, kz, 0, 'mdaughter_bear_helmet', p)], [true, 40, true]);
+    // and Asleif is at the foot of the pillars, which is the thing he was standing over. The
+    // ending - Hamal seeing her, Ragnar's necklace, the goat pen and the cairn - is
+    // quest_mdaughter_run's; what this block is for is that the cave gives her up at all.
+    // ^mdaughter_corpse_pile is 0_43_157_36_30, which is 2788,10078: "nothing in the map puts her
+    // there, so she goes on the floor when the thing that carried her off is dead".
+    check('  and Asleif is on the floor at the foot of the pillars', hasObjOnFloor(2788, 10078, 0, 'mdaughter_daughter_corpse', p), true);
 }
 
 // ============================================================================== Spirits of the Elid
@@ -382,11 +471,27 @@ console.log('SPIRITS OF THE ELID');
     check('Ghaslor', H.getVarBit(p, 'elidquest'), 20);
     p.teleport(3419, 2930, 0);
     H.tick(1);
+    // TWO TORN ROBES, AND A NEEDLE AND THREAD. The cupboard used to hand out the finished robes;
+    // it hands out elid_robetop_torn and elid_robebottoms_torn now - "This robe is too torn to
+    // wear.", which is what the cache says about them and what they were referenced by nothing
+    // for - and sewing both of them is what reaches ^elid_has_robes. The whole of the rest of
+    // this quest block was failing because the player never had a wearable robe.
     op(p, 3420, 2930, 'elid_cupboard_closed_withrobes');
     op(p, 3420, 2930, 'elid_cupboard_open_withrobes', 2);
-    check('robes from the cupboard', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_robetop'), H.invCount(p, 'elid_robebottoms')], [25, 1, 1]);
+    check('torn robes from the cupboard, and the stage has not moved for them', [H.invCount(p, 'elid_robetop_torn'), H.invCount(p, 'elid_robebottoms_torn'), H.getVarBit(p, 'elidquest')], [1, 1, 20]);
+    H.give(p, 'needle');
+    H.give(p, 'thread', 2);
+    useHeld(p, 'needle', 'elid_robetop_torn');
+    check('  one sewn: still 20, because the shrine wants both', [H.invCount(p, 'elid_robetop'), H.getVarBit(p, 'elidquest')], [1, 20]);
+    useHeld(p, 'needle', 'elid_robebottoms_torn');
+    check('robes from the cupboard, sewn: stage 25', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_robetop'), H.invCount(p, 'elid_robebottoms')], [25, 1, 1]);
     H.clearInv(p);
     H.equip(p, { torso: 'elid_robetop', legs: 'elid_robebottoms' });
+    // AND THE BALLAD, which the robe door wants as well as the robes: "You are dressed for the
+    // shrine and you do not know a word anybody down here would recognise." Ghaslor hands it over
+    // above and the clearInv on the line before this threw it away, so the door below stayed shut
+    // and every check past it was reporting a player who had not moved.
+    H.give(p, 'elid_ballad');
     p.teleport(3374, 2904, 0);
     H.tick(1);
     op(p, 3373, 2904, 'elid_crevice_clickzone');
@@ -401,7 +506,7 @@ console.log('SPIRITS OF THE ELID');
     op(p, 3373, 2904, 'elid_crevice_clickzone');
 
     op(p, 3353, 9544, 'elid_underground_robe_door');
-    check('the robe door (robes on): through to the hub', [at(p), free(p)], [[3353, 9545, 0], true]);
+    check('the robe door (robes and ballad): through to the hub', [at(p), free(p)], [[3353, 9545, 0], true]);
     op(p, 3354, 9558, 'elid_underground_lake_door');
     check('the lake door: through to the spirits', [at(p), free(p)], [[3354, 9559, 0], true]);
     check('  the spirits are talked to on foot', walkTalk(p, 'elid_waterspirit'), true);
@@ -410,17 +515,25 @@ console.log('SPIRITS OF THE ELID');
     check('  and back through the lake door', at(p), [3354, 9557, 0]);
 
     H.give(p, 'rune_pickaxe');
+    // THE GOLEM IS FOUGHT INSIDE THIS CLICK, and there is no honest way to catch it standing.
+    // The door spawns it on the far side on npc_setmode(opplayer2), op()'s drive() counts a player
+    // with a combat target as busy, and a maxed player with auto-retaliate kills a golem long
+    // before drive() goes idle - so by the time the click returns the room is empty and
+    // H.npcNear finds nothing. Asking for the npc was asking to see a fight that had already
+    // finished; what PROVES it happened is the bit, which only [ai_queue3,elid_golem_grey] ->
+    // [queue,elid_golem_down] sets, and which npc_find deliberately is not used for because it
+    // "cannot tell killed from despawned twenty minutes later". Measured, not assumed: elid_main
+    // reads 158 on the way in with bit 13 clear, and 1/bit 13 set on the way out.
     op(p, 3374, 9547, 'elid_greygolem_door');
-    check('grey golem door: the key opens it and you go through', [at(p), free(p), !!H.npcNear('elid_golem_grey', p.x, p.z)], [[3375, 9547, 0], true, true]);
+    H.tick(3);
+    check('grey golem door: the key opens it, you go through, and its golem is beaten', [at(p), free(p), H.getVarBit(p, 'elid_greygolem')], [[3375, 9547, 0], true, 1]);
     op(p, 3378, 9547, 'elid_waterchannel_mining_multiloc');
     check('  clear the fallen rock (trigger on the multiloc shell)', H.getVarBit(p, 'elid_miningchannel'), 1);
     op(p, 3374, 9547, 'elid_greygolem_door');
     check('  and back out', at(p), [3373, 9547, 0]);
 
     op(p, 3365, 9542, 'elid_whitegolem_door');
-    check('white golem door: through, south', [at(p), free(p)], [[3365, 9541, 0], true]);
-    const wg = H.npcNear('elid_golem_white', p.x, p.z);
-    check('  its golem stands on a free tile', wg ? !isMapBlocked(wg.x, wg.z, 0) : false, true);
+    check('white golem door: through, south, and its golem beaten too', [at(p), free(p), H.getVarBit(p, 'elid_whitegolem')], [[3365, 9541, 0], true, 1]);
     op(p, 3365, 9538, 'elid_waterchannel_thieving_multiloc');
     check('  clear the spike trap', H.getVarBit(p, 'elid_thievingchannel'), 1);
     op(p, 3365, 9542, 'elid_whitegolem_door');
@@ -435,8 +548,14 @@ console.log('SPIRITS OF THE ELID');
     // range - and the walk needs ticks the sim was not giving it. One click with no ticks lands the
     // arrow only when the black golem's door happens to leave the player inside seven tiles, which
     // is why this passed alone and failed in a sweep twenty minutes later.
+    // AND THE GOLEM IS FOUGHT INSIDE THE DOOR CLICK ABOVE, which leaves the player wherever the
+    // fight ended with a combat target still set - and a combat target replaces the interaction
+    // this shot needs. Settle first, then keep asking: the approach has to be walked, and thirty
+    // ticks was not enough for it once a fight was happening first.
+    H.tick(10);
+    p.clearPendingAction();
     const target = findNpc('elid_ranging_target_multinpc', p);
-    for (let t = 0; t < 30 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
+    for (let t = 0; t < 90 && H.getVarBit(p, 'elid_rangingchannel') === 0; t++) {
         if (t % 10 === 0) useOnNpc(p, target, 'bronze_arrow');
         H.tick(1);
     }
@@ -451,18 +570,31 @@ console.log('SPIRITS OF THE ELID');
     check('  the genie cannot be walked to with his door shut', reach(0, p.x, p.z)(3371, 9320), false);
     op(p, 3371, 9312, 'elid_genie_door');
     check('  through his door', [at(p), free(p)], [[3371, 9313, 0], true]);
-    check('  the genie, on foot', walkTalk(p, 'elid_genie', [1]), true);
-    check('  the statuette', [H.getVarBit(p, 'elidquest'), H.invCount(p, 'elid_statuette')], [40, 1]);
+    // AND THE GENIE DOES NOT SIMPLY HAND IT OVER: "A trade, because I am a genie and we do not
+    // simply hand things over." What he wants is the SOLES off the mayor's shoes - "I have been
+    // looking up at the bottom of that man's feet through a crack in a rock for sixty years" -
+    // which is a knife, Awusah's shoes and a walk back down here. quest_elid_run.ts does that
+    // trip; what this block is for is the crevice fork, his door and the rope, so the statuette
+    // and everything downstream of it are the run's.
+    const iGenie = H.ifaces.length;
+    const reached = walkTalk(p, 'elid_genie', [1]);
+    const genieSaid = H.ifaces
+        .slice(iGenie)
+        .filter(i => i.who === p.username && i.kind === 'text' && i.text)
+        .map(i => i.text!)
+        .join(' ');
+    check('  the genie, on foot, and he wants a trade for her', [reached, genieSaid.includes('oles')], [true, true]);
     op(p, 3371, 9312, 'elid_genie_door');
     op(p, 3373, 9305, 'elid_climbing_rope');
     check('  and the rope back up', at(p), [3374, 2903, 0]);
-    // lose it, get it back
-    H.clearInv(p);
+    // and a statuette lost between here and the plinth can be had again, which is this block's:
+    // "Lost between here and the plinth: there was no way to get it back."
+    H.setVarBit(p, 'elidquest', 40); // past ^elid_channels_done, which is the branch that re-gives it
+    p.teleport(3371, 9313, 0);
+    H.tick(1);
     talk(p, 'elid_genie');
     check('a lost statuette can be had again from the genie', H.invCount(p, 'elid_statuette'), 1);
-    talk(p, 'elid_ghaslor');
-    talk(p, 'elid_mayor');
-    check('Ghaslor, then Awusah', H.getVarBit(p, 'elidquest'), 55);
+    H.setVarBit(p, 'elidquest', 55); // where the run leaves it, with the statuette in hand
     p.teleport(3426, 2929, 0);
     H.tick(1);
     const pray = p.stats[5];
@@ -494,7 +626,13 @@ console.log('SPIRITS OF THE ELID');
 console.log('FORGETTABLE TALE OF A DRUNKEN DWARF');
 {
     const p = player('forget', 2828, 10212, 1);
-    H.setVarBit(p, 'giantdwarf_quest', 60);
+    // TWO REQUIREMENTS, AND ONLY ONE WAS SET. ~forget_veldaban reads The Giant Dwarf AND Fishing
+    // Contest - "it is what gets a human through the White Wolf Mountain pass, and it is on the
+    // quest's requirement list for that reason" - and returns false for either, which hands the
+    // conversation back to The Giant Dwarf's own Veldaban. So he said his Consortium line, nothing
+    // started, and the four checks after this were a run through a quest that had not begun.
+    H.setVarBit(p, 'giantdwarf_quest', 60); // ^gd_complete
+    H.setVar(p, 'fishingcompo', 5); // ^fishingcompo_complete (a varp, not a varbit)
     H.setVarBit(p, 'forget_quest', 0);
     const gd = H.getVarBit(p, 'giantdwarf_quest');
     void gd;
@@ -547,6 +685,14 @@ console.log('SWAN SONG');
 {
     const p = player('swan', 2345, 3649);
     H.setVarBit(p, 'swansong', 0);
+    // THREE REQUIREMENTS, AND NONE OF THEM WAS SET. "THE REQUIREMENTS WERE NOT CHECKED. OSRS
+    // wants 100 quest points, One Small Favour and Garden of Tranquillity before Herman will take
+    // you on, and this took anybody who said the right thing" - that is the content's own note on
+    // the branch it added. Each refusal returns before the ~p_choice2, so the pick this step was
+    // holding had no menu to land on: "menus not reached: 1".
+    H.setVar(p, 'qp', 100); // ^swan_req_questpoints
+    H.setVar(p, 'onesmallfavour', 70); // ^osf_complete (a varp)
+    H.setVarBit(p, 'garden_quest', 50); // ^garden_complete
     op(p, 2344, 3651, 'loc_14922');
     check('the crawl-hole before the quest: Herman will not let you', at(p)[1] < 3653, true);
     talk(p, 'swan_multioutside', [1]);
@@ -608,20 +754,66 @@ console.log('SWAN SONG');
     }
     check("monkfish from the colony's spots", H.getVarBit(p, 'swansong_fish') >= 5, true);
     talk(p, 'swan_herman');
-    check('fed; the letter goes; the Wise Old Man arrives', H.getVarBit(p, 'swansong'), 30);
-    talk(p, 'swan_multioutside');
-    talk(p, 'swan_multioutside');
-    check('he looks at them, and the ambush', H.getVarBit(p, 'swansong'), 65);
-    talk(p, 'swan_arnold');
-    check('Arnold: the book and the bone seeds', [H.getVarBit(p, 'swansong'), H.invCount(p, 'swan_army')], [80, 1]);
-    H.give(p, 'bones', 5);
-    for (let i = 0; i < 5; i++) useHeld(p, 'bones', 'swan_army');
-    check('five bones into the packet', H.getVarBit(p, 'swansong_bones'), 5);
-    held(p, 'swan_army', 4);
-    check('planted', H.getVarBit(p, 'swansong'), 90);
-    p.levels[3] = 10;
+    // STAGE 20, NOT 30. ^swan_letter is where feeding them leaves you; ^swan_wom is the Wise Old
+    // Man STANDING OUTSIDE, and getting him there is a leg of its own now: "It used to set
+    // ^swan_wom in the same breath, because the man it is addressed to was placed nowhere on the
+    // map - he is npc 2253 and Draynor had no Wise Old Man at all. He is at 3088,3251 now, so the
+    // quest does what Herman says it does: the letter goes out, and you go and fetch him."
+    check('fed, and the letter goes out on the tide: stage 20', H.getVarBit(p, 'swansong'), 20);
+    // That fetch, the ambush, the coma, Arnold's book, the bone seeds and the planting are all
+    // quest_swansong_run.ts's, which plays 109 of 109. What is kept here is the battle, because
+    // no run fights it on ten hitpoints.
+    H.setVarBit(p, 'swansong', 90); // ^swan_planted
+    H.setVarBit(p, 'swansong_bones', 7); // ^swan_bones_needed
+    // AND THE QUEEN IS A FIGHT, NOT A PARAGRAPH, which is the other half of what this block was
+    // written before: "She is level 170 with an Attack op and had no statblock at all - the
+    // seventh npc in this pass with a level, an op and nothing behind it - and this label used to
+    // narrate her death with two mesboxes and thirty-four points of ~damage_self." So the old
+    // check here - "fought on 10 hitpoints: through it, still standing" - was asserting that a
+    // player survived some self-damage, and there is no self-damage any more. What there is is
+    // 200 hitpoints that have to be taken off her.
+    H.equip(p, { rhand: 'rune_scimitar' });
     talk(p, 'swan_herman');
-    check('the battle, fought on 10 hitpoints: through it, still standing', [H.getVarBit(p, 'swansong'), p.levels[3] >= 1, p.x > 2300 && p.z > 3600], [190, true, true]);
+    check('the battle starts, and she comes out of the water: stage 100', [H.getVarBit(p, 'swansong'), findNpc('swan_seatroll_queen', p) !== null], [100, true]);
+    const queen = findNpc('swan_seatroll_queen', p);
+    check('  200 hitpoints and level 170, not a mesbox', [queen.baseLevels[3], NpcType.get(queen.type).vislevel], [200, 170]);
+    // AND SHE IS FIVE TILES ACROSS, which is why the first version of this fight landed nothing in
+    // nine hundred ticks: she is npc_add'ed at 2344,3646 and so occupies 2344..2348 by 3646..3650,
+    // and Herman - where this block's player is standing - is at 2345,3649, INSIDE her. A player
+    // inside an npc's footprint cannot swing at it. Stand clear of the square first.
+    const qsz = NpcType.get(queen.type).size ?? 1;
+    let stand: [number, number] | null = null;
+    for (let d = -1; d <= qsz && !stand; d++) {
+        for (const [x, z] of [
+            [queen.x - 1, queen.z + d],
+            [queen.x + qsz, queen.z + d],
+            [queen.x + d, queen.z - 1],
+            [queen.x + d, queen.z + qsz]
+        ] as [number, number][]) {
+            if (!isMapBlocked(x, z, 0)) {
+                stand = [x, z];
+                break;
+            }
+        }
+    }
+    check('  and there is a tile to stand on beside her five-tile square', stand !== null, true);
+    if (stand) {
+        p.teleport(stand[0], stand[1], 0);
+        H.tick(1);
+    }
+    let qt = 0;
+    const qhits = H.npcHits.length;
+    H.attackNpc(p, queen);
+    while (queen.isActive && qt < 900) {
+        if (!p.target) H.attackNpc(p, queen);
+        p.levels[3] = 99;
+        H.tick(1);
+        qt++;
+    }
+    check('  a melee player actually hits her', H.npcHits.length > qhits, true);
+    H.tick(6);
+    talk(p, 'swan_herman');
+    check('  she goes back into the water and does not come up: stage 190', [queen.isActive, H.getVarBit(p, 'swansong')], [false, 190]);
     talk(p, 'swan_herman');
     check('Herman: complete', H.getVarBit(p, 'swansong'), 200);
 
@@ -645,40 +837,50 @@ console.log('IN SEARCH OF THE MYREQUE');
     op(p, 3480, 9837, 'thrttavernbasementfalsewall');
     check('Search the false wall: through into the Hollows', [at(p), free(p)], [[3480, 9836, 0], true]);
     check("  the Myreque's door is in reach", reach(0, p.x, p.z)(3500, 9812), true);
+    // THE DOORS DO NOT MOVE UNTIL CURPILE FYOD IS SATISFIED - ^route_bit_curpile, "Curpile Fyod is
+    // satisfied and the doors will open" - and the three questions he asks are reached over a ROPE
+    // BRIDGE in the Hollows, not up the ladder this block used to repair. The content says that in
+    // as many words: "The other ladder_broken in the world is in the cellar under the Hair of the
+    // Dog in Canifis. It is broken there too and NOTHING REPAIRS IT - In Search of the Myreque is
+    // played over a rope bridge in the Hollows, which is a different loc and a different place."
+    // So the three-rung checks were hammering at a ladder the content deliberately leaves broken,
+    // and the door check was reading a player who had not moved - which then made the tunnel check
+    // below pass, because 3500,9811 is where the tunnel comes out and where they were standing.
+    //
+    // Cyreg's boat, the bridge, the three questions and the ending are quest_routequest_run.ts's.
+    // The two landings on either side of their door are this block's, and the refusal is worth a
+    // check of its own while we are here.
+    let fromIf2 = H.ifaces.length;
     op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
-    check('  their door: into the hideout', [at(p), free(p)], [[3505, 9832, 0], true]);
-    check('  Veliaf, on foot', walkTalk(p, 'route_veliaf_hurtz', [1, 1, 1, 1]), true);
-    check('  three questions right: sent for the route', H.getVar(p, 'routequest'), 3);
+    check('  their door does not move until Curpile Fyod is satisfied', [at(p), boxedSince(p, fromIf2, 'do not move')], [[3500, 9811, 0], true]);
+    H.setVar(p, 'routequest_myreque_bits', 1 << 2); // ^route_bit_curpile
+    fromIf2 = H.ifaces.length;
+    op(p, 3500, 9812, 'freedomfighterundergroundentrancel');
+    // ^route_hideout_inside is 3_54_153_49_40 - "3505,9832 on plane 3, six of them alive" - so the
+    // hideout is on LEVEL 3, which is the thing worth asserting about it.
+    check('  and then it is six of them alive on plane 3', [at(p), free(p)], [[3505, 9832, 3], true]);
     op(p, 3505, 9831, 'route_cavewalltunnel');
     check("the hideout's tunnel: back out by the door", [at(p), free(p)], [[3500, 9811, 0], true]);
-
-    // the ladder, Cyreg, Curpile
-    p.teleport(3483, 9842, 0);
-    H.tick(1);
-    H.give(p, 'hammer');
-    H.give(p, 'nails', 10);
-    H.give(p, 'woodplank', 3);
-    for (let i = 0; i < 3; i++) op(p, 3483, 9841, 'ladder_broken');
-    check('three rungs', H.getVarBit(p, 'bridgerung3'), 1);
-    op(p, 3483, 9841, 'ladder_broken');
-    check('  climb it: the south swamp, a free tile', [at(p), free(p)], [[3498, 3382, 0], true]);
-    talk(p, 'route_cyreg_paddlehorn');
-    talk(p, 'route_curpile_fyod');
-    p.teleport(3498, 3376, 0);
-    H.tick(1);
-    op(p, 3498, 3377, 'route_rowboat_hollows');
-    check('the boat under the bank: a free tile by the stalagmite (was blocked)', [at(p), free(p)], [[3491, 9821, 0], true]);
     p.teleport(3505, 9833, 0);
     H.tick(1);
+    // ^route_canifis is 7 - the hellhound dead and Veliaf sending you up to the tavern - and
+    // ^route_complete is 8. The old pair of numbers here (4 and 5) are from before the quest was
+    // renumbered, which is the same stage-number slip audit4 had with ^route_complete.
+    // AND VELIAF DOES NOT FINISH IT. At ^route_canifis he says "Go and look in that tavern. If he
+    // is still sitting in it then he is not finished with us, and if he is gone then he has
+    // somewhere better to be, and I would like to know which" - and what finishes the quest is
+    // the chair in Canifis being empty, which is [label,route_finish] on the stranger.
+    H.setVar(p, 'routequest', 7); // ^route_canifis
     talk(p, 'route_veliaf_hurtz');
-    check('Veliaf: complete', H.getVar(p, 'routequest'), 5);
-    H.clearLogs();
+    check('Veliaf sends you up to the tavern rather than finishing it', H.getVar(p, 'routequest'), 7);
+    // multi_vanstrom_stranger_entity switches on thsfm_vanstrom_hide: "at zero the chair holds
+    // Vanstrom Klause, and after he has shown everybody what he is it holds a stranger. Talk-to
+    // had no trigger in either form, so the quest could not be started at all."
+    H.setVarBit(p, 'thsfm_vanstrom_hide', 1);
+    p.teleport(3493, 3473, 0);
+    H.tick(1);
     talk(p, 'multi_vanstrom_stranger_entity');
-    check(
-        'the man in the tavern chair answers Talk-to',
-        H.ifaces.some(i => i.who === 'myreque' && i.kind === 'text' && (i.text ?? '').includes('passing through')),
-        true
-    );
+    check('the man in the chair is not him, and that is the end of it: complete', H.getVar(p, 'routequest'), 8);
 }
 
 // ============================================================================== getting there on foot

@@ -70,6 +70,7 @@ import UpdateInvPartialEncoder from '#/network/game/server/codec/UpdateInvPartia
 import UpdateInvStopTransmitEncoder from '#/network/game/server/codec/UpdateInvStopTransmitEncoder.js';
 import UpdatePidEncoder from '#/network/game/server/codec/UpdatePidEncoder.js';
 import UpdateRebootTimerEncoder from '#/network/game/server/codec/UpdateRebootTimerEncoder.js';
+import PingEncoder from '#/network/game/server/codec/PingEncoder.js';
 import UpdateRunEnergyEncoder from '#/network/game/server/codec/UpdateRunEnergyEncoder.js';
 import UpdateRunWeightEncoder from '#/network/game/server/codec/UpdateRunWeightEncoder.js';
 import UpdateStatEncoder from '#/network/game/server/codec/UpdateStatEncoder.js';
@@ -77,6 +78,7 @@ import UpdateZoneFullFollowsEncoder from '#/network/game/server/codec/UpdateZone
 import UpdateZonePartialEnclosedEncoder from '#/network/game/server/codec/UpdateZonePartialEnclosedEncoder.js';
 import UpdateZonePartialFollowsEncoder from '#/network/game/server/codec/UpdateZonePartialFollowsEncoder.js';
 import VarpLargeEncoder from '#/network/game/server/codec/VarpLargeEncoder.js';
+import VarpBatchEncoder from '#/network/game/server/codec/VarpBatchEncoder.js';
 import VarpSmallEncoder from '#/network/game/server/codec/VarpSmallEncoder.js';
 import CamLookAt from '#/network/game/server/model/CamLookAt.js';
 import CamMoveTo from '#/network/game/server/model/CamMoveTo.js';
@@ -145,6 +147,7 @@ import UpdateInvPartial from '#/network/game/server/model/UpdateInvPartial.js';
 import UpdateInvStopTransmit from '#/network/game/server/model/UpdateInvStopTransmit.js';
 import UpdateUid192 from '#/network/game/server/model/UpdatePid.js';
 import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
+import Ping from '#/network/game/server/model/Ping.js';
 import UpdateRunEnergy from '#/network/game/server/model/UpdateRunEnergy.js';
 import UpdateRunWeight from '#/network/game/server/model/UpdateRunWeight.js';
 import UpdateStat from '#/network/game/server/model/UpdateStat.js';
@@ -152,6 +155,7 @@ import UpdateZoneFullFollows from '#/network/game/server/model/UpdateZoneFullFol
 import UpdateZonePartialEnclosed from '#/network/game/server/model/UpdateZonePartialEnclosed.js';
 import UpdateZonePartialFollows from '#/network/game/server/model/UpdateZonePartialFollows.js';
 import VarpLarge from '#/network/game/server/model/VarpLarge.js';
+import VarpBatch from '#/network/game/server/model/VarpBatch.js';
 import VarpSmall from '#/network/game/server/model/VarpSmall.js';
 import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
 import IfSetInvWindow from '#/network/game/server/model/IfSetInvWindow.js';
@@ -258,6 +262,7 @@ class ServerGameProtRepository {
         this.bind(UpdateInvPartial, new UpdateInvPartialEncoder());
         this.bind(UpdateInvStopTransmit, new UpdateInvStopTransmitEncoder());
         this.bind(UpdateRunEnergy, new UpdateRunEnergyEncoder());
+        this.bind(Ping, new PingEncoder());
         this.bind(UpdateRunWeight, new UpdateRunWeightEncoder());
         this.bind(UpdateRebootTimer, new UpdateRebootTimerEncoder());
         this.bind(UpdateStat, new UpdateStatEncoder());
@@ -267,6 +272,7 @@ class ServerGameProtRepository {
         this.bind(UpdateZonePartialFollows, new UpdateZonePartialFollowsEncoder());
         this.bind(VarpLarge, new VarpLargeEncoder());
         this.bind(VarpSmall, new VarpSmallEncoder());
+        this.bind(VarpBatch, new VarpBatchEncoder());
         this.bind(SetPlayerOp, new SetPlayerOpEncoder());
         this.bind(FriendlistLoaded, new FriendlistLoadedEncoder());
     }

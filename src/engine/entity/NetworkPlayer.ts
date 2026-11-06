@@ -44,6 +44,12 @@ export class NetworkPlayer extends Player {
     userPath: number[] = [];
     opcalled: boolean = false;
 
+    // custom (2026-11-03) - server messages sent to this client in the current tick, reset by
+    // World.processCleanup once the tick's output is complete. The client parses at most five
+    // packets per loop iteration, so this is the figure that says whether it can keep up; see
+    // trackPlayerPacketsPerTick for the arithmetic.
+    packetsThisTick: number = 0;
+
     constructor(username: string, username37: bigint, hash64: bigint, client: ClientSocket) {
         super(username, username37, hash64);
 
@@ -89,6 +95,11 @@ export class NetworkPlayer extends Player {
         if (this.client.opcode === -1) {
             NetworkPlayer.inBuf.pos = 0;
             this.client.read(NetworkPlayer.inBuf.data, 0, 1);
+
+            // custom (2026-11-03) - this packet is timed from its opcode, so a handler measuring a
+            // round trip (PongHandler) gets when the CLIENT answered rather than when this tick
+            // reached the answer, and is not thrown off by the payload arriving in a later segment.
+            this.client.packetArrival = this.client.lastReadArrival;
 
             if (this.client.decryptor) {
                 this.client.opcode = (NetworkPlayer.inBuf.g1() - this.client.decryptor.nextInt()) & 0xff;
@@ -151,6 +162,10 @@ export class NetworkPlayer extends Player {
                 // todo: move out of model
                 if (success && message.category === ClientGameProtCategory.USER_EVENT) {
                     this.userLimit++;
+                    // custom (2026-11-04) - and for the session, not just this tick. A high count
+                    // here against a near-zero mouse count is what says nobody was holding the
+                    // mouse; see InputTracking.userActions.
+                    this.input.userAction();
                 } else if (message.category === ClientGameProtCategory.RESTRICTED_EVENT) {
                     this.restrictedLimit++;
                 } else {
@@ -263,6 +278,7 @@ export class NetworkPlayer extends Player {
 
         this.client.send(buf.data.subarray(0, buf.pos));
         World.cycleStats[WorldStat.BANDWIDTH_OUT] += buf.pos;
+        this.packetsThisTick++;
     }
 
     override logout() {

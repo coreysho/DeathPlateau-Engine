@@ -464,6 +464,41 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 return handleFaultsCommand(player, args);
             }
 
+            // custom (2026-11-04) - turn the input capture on for somebody, which until now
+            // NOTHING COULD DO. InputTracking has recorded the cursor, clicks, camera and focus
+            // into input_report since long before any of this, gated on input.active - and the
+            // only thing that ever set it was a player being reported (World.processReport). The
+            // RELAY_TRACK opcode exists, the friend server relays it, and no caller was ever
+            // written: so a suspect found by ::botcheck's counts could not be watched.
+            //
+            // It costs about a megabyte per player-hour, which is why it is per-player and off by
+            // default rather than on for the world. ::track with no name lists who is being
+            // watched, so it cannot be left on by accident and forgotten.
+            if (cmd === 'track' || cmd === 'untrack') {
+                const want = args.join('_').toLowerCase();
+
+                if (cmd === 'track' && want.length === 0) {
+                    const on: string[] = [];
+                    for (const other of World.playerLoop.all()) {
+                        if (isClientConnected(other) && other.input.active) {
+                            on.push(other.displayName);
+                        }
+                    }
+                    player.messageGame(on.length > 0 ? `Capturing input for: ${on.join(', ')}` : 'Capturing input for nobody.');
+                    return true;
+                }
+
+                const target = World.getPlayerByUsername(want);
+                if (!target || !isClientConnected(target)) {
+                    player.messageGame(`${want} is not online.`);
+                    return true;
+                }
+
+                target.input.active = cmd === 'track';
+                player.messageGame(`${cmd === 'track' ? 'Capturing' : 'No longer capturing'} input for ${target.displayName}.`);
+                return true;
+            }
+
             // custom (2026-09-29) - which of the build's triggers have ever run
             // (engine/script/ScriptCoverage.ts). The never-reached list is a to-do list nobody can
             // write by hand: there is no way to read off the source which triggers a player can
@@ -685,6 +720,36 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 VoteService.ledger().credit('staff', ref, who, count, Date.now(), 0);
                 VoteService.deliver(who);
                 player.messageGame(`vote: credited ${count} to ${who}`);
+            } else if (cmd === 'veteran') {
+                // custom (2026-11-06) - the rank for the players who tested before launch. The
+                // account does not have to be logged in: the list is worked through after the
+                // wipe, when most of them will not be.
+                //
+                // ::veteran <username>      give it
+                // ::veteran <username> off  take it back
+                if (args.length < 1) {
+                    player.messageGame('Usage: ::veteran <username> [off]');
+                    return false;
+                }
+
+                // The name is everything except a trailing "off", because a display name with a
+                // space in it has already been split into two arguments by the time it gets here.
+                // ::ban and ::mute take args[0] alone and quietly act on the wrong name when one
+                // is typed that way; this is given out by hand from a list of display names, so it
+                // takes "Bob Smith" and "bob_smith" alike.
+                const grant = args[args.length - 1] !== 'off';
+                const name = (grant ? args : args.slice(0, -1)).join(' ');
+                if (name.length === 0) {
+                    player.messageGame('Usage: ::veteran <username> [off]');
+                    return false;
+                }
+
+                const filed = World.requestVeteran(player.username, name, grant);
+                if (filed === null) {
+                    player.messageGame(`veteran: ${name} is already being changed, or is not a name.`);
+                } else {
+                    player.messageGame(`veteran: ${grant ? 'granting' : 'removing'}...`);
+                }
             } else if (cmd === 'giveother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {

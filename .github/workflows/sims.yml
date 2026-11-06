@@ -1,4 +1,4 @@
-# The 298 pass/fail simulations in tools/sim, which nothing ran automatically.
+# The three hundred-odd pass/fail simulations in tools/sim, which nothing ran automatically.
 #
 # WHY NOT ON EVERY PUSH. They are about two and a half hours end to end - each boots a world,
 # and the audit sweeps are minutes each - against four minutes for the whole of the client's
@@ -20,13 +20,24 @@ name: Nightly sims
 
 on:
   schedule:
-    # 03:00 UTC, off the hour everything else in this project uses.
+    # 03:00 UTC, off the hour everything else in this project uses. GitHub delays scheduled runs
+    # under load and is not shy about it - the first unattended run fired at 10:28.
     - cron: '0 3 * * *'
   workflow_dispatch:
+    inputs:
+      notify_test:
+        # A WAY TO PROVE THE DISCORD SECRET WORKS without waiting for a bad night or faking a
+        # broken sim. Testing the webhook URL by hand proves the URL works; it does NOT prove
+        # the repository secret is right, which is where a typo, a stray newline or a truncated
+        # paste actually lands. This runs the notify job alone, against the real secret.
+        description: 'Post a test message to Discord and skip the sims'
+        type: boolean
+        default: false
 
 jobs:
   sims:
     name: sims ${{ matrix.shard }} of 8
+    if: ${{ !inputs.notify_test }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -44,6 +55,23 @@ jobs:
         repository: coreysho/DeathPlateau-Content
         ref: 377-wip
         path: content
+
+    # AND THE CLIENT, because two sims check that the client and the server still agree about the
+    # wire. varpbatch reads Protocol.java's SERVERPROT_LENGTH table to prove the client has a
+    # length for the batched-varp opcode the server now writes - get that wrong and every player
+    # desyncs at login. Without this checkout the sim cannot read the file and dies, which is how
+    # it turned up as "newly failing" on the first unattended night.
+    #
+    # The path is a SIBLING OF engine/, not under it: the sims default to '../DeathPlateau-Client'
+    # and run with engine/ as their working directory.
+    #
+    # dev-logging ON PURPOSE. It is the branch the launcher ships, so this compares the server
+    # against the client players are actually running, which is the disagreement that matters.
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Client
+        ref: dev-logging
+        path: DeathPlateau-Client
 
     - uses: actions/setup-node@v6
       with:
@@ -72,30 +100,154 @@ jobs:
       working-directory: engine
       run: npx tsx tools/server/rsa.ts
 
+    # AND A DATABASE, for the one sim that needs one - and this is the whole of why
+    # changepassword "fails on a runner and passes on a laptop", which this file has carried as a
+    # mystery and known-failing.txt as its last entry.
+    #
+    # changepassword drives ::changepassword through the REAL account table: it deletes its two
+    # accounts, reads the stored bcrypt hash back to prove an unchanged password really is
+    # unchanged, and checks ::ban and ::mute persist. DB_BACKEND defaults to sqlite, which is
+    # db.sqlite in the working directory, and db.sqlite is gitignored - same as the login key
+    # above, for the same reason and with the same consequence. A laptop has one from running the
+    # server; a fresh checkout has none, so Kysely throws on the first query and dumps the query
+    # object, which is what the shard log shows: a WhereNode with value 'pwtest'.
+    #
+    # Reproduced by moving db.sqlite aside here: the same failure. Migrated from nothing with
+    # this step: 14 ok, 0 failed. It was never the timing problem it had been treated as.
+    #
+    # prisma migrate deploy needs no server for sqlite and creates the file if it is missing.
+    - name: A database for this run
+      working-directory: engine
+      run: npm run sqlite:migrate
+
     - name: Run this shard
       working-directory: engine
       run: |
         # NAMES ONLY: the list carries a comment per entry saying how it fails, which is the
         # point of it, so the names are cut out of it rather than matched against the line.
+        SKIP_IN_CI='pingwire'
         known=/tmp/known-failing-names.txt
         grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
         echo "known-failing: $(wc -l < "$known") sims"
         newly_red=""
         newly_green=""
         flaky=""
-        i=0
+        # ---- THE WORK LIST, built before anything is sharded, because one file is not always one
+        # piece of work. audit1 is thirteen quests in one file and it takes 2551 SECONDS measured
+        # here, on a machine faster than a runner - so the cap that would cover it (three times
+        # its own measurement, which is this job's rule) is over two hours for one sim, and a cap
+        # that big stops being a timeout at all. It takes section arguments, so it is three pieces
+        # of work instead, grouped off its own per-section timings:
+        #
+        #   watchtower 422s  arrav 370s  hero 343s  mourning 289s  rfd 236s  monk 224s
+        #   demon 205s  waterfall 181s  gobdip 119s  totem 99s  rag 35s  fenk 17s
+        #   scorp 4s  marim 1s
+        #
+        # which groups into 797s, 783s and 965s. Each one gets its own cap AND its own place in
+        # the shard rotation, so they run on three runners at once instead of one runner for
+        # three quarters of an hour.
+        work=/tmp/sim-work.tsv
+        : > "$work"
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
           grep -qE 'process\.exit\([^0-9)]' "$f" || continue
+          # AND NOT THE ONES THAT NEED A RUNNING GAME. This is not known-failing.txt: nothing is
+          # broken here, the job simply cannot give these sims what they ask for, and recording
+          # them as "failing" would be a lie that also hides a real failure if one ever appears.
+          #   pingwire  opens a socket to a live server and fetches /crc0 off its web port
+          b=$(basename "$f" .ts)
+          case " $SKIP_IN_CI " in *" $b "*) continue ;; esac
+          case "$b" in
+            audit1)
+              printf '%s\t%s\t%s\n' "$f" "audit1-watchtower" "watchtower arrav scorp marim" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-hero" "hero mourning totem rag fenk" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-rfd" "rfd monk demon waterfall gobdip" >> "$work"
+              ;;
+            *) printf '%s\t%s\t%s\n' "$f" "$b" "" >> "$work" ;;
+          esac
+        done
+        echo "work items: $(wc -l < "$work")"
+        i=0
+        # `label` is what the output calls this piece of work and what its log is named after;
+        # `n` stays the sim's own name, because known-failing.txt lists sims and not pieces.
+        while IFS="$(printf '\t')" read -r f label args; do
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
+          # A FEW ARE HONESTLY SLOW, and a sim killed at the cap looks exactly like a sim that
+          # failed: no verdict line, just output that stops. glassblowing is 88 checks over
+          # seventeen products and takes 216 seconds on a machine FASTER than a runner, so the
+          # 180 second cap killed it and the job reported it as "fails twice". It was passing
+          # all along. Its own cap rather than a bigger one for all 300, because a cap that
+          # covers the slowest sim stops being a timeout at all.
+          #
+          # MEASURED, not guessed, on a machine faster than a runner: glassblowing 216s, gwdguards
+          # 322s, audit1 357s, dpick 396s, gwdanims 433s. Each cap is roughly three times its own
+          # measurement, which is headroom for a slower box and still a timeout rather than a
+          # blank cheque. The cap is a ceiling, not a cost: a sim that finishes early costs what
+          # it costs.
+          #
+          # AND audit7 GREW. It used to stop at its first step and take fourteen seconds; now that
+          # Rum Deal, Miscellania, the Garden and the whole of Haunted Mine actually run it takes
+          # 161s on this machine, which is inside the 180s cap by nineteen seconds - and a cap a
+          # sim only just fits inside is a cap that will kill it on a slower box and look exactly
+          # like a failure. Same reason glassblowing has its own.
+          # AND FIVE MORE HAD OUTGROWN IT, found by timing every sim on this machine rather than
+          # waiting for each one to go red in turn. Measured here: lunar 374s, quest_hundred_run
+          # 268s (255 of 255 checks, so it is green and slow, not broken), roofall 152s, animmag
+          # 142s, audit3 135s, diaryrewards 124s. Two are already OVER 180s and the rest are
+          # inside it by less than a minute, which is the audit7 trap again - a cap a sim only
+          # just fits inside kills it on a slower box and looks exactly like a failure.
+          #
+          # That two of them are over the cap here and neither has ever been reported red says
+          # the same thing lunar does from the other direction: a runner is a good deal faster
+          # than this container, so these caps are generous there and honest here.
+          #
+          # lunar is the one that proved it, and it is worth writing down how it looked, because
+          # it looked exactly like a regression and was not one. It timed out TWICE on a runner
+          # on one night having passed the night before, so the first guess was that something
+          # between the two commits had slowed it. Measured instead: 374s at the new commit, 402s
+          # at the old one - very slightly FASTER after the change. The engine's tick loop was
+          # unchanged too (4000 ticks: 7225ms against 7119ms).
+          #
+          # What it actually is: lunar sits right at the line. These numbers are from a cloud
+          # container that is much slower than the machine the caps above were measured on -
+          # audit1 is 357s up there and 2551s here - so lunar is somewhere near 180s on a runner,
+          # which is a coin toss decided by whichever runner you get. One night it lands under,
+          # the next it times out twice and reads as "fails twice". That is the audit7 trap with
+          # a different sim, and the fix is the same: give it its own cap.
+          case "$label" in
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate) cap=600 ;;
+            gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
+            audit1-*) cap=2400 ;;
+            *) cap=180 ;;
+          esac
+          # AND TWO OF THEM ASK FOR A SETTING AND REFUSE TO RUN WITHOUT IT. Both say so in one
+          # line and exit non-zero - "Run with NODE_PRODUCTION=true - the owner rules are about a
+          # live world" - which the job counted as a failure for as long as it has existed. They
+          # were never broken: given what they ask for, securityfixes is 21 ok and staffrules 16.
+          case "$n" in
+            securityfixes) extra='NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20' ;;
+            staffrules) extra='NODE_PRODUCTION=true' ;;
+            *) extra='' ;;
+          esac
           rc=0
-          timeout 180 npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          # shellcheck disable=SC2086 - $extra is a deliberate list of VAR=value for env, and
+          # $args a deliberate list of section names for the sim
+          timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.log" 2>&1 || rc=$?
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
-              echo "::notice title=$n::$n passes now and is still on known-failing.txt"
-              newly_green="$newly_green $n"
+              echo "::notice title=$label::$label passes now and $n is still on known-failing.txt"
+              newly_green="$newly_green $label"
+            else
+              # SHOW THE DEBT ITS OWN FAILURE. A listed sim used to fail in total silence, which
+              # makes every entry on that list undiagnosable from CI: the only way to see why
+              # changepassword fails on a runner and passes on a laptop was to take it OFF the
+              # list and make the job red on purpose. The group is collapsed, so a quiet night
+              # stays quiet and the reason is one click away when somebody wants it.
+              echo "::group::$label (exit $rc, $n is on known-failing.txt)"
+              tail -20 "/tmp/$label.log"
+              echo "::endgroup::"
             fi
             continue
           fi
@@ -111,24 +263,159 @@ jobs:
             # as an INSTRUMENT: with the dice fixed, a FLAKY line means something still
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
+            #
+            # AND ONE OF THOSE THREE WAS NOT SAMPLING ANYTHING. droprate failed twice in a
+            # row again, and this time the retry said how: exit 124 both times. It is 288s
+            # on this machine against the 180s cap, so the retry was timing it out a second
+            # time and "fails twice" was the cap talking, not the game being sampled. It has
+            # its own cap below now.
+            #
+            # THE OTHER TWO WERE THE ROLL, and that is settled rather than guessed: the first
+            # seeded run (run 5, written up in run 6's commit) found "CI AND THIS MACHINE AGREE,
+            # SIX FOR SIX - droprate, gwdskirmish, rdreach and fremtrials2 pass in both. It was
+            # never a machine difference, it was the roll." Measured again here since:
+            # gwdskirmish 7s and 18 ok, rdreach 77s and 21 ok.
+            #
+            # So the example above had TWO causes wearing one description. gwdskirmish and
+            # rdreach were sampling the game and the seeding fixed them, exactly as this comment
+            # says. droprate was ALSO fixed by the seeding - and then came back for an unrelated
+            # reason, the cap, which is why its second appearance looked like its first and was
+            # not. A sim that fails twice is worth an exit code before it is worth a diagnosis.
             rc2=0
-            timeout 180 npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            # shellcheck disable=SC2086
+            timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
-              echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
-              flaky="$flaky $n"
+              echo "::notice title=$label::$label failed then passed on a retry - flaky, not counted"
+              flaky="$flaky $label"
               continue
             fi
-            echo "::group::$n (exit $rc, then $rc2 on retry)"
-            tail -40 "/tmp/$n.retry.log"
+            echo "::group::$label (exit $rc, then $rc2 on retry)"
+            tail -40 "/tmp/$label.retry.log"
             echo "::endgroup::"
-            echo "::error title=$n::$n fails twice and is not on known-failing.txt"
-            newly_red="$newly_red $n"
+            echo "::error title=$label::$label fails twice and is not on known-failing.txt"
+            newly_red="$newly_red $label"
           fi
-        done
+        done < "$work"
         [ -n "$flaky" ] && echo "FLAKY, failed then passed:$flaky"
         [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
+        # WRITTEN DOWN BEFORE THE EXIT, so the notify job can name the sims rather than say
+        # "a shard went red, go and read eight logs". The step dies on the next line when
+        # anything is newly red, so anything this file is to carry has to be in it by now.
+        mkdir -p /tmp/verdict
+        {
+          [ -n "$newly_red" ] && echo "red:${newly_red}"
+          [ -n "$flaky" ] && echo "flaky:${flaky}"
+          [ -n "$newly_green" ] && echo "green:${newly_green}"
+        } > "/tmp/verdict/shard-${{ matrix.shard }}.txt" || :
         if [ -n "$newly_red" ]; then
           echo "NEWLY FAILING:$newly_red"
           exit 1
         fi
         echo "shard ${{ matrix.shard }}: nothing newly broken"
+
+    # always(): the step above exits 1 on a red shard, and a red shard's verdict is the one
+    # worth keeping.
+    - name: Keep this shard's verdict
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: verdict-${{ matrix.shard }}
+        path: /tmp/verdict/
+        if-no-files-found: ignore
+        retention-days: 7
+
+  # ------------------------------------------------------------------ and say so in Discord
+  # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token
+  # (Environment.DISCORD_TOKEN, src/server/discord), which belongs to a running server and has
+  # the run of its guild. This repository is PUBLIC. A per-channel incoming webhook can only
+  # post to the one channel it was made for, so that is what CI gets.
+  #
+  # NO SECRET, NO POST, NO FAILURE. If DISCORD_WEBHOOK is not set the job prints the message it
+  # would have sent and succeeds: a missing notification must not turn a green night red, and
+  # printing it means this job can be proved to work before the secret exists.
+  #
+  # To switch it on: in Discord, the channel's Settings -> Integrations -> Webhooks -> New
+  # Webhook, copy its URL, then in this repository Settings -> Secrets and variables ->
+  # Actions -> New repository secret, named DISCORDWEBHOOK.
+  #
+  # NO UNDERSCORE, which is not a typo here. The secret was created as DISCORDWEBHOOK and a
+  # secret cannot be renamed, only deleted and remade - so the workflow matches the secret
+  # rather than making somebody paste the URL again. The shell variable below keeps the
+  # readable spelling; only the ${{ secrets.* }} reference has to match GitHub exactly.
+  notify:
+    name: tell Discord
+    needs: sims
+    # needs.sims.result rather than failure(), because on a notifier test the sims job is
+    # SKIPPED and failure() would not fire. !cancelled() keeps it from speaking after a cancel.
+    if: ${{ !cancelled() && (needs.sims.result == 'failure' || inputs.notify_test) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    # Nothing to download on a test, and v4 treats "no artifacts matched" as an error.
+    - uses: actions/download-artifact@v4
+      if: ${{ !inputs.notify_test }}
+      with:
+        pattern: verdict-*
+        merge-multiple: true
+        path: verdict
+
+    - name: Post the failure
+      env:
+        # Quoted and read as an environment variable rather than interpolated into the script,
+        # so the URL is never part of a command line and cannot land in the log.
+        DISCORD_WEBHOOK: ${{ secrets.DISCORDWEBHOOK }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        TRIGGER: ${{ github.event_name }}
+        SHA: ${{ github.sha }}
+        NOTIFY_TEST: ${{ inputs.notify_test }}
+        # DIAGNOSTIC ONLY, and deliberately not used to send anything. 'Settings -> Secrets and
+        # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
+        # "New repository secret", so a webhook in the wrong half is the likeliest reason for a
+        # secret that reads empty. This says which half it is in without guessing twice.
+        HAVE_VAR: ${{ vars.DISCORDWEBHOOK != '' }}
+      run: |
+        red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+        flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+
+        # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
+        # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
+        # the message says it does not know rather than inventing a clean bill of health.
+        if [ "$NOTIFY_TEST" = "true" ]; then
+          # SAYS SO IN THE MESSAGE, loudly. A test that looks like a real failure is worse than
+          # no test: somebody reads it at 3am and goes looking for a broken sim.
+          title="Nightly sims: notifier test"
+          colour=3066993
+          body="This is a test of the failure notification. The sims did not run and nothing is broken."
+        elif [ -n "$red" ]; then
+          body="Newly failing: **${red}**"
+        else
+          body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
+        fi
+        [ -n "$flaky" ] && body="${body}"$'\n'"Flaky (failed, then passed on a retry): **${flaky}** - the dice are seeded, so this should never happen and means something still varies between two runs of one commit."
+
+        # jq builds the JSON so a sim name or a message can never break the payload.
+        jq -n --arg body "$body" --arg url "$RUN_URL" --arg trigger "$TRIGGER" --arg sha "${SHA:0:7}" \
+          --arg title "${title:-Nightly sims failed}" --argjson colour "${colour:-15158332}" \
+          '{username: "Nightly sims", embeds: [{title: $title, url: $url, color: $colour, description: $body, footer: {text: ("\($trigger) · \($sha)")}}]}' > /tmp/discord.json
+
+        if [ -z "$DISCORD_WEBHOOK" ]; then
+          if [ "$HAVE_VAR" = "true" ]; then
+            echo "FOUND IT: DISCORD_WEBHOOK is a repository VARIABLE, not a secret. Delete it from"
+            echo "the Variables tab and add it under Secrets. It matters on a public repository:"
+            echo "GitHub masks a secret in these logs and does not mask a variable, so a failing"
+            echo "curl could print the URL into a log anybody can read."
+          else
+            echo "DISCORD_WEBHOOK is empty, and there is no repository variable of that name"
+            echo "either. So it is not on this repository's Actions secrets at all - check it is"
+            echo "on coreysho/DeathPlateau-Engine, under the Actions tab (not Dependabot or"
+            echo "Codespaces), as a Repository secret (not an Environment secret)."
+          fi
+          echo "Nothing was posted. The message would have been:"
+          cat /tmp/discord.json
+          exit 0
+        fi
+        curl --silent --show-error --fail-with-body \
+          -H 'Content-Type: application/json' \
+          --data @/tmp/discord.json \
+          "$DISCORD_WEBHOOK"
+        echo "posted to Discord"

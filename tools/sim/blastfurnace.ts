@@ -367,7 +367,12 @@ p.setLevel(12, 30);
 H.tick(1);
 const cxp = p.stats[12];
 click(PUMP, 1, [], 'hammer');
-check('30 mends them, and pays its 40 Crafting for it', [H.getVarBit(p, 'blast_furnace_broken_pipe_reading'), p.stats[12] - cxp], [0, 400]);
+// AND PAYS NOTHING, WHICH IS THE POINT. This asserted 400 - the 40 Crafting the pipes used to
+// give - and blast_furnace.rs2 took it away on purpose: "The pipes only ever split from pumping
+// past the gauge, so the XP rewarded breaking them on purpose: pump, burst, mend, repeat, for
+// ever." The check now holds the closed exploit open to view: mending works, and pays nothing.
+// ^bf_repair_xp = 400 is dead in the content and is left alone here rather than read from it.
+check('30 mends them, and pays nothing - the XP was an infinite loop and was removed', [H.getVarBit(p, 'blast_furnace_broken_pipe_reading'), p.stats[12] - cxp], [0, 0]);
 
 console.log('');
 console.log(`${R.ok} ok, ${R.bad} failed`);

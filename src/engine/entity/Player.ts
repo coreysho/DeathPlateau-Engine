@@ -64,6 +64,7 @@ import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js'
 import UpdateRunEnergy from '#/network/game/server/model/UpdateRunEnergy.js';
 import UpdateStat from '#/network/game/server/model/UpdateStat.js';
 import VarpLarge from '#/network/game/server/model/VarpLarge.js';
+import VarpBatch from '#/network/game/server/model/VarpBatch.js';
 import VarpSmall from '#/network/game/server/model/VarpSmall.js';
 import ServerGameMessage from '#/network/game/server/ServerGameMessage.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
@@ -346,6 +347,12 @@ export default class Player extends PathingEntity {
     // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
     // -1 until the world first looks at it. World.processLogouts logs out on it (2026-10-19).
     lastUserInput: number = -1;
+
+    // custom (2026-11-03) - the round trip to this client, measured by ServerGameProt.PING and
+    // PongHandler. -1 until the first answer comes back, and again whenever one goes unanswered.
+    pingMs: number = -1;
+    pingSeq: number = 0;
+    pingSentAt: number = -1;
     loggingOut: boolean = false;
     preventLogoutMessage: string | null = null;
     preventLogoutUntil: number = -1;
@@ -399,6 +406,13 @@ export default class Player extends PathingEntity {
     lastCom: number = -1; // if_button
 
     staffModLevel: number = 0;
+    // custom (2026-11-06) - helped test before launch, and carries the bronze emblem for it. Set
+    // from the account row at login (World.onLoginMessage), never from the save: the launch wipe
+    // moves saves away and keeps accounts, so the account is the half that survives.
+    //
+    // Not a staffModLevel, and deliberately a boolean so that no "at least" check can be written
+    // against it by accident. It grants nothing.
+    veteran: boolean = false;
     visibility: Visibility = Visibility.DEFAULT;
     // custom (2026-09-27) - a server-side bot (engine/bot/BotPlayer.ts). Never saved, never counted as
     // online, never announced to the friend server or a clan channel; see the isBot checks in World.
@@ -502,6 +516,7 @@ export default class Player extends PathingEntity {
         this.appearanceBuf = null;
         this.isActive = false;
         this.input.flush();
+        World.submitInputCounts(this);
     }
 
     resetEntity(respawn: boolean) {
@@ -557,13 +572,7 @@ export default class Player extends PathingEntity {
         this.write(new IfClose());
         this.write(new UpdatePid(this.slot, this.members));
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         this.write(new ResetAnims());
 
         const loginTrigger = ScriptProvider.getByTriggerSpecific(ServerTriggerType.LOGIN, -1, -1);
@@ -587,13 +596,7 @@ export default class Player extends PathingEntity {
         // - reset_anims
         // - socials
         this.write(new ResetClientVarCache());
-        for (let varp = 0; varp < this.vars.length; varp++) {
-            const type = VarPlayerType.get(varp);
-            const value = this.vars[varp];
-            if (type.transmit) {
-                this.writeVarp(varp, value);
-            }
-        }
+        this.writeAllVarps();
         // reload entity info (overkill? does the client have some logic around this?)
         this.buildArea.clear(true);
         // rebuild scene later this tick (note: rebuild won't run on the client if you're in the same zone!)
@@ -2003,7 +2006,7 @@ export default class Player extends PathingEntity {
     chatIcons(): number {
         const rate = this.xpRate();
         const badge = rate >= 10 ? 3 : rate >= 5 ? 2 : 1;
-        return chatCrown(this.staffModLevel) | (badge << 4);
+        return chatCrown(this.staffModLevel, this.veteran) | (badge << 4);
     }
 
     getVarBit(id: number) {
@@ -2033,6 +2036,40 @@ export default class Player extends PathingEntity {
 
         mask <<= startbit;
         this.setVar(basevar, (mask & (value << startbit)) | (this.vars[basevar] & ~mask));
+    }
+
+    /**
+     * Send every transmitted varp, in one packet.
+     *
+     * One packet per varp was 371 of the 536 a login sent, and the 377 client parses five a loop
+     * iteration - about 2.2 seconds of catching up before it was level with the world. The count
+     * does not depend on the player: it is every varp the content marks transmit, so a new
+     * character and a maxed one pay the same. See VarpBatch, and tools/sim/loginspike.ts for how
+     * the figure was arrived at.
+     *
+     * Every varp still goes, zeros included. The client reverts varps to varCache on
+     * RESET_CLIENT_VARCACHE rather than zeroing them and frees neither on logout, so a player who
+     * logs out to the login screen and back in holds the last session's values and a varp now 0
+     * would keep its old one.
+     */
+    private writeAllVarps(): void {
+        const small: number[][] = [];
+        const large: number[][] = [];
+
+        for (let varp = 0; varp < this.vars.length; varp++) {
+            if (!VarPlayerType.get(varp).transmit) {
+                continue;
+            }
+
+            const value = this.vars[varp];
+            if (value >= -128 && value <= 127) {
+                small.push([varp, value]);
+            } else {
+                large.push([varp, value]);
+            }
+        }
+
+        this.write(new VarpBatch(small, large));
     }
 
     private writeVarp(id: number, value: number): void {

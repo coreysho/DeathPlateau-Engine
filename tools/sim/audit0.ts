@@ -649,7 +649,18 @@ if (run('mm')) {
     H.tick(1);
     op(p, 2721, 2766, 'mm_bamboo_largedoor_left');
     H.tick(4);
-    check('a human clicking the bamboo gate is arrested and wakes up inside the walls', [p.z > 2766, connected(0, p.x, p.z, 2805, 2762)], [true, true]);
+    // AND HE WAKES UP LOCKED IN, which is the part this check predated. mm_stage3.rs2's jail
+    // rebuild "gave no cell coordinate, no guard and no escape route. It gives all three" -
+    // ^mm_jail_cell is 2771,2794, behind [oploc1,mm_jail_door], which wants a lockpick. So
+    // asking whether Garkor is reachable on foot from where you wake was asking whether the
+    // cell door is missing, and the answer being false is the jail working.
+    //
+    // Three checks instead of one, and they describe the jail rather than deny it: you wake in
+    // the cell, the cell holds you, and the far side of its door is inside Marim - which is
+    // ^mm_jail_outside, 2771,2796, and the reason picking the lock is worth anything.
+    check('a human clicking the bamboo gate is arrested and wakes in the cell', [p.z > 2766, p.x, p.z], [true, 2771, 2794]);
+    check('  and the cell holds him: Garkor is not reachable from inside it', connected(0, p.x, p.z, 2805, 2762), false);
+    check('  while the far side of its door is inside Marim, with Garkor', connected(0, 2771, 2796, 2805, 2762), true);
     check('  and the cell door with the pickable lock is on its tile', World.getLoc(2771, 2795, 0, LocType.getId('mm_jail_door')) !== null, true);
 
     // the tunnel on the west shore, and Zooknock at the end of it

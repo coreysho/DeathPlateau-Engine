@@ -3,6 +3,9 @@ export default class ClientGameProt {
 
     static readonly NO_TIMEOUT = new ClientGameProt(40, 0);
 
+    // custom (2026-11-03) - the answer to ServerGameProt.PING, echoing its seq byte. Opcode 2 was free.
+    static readonly PONG = new ClientGameProt(2, 1);
+
     static readonly IDLE_TIMER = new ClientGameProt(202, 0);
     static readonly EVENT_MOUSE_CLICK = new ClientGameProt(19, 4);
     static readonly EVENT_MOUSE_MOVE = new ClientGameProt(171, -1);

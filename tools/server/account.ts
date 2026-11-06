@@ -501,6 +501,29 @@ function applyPath(data: Export, dotted: string, raw: string) {
         return;
     }
 
+    // A VARP THE PLAYER DOES NOT HOLD YET IS STILL A VARP. saveToJson writes only the non-zero
+    // permanent ones, so the varp you most often want to set is the one that is missing: a player
+    // who has never opened the XP rate chooser has xp_rate 0, it is left out of the dump, and
+    // `set koda save.vars.xp_rate 10` answered "no such field: save.vars.xp_rate" - which reads
+    // as "that varp does not exist" rather than "they have not got one". The way round it was to
+    // export the whole character to a file, add one line and import it back.
+    //
+    // The name is checked against the cache, not against what the player happens to hold, and it
+    // has to be a PERM varp: a temp one is not written to the save at all, so setting it here
+    // would report success and change nothing.
+    if (parts[0] === 'save' && parts[1] === 'vars' && parts.length === 3 && !(parts[2] in data.save.vars)) {
+        const name = parts[2];
+        const id = VarPlayerType.getId(name);
+        if (id === -1) fail(`no such varp: ${name}`);
+        if (VarPlayerType.get(id)?.scope !== VarPlayerType.SCOPE_PERM) {
+            fail(`${name} is a temporary varp - it is not kept in the save, so setting it here would do nothing`);
+        }
+        const value = Number(raw);
+        if (!Number.isInteger(value)) fail(`a varp holds a whole number, not ${raw}`);
+        data.save.vars[name] = value;
+        return;
+    }
+
     // Everything else is an ordinary field: walk to its parent and coerce to the type already
     // sitting there, so `true` lands as a boolean and `3222` as a number without being told.
     let node: Record<string, unknown> = data as unknown as Record<string, unknown>;

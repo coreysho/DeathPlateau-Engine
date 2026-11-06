@@ -415,7 +415,7 @@ console.log('\nTHE ROYAL SEED POD STOPS AT LEVEL 30');
         return moved;
     };
     const deep: Player = player('podlevelprobe', 3094, 3760);
-    const shallow: Player = player('podlevelprobe2', 3094, 3650);
+    const shallow: Player = player('podlvlshallow', 3094, 3650);
     const deepLvl = H.runProc(deep, '[proc,wilderness_level]', [deep.coord])[0];
     const shallowLvl = H.runProc(shallow, '[proc,wilderness_level]', [shallow.coord])[0];
     H.despawn(deep, shallow);
