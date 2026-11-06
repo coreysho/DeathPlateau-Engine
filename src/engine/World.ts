@@ -76,7 +76,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
 import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
@@ -96,7 +96,7 @@ import {
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
-import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
+import { fromBase37, toBase37, toDisplayName, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
 import Ping from '#/network/game/server/model/Ping.js';
 import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
@@ -2470,6 +2470,41 @@ class World {
             } else {
                 player.messageGame(`Cancelled ${count} saved logins. You will have to type your password next time.`);
             }
+        } else if (isVeteranResponse(msg)) {
+            const { staff, username, result, veteran } = msg;
+            this.veteranRequests.delete(username);
+
+            // A player who is online gets it now rather than on their next login. The icon rides
+            // the appearance block, so rebuilding that is the whole of showing it - without this
+            // the account row is right and nobody can see it until they relog.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.veteran = veteran;
+                // Only when an appearance has been built already. buildAppearance(-1) reads no
+                // worn inventory at all, so rebuilding one that early would send everyone a
+                // player with no equipment on; a player who has not got that far yet picks the
+                // flag up from the first build instead, which is as soon as anyone could see it.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                target.messageGame(veteran ? 'You have been given the Veteran rank, for helping test the server.' : 'Your Veteran rank has been removed.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`veteran: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`veteran: ${name} could not be changed right now. Please try again.`);
+            } else if (veteran) {
+                who.messageGame(`veteran: ${name} now has the Veteran rank.`);
+            } else {
+                who.messageGame(`veteran: ${name} no longer has the Veteran rank.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2509,6 +2544,30 @@ class World {
             username: player.username
         });
         return true;
+    }
+
+    // custom (2026-11-06) - ::veteran (ClientCheatHandler). One change at a time per account, the
+    // way a password change is held. Keyed by the account being changed and not by the staff member
+    // running it, so two administrators cannot race on the same name.
+    veteranRequests: Set<string> = new Set();
+
+    /** Returns the safe name the request was filed under, or null if one is already in flight. */
+    requestVeteran(staff: string, username: string, veteran: boolean): string | null {
+        // The account table stores the base37 round trip, which is also what ::veteran is likely to
+        // be typed as - "Bob Smith" and "bob_smith" are the same account and both have to find it.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.veteranRequests.has(safeName)) {
+            return null;
+        }
+
+        this.veteranRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_veteran',
+            staff,
+            username: safeName,
+            veteran
+        });
+        return safeName;
     }
 
     requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {

@@ -352,6 +352,34 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
             parentPort.postMessage({ type: 'player_change_password', username, result });
             break;
         }
+        case 'player_set_veteran': {
+            // custom (2026-11-06) - ::veteran. Straight to the account table, as
+            // player_change_password is and for the same reason: that table is the same database
+            // in both login modes, so there is nothing for a login server to arbitrate.
+            //
+            // The account does not have to be logged in, and usually is not - the rank is given
+            // out after the launch wipe, to people who may not be online when the list is worked
+            // through.
+            const { staff, username, veteran } = msg;
+            let result: 'ok' | 'unknown' | 'error' = 'error';
+            try {
+                const account = await db.selectFrom('account').select(['id']).where('username', '=', username).executeTakeFirst();
+                if (!account) {
+                    result = 'unknown';
+                } else {
+                    await db
+                        .updateTable('account')
+                        .set({ veteran: veteran ? 1 : 0 })
+                        .where('id', '=', account.id)
+                        .execute();
+                    result = 'ok';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            parentPort.postMessage({ type: 'player_set_veteran', staff, username, result, veteran });
+            break;
+        }
         case 'player_forget_logins': {
             // custom (2026-11-02) - ::forgetlogins. Every saved login for this account, cancelled,
             // including the one on the computer it was typed from - which is the point: a player

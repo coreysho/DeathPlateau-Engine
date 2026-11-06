@@ -37,6 +37,17 @@ interface ChangePasswordResponse {
     result: 'ok' | 'wrong' | 'error';
 }
 
+// custom (2026-11-06) - the answer to ::veteran (ClientCheatHandler -> World -> LoginThread).
+// `staff` is who ran it, so the reply can be reported to them rather than to the account it
+// changed - which is usually not even logged in.
+interface VeteranResponse {
+    type: string;
+    staff: string;
+    username: string;
+    result: 'ok' | 'unknown' | 'error';
+    veteran: boolean;
+}
+
 // custom (2026-11-02) - the answer to ::forgetlogins. `count` is how many saved logins there were
 // to cancel, so the player is told whether anything happened.
 interface ForgetLoginsResponse {
@@ -46,7 +57,7 @@ interface ForgetLoginsResponse {
     ok: boolean;
 }
 
-export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse | ForgetLoginsResponse;
+export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse | ForgetLoginsResponse | VeteranResponse;
 
 export function isPlayerLoginResponse(response: GenericLoginThreadResponse): response is LoginResponse {
     return response.type === 'player_login';
@@ -62,4 +73,8 @@ export function isChangePasswordResponse(response: GenericLoginThreadResponse): 
 
 export function isForgetLoginsResponse(response: GenericLoginThreadResponse): response is ForgetLoginsResponse {
     return response.type === 'player_forget_logins';
+}
+
+export function isVeteranResponse(response: GenericLoginThreadResponse): response is VeteranResponse {
+    return response.type === 'player_set_veteran';
 }
