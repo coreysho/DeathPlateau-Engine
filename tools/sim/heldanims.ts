@@ -32,7 +32,9 @@ await H.boot();
 // Long enough that a player would see it and not think it a flicker.
 const HOLD_TICKS = 20;
 const held: string[] = [];
-for (const [name, id] of SeqType.configNames) {
+// configNames is private on SeqType (it is public on ObjType), so this reads it the way the
+// other sims reach into engine internals rather than changing the class.
+for (const [name, id] of (SeqType as unknown as { configNames: Map<string, number> }).configNames) {
     const t = SeqType.get(id) as unknown as { replaceheldleft: number; replaceheldright: number; duration: number };
     if (t.replaceheldleft < 0 && t.replaceheldright < 0) continue;
     if (t.duration < HOLD_TICKS * 30) continue;
