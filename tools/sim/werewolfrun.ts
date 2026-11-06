@@ -85,7 +85,7 @@ for (const [name, loc, lx, lz, ex, ez, xp] of LAP) {
     const was = p.stats[AGILITY];
     try {
         A.op(p, lx, lz, loc, 1);
-    } catch (e) {
+    } catch {
         console.log(`    ${name}: the loc is not on the player's level`);
         ok = false;
         break;
@@ -103,8 +103,7 @@ for (const [name, loc, lx, lz, ex, ez, xp] of LAP) {
 }
 check('    every obstacle put the player where the course says', ok, true);
 if (ok) {
-    check(`    and the five obstacles paid ${(K.werewolf_lap - K.werewolf_xp_stick) / 10}`,
-        p.stats[AGILITY] - before, K.werewolf_lap - K.werewolf_xp_stick);
+    check(`    and the five obstacles paid ${(K.werewolf_lap - K.werewolf_xp_stick) / 10}`, p.stats[AGILITY] - before, K.werewolf_lap - K.werewolf_xp_stick);
 }
 
 console.log('\n  the stones carry the player back as well as across');
@@ -126,7 +125,10 @@ console.log('\n  and it is shut to anyone under the level');
     const from = H.ifaces.length;
     A.op(q, 3538, 9875, 'loc_5138', 1);
     H.tick(6);
-    const said = H.ifaces.slice(from).filter(i => i.who === q.username && i.kind === 'text' && i.text).map(i => i.text!);
+    const said = H.ifaces
+        .slice(from)
+        .filter(i => i.who === q.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     check(`    ${K.werewolf_level - 1} agility is turned away`, A.saw(said, `Agility level of ${K.werewolf_level}`), true);
     // they walk up to the stone before being refused, which is what a player does - what matters
     // is that they are still on the near bank and not out on the water
@@ -143,14 +145,20 @@ console.log('\n  the trapdoor wants the quest and the ring');
     let from = H.ifaces.length;
     A.op(q, 3543, 3462, 'loc_5131', 1);
     H.tick(6);
-    let said = H.ifaces.slice(from).filter(i => i.who === q.username && i.kind === 'text' && i.text).map(i => i.text!);
+    let said = H.ifaces
+        .slice(from)
+        .filter(i => i.who === q.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     check('    quest unfinished is turned away', A.saw(said, 'bares his teeth'), true);
 
     H.setVar(q, 'fenk_quest', 99);
     from = H.ifaces.length;
     A.op(q, 3543, 3462, 'loc_5131', 1);
     H.tick(6);
-    said = H.ifaces.slice(from).filter(i => i.who === q.username && i.kind === 'text' && i.text).map(i => i.text!);
+    said = H.ifaces
+        .slice(from)
+        .filter(i => i.who === q.username && i.kind === 'text' && i.text)
+        .map(i => i.text!);
     check('    and without the ring, so is a finished quest', A.saw(said, 'for werewolves'), true);
 
     H.equip(q, { ring: 'ring_of_charos' });
@@ -159,9 +167,11 @@ console.log('\n  the trapdoor wants the quest and the ring');
     A.op(q, 3543, 3462, 'loc_5132', 1);
     H.tick(10);
     check(`    with both, the trapdoor lets you down (${at(q)})`, at(q), '3543,9862');
-    check('    and the stick is waiting on the course',
-        [...World.gameMap.getZone(3541, 9902, 0).getAllObjsUnsafe()]
-            .some(o => o.type === ObjType.getId('waa_stick') && o.x === 3541 && o.z === 9902), true);
+    check(
+        '    and the stick is waiting on the course',
+        [...World.gameMap.getZone(3541, 9902, 0).getAllObjsUnsafe()].some(o => o.type === ObjType.getId('waa_stick') && o.x === 3541 && o.z === 9902),
+        true
+    );
     H.despawn(q);
 }
 
@@ -186,9 +196,8 @@ console.log('\n  the stick is what the bonus is paid for');
     H.despawn(q);
 }
 
-console.log('\n  so a full lap with the stick is the 2006 540, not the wiki\'s 730');
-check(`    ${(K.werewolf_lap - K.werewolf_xp_stick) / 10} + ${K.werewolf_xp_stick / 10}`,
-    K.werewolf_lap, K.werewolf_xp_stones + K.werewolf_xp_hurdle * 3 + K.werewolf_xp_pipe + K.werewolf_xp_slope + K.werewolf_xp_zip + K.werewolf_xp_stick);
+console.log("\n  so a full lap with the stick is the 2006 540, not the wiki's 730");
+check(`    ${(K.werewolf_lap - K.werewolf_xp_stick) / 10} + ${K.werewolf_xp_stick / 10}`, K.werewolf_lap, K.werewolf_xp_stones + K.werewolf_xp_hurdle * 3 + K.werewolf_xp_pipe + K.werewolf_xp_slope + K.werewolf_xp_zip + K.werewolf_xp_stick);
 
 H.despawn(p);
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
