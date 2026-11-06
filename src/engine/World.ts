@@ -1264,6 +1264,7 @@ class World {
                 continue;
             }
             ClanChat.onLogin(player);
+            this.veteranCape(player, player.veteran);
 
             if (this.shutdownTick != -1) {
                 player.write(new UpdateRebootTimer(this.shutdownTick - this.currentTick));
@@ -2487,6 +2488,7 @@ class World {
                 if (target.appearanceInv !== -1) {
                     target.buildAppearance(target.appearanceInv);
                 }
+                this.veteranCape(target, veteran);
                 target.messageGame(veteran ? 'You have been given the Veteran rank, for helping test the server.' : 'Your Veteran rank has been removed.');
             }
 
@@ -2550,6 +2552,66 @@ class World {
     // way a password change is held. Keyed by the account being changed and not by the staff member
     // running it, so two administrators cannot race on the same name.
     veteranRequests: Set<string> = new Set();
+
+    // custom (2026-11-06) - looked up once; -2 means "not looked up yet", which is distinct from
+    // the -1 ObjType.getId returns for a build that does not have the cape in it.
+    private static veteranCapeObj: number = -2;
+
+    /**
+     * Give a veteran their cape, or take it back from somebody who is no longer one.
+     *
+     * Called at login as well as on the grant, so a cape that was dropped, destroyed or lost on
+     * death costs a relog and nothing else. That is the whole reclaim mechanism: an untradeable
+     * cosmetic that the server hands back is simpler than an npc to collect it from, and there is
+     * nothing to exploit in being given a second copy of something nobody can trade.
+     *
+     * INTO THE BANK BY PREFERENCE. A cape added to a full inventory would fall on the floor -
+     * which is how quest items have been lost here before - and a player logging in has no idea
+     * it is coming. The bank cannot drop it, and the first login after a grant is not a moment to
+     * be rummaging in somebody's backpack.
+     */
+    veteranCape(player: Player, give: boolean): void {
+        if (World.veteranCapeObj === -2) {
+            World.veteranCapeObj = ObjType.getId('veteran_cape');
+        }
+        const obj = World.veteranCapeObj;
+        if (obj === -1) {
+            return;
+        }
+
+        const bank = InvType.getId('bank');
+        const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
+        const have = held.reduce((n, inv) => n + player.invTotal(inv, obj), 0);
+
+        if (!give) {
+            for (const inv of held) {
+                const n = player.invTotal(inv, obj);
+                if (n > 0) {
+                    player.invDel(inv, obj, n);
+                }
+            }
+            if (have > 0) {
+                player.buildAppearance(player.appearanceInv);
+                player.messageGame('Your Veteran cape has been taken back.');
+            }
+            return;
+        }
+
+        if (have > 0) {
+            return;
+        }
+
+        if (bank !== -1 && player.invFreeSpace(bank) > 0) {
+            player.invAdd(bank, obj, 1);
+            player.messageGame('Your Veteran cape is in your bank.');
+        } else if (player.invFreeSpace(InvType.INV) > 0) {
+            player.invAdd(InvType.INV, obj, 1);
+            player.messageGame('Your Veteran cape has been added to your inventory.');
+        } else {
+            // Nowhere safe to put it. Say so rather than dropping it, and try again next login.
+            player.messageGame('Your Veteran cape could not be given to you - your bank and inventory are both full.');
+        }
+    }
 
     /** Returns the safe name the request was filed under, or null if one is already in flight. */
     requestVeteran(staff: string, username: string, veteran: boolean): string | null {
