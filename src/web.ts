@@ -748,6 +748,18 @@ fastify.route<{ Params: { site: string } }>({
     }
 });
 
+// THE SAME THING WITH THE SECRET IN THE PATH, for a site that sends no secret of its own and
+// appends its own query to whatever url you give it - TopG does both. See VoteService's note at
+// the secret check for why neither the query string nor the source address works there.
+fastify.route<{ Params: { site: string; secret: string } }>({
+    method: ['GET', 'POST'],
+    url: '/vote/:site/callback/:secret',
+    handler: async (req, reply) => {
+        const { status, body } = VoteService.fromHttp(req.params.site, req.query, req.body, req.params.secret);
+        reply.status(status).type('text/plain').send(body);
+    }
+});
+
 fastify.register(FastifyStatic, {
     root: path.join(process.cwd(), 'public')
 });

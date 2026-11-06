@@ -193,7 +193,7 @@ export default class VoteService {
      * The two are merged because sites disagree about which they use and several send the same
      * values in both, with the body winning - it is the one a site signs.
      */
-    static fromHttp(siteId: string, query: unknown, body: unknown): { status: number; body: string } {
+    static fromHttp(siteId: string, query: unknown, body: unknown, pathSecret?: string): { status: number; body: string } {
         const params: Record<string, string> = {};
         for (const source of [query, body]) {
             if (!source || typeof source !== 'object') {
@@ -206,7 +206,7 @@ export default class VoteService {
                 params[k] = String(v);
             }
         }
-        return VoteService.fromCallback(siteId, params);
+        return VoteService.fromCallback(siteId, params, pathSecret);
     }
 
     /**
@@ -227,7 +227,7 @@ export default class VoteService {
      * amount of retrying fixes. The one case that still answers non-2xx is a missing ledger (503),
      * because that one IS worth retrying.
      */
-    static fromCallback(siteId: string, params: Record<string, string>): { status: number; body: string } {
+    static fromCallback(siteId: string, params: Record<string, string>, pathSecret?: string): { status: number; body: string } {
         const site = VoteSites.get(siteId);
         if (!site || !site.callback) {
             // Deliberately the same answer as a bad secret. An unlisted id and a wrong key should
@@ -237,10 +237,26 @@ export default class VoteService {
             return { status: 200, body: 'unknown' };
         }
 
+        // THE SECRET MAY ARRIVE IN THE PATH INSTEAD, for a site that sends none of its own.
+        //
+        // TopG's callback is `?p_resp=NAME&ip=IP` and nothing else - they authenticate by source
+        // address, telling you to whitelist monitor.topg.org. That is no use behind a tunnel, where
+        // the address this server sees is the tunnel's, and trusting a forwarded header instead is a
+        // weaker guarantee for more work.
+        //
+        // Putting it in the query does not work either: TopG builds `YOURURL?p_resp=...`, so a url of
+        // ours that already carried `?key=...` ends up with two question marks and p_resp never parses
+        // as its own parameter. A trailing path segment is the one place a site like that cannot
+        // disturb, because everything it adds goes after the `?`.
+        //
+        // It is the SAME secret either way - this is where it was found, not a second credential - and
+        // when the path is used it is authoritative: a wrong one there does not fall back to a
+        // parameter. It is also never logged, because only `params` is ever printed.
         const secretParam = site.callback.secretParam ?? 'secret';
-        const given = params[secretParam] ?? '';
+        const given = pathSecret ?? params[secretParam] ?? '';
         if (!timingSafeEqual(given, site.callback.secret)) {
-            printError(`vote: ${siteId} callback with a wrong secret - expected it in "${secretParam}"${describe(params)}`);
+            const where = pathSecret === undefined ? `"${secretParam}"` : 'the url path';
+            printError(`vote: ${siteId} callback with a wrong secret - expected it in ${where}${describe(params)}`);
             return { status: 200, body: 'unknown' };
         }
 

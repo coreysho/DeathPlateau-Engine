@@ -21,6 +21,18 @@ built and works today.
      postback, or "vote check URL". Read its docs for what it names the secret, the player and the
      vote id, and put those names in `callback.secretParam`, `userParam` and `refParam`. GET or
      POST, query string or form body or JSON - all four work.
+
+     **A site that sends no secret of its own** - TopG's callback is `?p_resp=NAME&ip=IP` and
+     nothing else - can carry it in the path instead: give that site
+     `https://<your server>/vote/<id>/callback/<the secret>`. It is the same secret, still named
+     from the environment in `callback.secret`; only where it arrives differs, and it is never
+     logged. Use this where the site APPENDS its own query to your url, because then the query
+     string is not yours to put anything in: TopG builds `YOURURL?p_resp=...`, so a url already
+     carrying `?key=...` ends up with two question marks and `p_resp` never parses.
+
+     Where the site lets you end the url yourself - Top100Arena asks for one ending `?postback=`
+     and appends the voter to it - the ordinary query form is simpler: give them
+     `.../callback?key=SECRET&postback=` and set `secretParam` to `key`.
    - **We call it.** Fill in `check.url` with `{user}` and `{key}` where they go, and
      `check.success` with how to read a yes out of the answer. The player then claims by asking the
      Vote clerk.
