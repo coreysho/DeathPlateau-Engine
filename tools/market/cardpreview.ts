@@ -17,7 +17,7 @@
  */
 import fs from 'fs';
 
-import { renderMarketCard } from '#/server/market/MarketCard.js';
+import { iconReport, renderMarketCard } from '#/server/market/MarketCard.js';
 import { postCard } from '#/server/market/MarketFeed.js';
 import Environment from '#/util/Environment.js';
 
@@ -45,6 +45,9 @@ const png = renderMarketCard({
 
 fs.writeFileSync(out, png);
 console.log(`wrote ${out}  (${png.length} bytes)`);
+// Always, not only on failure: knowing WHICH folder a good card came from is what tells you
+// the live feed will find it too.
+console.log(iconReport(Number(value('--obj', '0'))));
 
 if (post) {
     if (!Environment.MARKET_FEED_WEBHOOK) {

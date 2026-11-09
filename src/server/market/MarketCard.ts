@@ -326,6 +326,33 @@ export function commas(n: number): string {
     return out;
 }
 
+/**
+ * Why the slot came out empty, in a sentence - or where the icon was read from.
+ *
+ * AN EMPTY SLOT IS SILENT BY DESIGN, because a feed that stops because one item has no picture is
+ * worse than a card with a gap in it. That is right for the live feed and wrong for the tool you
+ * run to set it up: "the card drew but the slot is blank" is the one failure that looks identical
+ * whether the path is unset, wrong, unreadable, or simply missing that obj.
+ */
+export function iconReport(obj: number): string {
+    const dir = Environment.MARKET_CARD_ICONS;
+    if (!dir) {
+        return 'no icon: MARKET_CARD_ICONS is not set. On the live box it wants /opt/deathplateau/web/public/icons';
+    }
+    const path = `${dir}/${obj}.png`;
+    try {
+        if (!fs.existsSync(path)) {
+            return `no icon: nothing at ${path} - either the icons are somewhere else, or obj ${obj} has none`;
+        }
+        if (!decodeIcon(fs.readFileSync(path))) {
+            return `no icon: ${path} is not a 32x32 RGBA PNG this can read`;
+        }
+    } catch (err) {
+        return `no icon: ${path} could not be read - ${String((err as { message?: unknown })?.message ?? err)}`;
+    }
+    return `icon: ${path}`;
+}
+
 function iconFor(obj: number): Int32Array | null {
     const dir = Environment.MARKET_CARD_ICONS;
     if (!dir) {
