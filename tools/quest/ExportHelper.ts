@@ -366,7 +366,12 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (kind === '__never__') {
             const item = String(s.has);
             const n = typeof s.n === 'number' ? s.n : 1;
-            cur.items.push(n > 1 ? `${item} x${n}` : item);
+            // THE SAME SHAPE AS THE give BRANCH ABOVE, because items stopped being strings. The
+            // count is a FIELD now and not part of the name: baking "x3" back into the name would
+            // have the panel print the number twice, once in each place it reads it from.
+            const id = idOf('obj', item);
+            const shown = id >= 0 ? ObjType.get(id)?.name : null;
+            cur.items.push({ name: shown || item, id, n });
             continue;
         }
 
