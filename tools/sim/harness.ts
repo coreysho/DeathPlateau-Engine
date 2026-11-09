@@ -601,6 +601,13 @@ export function useHeldOnLoc(p: Player, useName: string, x: number, z: number, l
     return true;
 }
 
+/** Is a loc of this type standing on that square right now? For door stages and loc_change. */
+export function locAt(level: number, x: number, z: number, locName: string): boolean {
+    const id = LocType.getId(locName);
+    if (id === -1) throw new Error('no such loc: ' + locName);
+    return World.getLoc(x, z, level, id) !== null;
+}
+
 /** Where a loc of this type is placed, nearest first to (x, z) on that level. */
 export function locsNear(locName: string, x: number, z: number, level = 0): { x: number; z: number; level: number }[] {
     const id = LocType.getId(locName);

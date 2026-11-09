@@ -1,3 +1,5 @@
+import { createHmac } from 'crypto';
+
 import VoteBook, { CreditResult } from '#/engine/vote/VoteBook.js';
 import VoteSites, { VoteSite } from '#/engine/vote/VoteSites.js';
 import World from '#/engine/World.js';
@@ -105,6 +107,40 @@ function describe(params: Record<string, string>): string {
     return ` - it carried: ${names.join(', ')}`;
 }
 
+/** Anything whose NAME suggests it authenticates the caller. Never printed, whatever it holds. */
+const SECRETISH = /secret|key|token|hash|pass|sig/i;
+
+/**
+ * The same, with the values, for the one error where the values are the whole point.
+ *
+ * A VOTE THAT NAMED NOBODY cannot be traced from the names of its parameters: every such line
+ * looks identical, and the only way to work out who it was is to match the timestamp against a
+ * player saying "I voted about then". On 5 November that cost an exchange with a player and a
+ * read of three separate logs to conclude what this line could have said outright.
+ *
+ * THE SECRET IS NEVER PRINTED - not redacted at the call site, where somebody would eventually
+ * forget, but here, by name, for every parameter that looks like a credential. The one thing a
+ * journal must not become is a place where the shared secret can be read back.
+ *
+ * Values are truncated, because a site is free to send whatever it likes and a log line that
+ * wraps forty times is a log line nobody reads.
+ */
+function describeWithValues(params: Record<string, string>): string {
+    const names = Object.keys(params);
+    if (names.length === 0) {
+        return ' - it carried no parameters at all';
+    }
+    const shown = names.map(name => {
+        if (SECRETISH.test(name)) {
+            return `${name}=<hidden>`;
+        }
+        const raw = params[name];
+        const value = raw === undefined || raw === null ? '' : String(raw);
+        return `${name}=${JSON.stringify(value.length > 64 ? `${value.slice(0, 64)}\u2026` : value)}`;
+    });
+    return ` - it carried: ${shown.join(', ')}`;
+}
+
 export default class VoteService {
     static ledger(): VoteBook {
         if (!book) {
@@ -159,7 +195,7 @@ export default class VoteService {
      * The two are merged because sites disagree about which they use and several send the same
      * values in both, with the body winning - it is the one a site signs.
      */
-    static fromHttp(siteId: string, query: unknown, body: unknown): { status: number; body: string } {
+    static fromHttp(siteId: string, query: unknown, body: unknown, pathSecret?: string): { status: number; body: string } {
         const params: Record<string, string> = {};
         for (const source of [query, body]) {
             if (!source || typeof source !== 'object') {
@@ -172,7 +208,7 @@ export default class VoteService {
                 params[k] = String(v);
             }
         }
-        return VoteService.fromCallback(siteId, params);
+        return VoteService.fromCallback(siteId, params, pathSecret);
     }
 
     /**
@@ -193,7 +229,7 @@ export default class VoteService {
      * amount of retrying fixes. The one case that still answers non-2xx is a missing ledger (503),
      * because that one IS worth retrying.
      */
-    static fromCallback(siteId: string, params: Record<string, string>): { status: number; body: string } {
+    static fromCallback(siteId: string, params: Record<string, string>, pathSecret?: string): { status: number; body: string } {
         const site = VoteSites.get(siteId);
         if (!site || !site.callback) {
             // Deliberately the same answer as a bad secret. An unlisted id and a wrong key should
@@ -203,10 +239,61 @@ export default class VoteService {
             return { status: 200, body: 'unknown' };
         }
 
-        const secretParam = site.callback.secretParam ?? 'secret';
-        const given = params[secretParam] ?? '';
-        if (!timingSafeEqual(given, site.callback.secret)) {
-            printError(`vote: ${siteId} callback with a wrong secret - expected it in "${secretParam}"${describe(params)}`);
+        // THE SECRET MAY ARRIVE IN THE PATH INSTEAD, for a site that sends none of its own.
+        //
+        // TopG's callback is `?p_resp=NAME&ip=IP` and nothing else - they authenticate by source
+        // address, telling you to whitelist monitor.topg.org. That is no use behind a tunnel, where
+        // the address this server sees is the tunnel's, and trusting a forwarded header instead is a
+        // weaker guarantee for more work.
+        //
+        // Putting it in the query does not work either: TopG builds `YOURURL?p_resp=...`, so a url of
+        // ours that already carried `?key=...` ends up with two question marks and p_resp never parses
+        // as its own parameter. A trailing path segment is the one place a site like that cannot
+        // disturb, because everything it adds goes after the `?`.
+        //
+        // It is the SAME secret either way - this is where it was found, not a second credential - and
+        // when the path is used it is authoritative: a wrong one there does not fall back to a
+        // parameter. It is also never logged, because only `params` is ever printed.
+        //
+        // A SIGNED CALLBACK IS CHECKED DIFFERENTLY, because there is no secret in it to compare.
+        // RuneRank sends an HMAC of its own fields and keeps the key; rebuilding the digest over
+        // the same fields is the only way to know it was them. It is the stronger of the two: a
+        // captured callback cannot be edited into another player's name, because the name was
+        // signed.
+        let authentic: boolean;
+        let where: string;
+        if (site.callback.hmac) {
+            const { param, fields, separator } = site.callback.hmac;
+            const missing = fields.filter(field => params[field] === undefined);
+            if (missing.length > 0) {
+                printError(`vote: ${siteId} signed callback is missing ${missing.join(', ')}, which the signature covers${describe(params)}`);
+                return { status: 200, body: 'unknown' };
+            }
+            const signed = fields.map(field => params[field]).join(separator ?? ':');
+            const expected = createHmac('sha256', site.callback.secret).update(signed).digest('hex');
+            const got = (params[param] ?? '').toLowerCase();
+            authentic = timingSafeEqual(expected, got);
+            where = `"${param}"`;
+
+            // A MISMATCH HAS TWO CAUSES AND THE LOG MUST SEPARATE THEM: the key is wrong, or what
+            // we signed is not what they signed. The string that went into the digest is printed
+            // because every part of it already arrived in the clear, and seeing it is the only way
+            // to catch a field in the wrong order or a value read differently. The digests are
+            // shown as short prefixes - enough to tell "completely different" from "same shape",
+            // and they are derived values, never the key.
+            if (!authentic) {
+                printError(
+                    `vote: ${siteId} signed "${signed}" and got ${expected.slice(0, 12)}…, but the callback carried ${got.slice(0, 12) || '(nothing)'}… - either ${site.callback.secret.length > 0 ? 'the key differs' : 'there is no key'}, or the fields are not the ones they sign`
+                );
+            }
+        } else {
+            const secretParam = site.callback.secretParam ?? 'secret';
+            const given = pathSecret ?? params[secretParam] ?? '';
+            authentic = timingSafeEqual(given, site.callback.secret);
+            where = pathSecret === undefined ? `"${secretParam}"` : 'the url path';
+        }
+        if (!authentic) {
+            printError(`vote: ${siteId} callback with a wrong secret - expected it in ${where}${describe(params)}`);
             return { status: 200, body: 'unknown' };
         }
 
@@ -239,7 +326,7 @@ export default class VoteService {
         const claimed = (params[site.callback.userParam] ?? '').trim();
         const username = toSafeName(claimed);
         if (!claimed.length || claimed.length > 12 || username === 'invalid_name' || NOT_A_PLAYER.has(username)) {
-            printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describe(params)}`);
+            printError(`vote: ${siteId} callback with no usable player in "${site.callback.userParam}"${describeWithValues(params)}`);
             // 400 rather than 200: unlike a validator's empty ping, this one got past the secret,
             // so it is a real caller sending something we cannot pay. Say so.
             return { status: 400, body: 'no player' };

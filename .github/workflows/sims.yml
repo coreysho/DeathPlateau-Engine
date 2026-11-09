@@ -270,11 +270,17 @@ jobs:
             # time and "fails twice" was the cap talking, not the game being sampled. It has
             # its own cap below now.
             #
-            # The other two were measured at the same time and are not this: gwdskirmish is
-            # 7s and 18 ok, rdreach is 77s and 21 ok. Whatever they were doing in that run is
-            # gone - most likely the seeding this comment describes, which came after it - so
-            # the three-sim example above stands as history and not as a live diagnosis, and
-            # only droprate's share of it is explained.
+            # THE OTHER TWO WERE THE ROLL, and that is settled rather than guessed: the first
+            # seeded run (run 5, written up in run 6's commit) found "CI AND THIS MACHINE AGREE,
+            # SIX FOR SIX - droprate, gwdskirmish, rdreach and fremtrials2 pass in both. It was
+            # never a machine difference, it was the roll." Measured again here since:
+            # gwdskirmish 7s and 18 ok, rdreach 77s and 21 ok.
+            #
+            # So the example above had TWO causes wearing one description. gwdskirmish and
+            # rdreach were sampling the game and the seeding fixed them, exactly as this comment
+            # says. droprate was ALSO fixed by the seeding - and then came back for an unrelated
+            # reason, the cap, which is why its second appearance looked like its first and was
+            # not. A sim that fails twice is worth an exit code before it is worth a diagnosis.
             rc2=0
             # shellcheck disable=SC2086
             timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.retry.log" 2>&1 || rc2=$?

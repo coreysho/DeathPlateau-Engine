@@ -18,7 +18,11 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 const AVA: [number, number, number] = [3093, 3358, 0];
-const WITCH: [number, number, number] = [3091, 3366, 0];
+// Beside her, INSIDE the manor. This used to be 3091,3366 - outdoors, against the manor's west
+// wall - which is where her spawn was until it was moved into the north-western corner the wiki
+// puts her in. The manifest's own comment below already said "north-west corner"; only the
+// coordinate was following the broken spawn.
+const WITCH: [number, number, number] = [3099, 3370, 0];
 const ALICE: [number, number, number] = [3627, 3526, 0];
 const MALCOLM: [number, number, number] = [3615, 3529, 0];
 const CRONE: [number, number, number] = [3460, 3557, 0];

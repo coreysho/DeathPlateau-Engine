@@ -80,6 +80,11 @@ export const CHEATS: Cheat[] = [
     { name: 'givecrap', what: 'fill your inventory with 28 random items', rank: 3 },
     { name: 'givemany', args: '<item>', what: '1000 of an item', rank: 3 },
     { name: 'vote', args: '[username] [count]', what: 'what the vote ledger knows, or credit a player a vote', rank: 3 },
+    // No staffWorld flag, unlike ::ban and ::mute, which also write an account row. That flag is
+    // for commands that could be used AGAINST somebody on an open development world, where every
+    // login is promoted to 4; this one only adds a chat icon, and a development world's accounts
+    // are its own database anyway.
+    { name: 'veteran', args: '<username> [off]', what: 'give a player the Veteran rank, or take it back', rank: 3 },
     { name: 'broadcast', args: '<message>', what: 'a staff announcement to every player, with your crown', rank: 3, staffWorld: true },
     { name: 'reboot', what: 'shut the world down now, applying packed changes', rank: 3, staffWorld: true },
     { name: 'slowreboot', args: '<seconds>', what: 'the same, after a countdown every client can see', rank: 3, staffWorld: true },

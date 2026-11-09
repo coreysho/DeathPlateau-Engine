@@ -76,7 +76,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
 import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
@@ -96,7 +96,7 @@ import {
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
-import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
+import { fromBase37, toBase37, toDisplayName, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
 import Ping from '#/network/game/server/model/Ping.js';
 import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
@@ -1190,6 +1190,19 @@ class World {
                     Uint8Array.from([
                         2,
                         // the rank the client echoes its own lines with - see ChatCrown
+                        //
+                        // NO VETERAN HERE, and it is not an oversight. The client keeps this byte
+                        // as Client.staffmodlevel and gates three moderator things on it: the
+                        // "Report abuse" option on a chat line and the mute option on the report
+                        // interface (>= 1), and ::clientdrop / ::lag / ::prefetchmusic (>= 2).
+                        // Crown 7 would pass all of them, so a veteran would be offered a
+                        // moderator's menu. The server would refuse whatever they clicked, but
+                        // being shown it is wrong on its own.
+                        //
+                        // The veteran emblem reaches the client in the appearance instead
+                        // (Player.chatIcons), which is where every other player's icons come from
+                        // and which carries no rights with it. This byte is only a fallback for
+                        // the local player's own lines before an appearance has been read.
                         chatCrown(player.staffModLevel),
                         1 // mouse tracking can only be enabled on login
                     ])
@@ -1251,6 +1264,7 @@ class World {
                 continue;
             }
             ClanChat.onLogin(player);
+            this.veteranCape(player, player.veteran);
 
             if (this.shutdownTick != -1) {
                 player.write(new UpdateRebootTimer(this.shutdownTick - this.currentTick));
@@ -2359,7 +2373,7 @@ class World {
                 return;
             }
 
-            const { username, lowMemory, reconnecting, staffmodlevel, muted_until, members, messageCount } = msg;
+            const { username, lowMemory, reconnecting, staffmodlevel, veteran, muted_until, members, messageCount } = msg;
             const save = msg.save ?? new Uint8Array();
 
             // if (reconnecting && !this.getPlayerByUsername(username)) {
@@ -2385,6 +2399,7 @@ class World {
                 // the player has no outbound stream yet.
                 player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
+                player.veteran = (veteran ?? 0) > 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
                 player.members = members;
@@ -2456,6 +2471,42 @@ class World {
             } else {
                 player.messageGame(`Cancelled ${count} saved logins. You will have to type your password next time.`);
             }
+        } else if (isVeteranResponse(msg)) {
+            const { staff, username, result, veteran } = msg;
+            this.veteranRequests.delete(username);
+
+            // A player who is online gets it now rather than on their next login. The icon rides
+            // the appearance block, so rebuilding that is the whole of showing it - without this
+            // the account row is right and nobody can see it until they relog.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.veteran = veteran;
+                // Only when an appearance has been built already. buildAppearance(-1) reads no
+                // worn inventory at all, so rebuilding one that early would send everyone a
+                // player with no equipment on; a player who has not got that far yet picks the
+                // flag up from the first build instead, which is as soon as anyone could see it.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                this.veteranCape(target, veteran);
+                target.messageGame(veteran ? 'You have been given the Veteran rank, for helping test the server.' : 'Your Veteran rank has been removed.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`veteran: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`veteran: ${name} could not be changed right now. Please try again.`);
+            } else if (veteran) {
+                who.messageGame(`veteran: ${name} now has the Veteran rank.`);
+            } else {
+                who.messageGame(`veteran: ${name} no longer has the Veteran rank.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2495,6 +2546,90 @@ class World {
             username: player.username
         });
         return true;
+    }
+
+    // custom (2026-11-06) - ::veteran (ClientCheatHandler). One change at a time per account, the
+    // way a password change is held. Keyed by the account being changed and not by the staff member
+    // running it, so two administrators cannot race on the same name.
+    veteranRequests: Set<string> = new Set();
+
+    // custom (2026-11-06) - looked up once; -2 means "not looked up yet", which is distinct from
+    // the -1 ObjType.getId returns for a build that does not have the cape in it.
+    private static veteranCapeObj: number = -2;
+
+    /**
+     * Give a veteran their cape, or take it back from somebody who is no longer one.
+     *
+     * Called at login as well as on the grant, so a cape that was dropped, destroyed or lost on
+     * death costs a relog and nothing else. That is the whole reclaim mechanism: an untradeable
+     * cosmetic that the server hands back is simpler than an npc to collect it from, and there is
+     * nothing to exploit in being given a second copy of something nobody can trade.
+     *
+     * INTO THE BANK BY PREFERENCE. A cape added to a full inventory would fall on the floor -
+     * which is how quest items have been lost here before - and a player logging in has no idea
+     * it is coming. The bank cannot drop it, and the first login after a grant is not a moment to
+     * be rummaging in somebody's backpack.
+     */
+    veteranCape(player: Player, give: boolean): void {
+        if (World.veteranCapeObj === -2) {
+            World.veteranCapeObj = ObjType.getId('veteran_cape');
+        }
+        const obj = World.veteranCapeObj;
+        if (obj === -1) {
+            return;
+        }
+
+        const bank = InvType.getId('bank');
+        const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
+        const have = held.reduce((n, inv) => n + player.invTotal(inv, obj), 0);
+
+        if (!give) {
+            for (const inv of held) {
+                const n = player.invTotal(inv, obj);
+                if (n > 0) {
+                    player.invDel(inv, obj, n);
+                }
+            }
+            if (have > 0) {
+                player.buildAppearance(player.appearanceInv);
+                player.messageGame('Your Veteran cape has been taken back.');
+            }
+            return;
+        }
+
+        if (have > 0) {
+            return;
+        }
+
+        if (bank !== -1 && player.invFreeSpace(bank) > 0) {
+            player.invAdd(bank, obj, 1);
+            player.messageGame('Your Veteran cape is in your bank.');
+        } else if (player.invFreeSpace(InvType.INV) > 0) {
+            player.invAdd(InvType.INV, obj, 1);
+            player.messageGame('Your Veteran cape has been added to your inventory.');
+        } else {
+            // Nowhere safe to put it. Say so rather than dropping it, and try again next login.
+            player.messageGame('Your Veteran cape could not be given to you - your bank and inventory are both full.');
+        }
+    }
+
+    /** Returns the safe name the request was filed under, or null if one is already in flight. */
+    requestVeteran(staff: string, username: string, veteran: boolean): string | null {
+        // The account table stores the base37 round trip, which is also what ::veteran is likely to
+        // be typed as - "Bob Smith" and "bob_smith" are the same account and both have to find it.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.veteranRequests.has(safeName)) {
+            return null;
+        }
+
+        this.veteranRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_veteran',
+            staff,
+            username: safeName,
+            veteran
+        });
+        return safeName;
     }
 
     requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {
