@@ -4752,6 +4752,9 @@
        "target": "elena2",
        "id": 335,
        "label": "Elena",
+       "also": [
+        3209
+       ],
        "picks": [
         "I'll try to retrieve it for you."
        ]
@@ -5260,7 +5263,10 @@
        "why": "The touch paper does not change colour.",
        "target": "elena2",
        "id": 335,
-       "label": "Elena"
+       "label": "Elena",
+       "also": [
+        3209
+       ]
       }
      ],
      "items": [
@@ -5591,7 +5597,10 @@
        "why": "This is bigger than both of us.",
        "target": "elena2",
        "id": 335,
-       "label": "Elena"
+       "label": "Elena",
+       "also": [
+        3209
+       ]
       }
      ],
      "items": [],
@@ -16504,7 +16513,10 @@
        "why": "Hear the story.",
        "target": "fourdiamonds_elder",
        "id": 1922,
-       "label": "Eblis"
+       "label": "Eblis",
+       "also": [
+        1923
+       ]
       }
      ],
      "items": [],
@@ -16527,7 +16539,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 1513
+       "item": 1513,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16536,7 +16551,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 1775
+       "item": 1775,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16545,7 +16563,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 2353
+       "item": 2353,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16554,7 +16575,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 592
+       "item": 592,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16563,7 +16587,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 973
+       "item": 973,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16572,7 +16599,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 526
+       "item": 526,
+       "also": [
+        1923
+       ]
       },
       {
        "kind": "talk",
@@ -16581,7 +16611,10 @@
        "target": "fourdiamonds_elder",
        "id": 1922,
        "label": "Eblis",
-       "item": 565
+       "item": 565,
+       "also": [
+        1923
+       ]
       }
      ],
      "items": [
@@ -16655,7 +16688,10 @@
        "why": "He explains them.",
        "target": "fourdiamonds_elder2",
        "id": 1924,
-       "label": "Eblis"
+       "label": "Eblis",
+       "also": [
+        1925
+       ]
       }
      ],
      "items": [],
@@ -16967,7 +17003,11 @@
        "why": "Hear what happened.",
        "target": "fourdiamonds_troll_child",
        "id": 1932,
-       "label": "Troll child"
+       "label": "Troll child",
+       "also": [
+        1933,
+        1934
+       ]
       },
       {
        "kind": "talk",
@@ -16976,7 +17016,11 @@
        "target": "fourdiamonds_troll_child",
        "id": 1932,
        "label": "Troll child",
-       "item": 1891
+       "item": 1891,
+       "also": [
+        1933,
+        1934
+       ]
       },
       {
        "kind": "loc",
@@ -17022,6 +17066,10 @@
        "target": "fourdiamonds_troll_child",
        "id": 1932,
        "label": "Troll child",
+       "also": [
+        1933,
+        1934
+       ],
        "gives": [
         4671
        ]
@@ -17718,7 +17766,10 @@
        "why": "Tell him how long it has been.",
        "target": "azzanadra",
        "id": 1970,
-       "label": "Azzanadra"
+       "label": "Azzanadra",
+       "also": [
+        1971
+       ]
       }
      ],
      "items": [],
@@ -17735,7 +17786,10 @@
        "why": "Take the Ancient Magicks.",
        "target": "azzanadra",
        "id": 1970,
-       "label": "Azzanadra"
+       "label": "Azzanadra",
+       "also": [
+        1971
+       ]
       }
      ],
      "items": [],
@@ -21420,6 +21474,11 @@
        "target": "enakh_lazim_statue_east_multinpc",
        "id": 3143,
        "label": "Lazim",
+       "also": [
+        3144,
+        3145,
+        3146
+       ],
        "picks": [
         "What are you building?"
        ]
@@ -21562,7 +21621,12 @@
        "why": "He rasps the joins square.",
        "target": "enakh_lazim_statue_east_multinpc",
        "id": 3143,
-       "label": "Lazim"
+       "label": "Lazim",
+       "also": [
+        3144,
+        3145,
+        3146
+       ]
       }
      ],
      "items": [
@@ -22211,6 +22275,11 @@
        "target": "enakh_lazim_altar_multinpc",
        "id": 3146,
        "label": "Lazim",
+       "also": [
+        3143,
+        3144,
+        3145
+       ],
        "gives": [
         7002
        ]
@@ -24836,7 +24905,10 @@
        "why": "The bandits.",
        "target": "feud_arabian_guard_multi",
        "id": 1879,
-       "label": "Bandit"
+       "label": "Bandit",
+       "also": [
+        1882
+       ]
       },
       {
        "kind": "walk",
@@ -24953,7 +25025,10 @@
        "why": "One for the bandits.",
        "target": "feud_arabian_guard_multi",
        "id": 1879,
-       "label": "Bandit"
+       "label": "Bandit",
+       "also": [
+        1882
+       ]
       },
       {
        "kind": "walk",
@@ -25010,7 +25085,11 @@
        "target": "feud_villager_multi_2",
        "id": 1891,
        "label": "Villager",
-       "op": 3
+       "op": 3,
+       "also": [
+        1887,
+        1895
+       ]
       },
       {
        "kind": "walk",
@@ -25093,7 +25172,11 @@
        "target": "feud_villager_multi_2",
        "id": 1891,
        "label": "Villager",
-       "op": 3
+       "op": 3,
+       "also": [
+        1887,
+        1895
+       ]
       },
       {
        "kind": "walk",
@@ -25109,7 +25192,11 @@
        "target": "feud_villager_multi_1",
        "id": 1887,
        "label": "Villager",
-       "op": 3
+       "op": 3,
+       "also": [
+        1891,
+        1895
+       ]
       },
       {
        "kind": "walk",
@@ -25125,7 +25212,11 @@
        "target": "feud_villager_multi_3",
        "id": 1895,
        "label": "Villager",
-       "op": 3
+       "op": 3,
+       "also": [
+        1887,
+        1891
+       ]
       },
       {
        "kind": "walk",
@@ -25207,7 +25298,10 @@
        "target": "feud_villager_multi_3",
        "id": 1895,
        "label": "Villager",
-       "op": 4
+       "op": 4,
+       "also": [
+        1891
+       ]
       },
       {
        "kind": "talk",
@@ -25827,7 +25921,11 @@
        "why": "Tell him.",
        "target": "feud_villager_multi_1",
        "id": 1887,
-       "label": "Villager"
+       "label": "Villager",
+       "also": [
+        1891,
+        1895
+       ]
       },
       {
        "kind": "walk",
@@ -25878,7 +25976,11 @@
        "text": "Talk to Villager.",
        "target": "feud_villager_multi_1",
        "id": 1887,
-       "label": "Villager"
+       "label": "Villager",
+       "also": [
+        1891,
+        1895
+       ]
       },
       {
        "kind": "walk",
@@ -26947,7 +27049,10 @@
        "why": "Cast one.",
        "target": "0_41_53_sinisterfishspot",
        "id": 234,
-       "label": "Fishing spot"
+       "label": "Fishing spot",
+       "also": [
+        233
+       ]
       },
       {
        "kind": "talk",
@@ -26955,7 +27060,10 @@
        "why": "Cast two.",
        "target": "0_41_53_sinisterfishspot",
        "id": 234,
-       "label": "Fishing spot"
+       "label": "Fishing spot",
+       "also": [
+        233
+       ]
       },
       {
        "kind": "talk",
@@ -26963,7 +27071,10 @@
        "why": "Cast three, and the weigh-in.",
        "target": "0_41_53_sinisterfishspot",
        "id": 234,
-       "label": "Fishing spot"
+       "label": "Fishing spot",
+       "also": [
+        233
+       ]
       }
      ],
      "items": [],
@@ -38509,6 +38620,12 @@
        "target": "ics_little_multi_wanderer",
        "id": 2002,
        "label": "Wanderer",
+       "also": [
+        2003,
+        2004,
+        2005,
+        2006
+       ],
        "picks": [
         "Why do you have a problem with my cat?"
        ]
@@ -40388,6 +40505,9 @@
        "id": 613,
        "label": "Digsite workman",
        "op": 3,
+       "also": [
+        614
+       ],
        "gives": [
         671
        ]
@@ -41039,6 +41159,9 @@
        "id": 613,
        "label": "Digsite workman",
        "op": 3,
+       "also": [
+        614
+       ],
        "gives": [
         670
        ]
@@ -42134,6 +42257,9 @@
        "id": 401,
        "label": "Jungle Forester",
        "item": 715,
+       "also": [
+        402
+       ],
        "picks": [
         "go ahead make a copy"
        ],
@@ -54163,7 +54289,10 @@
        "why": "She hands over her assay sieve.",
        "target": "elena2",
        "id": 335,
-       "label": "Elena"
+       "label": "Elena",
+       "also": [
+        3209
+       ]
       }
      ],
      "items": [],
@@ -54863,7 +54992,10 @@
        "why": "She examines the flocks.",
        "target": "elena2",
        "id": 335,
-       "label": "Elena"
+       "label": "Elena",
+       "also": [
+        3209
+       ]
       }
      ],
      "items": [],
@@ -56150,7 +56282,10 @@
        "target": "burgh_ivan_strom_temple_ambush",
        "id": 3535,
        "label": "Ivan Strom",
-       "item": 2309
+       "item": 2309,
+       "also": [
+        3536
+       ]
       },
       {
        "kind": "talk",
@@ -56159,6 +56294,9 @@
        "target": "burgh_ivan_strom_temple_ambush",
        "id": 3535,
        "label": "Ivan Strom",
+       "also": [
+        3536
+       ],
        "picks": [
         "Then let's go."
        ]
@@ -56186,7 +56324,10 @@
        "why": "The ambush is behind you.",
        "target": "burgh_ivan_strom_temple_ambush",
        "id": 3535,
-       "label": "Ivan Strom"
+       "label": "Ivan Strom",
+       "also": [
+        3536
+       ]
       }
      ],
      "items": [],
@@ -57864,6 +58005,9 @@
        "target": "edmond_top",
        "id": 3213,
        "label": "Edmond",
+       "also": [
+        3214
+       ],
        "picks": [
         "What's happened to her?",
         "Can I help find her?"
@@ -58025,7 +58169,10 @@
        "why": "The soil is rock hard.",
        "target": "edmond_top",
        "id": 3213,
-       "label": "Edmond"
+       "label": "Edmond",
+       "also": [
+        3214
+       ]
       }
      ],
      "items": [
@@ -58219,7 +58366,10 @@
        "why": "The two of you pull.",
        "target": "edmond_bottom",
        "id": 3214,
-       "label": "Edmond"
+       "label": "Edmond",
+       "also": [
+        3213
+       ]
       }
      ],
      "items": [],
@@ -58722,7 +58872,10 @@
        "why": "Elena beat you home by minutes.",
        "target": "edmond_top",
        "id": 3213,
-       "label": "Edmond"
+       "label": "Edmond",
+       "also": [
+        3214
+       ]
       }
      ],
      "items": [],
@@ -64501,6 +64654,10 @@
        "id": 385,
        "label": "Kharid Scorpion",
        "item": 456,
+       "also": [
+        386,
+        387
+       ],
        "gives": [
         457
        ]
@@ -64628,6 +64785,10 @@
        "id": 386,
        "label": "Kharid Scorpion",
        "item": 457,
+       "also": [
+        385,
+        387
+       ],
        "gives": [
         458
        ]
@@ -64669,6 +64830,10 @@
        "id": 387,
        "label": "Kharid Scorpion",
        "item": 458,
+       "also": [
+        385,
+        386
+       ],
        "gives": [
         463
        ]

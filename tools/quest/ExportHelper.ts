@@ -38,6 +38,8 @@ import NpcType from '#/cache/config/NpcType.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 
 const SIM = path.join(import.meta.dirname, '..', 'sim');
@@ -70,6 +72,19 @@ type HelperStep = {
      * standing in the scene, which is exactly the one the step is sending you to find.
      */
     label?: string;
+    /**
+     * The OTHER npcs this step would take, as ids, for a step whose target comes in a crowd.
+     *
+     * Pollnivneach has three villagers to pickpocket, Rat Catchers six rats, Sheep Herder four
+     * sick sheep. The sim used whichever one it met, so the marker pointed at that one across town
+     * while an identical one stood next to the player.
+     *
+     * These are the ids the SERVER would run the same script on for this step's op, which is its
+     * own answer to "will this one do instead?" - not a guess from the names, which would be
+     * wrong in both directions: The Feud takes any of its three villagers for Pickpocket, two of
+     * them for Lure and one for Knock-Out.
+     */
+    also?: number[];
     /** Where it is, when the manifest says. */
     at?: number[];
     /**
@@ -854,6 +869,10 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (Array.isArray(s.at)) step.at = s.at as number[];
         else if (walk && Array.isArray(raw)) step.at = raw as number[];
         if (typeof s.op === 'number') step.op = s.op;
+        if (npc && id >= 0) {
+            const also = family(id, typeof s.op === 'number' ? s.op : undefined);
+            if (also) step.also = also;
+        }
         if (Array.isArray(s.picks)) step.picks = (s.picks as unknown[]).map(String);
         cur.steps.push(step);
     }
@@ -916,6 +935,71 @@ LocType.load('data/pack');
 NpcType.load('data/pack');
 VarPlayerType.load('data/pack');
 VarBitType.load('data/pack');
+
+// THE SCRIPTS TOO, for one question the cache cannot answer: which OTHER npcs a step would also
+// accept. See `family` below.
+ScriptProvider.load('data/pack');
+
+/**
+ * The npcs a step's op would run the SAME script on, which is the server's own answer to "will
+ * this one do instead?".
+ *
+ * The reported case: The Feud sends you to pickpocket a villager, the sim happened to use
+ * feud_villager_multi_2, and the marker pointed at that one across town while an identical
+ * villager stood next to the player. Pollnivneach has three of them, Rat Catchers has six rats,
+ * Sheep Herder four sick sheep.
+ *
+ * NOT A GUESS FROM THE NAMES, which would be wrong in both directions. The Feud binds opnpc3
+ * (Pickpocket) on all three villagers, opnpc4 (Lure) on only the second and third, and opnpc5
+ * (Knock-Out) on the third alone - so "any villager" is right for one step of that quest and
+ * wrong for the next two. Asking which script the op resolves to gets each of them right, and
+ * costs one walk of the npc table per op.
+ *
+ * ONLY A TYPE-SPECIFIC SCRIPT COUNTS. getByTrigger falls back to the category's script and then
+ * to a global one, and a global fallback is shared by every npc that has no handler of its own -
+ * grouping on that would make one family of half the cache. Passing -1 as the category leaves
+ * only the type key and the global, and the global is what every id without a handler answers,
+ * so an id whose answer IS the global has no script of its own and no family.
+ */
+const families = new Map<string, number[]>();
+{
+    for (let op = 1; op <= 5; op++) {
+        const trigger = ServerTriggerType.OPNPC1 + op - 1;
+        const groups = new Map<string, number[]>();
+        for (let id = 0; id < NpcType.count; id++) {
+            const script = ScriptProvider.getByTrigger(trigger, id, -1);
+            // THE SCRIPT HAS TO BE THIS NPC'S OWN. getByTrigger falls back to the category's
+            // script and then to a global one, and a fallback is shared by every npc with no
+            // handler of its own, so grouping on one would make a family of half the cache.
+            if (!script || script.info.lookupKey !== (trigger | (0x2 << 8) | (id << 10))) continue;
+            // AND THE SAME WORD HAS TO BE OVER BOTH. The compiled body alone groups the sixty-six
+            // npcs that share the generic pickpocket script - Man, Woman, Farmer, Guard, a whole
+            // town - and a step about a farmer is not a step about a guard. Two npcs with one name
+            // and one script are two the player cannot tell apart and the server does not either.
+            const name = npcName(id);
+            if (!name) continue;
+            const key = JSON.stringify([name, script.opcodes, script.intOperands, script.stringOperands]);
+            const seen = groups.get(key);
+            if (seen) seen.push(id);
+            else groups.set(key, [id]);
+        }
+        for (const ids of groups.values()) {
+            if (ids.length < 2) continue;
+            for (const id of ids) {
+                families.set(`${op}:${id}`, ids);
+            }
+        }
+    }
+}
+
+/** The other npcs this step would take, nearest-first being the client's business, or null. */
+function family(id: number, op: number | undefined): number[] | null {
+    if (id < 0) return null;
+    const also = families.get(`${op ?? 1}:${id}`);
+    if (!also) return null;
+    const rest = also.filter(other => other !== id);
+    return rest.length > 0 ? rest : null;
+}
 
 /** A debugname to its cache id, by what kind of step it came from. -1 when the cache has no such name. */
 function idOf(kind: string, name: string): number {

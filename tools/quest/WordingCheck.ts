@@ -24,7 +24,10 @@ import * as path from 'path';
 
 const file = process.argv[2] ?? path.join(import.meta.dirname, '..', '..', 'data', 'quests.json');
 const table = JSON.parse(fs.readFileSync(file, 'utf8')) as {
-    quests: { name: string; stages: { steps: { text: string; kind: string; why?: string }[] }[] }[];
+    quests: {
+        name: string;
+        stages: { steps: { text: string; kind: string; why?: string; id?: number; also?: number[] }[] }[];
+    }[];
 };
 
 interface Row {
@@ -32,13 +35,23 @@ interface Row {
     text: string;
     kind: string;
     why?: string;
+    /** The step's own npc id, and the others it would take: a crowd the player cannot tell apart. */
+    id?: number;
+    also?: number[];
 }
 
 const rows: Row[] = [];
 for (const quest of table.quests) {
     for (const stage of quest.stages) {
         for (const step of stage.steps) {
-            rows.push({ quest: quest.name, text: step.text, kind: step.kind, why: step.why });
+            rows.push({
+                quest: quest.name,
+                text: step.text,
+                kind: step.kind,
+                why: step.why,
+                id: step.id,
+                also: step.also
+            });
         }
     }
 }
@@ -61,6 +74,14 @@ const RULES: { name: string; wrong: (row: Row) => boolean }[] = [
     { name: 'an explanation that opens on a conjunction', wrong: r => /^(?:And|Then|But|So|Also)\b/.test(r.why ?? '') },
     // A walk that names nowhere tells a player nothing; it takes the name of what it leads to.
     { name: 'a walk with nothing in it', wrong: r => r.kind === 'walk' && r.text === 'Travel here.' },
+    // A FAMILY IS OTHER npcs, and the client walks it after failing on the step's own id, so its
+    // own id in there is dead weight and a repeat is a wasted comparison every frame. A family on
+    // a step with no id of its own is a family of strangers: nothing would ever match the step
+    // itself, so the marker could only ever point at somebody else.
+    { name: "a family holding the step's own id", wrong: r => (r.also ?? []).includes(r.id ?? -1) },
+    { name: 'a family with the same id twice', wrong: r => new Set(r.also ?? []).size !== (r.also ?? []).length },
+    { name: 'a family on a step with no id', wrong: r => (r.also ?? []).length > 0 && (r.id ?? -1) < 0 },
+    { name: 'an empty family, which is no family', wrong: r => Array.isArray(r.also) && r.also.length === 0 },
     {
         name: 'no verb in front of the target',
         wrong: r => r.kind !== 'walk' && r.kind !== 'note' && !/^[A-Z][a-zA-Z-]* /.test(r.text)
