@@ -24,19 +24,22 @@ import * as path from 'path';
 
 const file = process.argv[2] ?? path.join(import.meta.dirname, '..', '..', 'data', 'quests.json');
 const table = JSON.parse(fs.readFileSync(file, 'utf8')) as {
-    quests: { name: string; stages: { headings: string[]; steps: { text: string; kind: string }[] }[] }[];
+    quests: { name: string; stages: { steps: { text: string; kind: string; why?: string }[] }[] }[];
 };
 
 interface Row {
     quest: string;
     text: string;
     kind: string;
+    why?: string;
 }
 
 const rows: Row[] = [];
 for (const quest of table.quests) {
     for (const stage of quest.stages) {
-        for (const step of stage.steps) rows.push({ quest: quest.name, text: step.text, kind: step.kind });
+        for (const step of stage.steps) {
+            rows.push({ quest: quest.name, text: step.text, kind: step.kind, why: step.why });
+        }
     }
 }
 
@@ -53,6 +56,11 @@ const RULES: { name: string; wrong: (row: Row) => boolean }[] = [
     { name: 'double spacing', wrong: r => /\s\s/.test(r.text) },
     // A step you can click has a verb in front of it; the ones that did not were a debugname on
     // its own. Walks and notes are prose and say what they say.
+    // A note under an instruction is a label - which helmet, which attempt - and the manifests
+    // write them as running commentary, so they arrive as the next sentence of a story.
+    { name: 'an explanation that opens on a conjunction', wrong: r => /^(?:And|Then|But|So|Also)\b/.test(r.why ?? '') },
+    // A walk that names nowhere tells a player nothing; it takes the name of what it leads to.
+    { name: 'a walk with nothing in it', wrong: r => r.kind === 'walk' && r.text === 'Travel here.' },
     {
         name: 'no verb in front of the target',
         wrong: r => r.kind !== 'walk' && r.kind !== 'note' && !/^[A-Z][a-zA-Z-]* /.test(r.text)

@@ -388,7 +388,10 @@ function explanation(act: string, why: string): string | undefined {
     // thing on the row worth reading. Three words or fewer is the restatement - "wear it",
     // "search it" - and anything longer has something of its own to say.
     if (verb(act) && verb(act) === verb(why) && why.trim().split(/\s+/).length <= 3) return undefined;
-    return sentence(why);
+    // NOT THE NEXT SENTENCE OF A STORY. The manifests are written as running commentary, so 293
+    // of these open on a conjunction - "and the helmet", "and he feels it" - which under an
+    // instruction reads as narration rather than as what it is: which helmet, which attempt.
+    return sentence(why.replace(/^(?:(?:and|then|but|so|also)\s+)+/i, ''));
 }
 
 /** How many paragraphs of sim commentary were left out, for the report. */
@@ -494,6 +497,41 @@ function states(text: string): boolean {
 }
 
 /**
+ * What a player calls an npc, following a MULTINPC to find out.
+ *
+ * An npc that changes with a varbit - the villager who is three different men, the Menaphite
+ * leader who is invisible until he is not - carries no name of its own: the names are on the
+ * children it switches between. The row read "Talk to Feud Villager Multi 2", which is the
+ * server's handle for a thing the game calls a Villager. Any named child will do: they are the
+ * same person in different clothes, and where they are not (a guard who becomes a corpse) the
+ * first one is the one standing there when the quest sends you.
+ */
+function npcName(id: number): string | null {
+    const type = id >= 0 ? NpcType.get(id) : null;
+    if (!type) return null;
+    if (type.name) return type.name;
+    for (const child of type.multinpc ?? []) {
+        if (child < 0 || child === id) continue;
+        const name = NpcType.get(child)?.name;
+        if (name) return name;
+    }
+    return null;
+}
+
+/** An npc's right-click word, from the same chain: the ops are on the children too. */
+function npcOp(id: number, slot: number): string | null {
+    const type = id >= 0 ? NpcType.get(id) : null;
+    if (!type) return null;
+    if (type.op?.[slot]) return type.op[slot];
+    for (const child of type.multinpc ?? []) {
+        if (child < 0 || child === id) continue;
+        const word = NpcType.get(child)?.op?.[slot];
+        if (word) return word;
+    }
+    return null;
+}
+
+/**
  * A server handle in a walk's prose, swapped for the name a player reads.
  *
  * The generated legs hand the thing they are walking to straight through as the note - a
@@ -511,7 +549,7 @@ function named(text: string): string {
         for (const kind of ['talk', 'loc', 'obj']) {
             const id = idOf(kind, token);
             if (id < 0) continue;
-            const name = kind === 'talk' ? NpcType.get(id)?.name : kind === 'loc' ? LocType.get(id)?.name : ObjType.get(id)?.name;
+            const name = kind === 'talk' ? npcName(id) : kind === 'loc' ? LocType.get(id)?.name : ObjType.get(id)?.name;
             if (name) return name;
         }
         return token.replace(/_/g, ' ');
@@ -576,7 +614,14 @@ function sentence(text: string): string {
  */
 function imperative(kind: string, name: string, op: number | undefined, id: number, item?: string | null): string | null {
     if (!name) return null;
-    if (kind === 'talk') return `Talk to ${name}`;
+    // THE RIGHT-CLICK WORD, when the sim names one. `{ talk: 'feud_villager_multi_2', op: 3 }`
+    // is a PICKPOCKET, and the row said "Talk to" - which is a different thing to do, in a leg
+    // whose heading is "pickpocket a villager, badly". Locs have read their ops since the start;
+    // npcs carry the same five and were not being asked.
+    if (kind === 'talk') {
+        const word = op && op > 1 && id >= 0 ? npcOp(id, op - 1) : null;
+        return word ? `${word} ${name}` : `Talk to ${name}`;
+    }
     if (kind === 'fight') return `Kill ${name}`;
     if (kind === 'take') return `Pick up ${name}`;
     if (kind === 'herd') return `Herd ${name}`;
@@ -773,7 +818,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (target) {
             id = npc ? idOf('talk', target) : loc ? idOf('loc', target) : idOf('obj', target);
             if (id >= 0) {
-                shown = (npc ? NpcType.get(id)?.name : loc ? LocType.get(id)?.name : ObjType.get(id)?.name) ?? null;
+                shown = (npc ? npcName(id) : loc ? LocType.get(id)?.name : ObjType.get(id)?.name) ?? null;
             } else {
                 unresolved.set(kind + ':' + target, (unresolved.get(kind + ':' + target) ?? 0) + 1);
             }
@@ -816,6 +861,20 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
     // otherwise lose it, and with it the heading of the final leg.
     flushNotes();
     push();
+    // A WALK WITH NOTHING TO SAY TAKES THE NAME OF WHAT IT LEADS TO. 22 setposes carry no prose
+    // at all and came out as "Travel here.", which is a row that tells a player nothing; the
+    // step underneath nearly always names the thing they are being sent to.
+    for (const stage of stages) {
+        for (let i = 0; i < stage.steps.length; i++) {
+            if (stage.steps[i].text !== 'Travel here.') continue;
+            for (let j = i + 1; j < stage.steps.length; j++) {
+                const next = stage.steps[j];
+                if (next.kind === 'walk' || next.kind === 'note') continue;
+                if (next.label) stage.steps[i].text = sentence(`Go to ${next.label}`);
+                break;
+            }
+        }
+    }
     // THE WHOLE RUN DECIDES, so this is settled here and not as each item is pushed: a knife
     // given at the top of the sim is a knife to bring in every leg that asks for it, and a leg
     // that only ever says `has` is asking for something the quest itself hands over.
