@@ -81,6 +81,26 @@ type HelperStep = {
      * already the item, so this is only set where the target is something else.
      */
     item?: number;
+    /**
+     * What this step HANDED OVER, as obj ids: the step's receipt.
+     *
+     * A manifest asserts what the player is holding right after the click that gave it to them -
+     * `{ talk: 'feud_ali_m', why: 'the headpiece' }, { has: 'feud_karidian_turban' }` - and 549
+     * of the 901 assertions sit directly behind a step like that. That is the only record in the
+     * game that a talk happened: the quest's own varp moves once a leg and says nothing about the
+     * five steps inside it, so holding what a step handed over is how the client can tell that
+     * step is behind you.
+     */
+    gives?: number[];
+    /**
+     * What this step put ON, as obj ids: a receipt that is only true while it is worn.
+     *
+     * Separate from `gives` because the difference is the whole step. "Wear Ghostspeak amulet"
+     * is followed by `{ worn: ... }`, and an amulet in the BAG is that step still waiting to be
+     * taken - counting it as carried-or-worn declared the step done the moment you picked the
+     * amulet up.
+     */
+    wears?: number[];
     /** Which right-click option, when it is not the first. */
     op?: number;
     /** Dialogue options to choose, in order. */
@@ -659,6 +679,12 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // ghostspeak.") directly under the real one.
         if (kind === 'worn' && typeof s.why !== 'string') {
             const wid = idOf('obj', String(s.worn));
+            // A `worn` assertion is a receipt too: the equip above it worked. On the BODY,
+            // though - the same item in the bag is that step still waiting to be taken.
+            if (cur.steps.length && wid >= 0) {
+                const last = cur.steps[cur.steps.length - 1];
+                if (last.kind !== 'note') (last.wears ??= []).push(wid);
+            }
             cur.worn.push({
                 name: (wid >= 0 ? ObjType.get(wid)?.name : null) || String(s.worn),
                 id: wid,
@@ -675,6 +701,14 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // somebody to give a hammer to a hammer.
         if (kind === 'give' || kind === 'has') {
             const item = String(kind === 'give' ? s.give : s.has);
+            // THE RECEIPT FOR THE STEP ABOVE. `has` is the sim checking the click worked, which
+            // means the thing is in the bag because of that step - and `give` is not: that is the
+            // sim handing itself something out of the bank, which proves nothing about the quest.
+            if (kind === 'has' && cur.steps.length) {
+                const last = cur.steps[cur.steps.length - 1];
+                const got = idOf('obj', item);
+                if (got >= 0 && last.kind !== 'note') (last.gives ??= []).push(got);
+            }
             const n = typeof s.n === 'number' ? s.n : 1;
             const id = idOf('obj', item);
             if (id < 0) unresolved.set('item:' + item, (unresolved.get('item:' + item) ?? 0) + 1);

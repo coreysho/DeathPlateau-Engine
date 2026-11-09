@@ -132,7 +132,10 @@
        "target": "silverlight",
        "id": 2402,
        "label": "Silverlight",
-       "item": 4622
+       "item": 4622,
+       "gives": [
+        6745
+       ]
       }
      ],
      "items": [
@@ -225,6 +228,10 @@
        "at": [
         3467,
         3123
+       ],
+       "gives": [
+        6748,
+        6749
        ]
       }
      ],
@@ -764,6 +771,9 @@
        "at": [
         3619,
         3544
+       ],
+       "gives": [
+        4253
        ]
       },
       {
@@ -773,7 +783,10 @@
        "target": "ahoy_toy_boat",
        "id": 4253,
        "label": "Model ship",
-       "item": 1733
+       "item": 1733,
+       "gives": [
+        4254
+       ]
       },
       {
        "kind": "walk",
@@ -880,7 +893,10 @@
        "why": "Hand over the ship.",
        "target": "ahoy_oldman",
        "id": 1696,
-       "label": "Old man"
+       "label": "Old man",
+       "gives": [
+        4273
+       ]
       },
       {
        "kind": "walk",
@@ -919,6 +935,9 @@
        "at": [
         3618,
         3541
+       ],
+       "gives": [
+        4274
        ]
       },
       {
@@ -980,6 +999,9 @@
        "at": [
         3621,
         3543
+       ],
+       "gives": [
+        4275
        ]
       },
       {
@@ -1000,6 +1022,9 @@
        "at": [
         3602,
         3543
+       ],
+       "gives": [
+        4276
        ]
       },
       {
@@ -1008,7 +1033,10 @@
        "target": "ahoy_map_scrap_2",
        "id": 4275,
        "label": "Map scrap",
-       "item": 4274
+       "item": 4274,
+       "gives": [
+        4277
+       ]
       }
      ],
      "items": [
@@ -1115,7 +1143,10 @@
        "text": "Dig Spade.",
        "target": "spade",
        "id": 952,
-       "label": "Spade"
+       "label": "Spade",
+       "gives": [
+        4248
+       ]
       }
      ],
      "items": [
@@ -1242,6 +1273,9 @@
         "1",
         "1",
         "1"
+       ],
+       "gives": [
+        4236
        ]
       },
       {
@@ -1276,7 +1310,10 @@
        "text": "Talk to Ahoy Akharanu Multi.",
        "why": "Trade the signed bow for the manual.",
        "target": "ahoy_akharanu_multi",
-       "id": 1687
+       "id": 1687,
+       "gives": [
+        4249
+       ]
       }
      ],
      "items": [
@@ -1358,7 +1395,10 @@
        "why": "Ask for work.",
        "target": "ahoy_ghost_innkeeper",
        "id": 1700,
-       "label": "Ghost Innkeeper"
+       "label": "Ghost Innkeeper",
+       "gives": [
+        4284
+       ]
       },
       {
        "kind": "obj",
@@ -1366,7 +1406,10 @@
        "target": "ahoy_bedsheet",
        "id": 4284,
        "label": "Bedsheet",
-       "item": 4286
+       "item": 4286,
+       "gives": [
+        4285
+       ]
       },
       {
        "kind": "obj",
@@ -1409,7 +1452,10 @@
        "why": "He hands over the petition.",
        "target": "ahoy_ghost_protestor",
        "id": 1685,
-       "label": "Gravingas"
+       "label": "Gravingas",
+       "gives": [
+        4283
+       ]
       },
       {
        "kind": "talk",
@@ -1642,6 +1688,9 @@
        "at": [
         3659,
         3513
+       ],
+       "gives": [
+        4247
        ]
       },
       {
@@ -1832,7 +1881,10 @@
        "target": "amulet_of_ghostspeak",
        "id": 552,
        "label": "Ghostspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        552
+       ]
       },
       {
        "text": "Go to Ava.",
@@ -2083,7 +2135,10 @@
        "why": "She makes the amulet.",
        "target": "ahoy_crone",
        "id": 1695,
-       "label": "Old crone"
+       "label": "Old crone",
+       "gives": [
+        10312
+       ]
       },
       {
        "text": "Go back to Malcolm.",
@@ -2122,6 +2177,9 @@
        "label": "Alice's husband",
        "picks": [
         "Can I buy an undead chicken?"
+       ],
+       "gives": [
+        10300
        ]
       },
       {
@@ -2402,7 +2460,10 @@
        "why": "Cut the undead wood.",
        "target": "animmag_undead_tree",
        "id": 4804,
-       "label": "Undead tree"
+       "label": "Undead tree",
+       "gives": [
+        10303
+       ]
       },
       {
        "text": "Go back to Ava.",
@@ -2453,7 +2514,10 @@
        "why": "Ask for a copy.",
        "target": "animmag_ava",
        "id": 4800,
-       "label": "Ava"
+       "label": "Ava",
+       "gives": [
+        10305
+       ]
       },
       {
        "kind": "obj",
@@ -2522,7 +2586,10 @@
        "target": "digsitebuttons",
        "id": 688,
        "label": "Buttons",
-       "op": 1
+       "op": 1,
+       "gives": [
+        10309
+       ]
       },
       {
        "kind": "obj",
@@ -2531,7 +2598,10 @@
        "target": "animmag_pattern",
        "id": 10307,
        "label": "A pattern",
-       "item": 10309
+       "item": 10309,
+       "gives": [
+        10308
+       ]
       },
       {
        "kind": "talk",
@@ -2703,7 +2773,11 @@
        "target": "khazard_helmet",
        "id": 74,
        "label": "Khazard helmet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        75,
+        74
+       ]
       },
       {
        "text": "Go into the prison, to the guard by the staircase.",
@@ -2781,6 +2855,9 @@
        "label": "Khazard barman",
        "picks": [
         "I'd like a Khali brew please."
+       ],
+       "gives": [
+        77
        ]
       },
       {
@@ -3055,7 +3132,10 @@
         3212,
         3493
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        757
+       ]
       },
       {
        "kind": "obj",
@@ -3214,7 +3294,10 @@
        "why": "Off the floor.",
        "target": "intelligence_report",
        "id": 761,
-       "label": "Scroll"
+       "label": "Scroll",
+       "gives": [
+        761
+       ]
       },
       {
        "text": "Go back down to the hideout.",
@@ -3303,6 +3386,9 @@
        "at": [
         3235,
         9761
+       ],
+       "gives": [
+        763
        ]
       },
       {
@@ -3320,7 +3406,10 @@
        "why": "He takes the half shield.",
        "target": "curator",
        "id": 646,
-       "label": "Curator"
+       "label": "Curator",
+       "gives": [
+        769
+       ]
       },
       {
        "text": "Go west to the palace.",
@@ -3623,7 +3712,10 @@
        "why": "The wax for the candle.",
        "target": "candle_maker",
        "id": 562,
-       "label": "Candle maker"
+       "label": "Candle maker",
+       "gives": [
+        38
+       ]
       },
       {
        "text": "Go east to the Chaos Temple.",
@@ -3671,7 +3763,10 @@
        "target": "unlit_black_candle",
        "id": 38,
        "label": "Black candle",
-       "item": 590
+       "item": 590,
+       "gives": [
+        32
+       ]
       },
       {
        "kind": "obj",
@@ -3757,6 +3852,9 @@
        ],
        "picks": [
         "Yes certainly"
+       ],
+       "gives": [
+        35
        ]
       },
       {
@@ -3854,7 +3952,10 @@
        "target": "leather_gloves",
        "id": 1059,
        "label": "Leather gloves",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1059
+       ]
       },
       {
        "kind": "talk",
@@ -3923,6 +4024,9 @@
        "at": [
         2900,
         3474
+       ],
+       "gives": [
+        2409
        ]
       },
       {
@@ -4271,7 +4375,10 @@
         2909,
         3470
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        2411
+       ]
       },
       {
        "kind": "walk",
@@ -4344,7 +4451,10 @@
        "why": "And now the ball.",
        "target": "ball",
        "id": 2407,
-       "label": "Ball"
+       "label": "Ball",
+       "gives": [
+        2407
+       ]
       },
       {
        "text": "Go out of the garden and back to Taverley.",
@@ -4551,6 +4661,9 @@
        "at": [
         2611,
         3326
+       ],
+       "gives": [
+        422
        ]
       },
       {
@@ -4579,7 +4692,10 @@
        "why": "One cage of pigeons.",
        "target": "pigeons",
        "id": 424,
-       "label": "Pigeon cage"
+       "label": "Pigeon cage",
+       "gives": [
+        424
+       ]
       },
       {
        "kind": "walk",
@@ -4785,6 +4901,9 @@
        "at": [
         2517,
         3276
+       ],
+       "gives": [
+        430
        ]
       },
       {
@@ -4793,7 +4912,10 @@
        "target": "doctor_gown",
        "id": 430,
        "label": "Doctors' gown",
-       "op": 2
+       "op": 2,
+       "wears": [
+        430
+       ]
       },
       {
        "kind": "loc",
@@ -4885,7 +5007,10 @@
        "why": "And attacks.",
        "target": "mournerstew2",
        "id": 370,
-       "label": "Mourner"
+       "label": "Mourner",
+       "gives": [
+        423
+       ]
       },
       {
        "kind": "loc",
@@ -5116,7 +5241,10 @@
        "why": "Hops kept his.",
        "target": "drunk2",
        "id": 341,
-       "label": "Hops"
+       "label": "Hops",
+       "gives": [
+        417
+       ]
       },
       {
        "kind": "talk",
@@ -5124,7 +5252,10 @@
        "why": "Chancy kept his.",
        "target": "gambler2",
        "id": 339,
-       "label": "Chancy"
+       "label": "Chancy",
+       "gives": [
+        416
+       ]
       },
       {
        "kind": "talk",
@@ -5132,7 +5263,10 @@
        "why": "Da Vinci kept his.",
        "target": "artist2",
        "id": 337,
-       "label": "Da Vinci"
+       "label": "Da Vinci",
+       "gives": [
+        415
+       ]
       },
       {
        "kind": "obj",
@@ -5150,7 +5284,11 @@
        "target": "priest_robe",
        "id": 428,
        "label": "Priest gown",
-       "op": 2
+       "op": 2,
+       "wears": [
+        426,
+        428
+       ]
       },
       {
        "kind": "walk",
@@ -5425,7 +5563,11 @@
        "target": "bronze_med_helm",
        "id": 1139,
        "label": "Bronze med helm",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1101,
+        1139
+       ]
       },
       {
        "kind": "loc",
@@ -5634,6 +5776,9 @@
        "at": [
         3031,
         3507
+       ],
+       "gives": [
+        1967
        ]
       },
       {
@@ -5868,6 +6013,9 @@
        "label": "Fycie",
        "picks": [
         "Ok, I'll give you 50 bright pretties."
+       ],
+       "gives": [
+        314
        ]
       },
       {
@@ -5888,6 +6036,10 @@
        "label": "Bugs",
        "picks": [
         "Ok, I'll give you 10 bright pretties."
+       ],
+       "gives": [
+        1755,
+        946
        ]
       },
       {
@@ -5948,6 +6100,9 @@
        "at": [
         2625,
         2959
+       ],
+       "gives": [
+        2862
        ]
       },
       {
@@ -5984,7 +6139,10 @@
        "target": "achey_tree_logs",
        "id": 2862,
        "label": "Achey tree logs",
-       "item": 946
+       "item": 946,
+       "gives": [
+        2864
+       ]
       },
       {
        "kind": "obj",
@@ -6002,7 +6160,10 @@
        "target": "ogre_arrow_shaft",
        "id": 2864,
        "label": "Ogre arrow shaft",
-       "item": 314
+       "item": 314,
+       "gives": [
+        2865
+       ]
       },
       {
        "text": "Go to the wolves.",
@@ -6063,7 +6224,10 @@
        "target": "wolf_bones",
        "id": 2859,
        "label": "Wolf bones",
-       "item": 1755
+       "item": 1755,
+       "gives": [
+        2861
+       ]
       },
       {
        "kind": "obj",
@@ -6081,7 +6245,10 @@
        "target": "ogre_headless_arrow",
        "id": 2865,
        "label": "Flighted ogre arrow",
-       "item": 2861
+       "item": 2861,
+       "gives": [
+        2866
+       ]
       },
       {
        "text": "Go back to Rantz.",
@@ -6257,6 +6424,9 @@
        "at": [
         2637,
         9398
+       ],
+       "gives": [
+        2871
        ]
       },
       {
@@ -6291,6 +6461,9 @@
        "at": [
         2595,
         2966
+       ],
+       "gives": [
+        2872
        ]
       },
       {
@@ -6318,7 +6491,11 @@
        "target": "toad",
        "id": 1013,
        "label": "Swamp toad",
-       "item": 2874
+       "item": 2874,
+       "gives": [
+        2875,
+        2871
+       ]
       },
       {
        "text": "Go back to Rantz.",
@@ -6449,7 +6626,10 @@
        "target": "ogre_bow",
        "id": 2883,
        "label": "Ogre bow",
-       "op": 2
+       "op": 2,
+       "wears": [
+        2883
+       ]
       },
       {
        "kind": "obj",
@@ -6458,7 +6638,10 @@
        "target": "ogre_arrow",
        "id": 2866,
        "label": "Ogre arrow",
-       "op": 2
+       "op": 2,
+       "wears": [
+        2866
+       ]
       },
       {
        "text": "Go back to the clearing.",
@@ -6748,7 +6931,10 @@
        "target": "ice_gloves",
        "id": 1580,
        "label": "Ice gloves",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1580
+       ]
       },
       {
        "kind": "talk",
@@ -6776,7 +6962,10 @@
        "why": "Off the floor.",
        "target": "blackcog",
        "id": 21,
-       "label": "Cog"
+       "label": "Cog",
+       "gives": [
+        21
+       ]
       },
       {
        "text": "Go west to the cellar spindle.",
@@ -7093,7 +7282,10 @@
        "why": "Off the floor of the coop.",
        "target": "egg",
        "id": 1944,
-       "label": "Egg"
+       "label": "Egg",
+       "gives": [
+        1944
+       ]
       },
       {
        "text": "Go to the cow pasture, north of Lumbridge.",
@@ -7115,6 +7307,9 @@
        "at": [
         3172,
         3317
+       ],
+       "gives": [
+        1927
        ]
       },
       {
@@ -7137,7 +7332,10 @@
         3159,
         3294
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1947
+       ]
       },
       {
        "text": "Go to the mill.",
@@ -7233,6 +7431,9 @@
        "at": [
         3166,
         3306
+       ],
+       "gives": [
+        1933
        ]
       },
       {
@@ -7909,6 +8110,9 @@
        "at": [
         2737,
         9689
+       ],
+       "gives": [
+        446
        ]
       },
       {
@@ -7929,6 +8133,9 @@
        "at": [
         2738,
         9693
+       ],
+       "gives": [
+        446
        ]
       },
       {
@@ -7964,6 +8171,9 @@
        "at": [
         3272,
         3185
+       ],
+       "gives": [
+        2365
        ]
       },
       {
@@ -7977,6 +8187,9 @@
        "at": [
         3272,
         3185
+       ],
+       "gives": [
+        773
        ]
       },
       {
@@ -7990,6 +8203,9 @@
        "at": [
         3272,
         3185
+       ],
+       "gives": [
+        774
        ]
       },
       {
@@ -8155,7 +8371,10 @@
        "why": "The last piece.",
        "target": "johnathon_crest",
        "id": 781,
-       "label": "Crest part"
+       "label": "Crest part",
+       "gives": [
+        781
+       ]
       },
       {
        "kind": "obj",
@@ -8164,7 +8383,10 @@
        "target": "caleb_crest",
        "id": 780,
        "label": "Crest part",
-       "item": 779
+       "item": 779,
+       "gives": [
+        782
+       ]
       },
       {
        "text": "Go back to Dimintheis in Varrock.",
@@ -8328,7 +8550,11 @@
         2157,
         5093
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        5341,
+        5343
+       ]
       },
       {
        "kind": "loc",
@@ -8427,6 +8653,9 @@
        "at": [
         2162,
         5069
+       ],
+       "gives": [
+        6711
        ]
       },
       {
@@ -8554,7 +8783,10 @@
        "why": "He hands over a bucket.",
        "target": "deal_captian_braindeath",
        "id": 2827,
-       "label": "Captain Braindeath"
+       "label": "Captain Braindeath",
+       "gives": [
+        1925
+       ]
       },
       {
        "kind": "walk",
@@ -8615,6 +8847,9 @@
        "at": [
         2133,
         5161
+       ],
+       "gives": [
+        6712
        ]
       },
       {
@@ -8742,7 +8977,10 @@
        "why": "He hands over the fishbowl and net.",
        "target": "deal_captian_braindeath",
        "id": 2827,
-       "label": "Captain Braindeath"
+       "label": "Captain Braindeath",
+       "gives": [
+        6673
+       ]
       },
       {
        "kind": "obj",
@@ -8751,7 +8989,10 @@
        "target": "fishbowl_net",
        "id": 6673,
        "label": "Fishbowl and net",
-       "op": 2
+       "op": 2,
+       "gives": [
+        303
+       ]
       },
       {
        "kind": "walk",
@@ -8819,7 +9060,10 @@
        "why": "Five.",
        "target": "deal_squid",
        "id": 2859,
-       "label": "Fishing spot"
+       "label": "Fishing spot",
+       "gives": [
+        6716
+       ]
       },
       {
        "kind": "walk",
@@ -9016,7 +9260,10 @@
        "why": "He hands over the wrench.",
        "target": "deal_captian_braindeath",
        "id": 2827,
-       "label": "Captain Braindeath"
+       "label": "Captain Braindeath",
+       "gives": [
+        6713
+       ]
       },
       {
        "kind": "walk",
@@ -9032,7 +9279,10 @@
        "why": "The blessing, with 47 prayer points about you.",
        "target": "deal_davey",
        "id": 2829,
-       "label": "Davey"
+       "label": "Davey",
+       "gives": [
+        6714
+       ]
       },
       {
        "kind": "walk",
@@ -9212,6 +9462,9 @@
        "at": [
         2142,
         5093
+       ],
+       "gives": [
+        6719
        ]
       }
      ],
@@ -9875,6 +10128,9 @@
        "label": "Tenzing",
        "picks": [
         "OK, I'll get those for you."
+       ],
+       "gives": [
+        3105
        ]
       },
       {
@@ -9909,7 +10165,10 @@
        "why": "He writes a certificate.",
        "target": "death_ig_commander",
        "id": 1060,
-       "label": "Denulth"
+       "label": "Denulth",
+       "gives": [
+        3114
+       ]
       },
       {
        "text": "Go back to Dunstan.",
@@ -9926,7 +10185,10 @@
        "why": "He keeps his end of the bargain.",
        "target": "death_smithy",
        "id": 1082,
-       "label": "Dunstan"
+       "label": "Dunstan",
+       "gives": [
+        3107
+       ]
       },
       {
        "text": "Go back to Tenzing.",
@@ -9943,7 +10205,10 @@
        "why": "Hand it all over.",
        "target": "death_sherpa",
        "id": 1071,
-       "label": "Tenzing"
+       "label": "Tenzing",
+       "gives": [
+        3104
+       ]
       },
       {
        "text": "Go to the stile behind the hut.",
@@ -10184,6 +10449,9 @@
        "picks": [
         "this is important",
         "demon who wants to invade"
+       ],
+       "gives": [
+        2400
        ]
       },
       {
@@ -10235,7 +10503,10 @@
        "why": "Off the sewer floor.",
        "target": "silverlight_key_3",
        "id": 2401,
-       "label": "Key"
+       "label": "Key",
+       "gives": [
+        2401
+       ]
       },
       {
        "text": "Go south-west to the tower and up a floor.",
@@ -10298,7 +10569,10 @@
        "why": "Twenty-five bones, one conversation each.",
        "target": "traiborn",
        "id": 881,
-       "label": "Traiborn"
+       "label": "Traiborn",
+       "gives": [
+        2399
+       ]
       },
       {
        "text": "Go back to the palace.",
@@ -10348,7 +10622,10 @@
        "target": "silverlight",
        "id": 2402,
        "label": "Silverlight",
-       "op": 2
+       "op": 2,
+       "wears": [
+        2402
+       ]
       },
       {
        "text": "Go south-west out of the city to the circle.",
@@ -10638,7 +10915,12 @@
        "target": "slave_boots",
        "id": 1846,
        "label": "Slave boots",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1844,
+        1845,
+        1846
+       ]
       },
       {
        "kind": "walk",
@@ -11329,6 +11611,9 @@
        "op": 2,
        "picks": [
         "1"
+       ],
+       "gives": [
+        1841
        ]
       },
       {
@@ -11893,7 +12178,10 @@
        "target": "shortbow",
        "id": 841,
        "label": "Shortbow",
-       "item": 6817
+       "item": 6817,
+       "gives": [
+        6818
+       ]
       },
       {
        "kind": "obj",
@@ -12196,7 +12484,10 @@
        "target": "rune_scimitar",
        "id": 1333,
        "label": "Rune scimitar",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1333
+       ]
       },
       {
        "kind": "loc",
@@ -12451,6 +12742,9 @@
        "label": "Duke Horacio",
        "picks": [
         "shield that will protect me"
+       ],
+       "gives": [
+        1540
        ]
       },
       {
@@ -12497,7 +12791,10 @@
        "why": "Off the floor.",
        "target": "redkey",
        "id": 1543,
-       "label": "Key"
+       "label": "Key",
+       "gives": [
+        1543
+       ]
       },
       {
        "kind": "loc",
@@ -12738,6 +13035,9 @@
        "at": [
         2935,
         9657
+       ],
+       "gives": [
+        1535
        ]
       },
       {
@@ -12802,6 +13102,9 @@
        "at": [
         3057,
         9841
+       ],
+       "gives": [
+        1537
        ]
       },
       {
@@ -12824,6 +13127,9 @@
         "piece of map that I need",
         "pay you for the map piece",
         "Alright then, 10,000"
+       ],
+       "gives": [
+        1536
        ]
       },
       {
@@ -12833,7 +13139,10 @@
        "target": "mappart2",
        "id": 1536,
        "label": "Map part",
-       "item": 1535
+       "item": 1535,
+       "gives": [
+        1538
+       ]
       },
       {
        "text": "Go north up the Port Sarim waterfront and out onto his dock.",
@@ -13130,7 +13439,10 @@
        "target": "antidragonbreathshield",
        "id": 1540,
        "label": "Anti-dragon shield",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1540
+       ]
       },
       {
        "kind": "loc",
@@ -13142,6 +13454,9 @@
        "at": [
         2847,
         9636
+       ],
+       "wears": [
+        1333
        ]
       },
       {
@@ -13773,6 +14088,9 @@
        "at": [
         2075,
         3922
+       ],
+       "gives": [
+        10433
        ]
       },
       {
@@ -14231,6 +14549,12 @@
        "at": [
         2893,
         9831
+       ],
+       "gives": [
+        522,
+        523,
+        524,
+        525
        ]
       },
       {
@@ -14344,7 +14668,10 @@
        "target": "amulet_of_ghostspeak",
        "id": 552,
        "label": "Ghostspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        552
+       ]
       },
       {
        "text": "Go to Drezel.",
@@ -14514,7 +14841,10 @@
        "why": "And the mirror.",
        "target": "mirror",
        "id": 2966,
-       "label": "Mirror"
+       "label": "Mirror",
+       "gives": [
+        2966
+       ]
       },
       {
        "kind": "talk",
@@ -14550,7 +14880,10 @@
         3439,
         3338
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        2967
+       ]
       },
       {
        "kind": "talk",
@@ -14989,7 +15322,10 @@
         3439,
         3348
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        2970
+       ]
       },
       {
        "kind": "obj",
@@ -15284,7 +15620,10 @@
        "why": "Off the floor.",
        "target": "childs_blanket",
        "id": 90,
-       "label": "Child's blanket"
+       "label": "Child's blanket",
+       "gives": [
+        90
+       ]
       },
       {
        "text": "Go out of the cave and back to the monastery.",
@@ -15892,7 +16231,10 @@
        "target": "malak",
        "id": 1916,
        "label": "Ruantun",
-       "item": 2355
+       "item": 2355,
+       "gives": [
+        4658
+       ]
       },
       {
        "text": "Go to the High Priest on Entrana.",
@@ -15910,7 +16252,10 @@
        "target": "high_priest_of_entrana",
        "id": 216,
        "label": "High Priest",
-       "item": 4658
+       "item": 4658,
+       "gives": [
+        4659
+       ]
       },
       {
        "text": "Go back to Malak.",
@@ -15927,7 +16272,10 @@
        "why": "He fills it with your blood.",
        "target": "fourdiamonds_vampire_lord",
        "id": 1920,
-       "label": "Malak"
+       "label": "Malak",
+       "gives": [
+        4661
+       ]
       },
       {
        "kind": "obj",
@@ -15936,7 +16284,10 @@
        "target": "garlic",
        "id": 1550,
        "label": "Garlic",
-       "item": 233
+       "item": 233,
+       "gives": [
+        4668
+       ]
       },
       {
        "kind": "obj",
@@ -15945,7 +16296,10 @@
        "target": "fd_silver_pot_blood_blessed",
        "id": 4661,
        "label": "Blessed pot",
-       "item": 4668
+       "item": 4668,
+       "gives": [
+        4663
+       ]
       },
       {
        "kind": "obj",
@@ -15954,7 +16308,10 @@
        "target": "fd_silver_pot_blood_garlic_blessed",
        "id": 4663,
        "label": "Blessed pot",
-       "item": 2007
+       "item": 2007,
+       "gives": [
+        4665
+       ]
       },
       {
        "text": "Go to Dessous's tomb, from the north.",
@@ -16012,7 +16369,10 @@
        "why": "Collect the diamond.",
        "target": "fourdiamonds_vampire_lord",
        "id": 1920,
-       "label": "Malak"
+       "label": "Malak",
+       "gives": [
+        4670
+       ]
       },
       {
        "text": "Go to the troll child.",
@@ -16083,7 +16443,10 @@
        "why": "Collect the diamond.",
        "target": "fourdiamonds_troll_child",
        "id": 1932,
-       "label": "Troll child"
+       "label": "Troll child",
+       "gives": [
+        4671
+       ]
       },
       {
        "kind": "obj",
@@ -16091,7 +16454,10 @@
        "target": "gasmask",
        "id": 1506,
        "label": "Gas mask",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1506
+       ]
       },
       {
        "text": "Go to the smokey well.",
@@ -16212,6 +16578,9 @@
        "at": [
         3248,
         9364
+       ],
+       "gives": [
+        4656
        ]
       },
       {
@@ -16295,6 +16664,9 @@
        "at": [
         3169,
         2967
+       ],
+       "gives": [
+        4674
        ]
       },
       {
@@ -16312,7 +16684,10 @@
        "why": "Collect the ring.",
        "target": "shadow_warrior_rasool",
        "id": 1972,
-       "label": "Rasolo"
+       "label": "Rasolo",
+       "gives": [
+        4657
+       ]
       },
       {
        "kind": "obj",
@@ -16320,7 +16695,10 @@
        "target": "fd_ring_visibility",
        "id": 4657,
        "label": "Ring of visibility",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4657
+       ]
       },
       {
        "text": "Go to the invisible ladder.",
@@ -16943,6 +17321,9 @@
        "at": [
         3017,
         9845
+       ],
+       "gives": [
+        4574
        ]
       },
       {
@@ -16979,6 +17360,11 @@
        "at": [
         3017,
         9845
+       ],
+       "gives": [
+        4575,
+        4576,
+        4577
        ]
       }
      ],
@@ -17024,7 +17410,10 @@
        "text": "Assemble Base schematics.",
        "target": "dwarf_rock_base_schematic",
        "id": 4574,
-       "label": "Base schematics"
+       "label": "Base schematics",
+       "gives": [
+        4578
+       ]
       }
      ],
      "items": [
@@ -17129,7 +17518,10 @@
        "target": "dwarf_goldrock_helmet",
        "id": 4567,
        "label": "Gold helmet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4567
+       ]
       },
       {
        "text": "Go back to the cannon.",
@@ -17330,6 +17722,9 @@
        "at": [
         2912,
         3418
+       ],
+       "gives": [
+        3267
        ]
       },
       {
@@ -17347,7 +17742,10 @@
        "why": "The alco-chunks.",
        "target": "eadgar_zoo_keeper_aviary",
        "id": 1216,
-       "label": "Parroty Pete"
+       "label": "Parroty Pete",
+       "gives": [
+        3270
+       ]
       },
       {
        "text": "Go round to the feeding hatch.",
@@ -17369,6 +17767,9 @@
        "at": [
         2611,
         3287
+       ],
+       "gives": [
+        3266
        ]
       },
       {
@@ -17378,7 +17779,10 @@
        "target": "eadgar_drunk_parrot",
        "id": 3266,
        "label": "Drunk parrot",
-       "item": 3267
+       "item": 3267,
+       "gives": [
+        3268
+       ]
       },
       {
        "text": "Go back up to Trollheim.",
@@ -17395,7 +17799,10 @@
        "why": "Pick the thistle.",
        "target": "eadgar_troll_thistle",
        "id": 1214,
-       "label": "Thistle"
+       "label": "Thistle",
+       "gives": [
+        3262
+       ]
       },
       {
        "text": "Go down to the troll kitchen.",
@@ -17739,6 +18146,9 @@
        "at": [
         2319,
         3506
+       ],
+       "gives": [
+        9606
        ]
       },
       {
@@ -18034,6 +18444,9 @@
        "at": [
         2005,
         4972
+       ],
+       "gives": [
+        9600
        ]
       },
       {
@@ -18066,6 +18479,10 @@
        "picks": [
         "feathers and materials",
         "Eagle me up"
+       ],
+       "gives": [
+        9604,
+        9605
        ]
       },
       {
@@ -18207,6 +18624,9 @@
        "at": [
         1973,
         4914
+       ],
+       "gives": [
+        9610
        ]
       },
       {
@@ -18342,7 +18762,10 @@
        "why": "It drops the silver feather.",
        "target": "eagle_silver_feather",
        "id": 9609,
-       "label": "Silver feather"
+       "label": "Silver feather",
+       "gives": [
+        9609
+       ]
       },
       {
        "kind": "walk",
@@ -18463,6 +18886,9 @@
        "at": [
         1958,
         4906
+       ],
+       "gives": [
+        9611
        ]
       },
       {
@@ -18710,6 +19136,9 @@
        "at": [
         1928,
         4907
+       ],
+       "gives": [
+        9608
        ]
       },
       {
@@ -18830,7 +19259,11 @@
        "target": "fake_beak",
        "id": 9605,
        "label": "Fake beak",
-       "op": 2
+       "op": 2,
+       "wears": [
+        9604,
+        9605
+       ]
       },
       {
        "kind": "talk",
@@ -19101,6 +19534,9 @@
        "at": [
         2716,
         3481
+       ],
+       "gives": [
+        2886
        ]
       },
       {
@@ -19126,7 +19562,10 @@
        "target": "elemental_workshop_shield_book",
        "id": 2886,
        "label": "Battered book",
-       "item": 946
+       "item": 946,
+       "gives": [
+        2887
+       ]
       },
       {
        "kind": "walk",
@@ -19249,6 +19688,9 @@
        "at": [
         2700,
         9887
+       ],
+       "gives": [
+        1733
        ]
       },
       {
@@ -19268,6 +19710,9 @@
        "at": [
         2724,
         9894
+       ],
+       "gives": [
+        1741
        ]
       },
       {
@@ -19279,6 +19724,9 @@
        "at": [
         2717,
         9894
+       ],
+       "gives": [
+        2888
        ]
       },
       {
@@ -19376,6 +19824,9 @@
        "at": [
         2706,
         9876
+       ],
+       "gives": [
+        2889
        ]
       },
       {
@@ -19410,6 +19861,9 @@
        "at": [
         2724,
         9874
+       ],
+       "gives": [
+        2893
        ]
       },
       {
@@ -19431,6 +19885,9 @@
        "at": [
         2717,
         9887
+       ],
+       "gives": [
+        2890
        ]
       }
      ],
@@ -19656,7 +20113,11 @@
         3420,
         2930
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        6788,
+        6789
+       ]
       },
       {
        "kind": "obj",
@@ -19723,7 +20184,10 @@
        "target": "elid_robebottoms",
        "id": 6787,
        "label": "Robe of elidinis",
-       "op": 2
+       "op": 2,
+       "wears": [
+        6786
+       ]
       },
       {
        "text": "Go west out of Nardah.",
@@ -19843,7 +20307,10 @@
        "why": "The ancestral key.",
        "target": "elid_shiratti",
        "id": 3044,
-       "label": "Shiratti the Custodian"
+       "label": "Shiratti the Custodian",
+       "gives": [
+        6792
+       ]
       },
       {
        "text": "Go back to the crevice.",
@@ -20021,7 +20488,10 @@
        "why": "His shoes.",
        "target": "elid_mayor",
        "id": 3040,
-       "label": "Awusah the Mayor"
+       "label": "Awusah the Mayor",
+       "gives": [
+        6790
+       ]
       },
       {
        "kind": "obj",
@@ -20030,7 +20500,10 @@
        "target": "elid_shoes",
        "id": 6790,
        "label": "Shoes",
-       "item": 946
+       "item": 946,
+       "gives": [
+        6791
+       ]
       },
       {
        "text": "Go back west.",
@@ -20283,6 +20756,9 @@
        "at": [
         3173,
         2918
+       ],
+       "gives": [
+        1265
        ]
       },
       {
@@ -20295,6 +20771,9 @@
        "at": [
         3173,
         2918
+       ],
+       "gives": [
+        6986
        ]
       },
       {
@@ -20307,6 +20786,9 @@
        "at": [
         3173,
         2918
+       ],
+       "gives": [
+        6985
        ]
       },
       {
@@ -20422,6 +20904,9 @@
        "at": [
         3173,
         2918
+       ],
+       "gives": [
+        6983
        ]
       },
       {
@@ -20434,6 +20919,9 @@
        "item": 7004,
        "picks": [
         "Zamorak."
+       ],
+       "gives": [
+        6990
        ]
       },
       {
@@ -20572,6 +21060,12 @@
        "at": [
         3129,
         9325
+       ],
+       "gives": [
+        6997,
+        6998,
+        6999,
+        7000
        ]
       },
       {
@@ -20592,6 +21086,9 @@
        "at": [
         3128,
         9319
+       ],
+       "gives": [
+        6994
        ]
       },
       {
@@ -20960,7 +21457,10 @@
        "text": "Talk to Enakh Lazim Altar Multinpc.",
        "why": "He hands over the head.",
        "target": "enakh_lazim_altar_multinpc",
-       "id": 3146
+       "id": 3146,
+       "gives": [
+        7002
+       ]
       },
       {
        "text": "Go back down to the pedestal.",
@@ -21299,7 +21799,10 @@
        "why": "Off the floor.",
        "target": "fish_food",
        "id": 272,
-       "label": "Fish food"
+       "label": "Fish food",
+       "gives": [
+        272
+       ]
       },
       {
        "text": "Go back down to the ground floor and across it to the north-west room.",
@@ -21325,7 +21828,10 @@
        "target": "fish_food",
        "id": 272,
        "label": "Fish food",
-       "item": 273
+       "item": 273,
+       "gives": [
+        274
+       ]
       },
       {
        "text": "Go across the ground floor to the south-east room.",
@@ -21342,7 +21848,10 @@
        "why": "Off the floor.",
        "target": "spade",
        "id": 952,
-       "label": "Spade"
+       "label": "Spade",
+       "gives": [
+        952
+       ]
       },
       {
        "text": "Go out of the south-east door and round the grounds.",
@@ -21376,6 +21885,9 @@
        "at": [
         3087,
         3334
+       ],
+       "gives": [
+        271
        ]
       },
       {
@@ -21398,6 +21910,9 @@
        "at": [
         3084,
         3360
+       ],
+       "gives": [
+        275
        ]
       },
       {
@@ -21436,7 +21951,10 @@
        "why": "Off the floor, with a skeleton for company.",
        "target": "rubber_tube",
        "id": 276,
-       "label": "Rubber tube"
+       "label": "Rubber tube",
+       "gives": [
+        276
+       ]
       },
       {
        "text": "Go west across the ground floor.",
@@ -21737,7 +22255,10 @@
        "why": "The oil can, at last.",
        "target": "oil_can",
        "id": 277,
-       "label": "Oil can"
+       "label": "Oil can",
+       "gives": [
+        277
+       ]
       },
       {
        "text": "Go back up the ladder and the two staircases.",
@@ -21969,7 +22490,10 @@
        "why": "And she hands over the symptoms list.",
        "target": "fairy_nuff",
        "id": 3303,
-       "label": "Fairy Nuff"
+       "label": "Fairy Nuff",
+       "gives": [
+        7411
+       ]
       },
       {
        "kind": "obj",
@@ -22028,6 +22552,9 @@
        "at": [
         2381,
         4455
+       ],
+       "gives": [
+        7410
        ]
       },
       {
@@ -22114,7 +22641,10 @@
        "target": "spade",
        "id": 952,
        "label": "Spade",
-       "op": 1
+       "op": 1,
+       "gives": [
+        7408
+       ]
       },
       {
        "text": "Go back to Nuff with the skull.",
@@ -22297,6 +22827,9 @@
        "at": [
         3542,
         3558
+       ],
+       "gives": [
+        4187
        ]
       },
       {
@@ -22317,6 +22850,9 @@
        "at": [
         3555,
         3558
+       ],
+       "gives": [
+        4188
        ]
       },
       {
@@ -22326,7 +22862,10 @@
        "target": "fenk_obsidian_amulet",
        "id": 4188,
        "label": "Obsidian amulet",
-       "item": 4187
+       "item": 4187,
+       "gives": [
+        4183
+       ]
       },
       {
        "text": "Go to the Hair of the Dog in Canifis.",
@@ -22347,6 +22886,9 @@
        "picks": [
         "Is that a brain in a jar?",
         "Here's fifty gold."
+       ],
+       "gives": [
+        4199
        ]
       },
       {
@@ -22379,7 +22921,10 @@
         3629,
         3483
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        4197
+       ]
       },
       {
        "kind": "obj",
@@ -22388,7 +22933,10 @@
        "target": "fenk_head_empty",
        "id": 4197,
        "label": "Decapitated head",
-       "item": 4199
+       "item": 4199,
+       "gives": [
+        4198
+       ]
       },
       {
        "text": "Go to the memorial below the railings.",
@@ -22468,7 +23016,12 @@
         3506,
         3576
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        4195,
+        4196,
+        4194
+       ]
       },
       {
        "kind": "loc",
@@ -22625,7 +23178,10 @@
        "target": "amulet_of_ghostspeak",
        "id": 552,
        "label": "Ghostspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        552
+       ]
       },
       {
        "text": "Go round the back to the gardener.",
@@ -22641,7 +23197,10 @@
        "text": "Talk to Fenk Gardener Multi 2.",
        "why": "The key and the chimney.",
        "target": "fenk_gardener_multi_2",
-       "id": 1667
+       "id": 1667,
+       "gives": [
+        4186
+       ]
       },
       {
        "kind": "walk",
@@ -22693,7 +23252,10 @@
         3546,
         3563
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        4190
+       ]
       },
       {
        "kind": "loc",
@@ -22749,6 +23311,9 @@
        "at": [
         3551,
         3564
+       ],
+       "gives": [
+        4189
        ]
       },
       {
@@ -22776,7 +23341,10 @@
        "target": "fenk_brush2",
        "id": 4192,
        "label": "Extended brush",
-       "item": 4189
+       "item": 4189,
+       "gives": [
+        4193
+       ]
       },
       {
        "text": "Go upstairs to the west room.",
@@ -22811,6 +23379,9 @@
        "at": [
         3544,
         3555
+       ],
+       "gives": [
+        4200
        ]
       },
       {
@@ -22820,7 +23391,10 @@
        "target": "fenk_lightning_mould",
        "id": 4200,
        "label": "Conductor mould",
-       "item": 2355
+       "item": 2355,
+       "gives": [
+        4201
+       ]
       },
       {
        "text": "Go up to the roof.",
@@ -22951,7 +23525,10 @@
        "text": "Talk to Fenk Fenkenstrain.",
        "why": "And hands over the tower key.",
        "target": "fenk_fenkenstrain",
-       "id": 1668
+       "id": 1668,
+       "gives": [
+        4185
+       ]
       },
       {
        "text": "Go upstairs to the tower door.",
@@ -23025,7 +23602,10 @@
        "why": "Pick his pocket.",
        "target": "fenk_fenkenstrain",
        "id": 1668,
-       "op": 3
+       "op": 3,
+       "gives": [
+        4202
+       ]
       }
      ],
      "items": [
@@ -23144,6 +23724,9 @@
        "label": "Ali Morrisane",
        "picks": [
         "1"
+       ],
+       "gives": [
+        4591
        ]
       },
       {
@@ -23155,6 +23738,9 @@
        "label": "Ali Morrisane",
        "picks": [
         "2"
+       ],
+       "gives": [
+        4593
        ]
       },
       {
@@ -23163,7 +23749,10 @@
        "target": "feud_karidian_fakebeard",
        "id": 4593,
        "label": "Fake beard",
-       "item": 4591
+       "item": 4591,
+       "gives": [
+        4611
+       ]
       },
       {
        "text": "Go to the magic carpet from Shantay Pass - world travel, not this quest.",
@@ -23191,6 +23780,9 @@
        "label": "Ali The barman",
        "picks": [
         "1"
+       ],
+       "gives": [
+        1917
        ]
       },
       {
@@ -23337,6 +23929,9 @@
        "label": "Ali the Camel Man",
        "picks": [
         "1"
+       ],
+       "gives": [
+        4603
        ]
       }
      ],
@@ -23569,6 +24164,9 @@
        "id": 1876,
        "picks": [
         "2"
+       ],
+       "gives": [
+        4599
        ]
       },
       {
@@ -23644,7 +24242,10 @@
        "target": "feud_desert_disguise",
        "id": 4611,
        "label": "Desert disguise",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4611
+       ]
       },
       {
        "kind": "obj",
@@ -23653,7 +24254,10 @@
        "target": "leather_gloves",
        "id": 1059,
        "label": "Leather gloves",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1059
+       ]
       },
       {
        "kind": "walk",
@@ -23728,6 +24332,9 @@
        ],
        "picks": [
         "3"
+       ],
+       "gives": [
+        4590
        ]
       }
      ],
@@ -23897,6 +24504,9 @@
        "label": "Ali the Kebab seller",
        "picks": [
         "1"
+       ],
+       "gives": [
+        4610
        ]
       },
       {
@@ -23937,6 +24547,9 @@
        "at": [
         3347,
         2966
+       ],
+       "gives": [
+        4602
        ]
       },
       {
@@ -23957,6 +24570,10 @@
        "at": [
         3355,
         2953
+       ],
+       "gives": [
+        4605,
+        4606
        ]
       },
       {
@@ -23973,7 +24590,10 @@
        "target": "feud_desert_snake",
        "id": 1874,
        "label": "Desert snake",
-       "item": 4605
+       "item": 4605,
+       "gives": [
+        4607
+       ]
       },
       {
        "kind": "walk",
@@ -24005,7 +24625,10 @@
        "why": "And the dung.",
        "target": "feud_hag",
        "id": 1871,
-       "label": "Ali the Hag"
+       "label": "Ali the Hag",
+       "gives": [
+        4604
+       ]
       }
      ],
      "items": [
@@ -24437,6 +25060,11 @@
        "at": [
         1814,
         4832
+       ],
+       "gives": [
+        7148,
+        1941,
+        2347
        ]
       },
       {
@@ -24468,6 +25096,12 @@
        "at": [
         1816,
         4833
+       ],
+       "gives": [
+        7120,
+        7109,
+        7119,
+        7156
        ]
       },
       {
@@ -25355,7 +25989,10 @@
        "target": "raw_sardine",
        "id": 327,
        "label": "Raw sardine",
-       "item": 1573
+       "item": 1573,
+       "gives": [
+        1552
+       ]
       },
       {
        "kind": "walk",
@@ -25526,7 +26163,10 @@
        "why": "Search it.",
        "target": "kittens_mew",
        "id": 767,
-       "label": "Crate"
+       "label": "Crate",
+       "gives": [
+        1554
+       ]
       },
       {
        "kind": "walk",
@@ -25759,7 +26399,10 @@
        "why": "The letter.",
        "target": "dwarf_city_gardener_dwarf",
        "id": 2170,
-       "label": "Rind the gardener"
+       "label": "Rind the gardener",
+       "gives": [
+        6121
+       ]
       },
       {
        "text": "Go up out of the city to Falador.",
@@ -26235,6 +26878,9 @@
         "PKMaster0036, obviously.",
         "Could I ask you something in return?",
         "No, but I will keep an eye out."
+       ],
+       "gives": [
+        6465
        ]
       },
       {
@@ -26260,7 +26906,10 @@
        "why": "The compost, and the seed.",
        "target": "elstan",
        "id": 2323,
-       "label": "Elstan"
+       "label": "Elstan",
+       "gives": [
+        6457
+       ]
       },
       {
        "text": "Go to kragen.",
@@ -26285,7 +26934,10 @@
        "why": "The compost, and the seed.",
        "target": "kragen",
        "id": 2325,
-       "label": "Kragen"
+       "label": "Kragen",
+       "gives": [
+        6454
+       ]
       },
       {
        "text": "Go to lyra.",
@@ -26310,7 +26962,10 @@
        "why": "The compost, and the seed.",
        "target": "lyra",
        "id": 2326,
-       "label": "Lyra"
+       "label": "Lyra",
+       "gives": [
+        6460
+       ]
       },
       {
        "text": "Go to dantaera.",
@@ -26335,7 +26990,10 @@
        "why": "The compost, and the seed.",
        "target": "dantaera",
        "id": 2324,
-       "label": "Dantaera"
+       "label": "Dantaera",
+       "gives": [
+        6458
+       ]
       },
       {
        "text": "Go to Brother Althric.",
@@ -26360,7 +27018,10 @@
        "why": "The compost, and the seed.",
        "target": "brother_althric",
        "id": 2588,
-       "label": "Brother Althric"
+       "label": "Brother Althric",
+       "gives": [
+        6461
+       ]
       },
       {
        "text": "Go to the Toad and Chicken.",
@@ -26405,7 +27066,10 @@
        "why": "The vine seeds.",
        "target": "bernald",
        "id": 2580,
-       "label": "Bernald"
+       "label": "Bernald",
+       "gives": [
+        6456
+       ]
       }
      ],
      "items": [
@@ -27070,7 +27734,10 @@
        "why": "He produces one.",
        "target": "king_roald",
        "id": 648,
-       "label": "King Roald"
+       "label": "King Roald",
+       "gives": [
+        6478
+       ]
       },
       {
        "text": "Go to Falador square.",
@@ -27575,7 +28242,10 @@
        "target": "goblin_armour",
        "id": 288,
        "label": "Goblin mail",
-       "item": 1769
+       "item": 1769,
+       "gives": [
+        286
+       ]
       },
       {
        "kind": "talk",
@@ -27612,7 +28282,10 @@
        "target": "goblin_armour",
        "id": 288,
        "label": "Goblin mail",
-       "item": 1767
+       "item": 1767,
+       "gives": [
+        287
+       ]
       },
       {
        "kind": "talk",
@@ -27875,6 +28548,9 @@
        "at": [
         2728,
         4888
+       ],
+       "gives": [
+        4620
        ]
       },
       {
@@ -27952,6 +28628,9 @@
        "at": [
         3366,
         3332
+       ],
+       "gives": [
+        4616
        ]
       },
       {
@@ -28010,7 +28689,10 @@
        "target": "curator",
        "id": 646,
        "label": "Curator",
-       "op": 3
+       "op": 3,
+       "gives": [
+        4617
+       ]
       },
       {
        "text": "Go upstairs to the cases.",
@@ -28031,6 +28713,9 @@
        "at": [
         3261,
         3450
+       ],
+       "gives": [
+        4618
        ]
       },
       {
@@ -28049,7 +28734,10 @@
        "target": "golem_phoenix",
        "id": 1911,
        "label": "Desert Phoenix",
-       "op": 3
+       "op": 3,
+       "gives": [
+        4621
+       ]
       },
       {
        "text": "Go back to Uzer.",
@@ -28296,7 +28984,10 @@
        "target": "golem_mushroom",
        "id": 4620,
        "label": "Black mushroom",
-       "item": 233
+       "item": 233,
+       "gives": [
+        4622
+       ]
       },
       {
        "kind": "obj",
@@ -28305,7 +28996,10 @@
        "target": "golem_phoenixfeather",
        "id": 4621,
        "label": "Phoenix feather",
-       "item": 4622
+       "item": 4622,
+       "gives": [
+        4623
+       ]
       },
       {
        "kind": "obj",
@@ -28314,7 +29008,10 @@
        "target": "golem_pen",
        "id": 4623,
        "label": "Phoenix quill pen",
-       "item": 970
+       "item": 970,
+       "gives": [
+        4624
+       ]
       },
       {
        "kind": "talk",
@@ -28541,6 +29238,9 @@
        "label": "Galahad",
        "picks": [
         "I seek an item from the realm of the Fisher King."
+       ],
+       "gives": [
+        15
        ]
       },
       {
@@ -28603,7 +29303,10 @@
        "text": "Blow Magic whistle.",
        "target": "magic_whistle",
        "id": 16,
-       "label": "Magic whistle"
+       "label": "Magic whistle",
+       "wears": [
+        35
+       ]
       },
       {
        "kind": "talk",
@@ -28719,7 +29422,10 @@
        "why": "The magic gold feather.",
        "target": "king_arthur",
        "id": 251,
-       "label": "King Arthur"
+       "label": "King Arthur",
+       "gives": [
+        18
+       ]
       },
       {
        "text": "Go north to Goblin Village.",
@@ -28801,7 +29507,10 @@
        "why": "The Holy Grail.",
        "target": "holy_grail",
        "id": 19,
-       "label": "Holy grail"
+       "label": "Holy grail",
+       "gives": [
+        19
+       ]
       },
       {
        "text": "Go back to Camelot.",
@@ -29339,7 +30048,10 @@
        "why": "Take the key.",
        "target": "grandtree_anita",
        "id": 672,
-       "label": "Anita"
+       "label": "Anita",
+       "gives": [
+        788
+       ]
       },
       {
        "text": "Go back to Glough's house.",
@@ -29623,6 +30335,9 @@
        "at": [
         2457,
         9881
+       ],
+       "gives": [
+        793
        ]
       },
       {
@@ -29836,6 +30551,9 @@
        "at": [
         2788,
         3174
+       ],
+       "gives": [
+        6948
        ]
       }
      ],
@@ -29868,7 +30586,10 @@
        "why": "Pick his pocket.",
        "target": "handsand_sandy",
        "id": 3110,
-       "op": 3
+       "op": 3,
+       "gives": [
+        6958
+       ]
       },
       {
        "text": "Go back to Bert.",
@@ -29885,7 +30606,10 @@
        "why": "He trades them for the scroll.",
        "target": "handsand_bert",
        "id": 3108,
-       "label": "Bert"
+       "label": "Bert",
+       "gives": [
+        6949
+       ]
       },
       {
        "text": "Go to the scroll to Rarve.",
@@ -29949,7 +30673,10 @@
        "why": "She takes an empty vial for it.",
        "target": "betty",
        "id": 583,
-       "label": "Betty"
+       "label": "Betty",
+       "gives": [
+        6953
+       ]
       },
       {
        "kind": "obj",
@@ -29976,7 +30703,10 @@
        "target": "bullseye_lantern_lens",
        "id": 4542,
        "label": "Lantern lens",
-       "item": 6955
+       "item": 6955,
+       "gives": [
+        6956
+       ]
       },
       {
        "kind": "talk",
@@ -30004,6 +30734,9 @@
        "at": [
         3013,
         3258
+       ],
+       "gives": [
+        6952
        ]
       }
      ],
@@ -30179,6 +30912,9 @@
        "at": [
         2542,
         3103
+       ],
+       "gives": [
+        1783
        ]
       },
       {
@@ -30251,7 +30987,10 @@
        "why": "Mazion has the rest of him.",
        "target": "handsand_naziom",
        "id": 3114,
-       "label": "Mazion"
+       "label": "Mazion",
+       "gives": [
+        6957
+       ]
       },
       {
        "text": "Go back to Rarve with it.",
@@ -30410,6 +31149,9 @@
        "at": [
         2782,
         4494
+       ],
+       "gives": [
+        4075
        ]
       },
       {
@@ -30580,6 +31322,9 @@
        "at": [
         2774,
         4537
+       ],
+       "gives": [
+        4075
        ]
       },
       {
@@ -30601,6 +31346,9 @@
        "at": [
         2800,
         4500
+       ],
+       "gives": [
+        1755
        ]
       },
       {
@@ -30757,7 +31505,10 @@
        "why": "Take the Crystal-mine key.",
        "target": "hauntedmine_boss_key",
        "id": 1543,
-       "label": "Innocent looking key"
+       "label": "Innocent looking key",
+       "gives": [
+        4077
+       ]
       },
       {
        "text": "Go back east across the chamber to the stairs.",
@@ -30840,6 +31591,9 @@
        "at": [
         2797,
         4437
+       ],
+       "gives": [
+        4082
        ]
       }
      ],
@@ -30870,7 +31624,10 @@
        "target": "crystalshard_necklace_unstrung",
        "id": 4082,
        "label": "Salve shard",
-       "item": 1759
+       "item": 1759,
+       "gives": [
+        4081
+       ]
       }
      ],
      "items": [
@@ -31084,7 +31841,10 @@
        "why": "You have proved your loyalty.",
        "target": "clivet_hazeel_cultist",
        "id": 893,
-       "label": "Clivet"
+       "label": "Clivet",
+       "gives": [
+        2406
+       ]
       },
       {
        "text": "Go to the westernmost valve.",
@@ -31322,6 +32082,9 @@
        "at": [
         2571,
         9669
+       ],
+       "gives": [
+        2404
        ]
       },
       {
@@ -31770,7 +32533,10 @@
        "why": "The family armour.",
        "target": "carnillean_armour",
        "id": 2405,
-       "label": "Carnillean armour"
+       "label": "Carnillean armour",
+       "gives": [
+        2405
+       ]
       },
       {
        "text": "Go to the Carnilleans' first floor.",
@@ -32001,7 +32767,10 @@
        "target": "ice_gloves",
        "id": 1580,
        "label": "Ice gloves",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1580
+       ]
       },
       {
        "text": "Go to the monks’ ship to Entrana.",
@@ -32026,7 +32795,10 @@
        "why": "Off the ground.",
        "target": "hot_feather",
        "id": 1583,
-       "label": "Fire feather"
+       "label": "Fire feather",
+       "gives": [
+        1583
+       ]
       },
       {
        "kind": "obj",
@@ -32035,7 +32807,10 @@
        "target": "fishing_rod",
        "id": 307,
        "label": "Fishing rod",
-       "item": 1582
+       "item": 1582,
+       "gives": [
+        1585
+       ]
       },
       {
        "text": "Go down into the Taverley dungeon, to the lava.",
@@ -32053,7 +32828,10 @@
        "target": "0_45_152_lavafish",
        "id": 800,
        "label": "Fishing spot",
-       "op": 1
+       "op": 1,
+       "gives": [
+        2148
+       ]
       },
       {
        "kind": "walk",
@@ -32083,6 +32861,9 @@
        "at": [
         2890,
         9768
+       ],
+       "gives": [
+        2149
        ]
       },
       {
@@ -32262,7 +33043,10 @@
        "target": "black_full_helm",
        "id": 1165,
        "label": "Black full helm",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1165
+       ]
       },
       {
        "text": "Go round to the mansion gate.",
@@ -32630,7 +33414,10 @@
        "why": "Ask for Larrissa's key.",
        "target": "gunnjorn",
        "id": 607,
-       "label": "Gunnjorn"
+       "label": "Gunnjorn",
+       "gives": [
+        3848
+       ]
       },
       {
        "text": "Go to the east end of the broken bridge.",
@@ -32724,6 +33511,11 @@
        ],
        "picks": [
         "Take all three books."
+       ],
+       "gives": [
+        3845,
+        3846,
+        3847
        ]
       },
       {
@@ -33032,7 +33824,10 @@
        "why": "Kill the Dagannoth Mother.",
        "target": "horror_dagganoth_air",
        "id": 1351,
-       "label": "Dagannoth mother"
+       "label": "Dagannoth mother",
+       "gives": [
+        3849
+       ]
       },
       {
        "kind": "loc",
@@ -33068,6 +33863,9 @@
        "picks": [
         "Saradomin.",
         "Saradomin."
+       ],
+       "gives": [
+        3839
        ]
       }
      ],
@@ -33446,7 +34244,10 @@
        "target": "asgarnian_ale",
        "id": 1905,
        "label": "Asgarnian ale",
-       "item": 995
+       "item": 995,
+       "gives": [
+        7508
+       ]
       },
       {
        "kind": "talk",
@@ -33461,7 +34262,10 @@
        "text": "Talk to Hundred Dwarf Drunk Multi.",
        "why": "Ask him again.",
        "target": "hundred_dwarf_drunk_multi",
-       "id": 3404
+       "id": 3404,
+       "gives": [
+        7509
+       ]
       },
       {
        "text": "Go to the fountain by Lumbridge castle.",
@@ -33483,6 +34287,9 @@
        "at": [
         3221,
         3226
+       ],
+       "gives": [
+        7510
        ]
       },
       {
@@ -33593,7 +34400,12 @@
        "why": "Ask Donie for milk.",
        "target": "lumbridge_guide2_woman",
        "id": 2238,
-       "label": "Donie"
+       "label": "Donie",
+       "gives": [
+        1933,
+        1944,
+        1927
+       ]
       },
       {
        "kind": "obj",
@@ -33602,7 +34414,10 @@
        "target": "cake_tin",
        "id": 1887,
        "label": "Cake tin",
-       "item": 1933
+       "item": 1933,
+       "gives": [
+        1889
+       ]
       },
       {
        "text": "Go to the range south of the castle.",
@@ -33624,6 +34439,9 @@
        "at": [
         3230,
         3196
+       ],
+       "gives": [
+        1891
        ]
       },
       {
@@ -33665,6 +34483,9 @@
        "at": [
         1865,
         5325
+       ],
+       "gives": [
+        1891
        ]
       },
       {
@@ -33705,6 +34526,9 @@
        "label": "Traiborn",
        "picks": [
         "2"
+       ],
+       "gives": [
+        11218
        ]
       },
       {
@@ -33795,7 +34619,10 @@
        "target": "fruit_blast",
        "id": 2084,
        "label": "Fruit blast",
-       "item": 592
+       "item": 592,
+       "gives": [
+        7497
+       ]
       },
       {
        "text": "Go back to Lumbridge castle, to the portal.",
@@ -33916,7 +34743,12 @@
        "target": "orange_slices",
        "id": 2112,
        "label": "Orange slices",
-       "item": 1763
+       "item": 1763,
+       "gives": [
+        7512,
+        7513,
+        7514
+       ]
       },
       {
        "kind": "walk",
@@ -33989,6 +34821,9 @@
        "at": [
         2980,
         9910
+       ],
+       "gives": [
+        7511
        ]
       },
       {
@@ -34090,6 +34925,10 @@
        "label": "Murphy",
        "picks": [
         "2"
+       ],
+       "gives": [
+        7534,
+        7535
        ]
       },
       {
@@ -34108,7 +34947,11 @@
        "target": "hundred_pirate_diving_backpack",
        "id": 7535,
        "label": "Diving apparatus",
-       "op": 2
+       "op": 2,
+       "wears": [
+        7534,
+        7535
+       ]
       },
       {
        "kind": "talk",
@@ -34139,6 +34982,9 @@
        "at": [
         2949,
         9480
+       ],
+       "gives": [
+        7516
        ]
       },
       {
@@ -34175,7 +35021,10 @@
        "why": "The meat.",
        "target": "hundred_pirate_giant_crab_meat",
        "id": 7518,
-       "label": "Crab meat"
+       "label": "Crab meat",
+       "gives": [
+        7518
+       ]
       },
       {
        "text": "Go to the anchor.",
@@ -34231,7 +35080,13 @@
        "target": "bread",
        "id": 2309,
        "label": "Bread",
-       "item": 233
+       "item": 233,
+       "gives": [
+        7517,
+        7527,
+        7528,
+        7515
+       ]
       },
       {
        "kind": "obj",
@@ -34240,7 +35095,10 @@
        "target": "hundred_pirate_breadcrumbs",
        "id": 7515,
        "label": "Breadcrumbs",
-       "item": 7517
+       "item": 7517,
+       "gives": [
+        7529
+       ]
       },
       {
        "text": "Go back to the Lumbridge range.",
@@ -34262,6 +35120,9 @@
        "at": [
         3230,
         3196
+       ],
+       "gives": [
+        7530
        ]
       },
       {
@@ -34565,7 +35426,10 @@
        "text": "Talk to 100 Rantz Multi Npc.",
        "why": "Have him launch it.",
        "target": "100_rantz_multi_npc",
-       "id": 3465
+       "id": 3465,
+       "gives": [
+        7564
+       ]
       },
       {
        "kind": "talk",
@@ -34609,7 +35473,10 @@
        "why": "The raw jubbly.",
        "target": "100_jubbly_meat_raw",
        "id": 7566,
-       "label": "Raw jubbly"
+       "label": "Raw jubbly",
+       "gives": [
+        7566
+       ]
       },
       {
        "kind": "talk",
@@ -34647,6 +35514,9 @@
        "at": [
         2650,
         2958
+       ],
+       "gives": [
+        7568
        ]
       },
       {
@@ -34770,7 +35640,10 @@
        "target": "mm_monkey_greegree_for_normal_gorilla",
        "id": 4026,
        "label": "Monkey greegree",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4026
+       ]
       },
       {
        "text": "Go to the banana tree.",
@@ -34801,6 +35674,9 @@
        "at": [
         2696,
         2785
+       ],
+       "gives": [
+        7572
        ]
       },
       {
@@ -34881,6 +35757,9 @@
        "at": [
         3020,
         5457
+       ],
+       "gives": [
+        7573
        ]
       },
       {
@@ -34957,7 +35836,10 @@
        "why": "Its corpse.",
        "target": "hundred_ilm_snake_corpse",
        "id": 7576,
-       "label": "Snake corpse"
+       "label": "Snake corpse",
+       "gives": [
+        7576
+       ]
       },
       {
        "kind": "walk",
@@ -35003,7 +35885,10 @@
        "target": "hundred_ilm_snake_corpse",
        "id": 7576,
        "label": "Snake corpse",
-       "item": 7574
+       "item": 7574,
+       "gives": [
+        7577
+       ]
       },
       {
        "text": "Go back to the Lumbridge range.",
@@ -35025,6 +35910,9 @@
        "at": [
         3230,
         3196
+       ],
+       "gives": [
+        7579
        ]
       },
       {
@@ -35807,7 +36695,10 @@
        "target": "white_apron",
        "id": 1005,
        "label": "White apron",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1005
+       ]
       },
       {
        "kind": "talk",
@@ -35845,6 +36736,9 @@
        ],
        "picks": [
         "No"
+       ],
+       "gives": [
+        431
        ]
       },
       {
@@ -35919,6 +36813,9 @@
        "at": [
         3218,
         3396
+       ],
+       "gives": [
+        433
        ]
       },
       {
@@ -36166,6 +37063,9 @@
        "at": [
         3289,
         2845
+       ],
+       "gives": [
+        4693
        ]
       },
       {
@@ -36188,6 +37088,9 @@
        "at": [
         3305,
         2756
+       ],
+       "gives": [
+        4689
        ]
       },
       {
@@ -36303,7 +37206,10 @@
        "why": "The holy symbol.",
        "target": "ics_little_carpenter",
        "id": 1981,
-       "label": "Carpenter"
+       "label": "Carpenter",
+       "gives": [
+        4682
+       ]
       },
       {
        "text": "Go north to the Sphinx.",
@@ -36725,7 +37631,10 @@
        "target": "ikov_pendantoflucien",
        "id": 86,
        "label": "Pendant of lucien",
-       "op": 2
+       "op": 2,
+       "wears": [
+        86
+       ]
       },
       {
        "kind": "walk",
@@ -37138,6 +38047,9 @@
        "at": [
         2710,
         9850
+       ],
+       "gives": [
+        78
        ]
       },
       {
@@ -37442,7 +38354,10 @@
        "why": "And now lift the staff.",
        "target": "ikov_staffofarmardyl",
        "id": 84,
-       "label": "Staff of armadyl"
+       "label": "Staff of armadyl",
+       "gives": [
+        84
+       ]
       },
       {
        "text": "Go to Lucien.",
@@ -37695,7 +38610,10 @@
        "why": "Get the letter stamped.",
        "target": "curator",
        "id": 646,
-       "label": "Curator"
+       "label": "Curator",
+       "gives": [
+        683
+       ]
       },
       {
        "text": "Go back from Varrock to the Exam Centre door.",
@@ -37852,7 +38770,10 @@
        "target": "digworkman1",
        "id": 613,
        "label": "Digsite workman",
-       "op": 3
+       "op": 3,
+       "gives": [
+        671
+       ]
       },
       {
        "kind": "walk",
@@ -37871,6 +38792,9 @@
        "at": [
         3357,
         3372
+       ],
+       "gives": [
+        673
        ]
       },
       {
@@ -37923,6 +38847,9 @@
        "at": [
         3378,
         3375
+       ],
+       "gives": [
+        679
        ]
       },
       {
@@ -37931,7 +38858,10 @@
        "target": "tray_mud",
        "id": 679,
        "label": "Panning tray",
-       "op": 2
+       "op": 2,
+       "gives": [
+        672
+       ]
       },
       {
        "kind": "loc",
@@ -37951,7 +38881,10 @@
        "target": "tray_mud",
        "id": 679,
        "label": "Panning tray",
-       "op": 2
+       "op": 2,
+       "gives": [
+        1625
+       ]
       },
       {
        "kind": "obj",
@@ -37960,7 +38893,10 @@
        "target": "uncut_opal",
        "id": 1625,
        "label": "Uncut opal",
-       "item": 1755
+       "item": 1755,
+       "gives": [
+        1609
+       ]
       },
       {
        "kind": "walk",
@@ -38428,6 +39364,9 @@
        "at": [
         3355,
         3337
+       ],
+       "gives": [
+        675
        ]
       },
       {
@@ -38459,6 +39398,9 @@
        "at": [
         3354,
         3332
+       ],
+       "gives": [
+        669
        ]
       },
       {
@@ -38476,7 +39418,10 @@
        "target": "digworkman1",
        "id": 613,
        "label": "Digsite workman",
-       "op": 3
+       "op": 3,
+       "gives": [
+        670
+       ]
       },
       {
        "kind": "walk",
@@ -38497,6 +39442,9 @@
        "at": [
         3351,
         3409
+       ],
+       "gives": [
+        681
        ]
       },
       {
@@ -38534,7 +39482,10 @@
        "target": "archaeological_expert",
        "id": 619,
        "label": "Archaeological expert",
-       "item": 681
+       "item": 681,
+       "gives": [
+        696
+       ]
       },
       {
        "kind": "walk",
@@ -38787,6 +39738,9 @@
         "1",
         "1",
         "1"
+       ],
+       "gives": [
+        709
        ]
       },
       {
@@ -38839,6 +39793,9 @@
        "at": [
         3374,
         3378
+       ],
+       "gives": [
+        700
        ]
       },
       {
@@ -38873,6 +39830,9 @@
        "at": [
         3365,
         3379
+       ],
+       "gives": [
+        702
        ]
       },
       {
@@ -38894,7 +39854,10 @@
         3367,
         3387
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        973
+       ]
       },
       {
        "kind": "walk",
@@ -38931,7 +39894,10 @@
        "target": "archaeological_expert",
        "id": 619,
        "label": "Archaeological expert",
-       "item": 702
+       "item": 702,
+       "gives": [
+        703
+       ]
       },
       {
        "kind": "talk",
@@ -38940,7 +39906,10 @@
        "target": "archaeological_expert",
        "id": 619,
        "label": "Archaeological expert",
-       "item": 700
+       "item": 700,
+       "gives": [
+        701
+       ]
       },
       {
        "kind": "obj",
@@ -38949,7 +39918,10 @@
        "target": "pestle_and_mortar",
        "id": 233,
        "label": "Pestle and mortar",
-       "item": 973
+       "item": 973,
+       "gives": [
+        704
+       ]
       },
       {
        "kind": "obj",
@@ -38958,7 +39930,10 @@
        "target": "nitroglycerin",
        "id": 703,
        "label": "Nitroglycerin",
-       "item": 701
+       "item": 701,
+       "gives": [
+        705
+       ]
       },
       {
        "kind": "obj",
@@ -38967,7 +39942,10 @@
        "target": "precharcoalmixture",
        "id": 705,
        "label": "Mixed chemicals",
-       "item": 704
+       "item": 704,
+       "gives": [
+        706
+       ]
       },
       {
        "kind": "obj",
@@ -38976,7 +39954,10 @@
        "target": "postcharcoalmixture",
        "id": 706,
        "label": "Mixed chemicals",
-       "item": 708
+       "item": 708,
+       "gives": [
+        707
+       ]
       },
       {
        "kind": "walk",
@@ -39349,7 +40330,10 @@
         2724,
         3370
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        975
+       ]
       },
       {
        "text": "Go to the north edge of the Kharazi Jungle - the crossing is travel.",
@@ -39432,7 +40416,10 @@
        "target": "thkaramjamap",
        "id": 714,
        "label": "Radimus notes",
-       "op": 2
+       "op": 2,
+       "gives": [
+        715
+       ]
       }
      ],
      "items": [
@@ -39503,6 +40490,9 @@
        "item": 715,
        "picks": [
         "go ahead make a copy"
+       ],
+       "gives": [
+        716
        ]
       }
      ],
@@ -39733,6 +40723,9 @@
        "picks": [
         "like you to bless my gold bowl",
         "Ok thanks for your help"
+       ],
+       "gives": [
+        722
        ]
       },
       {
@@ -39755,6 +40748,9 @@
        "at": [
         2836,
         2916
+       ],
+       "gives": [
+        727
        ]
       },
       {
@@ -39768,6 +40764,9 @@
        "at": [
         2837,
         2915
+       ],
+       "gives": [
+        726
        ]
       }
      ],
@@ -39897,6 +40896,9 @@
        "at": [
         2788,
         9331
+       ],
+       "gives": [
+        726
        ]
       },
       {
@@ -40257,7 +41259,10 @@
        "why": "The Book of Binding.",
        "target": "book_of_binding",
        "id": 730,
-       "label": "Book of binding"
+       "label": "Book of binding",
+       "gives": [
+        730
+       ]
       },
       {
        "text": "Go back to the west wall of the octagram.",
@@ -40459,6 +41464,9 @@
        "picks": [
         "collect some Yommi tree seeds",
         "Ok, thanks..."
+       ],
+       "gives": [
+        735
        ]
       },
       {
@@ -40468,7 +41476,10 @@
        "target": "goldbowlbless_pure",
        "id": 726,
        "label": "Golden bowl",
-       "item": 735
+       "item": 735,
+       "gives": [
+        736
+       ]
       }
      ],
      "items": [
@@ -40603,7 +41614,10 @@
        "target": "snakeweed_sol",
        "id": 737,
        "label": "Snakeweed mixture",
-       "item": 1528
+       "item": 1528,
+       "gives": [
+        739
+       ]
       },
       {
        "kind": "obj",
@@ -40913,7 +41927,12 @@
        "why": "Ranalph Devere.",
        "target": "ranalph_devere",
        "id": 938,
-       "label": "Ranalph Devere"
+       "label": "Ranalph Devere",
+       "gives": [
+        741,
+        742,
+        743
+       ]
       },
       {
        "kind": "walk",
@@ -40960,6 +41979,9 @@
        "at": [
         2426,
         4726
+       ],
+       "gives": [
+        744
        ]
       }
      ],
@@ -41023,6 +42045,9 @@
        "at": [
         2410,
         4715
+       ],
+       "gives": [
+        745
        ]
       },
       {
@@ -41111,6 +42136,9 @@
         "What can I do about that",
         "what I must to get the water",
         "Ok, I'll do it"
+       ],
+       "gives": [
+        746
        ]
       }
      ],
@@ -41292,7 +42320,10 @@
        "target": "viyeldi",
        "id": 935,
        "label": "Viyeldi",
-       "item": 746
+       "item": 746,
+       "gives": [
+        747
+       ]
       },
       {
        "kind": "walk",
@@ -41560,6 +42591,9 @@
        "at": [
         2386,
         4689
+       ],
+       "gives": [
+        726
        ]
       }
      ],
@@ -41666,6 +42700,9 @@
        "at": [
         2778,
         2916
+       ],
+       "gives": [
+        749
        ]
       }
      ],
@@ -41777,7 +42814,10 @@
        "why": "The tribe’s gift, if he has not handed it over already.",
        "target": "gujuo",
        "id": 928,
-       "label": "Gujuo"
+       "label": "Gujuo",
+       "gives": [
+        750
+       ]
       }
      ],
      "items": [
@@ -42073,7 +43113,10 @@
        "why": "The stone brooch.",
        "target": "lost_tribe_brooch",
        "id": 5008,
-       "label": "Brooch"
+       "label": "Brooch",
+       "gives": [
+        5008
+       ]
       },
       {
        "text": "Go back to the Duke.",
@@ -42149,6 +43192,9 @@
        "at": [
         3207,
         3496
+       ],
+       "gives": [
+        5009
        ]
       },
       {
@@ -42311,7 +43357,10 @@
        "why": "Pick his pocket.",
        "target": "lost_tribe_sigmund",
        "id": 2079,
-       "op": 3
+       "op": 3,
+       "gives": [
+        5010
+       ]
       },
       {
        "kind": "walk",
@@ -42371,6 +43420,9 @@
        "at": [
         3209,
         3217
+       ],
+       "gives": [
+        4298
        ]
       },
       {
@@ -42422,6 +43474,9 @@
        "at": [
         3152,
         9645
+       ],
+       "gives": [
+        5011
        ]
       },
       {
@@ -42661,7 +43716,10 @@
        "why": "Ask for the seal.",
        "target": "viking_brundt",
        "id": 1294,
-       "label": "Brundt the Chieftain"
+       "label": "Brundt the Chieftain",
+       "gives": [
+        10400
+       ]
       }
      ],
      "items": [
@@ -43060,7 +44118,10 @@
        "target": "bullseye_lantern_nolens",
        "id": 4544,
        "label": "Bullseye lantern",
-       "item": 10428
+       "item": 10428,
+       "gives": [
+        10429
+       ]
       },
       {
        "kind": "obj",
@@ -43069,7 +44130,10 @@
        "target": "lunar_emerald_lantern",
        "id": 10429,
        "label": "Emerald lantern",
-       "item": 590
+       "item": 590,
+       "gives": [
+        10430
+       ]
       },
       {
        "kind": "loc",
@@ -43331,6 +44395,9 @@
        "label": "Baba Yaga",
        "picks": [
         "Oneiromancer told me"
+       ],
+       "gives": [
+        10420
        ]
       },
       {
@@ -43353,6 +44420,9 @@
        "at": [
         2086,
         3895
+       ],
+       "gives": [
+        10421
        ]
       },
       {
@@ -43362,7 +44432,10 @@
        "target": "lunar_vial_water",
        "id": 10421,
        "label": "Vial of water",
-       "item": 249
+       "item": 249,
+       "gives": [
+        10422
+       ]
       },
       {
        "kind": "obj",
@@ -43371,7 +44444,10 @@
        "target": "lunar_guam_vial",
        "id": 10422,
        "label": "Guam vial",
-       "item": 251
+       "item": 251,
+       "gives": [
+        10424
+       ]
       },
       {
        "text": "Go to the Suqah on the east of the island.",
@@ -43413,7 +44489,10 @@
        "target": "suqah_tooth",
        "id": 10416,
        "label": "Suqah tooth",
-       "item": 233
+       "item": 233,
+       "gives": [
+        10417
+       ]
       },
       {
        "kind": "obj",
@@ -43422,7 +44501,10 @@
        "target": "lunar_guam_marr_vial",
        "id": 10424,
        "label": "Guam-marr vial",
-       "item": 10417
+       "item": 10417,
+       "gives": [
+        10425
+       ]
       },
       {
        "text": "Go back to the Oneiromancer.",
@@ -43511,6 +44593,9 @@
        "at": [
         2843,
         4833
+       ],
+       "gives": [
+        10402
        ]
       },
       {
@@ -43533,6 +44618,9 @@
        "at": [
         2584,
         4837
+       ],
+       "gives": [
+        10403
        ]
       },
       {
@@ -43555,6 +44643,9 @@
        "at": [
         2715,
         4835
+       ],
+       "gives": [
+        10404
        ]
       },
       {
@@ -43577,6 +44668,9 @@
        "at": [
         2657,
         4840
+       ],
+       "gives": [
+        10401
        ]
       },
       {
@@ -43675,6 +44769,9 @@
        "at": [
         2319,
         10339
+       ],
+       "gives": [
+        10414
        ]
       },
       {
@@ -43697,6 +44794,9 @@
        "at": [
         2616,
         3666
+       ],
+       "gives": [
+        10415
        ]
       },
       {
@@ -43719,6 +44819,9 @@
        "at": [
         2613,
         3078
+       ],
+       "gives": [
+        10405
        ]
       },
       {
@@ -43776,7 +44879,10 @@
        "why": "Its hide.",
        "target": "suqah_hide",
        "id": 10418,
-       "label": "Suqah hide"
+       "label": "Suqah hide",
+       "gives": [
+        10418
+       ]
       },
       {
        "text": "Go to Rimae Sirsalis.",
@@ -43797,6 +44903,9 @@
        "picks": [
         "ceremonial clothes",
         "fair deal"
+       ],
+       "gives": [
+        10419
        ]
       },
       {
@@ -43845,6 +44954,12 @@
        "item": 1733,
        "picks": [
         "Lunar boots"
+       ],
+       "gives": [
+        10406,
+        10407,
+        10408,
+        10409
        ]
       },
       {
@@ -43866,6 +44981,9 @@
        "picks": [
         "Pauline",
         "Jane Blud-Hagic-Maid"
+       ],
+       "gives": [
+        10410
        ]
       },
       {
@@ -43926,7 +45044,10 @@
        "target": "meteora",
        "id": 4863,
        "label": "Meteora",
-       "item": 10413
+       "item": 10413,
+       "gives": [
+        10411
+       ]
       },
       {
        "text": "Go to Selene.",
@@ -43960,7 +45081,10 @@
        "target": "spade",
        "id": 952,
        "label": "Spade",
-       "op": 1
+       "op": 1,
+       "gives": [
+        10412
+       ]
       },
       {
        "text": "Go back to the Oneiromancer.",
@@ -44041,7 +45165,12 @@
        "target": "oneiromancer",
        "id": 4860,
        "label": "Oneiromancer",
-       "item": 10412
+       "item": 10412,
+       "gives": [
+        10426,
+        10401,
+        10425
+       ]
       }
      ],
      "items": [
@@ -44154,7 +45283,10 @@
        "target": "lunar_kindling",
        "id": 10426,
        "label": "Kindling",
-       "item": 10425
+       "item": 10425,
+       "gives": [
+        10427
+       ]
       },
       {
        "kind": "obj",
@@ -44235,7 +45367,11 @@
        "target": "lunar_staff",
        "id": 10401,
        "label": "Lunar staff",
-       "op": 2
+       "op": 2,
+       "wears": [
+        10405,
+        10401
+       ]
       },
       {
        "text": "Go to the ceremonial brazier.",
@@ -44432,7 +45568,10 @@
        "target": "amulet_of_ghostspeak",
        "id": 552,
        "label": "Ghostspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        552
+       ]
       },
       {
        "kind": "talk",
@@ -44505,7 +45644,10 @@
        "why": "Borrow the key.",
        "target": "silver_merchant",
        "id": 569,
-       "label": "Silver merchant"
+       "label": "Silver merchant",
+       "gives": [
+        6754
+       ]
       },
       {
        "kind": "obj",
@@ -44536,7 +45678,10 @@
        "text": "Dig Spade.",
        "target": "spade",
        "id": 952,
-       "label": "Spade"
+       "label": "Spade",
+       "gives": [
+        6759
+       ]
       },
       {
        "kind": "obj",
@@ -44545,7 +45690,10 @@
        "target": "makinghistory_chest",
        "id": 6759,
        "label": "Chest",
-       "item": 6754
+       "item": 6754,
+       "gives": [
+        6755
+       ]
       },
       {
        "text": "Go to Rellekka.",
@@ -44698,7 +45846,10 @@
        "text": "Talk to Makinghistory Droalak Multi.",
        "why": "The scroll.",
        "target": "makinghistory_droalak_multi",
-       "id": 2936
+       "id": 2936,
+       "gives": [
+        6758
+       ]
       },
       {
        "text": "Go back up the north road.",
@@ -44826,7 +45977,10 @@
        "why": "He points the key at the graves.",
        "target": "makinghistory_jorral",
        "id": 2932,
-       "label": "Jorral"
+       "label": "Jorral",
+       "gives": [
+        6754
+       ]
       },
       {
        "text": "Go down into the woods below the outpost.",
@@ -44849,7 +46003,10 @@
        "text": "Dig Spade.",
        "target": "spade",
        "id": 952,
-       "label": "Spade"
+       "label": "Spade",
+       "gives": [
+        6760
+       ]
       }
      ],
      "items": [
@@ -45153,7 +46310,10 @@
        "why": "Gilob's remains, on the top floor.",
        "target": "mcannonremains",
        "id": 0,
-       "label": "Dwarf remains"
+       "label": "Dwarf remains",
+       "gives": [
+        0
+       ]
       },
       {
        "kind": "loc",
@@ -45578,7 +46738,11 @@
        "why": "The notes and the mould.",
        "target": "nulodion",
        "id": 209,
-       "label": "Nulodion"
+       "label": "Nulodion",
+       "gives": [
+        4,
+        3
+       ]
       }
      ],
      "items": [
@@ -45700,6 +46864,9 @@
        "at": [
         2766,
         3663
+       ],
+       "gives": [
+        954
        ]
       },
       {
@@ -45808,6 +46975,9 @@
        "label": "Jokul",
        "picks": [
         "Have you got a pole I could borrow?"
+       ],
+       "gives": [
+        4494
        ]
       },
       {
@@ -45828,6 +46998,9 @@
        "at": [
         2810,
         3661
+       ],
+       "gives": [
+        4490
        ]
       },
       {
@@ -46100,6 +47273,9 @@
        "at": [
         2799,
         3660
+       ],
+       "gives": [
+        4487
        ]
       },
       {
@@ -46117,7 +47293,10 @@
        "why": "He takes half.",
        "target": "viking_brundt",
        "id": 1294,
-       "label": "Brundt the Chieftain"
+       "label": "Brundt the Chieftain",
+       "gives": [
+        4484
+       ]
       },
       {
        "text": "Go back to Svidi.",
@@ -46160,7 +47339,10 @@
        "target": "leather_gloves",
        "id": 1059,
        "label": "Leather gloves",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1059
+       ]
       },
       {
        "text": "Go to the thorn bushes on White Wolf Mountain.",
@@ -46182,7 +47364,10 @@
         2849,
         3497
        ],
-       "op": 3
+       "op": 3,
+       "gives": [
+        4485
+       ]
       },
       {
        "kind": "obj",
@@ -46190,7 +47375,10 @@
        "target": "mdaughter_white_pearl_fruit",
        "id": 4485,
        "label": "White pearl",
-       "op": 3
+       "op": 3,
+       "gives": [
+        4486
+       ]
       },
       {
        "text": "Go back to Hamal.",
@@ -46698,7 +47886,10 @@
        "why": "Five.",
        "target": "mdaughter_rock",
        "id": 4492,
-       "label": "Rock"
+       "label": "Rock",
+       "gives": [
+        4492
+       ]
       },
       {
        "kind": "walk",
@@ -47299,7 +48490,10 @@
        "why": "The awful anthem.",
        "target": "misc_prince_brand",
        "id": 1371,
-       "label": "Prince Brand"
+       "label": "Prince Brand",
+       "gives": [
+        3894
+       ]
       },
       {
        "text": "Go to Etceteria.",
@@ -47336,6 +48530,9 @@
        "label": "Advisor Ghrim",
        "picks": [
         "What am I meant to be doing"
+       ],
+       "gives": [
+        3895
        ]
       },
       {
@@ -47461,6 +48658,9 @@
        "label": "Derrik",
        "picks": [
         "slightly strange request"
+       ],
+       "gives": [
+        3897
        ]
       },
       {
@@ -47470,7 +48670,10 @@
        "target": "logs",
        "id": 1511,
        "label": "Logs",
-       "item": 3897
+       "item": 3897,
+       "gives": [
+        3898
+       ]
       },
       {
        "text": "Go back up to Vargas.",
@@ -48097,7 +49300,10 @@
        "why": "Report what Caranock said.",
        "target": "grandtree_narnode",
        "id": 670,
-       "label": "King Narnode Shareen"
+       "label": "King Narnode Shareen",
+       "gives": [
+        4005
+       ]
       },
       {
        "kind": "walk",
@@ -48374,6 +49580,9 @@
        "at": [
         2767,
         2769
+       ],
+       "gives": [
+        4006
        ]
       },
       {
@@ -48414,6 +49623,9 @@
        "at": [
         2782,
         9172
+       ],
+       "gives": [
+        4020
        ]
       },
       {
@@ -48517,7 +49729,11 @@
        "why": "Hand over the gold bar, the mould and the dentures.",
        "target": "mm_zooknock",
        "id": 1425,
-       "label": "Zooknock"
+       "label": "Zooknock",
+       "gives": [
+        4007,
+        4020
+       ]
       },
       {
        "kind": "walk",
@@ -48629,6 +49845,9 @@
        "at": [
         2809,
         9191
+       ],
+       "gives": [
+        4022
        ]
       },
       {
@@ -48637,7 +49856,10 @@
        "target": "ball_of_wool",
        "id": 1759,
        "label": "Ball of wool",
-       "item": 4022
+       "item": 4022,
+       "gives": [
+        4021
+       ]
       }
      ],
      "items": [
@@ -48758,6 +49980,9 @@
        "at": [
         2741,
         2795
+       ],
+       "gives": [
+        1963
        ]
       },
       {
@@ -48797,7 +50022,10 @@
        "why": "Hand over five bananas.",
        "target": "mm_monkey_child",
        "id": 1452,
-       "label": "Monkey Child"
+       "label": "Monkey Child",
+       "gives": [
+        4023
+       ]
       }
      ],
      "items": [
@@ -48881,7 +50109,10 @@
        "why": "And the carving.",
        "target": "mm_zooknock",
        "id": 1425,
-       "label": "Zooknock"
+       "label": "Zooknock",
+       "gives": [
+        4031
+       ]
       }
      ],
      "items": [
@@ -49095,6 +50326,9 @@
        "label": "Monkey",
        "picks": [
         "1"
+       ],
+       "gives": [
+        4033
        ]
       }
      ],
@@ -49269,7 +50503,10 @@
        "text": "Talk to Garkor.",
        "target": "mm_garkor",
        "id": 1411,
-       "label": "Garkor"
+       "label": "Garkor",
+       "gives": [
+        4035
+       ]
       }
      ],
      "items": [
@@ -49513,6 +50750,11 @@
        "at": [
         1914,
         4639
+       ],
+       "gives": [
+        6639,
+        6641,
+        6638
        ]
       },
       {
@@ -50597,6 +51839,9 @@
        "at": [
         2912,
         3418
+       ],
+       "gives": [
+        6072
        ]
       },
       {
@@ -50606,7 +51851,10 @@
        "target": "mourning_bloody_mourner_top",
        "id": 6064,
        "label": "Bloody mourner top",
-       "item": 6072
+       "item": 6072,
+       "gives": [
+        6065
+       ]
       },
       {
        "text": "Go back to Lletya, and Oronwen.",
@@ -50623,7 +51871,10 @@
        "why": "She mends them.",
        "target": "mourning_seamstress",
        "id": 2353,
-       "label": "Oronwen"
+       "label": "Oronwen",
+       "gives": [
+        6067
+       ]
       }
      ],
      "items": [
@@ -50721,7 +51972,10 @@
        "target": "gasmask",
        "id": 1506,
        "label": "Gas mask",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1506
+       ]
       },
       {
        "text": "Go to the Mourner headquarters in West Ardougne.",
@@ -50895,6 +52149,9 @@
        "at": [
         2489,
         3373
+       ],
+       "gives": [
+        6093
        ]
       },
       {
@@ -50938,6 +52195,9 @@
        "at": [
         2484,
         3374
+       ],
+       "gives": [
+        6096
        ]
       },
       {
@@ -51176,6 +52436,11 @@
        "at": [
         2039,
         4633
+       ],
+       "gives": [
+        6081,
+        6083,
+        6104
        ]
       },
       {
@@ -51720,6 +52985,9 @@
        "op": 2,
        "picks": [
         "Yes, it might be useful."
+       ],
+       "gives": [
+        1811
        ]
       },
       {
@@ -51737,7 +53005,10 @@
        "why": "The flimsy dagger.",
        "target": "murderweapon",
        "id": 1813,
-       "label": "Criminal's dagger"
+       "label": "Criminal's dagger",
+       "gives": [
+        1813
+       ]
       },
       {
        "text": "Go to the window.",
@@ -51759,7 +53030,10 @@
         2747,
         3577
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1809
+       ]
       },
       {
        "text": "Go to the first barrel.",
@@ -51781,7 +53055,10 @@
         2733,
         3575
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1796
+       ]
       },
       {
        "text": "Go to the flour barrel.",
@@ -51803,7 +53080,10 @@
         2735,
         3582
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1933
+       ]
       },
       {
        "kind": "obj",
@@ -51812,7 +53092,10 @@
        "target": "murdernecklace",
        "id": 1796,
        "label": "Silver necklace",
-       "item": 1933
+       "item": 1933,
+       "gives": [
+        1797
+       ]
       },
       {
        "kind": "obj",
@@ -51821,7 +53104,10 @@
        "target": "murderpaper",
        "id": 1811,
        "label": "Flypaper",
-       "item": 1797
+       "item": 1797,
+       "gives": [
+        1816
+       ]
       },
       {
        "text": "Go back to the flour barrel.",
@@ -51852,7 +53138,10 @@
        "target": "murderweapon",
        "id": 1813,
        "label": "Criminal's dagger",
-       "item": 1933
+       "item": 1933,
+       "gives": [
+        1814
+       ]
       },
       {
        "kind": "obj",
@@ -51861,7 +53150,10 @@
        "target": "murderpaper",
        "id": 1811,
        "label": "Flypaper",
-       "item": 1814
+       "item": 1814,
+       "gives": [
+        1822
+       ]
       },
       {
        "kind": "obj",
@@ -51870,7 +53162,10 @@
        "target": "murderfingerprint1",
        "id": 1822,
        "label": "Unknown print",
-       "item": 1816
+       "item": 1816,
+       "gives": [
+        1815
+       ]
       },
       {
        "text": "Go to the Seers' Village pub.",
@@ -52258,6 +53553,9 @@
        "label": "Aurel",
        "picks": [
         "I will fetch all that."
+       ],
+       "gives": [
+        7630
        ]
       },
       {
@@ -52550,7 +53848,10 @@
        "why": "The hammer.",
        "target": "burgh_general_store_owner",
        "id": 3541,
-       "label": "Aurel"
+       "label": "Aurel",
+       "gives": [
+        7668
+       ]
       },
       {
        "text": "Go in through the inn.",
@@ -52595,6 +53896,9 @@
        "at": [
         3489,
         3231
+       ],
+       "gives": [
+        7626
        ]
       },
       {
@@ -52884,6 +54188,9 @@
        "at": [
         3407,
         9863
+       ],
+       "gives": [
+        7633
        ]
       },
       {
@@ -52975,6 +54282,9 @@
        "at": [
         3481,
         9808
+       ],
+       "gives": [
+        7628
        ]
       },
       {
@@ -53398,7 +54708,10 @@
         2428,
         9419
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        601
+       ]
       },
       {
        "kind": "walk",
@@ -53455,6 +54768,9 @@
        "at": [
         2389,
         9454
+       ],
+       "gives": [
+        602
        ]
       },
       {
@@ -53539,7 +54855,10 @@
        "target": "lens_mould",
        "id": 602,
        "label": "Lens mould",
-       "item": 1775
+       "item": 1775,
+       "gives": [
+        603
+       ]
       },
       {
        "kind": "talk",
@@ -53709,6 +55028,9 @@
        "label": "Spirit of Scorpius",
        "picks": [
         "I seek your wisdom."
+       ],
+       "gives": [
+        1594
        ]
       }
      ],
@@ -54013,7 +55335,10 @@
        "why": "The airtight pot.",
        "target": "favour_tassie_slipcast",
        "id": 1793,
-       "label": "Tassie Slipcast"
+       "label": "Tassie Slipcast",
+       "gives": [
+        4436
+       ]
       },
       {
        "text": "Go to Hammerspike.",
@@ -54546,7 +55871,10 @@
        "why": "The picture of Elena.",
        "target": "elena_picture",
        "id": 1510,
-       "label": "Picture"
+       "label": "Picture",
+       "gives": [
+        1510
+       ]
       },
       {
        "kind": "talk",
@@ -54766,7 +56094,10 @@
        "target": "gasmask",
        "id": 1506,
        "label": "Gas mask",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1506
+       ]
       },
       {
        "kind": "loc",
@@ -55051,7 +56382,10 @@
        "target": "chocolaty_milk",
        "id": 1977,
        "label": "Chocolatey milk",
-       "item": 231
+       "item": 231,
+       "gives": [
+        1504
+       ]
       },
       {
        "kind": "talk",
@@ -55121,6 +56455,9 @@
        "at": [
         2534,
         3268
+       ],
+       "gives": [
+        1507
        ]
       },
       {
@@ -55533,7 +56870,10 @@
        "why": "Off the floor.",
        "target": "pipkey_gold",
        "id": 2944,
-       "label": "Golden key"
+       "label": "Golden key",
+       "gives": [
+        2944
+       ]
       },
       {
        "text": "Go down to the monuments.",
@@ -55782,6 +57122,9 @@
         "other things from wool",
         "sort of wig",
         "Please, make me a wig"
+       ],
+       "gives": [
+        2421
        ]
       },
       {
@@ -55803,6 +57146,9 @@
        "picks": [
         "make skin paste",
         "Mix me some skin paste"
+       ],
+       "gives": [
+        2424
        ]
       },
       {
@@ -55816,6 +57162,9 @@
         "make dyes for me",
         "yellow dye",
         "make me some yellow dye"
+       ],
+       "gives": [
+        1765
        ]
       },
       {
@@ -55825,7 +57174,10 @@
        "target": "plainwig",
        "id": 2421,
        "label": "Wig",
-       "item": 1765
+       "item": 1765,
+       "gives": [
+        2419
+       ]
       },
       {
        "text": "Go east to the jail.",
@@ -55849,6 +57201,9 @@
         "not try to get him out",
         "see the key please",
         "touch the key"
+       ],
+       "gives": [
+        2423
        ]
       },
       {
@@ -55886,7 +57241,10 @@
        "why": "She gives you the key.",
        "target": "leela",
        "id": 915,
-       "label": "Leela"
+       "label": "Leela",
+       "gives": [
+        2418
+       ]
       },
       {
        "kind": "talk",
@@ -56413,7 +57771,10 @@
        "why": "One.",
        "target": "vc_partyrat_multi1",
        "id": 2974,
-       "item": 6773
+       "item": 6773,
+       "gives": [
+        6774
+       ]
       },
       {
        "text": "Go across the upper floor.",
@@ -56430,7 +57791,10 @@
        "why": "Two.",
        "target": "vc_partyrat_multi2",
        "id": 2975,
-       "item": 6774
+       "item": 6774,
+       "gives": [
+        6775
+       ]
       },
       {
        "text": "Go to the next.",
@@ -56447,7 +57811,10 @@
        "why": "Three.",
        "target": "vc_partyrat_multi3",
        "id": 2976,
-       "item": 6775
+       "item": 6775,
+       "gives": [
+        6776
+       ]
       },
       {
        "text": "Go down to the ground floor.",
@@ -56464,7 +57831,10 @@
        "why": "Four.",
        "target": "vc_partyrat_multi4",
        "id": 2977,
-       "item": 6776
+       "item": 6776,
+       "gives": [
+        6777
+       ]
       },
       {
        "text": "Go to the ballroom.",
@@ -56481,7 +57851,10 @@
        "why": "Five.",
        "target": "vc_partyrat_multi5",
        "id": 2978,
-       "item": 6777
+       "item": 6777,
+       "gives": [
+        6778
+       ]
       },
       {
        "text": "Go to the one in the trifle.",
@@ -56618,7 +57991,10 @@
        "target": "cheese",
        "id": 1985,
        "label": "Cheese",
-       "item": 24
+       "item": 24,
+       "gives": [
+        6768
+       ]
       },
       {
        "text": "Go into the warehouse, south of the ladder.",
@@ -56761,7 +58137,10 @@
        "why": "The antipoison.",
        "target": "apothecary",
        "id": 638,
-       "label": "Apothecary"
+       "label": "Apothecary",
+       "gives": [
+        6766
+       ]
       },
       {
        "text": "Go back to the step.",
@@ -56918,7 +58297,10 @@
        "why": "The pot.",
        "target": "vc_smokin_joe",
        "id": 2952,
-       "label": "Smokin' Joe"
+       "label": "Smokin' Joe",
+       "gives": [
+        6771
+       ]
       },
       {
        "kind": "obj",
@@ -57040,6 +58422,9 @@
        "label": "Ali the Snake Charmer",
        "picks": [
         "I'll pay for the tune."
+       ],
+       "gives": [
+        6769
        ]
       },
       {
@@ -57473,6 +58858,9 @@
        "at": [
         2468,
         4943
+       ],
+       "gives": [
+        5588
        ]
       },
       {
@@ -57667,7 +59055,10 @@
        "target": "rd_tin_of_crap_empty",
        "id": 5600,
        "label": "Tin",
-       "item": 5579
+       "item": 5579,
+       "gives": [
+        5593
+       ]
       },
       {
        "kind": "loc",
@@ -57680,6 +59071,9 @@
        "at": [
         2468,
         4938
+       ],
+       "gives": [
+        5594
        ]
       },
       {
@@ -57720,7 +59114,10 @@
        "target": "rd_full_keymould_complete",
        "id": 5598,
        "label": "Tin",
-       "item": 5605
+       "item": 5605,
+       "gives": [
+        5585
+       ]
       },
       {
        "kind": "loc",
@@ -58247,7 +59644,10 @@
         2198,
         3249
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        3224
+       ]
       },
       {
        "text": "Go to the tar, just south of the tracker.",
@@ -58268,6 +59668,9 @@
        "at": [
         2263,
         3127
+       ],
+       "gives": [
+        3220
        ]
       },
       {
@@ -58287,6 +59690,9 @@
        "at": [
         2267,
         3128
+       ],
+       "gives": [
+        3209
        ]
       },
       {
@@ -58309,6 +59715,9 @@
        "at": [
         2193,
         3146
+       ],
+       "gives": [
+        3213
        ]
       },
       {
@@ -58318,7 +59727,10 @@
        "target": "regicide_quicklime",
        "id": 3213,
        "label": "Quicklime",
-       "item": 233
+       "item": 233,
+       "gives": [
+        3214
+       ]
       },
       {
        "kind": "obj",
@@ -58327,7 +59739,10 @@
        "target": "regicide_sulphar",
        "id": 3209,
        "label": "Sulphur",
-       "item": 233
+       "item": 233,
+       "gives": [
+        3215
+       ]
       },
       {
        "text": "Go to by sea and road to Rimmington.",
@@ -58366,6 +59781,9 @@
        "at": [
         2927,
         3212
+       ],
+       "gives": [
+        3221
        ]
       },
       {
@@ -58375,7 +59793,10 @@
        "target": "regicide_barrel_naphtha",
        "id": 3221,
        "label": "Barrel of naphtha",
-       "item": 3214
+       "item": 3214,
+       "gives": [
+        3223
+       ]
       },
       {
        "kind": "obj",
@@ -58384,7 +59805,10 @@
        "target": "regicide_barrel_naphtha_quicklime_mix",
        "id": 3223,
        "label": "Naphtha mix",
-       "item": 3215
+       "item": 3215,
+       "gives": [
+        3218
+       ]
       },
       {
        "kind": "obj",
@@ -58393,7 +59817,10 @@
        "target": "regicide_barrel_lid",
        "id": 3218,
        "label": "Barrel bomb",
-       "item": 3224
+       "item": 3224,
+       "gives": [
+        3219
+       ]
       },
       {
        "text": "Go back west to the catapult north of Tyras Camp.",
@@ -58747,7 +60174,10 @@
        "target": "amulet_of_ghostspeak",
        "id": 552,
        "label": "Ghostspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        552
+       ]
       },
       {
        "text": "Go back north out of the swamp.",
@@ -59264,7 +60694,10 @@
         3272,
         3375
        ],
-       "op": 3
+       "op": 3,
+       "gives": [
+        753
+       ]
       },
       {
        "text": "Go back west across the city.",
@@ -59281,7 +60714,10 @@
        "why": "He shakes them up into the Cadava potion.",
        "target": "apothecary",
        "id": 638,
-       "label": "Apothecary"
+       "label": "Apothecary",
+       "gives": [
+        756
+       ]
       },
       {
        "text": "Go to the road out of the west gate to the Leptoc mansion.",
@@ -60043,6 +61479,9 @@
        "at": [
         2530,
         9844
+       ],
+       "gives": [
+        4205
        ]
       }
      ],
@@ -60750,7 +62189,10 @@
        "target": "questscorpiona",
        "id": 385,
        "label": "Kharid Scorpion",
-       "item": 456
+       "item": 456,
+       "gives": [
+        457
+       ]
       },
       {
        "text": "Go back to Seers’ Village.",
@@ -60873,7 +62315,10 @@
        "target": "questscorpionb",
        "id": 386,
        "label": "Kharid Scorpion",
-       "item": 457
+       "item": 457,
+       "gives": [
+        458
+       ]
       },
       {
        "text": "Go east to the monastery and up the ladder.",
@@ -60911,7 +62356,10 @@
        "target": "questscorpionc",
        "id": 387,
        "label": "Kharid Scorpion",
-       "item": 458
+       "item": 458,
+       "gives": [
+        463
+       ]
       },
       {
        "text": "Go back west to the tower.",
@@ -61062,7 +62510,10 @@
        "target": "pot_flour",
        "id": 1933,
        "label": "Pot of flour",
-       "item": 1939
+       "item": 1939,
+       "gives": [
+        1940
+       ]
       },
       {
        "kind": "walk",
@@ -61092,6 +62543,9 @@
        "at": [
         2719,
         3306
+       ],
+       "gives": [
+        1941
        ]
       },
       {
@@ -61290,7 +62744,10 @@
        "why": "The torch.",
        "target": "bailey",
        "id": 695,
-       "label": "Bailey"
+       "label": "Bailey",
+       "gives": [
+        596
+       ]
       },
       {
        "text": "Go out to the sticks.",
@@ -61333,7 +62790,10 @@
        "target": "damp_sticks",
        "id": 1467,
        "label": "Damp sticks",
-       "item": 1469
+       "item": 1469,
+       "gives": [
+        1468
+       ]
       },
       {
        "kind": "obj",
@@ -61341,7 +62801,10 @@
        "why": "Rub them together.",
        "target": "dry_sticks",
        "id": 1468,
-       "label": "Dry sticks"
+       "label": "Dry sticks",
+       "gives": [
+        594
+       ]
       }
      ],
      "items": [
@@ -61700,7 +63163,10 @@
        "target": "sheepunsheered",
        "id": 43,
        "label": "Sheep",
-       "item": 1735
+       "item": 1735,
+       "gives": [
+        1737
+       ]
       },
       {
        "text": "Go south to the castle and up the staircase.",
@@ -61725,6 +63191,10 @@
        ],
        "picks": [
         "6"
+       ],
+       "gives": [
+        1759,
+        1759
        ]
       },
       {
@@ -61902,7 +63372,10 @@
        "target": "plague_jacket",
        "id": 284,
        "label": "Plague jacket",
-       "op": 2
+       "op": 2,
+       "wears": [
+        284
+       ]
       },
       {
        "kind": "obj",
@@ -61911,7 +63384,10 @@
        "target": "plague_trousers",
        "id": 285,
        "label": "Plague trousers",
-       "op": 2
+       "op": 2,
+       "wears": [
+        285
+       ]
       },
       {
        "text": "Go north out of the city to the pen gate.",
@@ -61949,7 +63425,10 @@
        "target": "cattleprod",
        "id": 278,
        "label": "Cattleprod",
-       "op": 2
+       "op": 2,
+       "wears": [
+        278
+       ]
       },
       {
        "kind": "walk",
@@ -62457,6 +63936,9 @@
         "What can we do?",
         "I'll go to see the Shaman.",
         "Yes, I'm sure and I'll take the Wampum belt to Trufitus."
+       ],
+       "gives": [
+        625
        ]
       },
       {
@@ -62679,6 +64161,9 @@
        "op": 2,
        "picks": [
         "Yes, I'm quite sure."
+       ],
+       "gives": [
+        607
        ]
       },
       {
@@ -62711,7 +64196,10 @@
         2939,
         9285
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        608
+       ]
       },
       {
        "kind": "obj",
@@ -62746,6 +64234,9 @@
        "op": 2,
        "picks": [
         "Yes, I may find something else on the corpse."
+       ],
+       "gives": [
+        610
        ]
       },
       {
@@ -62803,7 +64294,10 @@
        "target": "zqzadimusbones",
        "id": 610,
        "label": "Zadimus corpse",
-       "op": 1
+       "op": 1,
+       "gives": [
+        604
+       ]
       },
       {
        "text": "Go to the rocks east of Cairn Isle.",
@@ -62893,7 +64387,11 @@
         2766,
         9364
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        623,
+        611
+       ]
       },
       {
        "kind": "obj",
@@ -62902,7 +64400,10 @@
        "target": "zqbevsword",
        "id": 623,
        "label": "Sword pommel",
-       "item": 1755
+       "item": 1755,
+       "gives": [
+        618
+       ]
       },
       {
        "kind": "obj",
@@ -62911,7 +64412,10 @@
        "target": "zqbonebeads",
        "id": 618,
        "label": "Bone beads",
-       "item": 1794
+       "item": 1794,
+       "gives": [
+        616
+       ]
       },
       {
        "kind": "loc",
@@ -62954,7 +64458,10 @@
        "target": "zqboneshard",
        "id": 604,
        "label": "Bone shard",
-       "item": 1755
+       "item": 1755,
+       "gives": [
+        605
+       ]
       },
       {
        "kind": "obj",
@@ -62963,7 +64470,10 @@
        "target": "zqdeadbeads",
        "id": 616,
        "label": "Beads of the dead",
-       "op": 2
+       "op": 2,
+       "wears": [
+        616
+       ]
       },
       {
        "kind": "loc",
@@ -63187,7 +64697,10 @@
         2892,
         9487
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        609
+       ]
       }
      ],
      "items": [
@@ -63356,6 +64869,9 @@
        ],
        "picks": [
         "The sword"
+       ],
+       "gives": [
+        7806
        ]
       },
       {
@@ -63365,7 +64881,10 @@
        "target": "soulbane_anger_swordq",
        "id": 7806,
        "label": "Anger sword",
-       "op": 2
+       "op": 2,
+       "wears": [
+        7806
+       ]
       },
       {
        "kind": "talk",
@@ -63867,7 +65386,10 @@
         3059,
         9564
        ],
-       "op": 1
+       "op": 1,
+       "gives": [
+        668
+       ]
       },
       {
        "text": "Go back to Mudskipper Point one last time.",
@@ -63887,6 +65409,9 @@
        "label": "Thurgo",
        "picks": [
         "Something else"
+       ],
+       "gives": [
+        667
        ]
       },
       {
@@ -64090,7 +65615,11 @@
        "why": "He asks for five sheets.",
        "target": "swan_franklin",
        "id": 3823,
-       "label": "Franklin Caranos"
+       "label": "Franklin Caranos",
+       "gives": [
+        590,
+        2347
+       ]
       },
       {
        "kind": "walk",
@@ -64209,6 +65738,9 @@
        "at": [
         2341,
         3675
+       ],
+       "gives": [
+        7941
        ]
       },
       {
@@ -65013,7 +66545,11 @@
        "target": "hundred_pirate_diving_backpack",
        "id": 7535,
        "label": "Diving apparatus",
-       "op": 2
+       "op": 2,
+       "wears": [
+        7534,
+        7535
+       ]
       },
       {
        "kind": "talk",
@@ -65293,7 +66829,10 @@
         3049,
         3483
        ],
-       "op": 1
+       "op": 1,
+       "gives": [
+        11502
+       ]
       },
       {
        "kind": "obj",
@@ -65301,7 +66840,10 @@
        "target": "tgbr_prayer_book_unread",
        "id": 11502,
        "label": "Prayer book",
-       "op": 1
+       "op": 1,
+       "gives": [
+        11503
+       ]
       }
      ],
      "items": [
@@ -65336,7 +66878,10 @@
        "target": "blessedstar",
        "id": 1718,
        "label": "Holy symbol",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1718
+       ]
       },
       {
        "text": "Go back to Harmony Island.",
@@ -65424,7 +66969,10 @@
        "target": "ring_of_charos",
        "id": 4202,
        "label": "Ring of charos",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4202
+       ]
       },
       {
        "text": "Go to the Canifis meat counter.",
@@ -65444,6 +66992,10 @@
        "label": "Rufus",
        "picks": [
         "What do you send?"
+       ],
+       "gives": [
+        11511,
+        11509
        ]
       },
       {
@@ -65502,7 +67054,10 @@
        "target": "tgbr_wolf_whistle",
        "id": 11509,
        "label": "Wolf whistle",
-       "op": 1
+       "op": 1,
+       "gives": [
+        11510
+       ]
       },
       {
        "kind": "loc",
@@ -65637,7 +67192,10 @@
         3791,
         2873
        ],
-       "op": 1
+       "op": 1,
+       "gives": [
+        11500
+       ]
       },
       {
        "kind": "loc",
@@ -65819,7 +67377,13 @@
        "why": "Off the floor.",
        "target": "tgbr_skull_staple",
        "id": 11512,
-       "label": "Skull staple"
+       "label": "Skull staple",
+       "gives": [
+        11507,
+        11506,
+        11508,
+        11512
+       ]
       },
       {
        "text": "Go back down to the cellar.",
@@ -66072,7 +67636,10 @@
         2650,
         3273
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1858
+       ]
       },
       {
        "kind": "walk",
@@ -67000,7 +68567,10 @@
        "target": "bucket_wax",
        "id": 30,
        "label": "Bucket of wax",
-       "item": 1939
+       "item": 1939,
+       "gives": [
+        4085
+       ]
       },
       {
        "kind": "obj",
@@ -67106,7 +68676,10 @@
        "target": "trollromance_toboggon_waxed",
        "id": 4084,
        "label": "Sled",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4084
+       ]
       },
       {
        "kind": "walk",
@@ -67238,6 +68811,9 @@
        "at": [
         2795,
         3717
+       ],
+       "gives": [
+        4084
        ]
       },
       {
@@ -67618,7 +69194,10 @@
        "why": "And pick it up.",
        "target": "troll_key_prison",
        "id": 3135,
-       "label": "Prison key"
+       "label": "Prison key",
+       "gives": [
+        3135
+       ]
       },
       {
        "kind": "loc",
@@ -67692,7 +69271,10 @@
        "target": "troll_prison_guard1",
        "id": 1128,
        "label": "Twig",
-       "op": 3
+       "op": 3,
+       "gives": [
+        3136
+       ]
       },
       {
        "kind": "talk",
@@ -67701,7 +69283,10 @@
        "target": "troll_prison_guard2",
        "id": 1129,
        "label": "Berry",
-       "op": 3
+       "op": 3,
+       "gives": [
+        3137
+       ]
       },
       {
        "kind": "loc",
@@ -67822,7 +69407,10 @@
        "target": "ics_little_amulet_of_catspeak",
        "id": 4677,
        "label": "Catspeak amulet",
-       "op": 2
+       "op": 2,
+       "wears": [
+        4677
+       ]
       },
       {
        "kind": "talk",
@@ -68480,6 +70068,9 @@
        "label": "Koftik",
        "picks": [
         "What does it say?"
+       ],
+       "gives": [
+        1485
        ]
       },
       {
@@ -68489,7 +70080,10 @@
        "target": "bronze_arrow",
        "id": 882,
        "label": "Bronze arrow",
-       "item": 1485
+       "item": 1485,
+       "gives": [
+        598
+       ]
       },
       {
        "kind": "obj",
@@ -68498,7 +70092,10 @@
        "target": "tinderbox",
        "id": 590,
        "label": "Tinderbox",
-       "item": 598
+       "item": 598,
+       "gives": [
+        942
+       ]
       },
       {
        "kind": "obj",
@@ -68516,7 +70113,10 @@
        "target": "litarrow",
        "id": 942,
        "label": "Bronze fire arrows",
-       "op": 2
+       "op": 2,
+       "wears": [
+        942
+       ]
       },
       {
        "text": "Go to the north-east bank.",
@@ -68592,7 +70192,10 @@
        "target": "bronze_arrow",
        "id": 882,
        "label": "Bronze arrow",
-       "op": 2
+       "op": 2,
+       "wears": [
+        882
+       ]
       },
       {
        "text": "Go to the second orb.",
@@ -68667,6 +70270,9 @@
        ],
        "picks": [
         "Yes, I'll give it a go."
+       ],
+       "gives": [
+        1481
        ]
       },
       {
@@ -68823,7 +70429,10 @@
         2397,
         9605
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        1486
+       ]
       },
       {
        "text": "Go to the boulder above the unicorn.",
@@ -68862,6 +70471,9 @@
        "at": [
         2371,
         9603
+       ],
+       "gives": [
+        1487
        ]
       }
      ],
@@ -69151,6 +70763,9 @@
        "at": [
         2327,
         9799
+       ],
+       "gives": [
+        1501
        ]
       },
       {
@@ -69168,7 +70783,10 @@
        "why": "Pick the cat up.",
        "target": "cavewitchcat",
        "id": 993,
-       "label": "Witch's cat"
+       "label": "Witch's cat",
+       "gives": [
+        1491
+       ]
       },
       {
        "text": "Go to the witch's door.",
@@ -69214,6 +70832,9 @@
        "at": [
         2157,
         4564
+       ],
+       "gives": [
+        1492
        ]
       }
      ],
@@ -69258,7 +70879,10 @@
        "why": "Ask for the gauntlets.",
        "target": "upassdwarf2",
        "id": 995,
-       "label": "Klank"
+       "label": "Klank",
+       "gives": [
+        1495
+       ]
       },
       {
        "text": "Go to onto Doomion.",
@@ -69356,6 +70980,9 @@
        "at": [
         2136,
         4578
+       ],
+       "gives": [
+        1500
        ]
       },
       {
@@ -69403,6 +71030,9 @@
        "at": [
         2356,
         9800
+       ],
+       "gives": [
+        1502
        ]
       },
       {
@@ -69429,7 +71059,10 @@
        "target": "klanks_gauntlets",
        "id": 1495,
        "label": "Klank's gauntlets",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1495
+       ]
       },
       {
        "text": "Go to the cage.",
@@ -69449,6 +71082,9 @@
        "at": [
         2134,
         4702
+       ],
+       "gives": [
+        1496
        ]
       },
       {
@@ -69536,7 +71172,11 @@
        "target": "zamrobebottom",
        "id": 1033,
        "label": "Zamorak robe",
-       "op": 2
+       "op": 2,
+       "wears": [
+        1035,
+        1033
+       ]
       },
       {
        "kind": "note",
@@ -69816,6 +71456,9 @@
        "at": [
         3096,
         3269
+       ],
+       "gives": [
+        1550
        ]
       },
       {
@@ -69879,6 +71522,9 @@
        "label": "Bartender",
        "picks": [
         "finest ale"
+       ],
+       "gives": [
+        1917
        ]
       },
       {
@@ -69887,7 +71533,10 @@
        "why": "He sobers up and gives you a stake.",
        "target": "dr_harlow",
        "id": 756,
-       "label": "Dr Harlow"
+       "label": "Dr Harlow",
+       "gives": [
+        1549
+       ]
       },
       {
        "text": "Go north up the road to the manor and round to the east door.",
@@ -70114,6 +71763,9 @@
        "label": "Sigli the Huntsman",
        "picks": [
         "1"
+       ],
+       "gives": [
+        3697
        ]
       },
       {
@@ -70243,6 +71895,9 @@
        "at": [
         2738,
         3638
+       ],
+       "gives": [
+        3692
        ]
       },
       {
@@ -70252,7 +71907,10 @@
        "target": "viking_musical_tree_branch",
        "id": 3692,
        "label": "Branch",
-       "item": 946
+       "item": 946,
+       "gives": [
+        3688
+       ]
       },
       {
        "kind": "walk",
@@ -70284,7 +71942,10 @@
        "why": "The pet rock.",
        "target": "viking_askelapen",
        "id": 1295,
-       "label": "Askeladden"
+       "label": "Askeladden",
+       "gives": [
+        3695
+       ]
       },
       {
        "kind": "walk",
@@ -70360,7 +72021,10 @@
        "why": "He tastes it.",
        "target": "viking_lalli_troll",
        "id": 1270,
-       "label": "Lalli"
+       "label": "Lalli",
+       "gives": [
+        3693
+       ]
       },
       {
        "kind": "walk",
@@ -70381,6 +72045,9 @@
        "at": [
         2617,
         3659
+       ],
+       "gives": [
+        3694
        ]
       },
       {
@@ -70390,7 +72057,10 @@
        "target": "viking_unstrung_lyre",
        "id": 3688,
        "label": "Unstrung lyre",
-       "item": 3694
+       "item": 3694,
+       "gives": [
+        3689
+       ]
       },
       {
        "text": "Go to Seers' Village - world travel, not the quest.",
@@ -70411,6 +72081,9 @@
        "picks": [
         "1",
         "1"
+       ],
+       "gives": [
+        3712
        ]
       },
       {
@@ -70454,7 +72127,10 @@
        "why": "Bind the Draugen.",
        "target": "viking_draugen",
        "id": 1279,
-       "label": "The Draugen"
+       "label": "The Draugen",
+       "gives": [
+        3696
+       ]
       },
       {
        "kind": "walk",
@@ -70471,7 +72147,10 @@
        "target": "vt_council_workmen",
        "id": 1287,
        "label": "Council workman",
-       "item": 1917
+       "item": 1917,
+       "gives": [
+        3713
+       ]
       },
       {
        "kind": "walk",
@@ -70492,6 +72171,9 @@
        "at": [
         2626,
         3598
+       ],
+       "gives": [
+        3690
        ]
       },
       {
@@ -70517,7 +72199,10 @@
        "target": "viking_firecracker",
        "id": 3713,
        "label": "Strange object",
-       "item": 590
+       "item": 590,
+       "gives": [
+        3714
+       ]
       },
       {
        "kind": "walk",
@@ -70605,6 +72290,9 @@
        "at": [
         2660,
         3674
+       ],
+       "gives": [
+        3711
        ]
       },
       {
@@ -70928,6 +72616,9 @@
        "picks": [
         "1",
         "1"
+       ],
+       "gives": [
+        3709
        ]
       },
       {
@@ -71483,7 +73174,10 @@
         2629,
         3660
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        3727
+       ]
       },
       {
        "kind": "loc",
@@ -71495,6 +73189,9 @@
        "at": [
         2633,
         3660
+       ],
+       "gives": [
+        3732
        ]
       },
       {
@@ -71507,6 +73204,9 @@
        "at": [
         2634,
         3665
+       ],
+       "gives": [
+        3744
        ]
       },
       {
@@ -71519,6 +73219,9 @@
        "at": [
         2637,
         3660
+       ],
+       "gives": [
+        3715
        ]
       },
       {
@@ -71531,6 +73234,9 @@
        "at": [
         2638,
         3661
+       ],
+       "gives": [
+        3742
        ]
       },
       {
@@ -71544,6 +73250,9 @@
        "at": [
         2629,
         3663
+       ],
+       "gives": [
+        3746
        ]
       },
       {
@@ -71553,7 +73262,10 @@
        "target": "viking_uncoloured_wooden_coin",
        "id": 3744,
        "label": "Wooden disk",
-       "item": 3746
+       "item": 3746,
+       "gives": [
+        3743
+       ]
       },
       {
        "kind": "loc",
@@ -71590,6 +73302,9 @@
        "at": [
         2634,
         3663
+       ],
+       "gives": [
+        3737
        ]
       },
       {
@@ -71668,7 +73383,10 @@
        "target": "viking_jug_2",
        "id": 3730,
        "label": "2/3rds full jug",
-       "item": 3722
+       "item": 3722,
+       "gives": [
+        3723
+       ]
       },
       {
        "kind": "loc",
@@ -71681,6 +73399,9 @@
        "at": [
         2632,
         3665
+       ],
+       "gives": [
+        3734
        ]
       },
       {
@@ -71699,7 +73420,10 @@
        "target": "viking_airtight_vase_water",
        "id": 3735,
        "label": "Vase of water",
-       "item": 3737
+       "item": 3737,
+       "gives": [
+        3740
+       ]
       },
       {
        "kind": "loc",
@@ -71721,7 +73445,10 @@
        "target": "viking_airtight_vase_with_lid_frozen",
        "id": 3739,
        "label": "Sealed vase",
-       "op": 1
+       "op": 1,
+       "gives": [
+        3741
+       ]
       },
       {
        "kind": "loc",
@@ -71734,6 +73461,9 @@
        "at": [
         2629,
         3663
+       ],
+       "gives": [
+        3745
        ]
       },
       {
@@ -72212,6 +73942,9 @@
        "at": [
         2544,
         3134
+       ],
+       "gives": [
+        2384
        ]
       },
       {
@@ -72345,6 +74078,9 @@
        "label": "Og",
        "picks": [
         "I seek entrance to the city of ogres."
+       ],
+       "gives": [
+        2378
        ]
       },
       {
@@ -72423,7 +74159,10 @@
        "text": "Kill Gorad.",
        "target": "gorad",
        "id": 856,
-       "label": "Gorad"
+       "label": "Gorad",
+       "gives": [
+        2377
+       ]
       },
       {
        "text": "Go to Toban.",
@@ -72453,7 +74192,10 @@
        "target": "toban",
        "id": 855,
        "label": "Toban",
-       "item": 536
+       "item": 536,
+       "gives": [
+        2375
+       ]
       },
       {
        "text": "Go to Toban's chest.",
@@ -72475,6 +74217,9 @@
        "at": [
         2575,
         3031
+       ],
+       "gives": [
+        2393
        ]
       },
       {
@@ -72514,7 +74259,11 @@
        "target": "grew",
        "id": 854,
        "label": "Grew",
-       "item": 2377
+       "item": 2377,
+       "gives": [
+        2374,
+        2380
+       ]
       },
       {
        "text": "Go back to Og.",
@@ -72532,7 +74281,10 @@
        "target": "og",
        "id": 853,
        "label": "Og",
-       "item": 2393
+       "item": 2393,
+       "gives": [
+        2373
+       ]
       },
       {
        "text": "Go back to the tower.",
@@ -72756,6 +74508,9 @@
        "at": [
         2506,
         3023
+       ],
+       "gives": [
+        2379
        ]
       },
       {
@@ -73160,7 +74915,10 @@
        "text": "Pick up Nightshade.",
        "target": "nightshade",
        "id": 2398,
-       "label": "Nightshade"
+       "label": "Nightshade",
+       "gives": [
+        2398
+       ]
       },
       {
        "text": "Go to the enclave guard.",
@@ -73292,7 +75050,10 @@
        "target": "vial_water",
        "id": 227,
        "label": "Vial of water",
-       "item": 249
+       "item": 249,
+       "gives": [
+        91
+       ]
       },
       {
        "kind": "obj",
@@ -73301,7 +75062,10 @@
        "target": "jangerberries",
        "id": 247,
        "label": "Jangerberries",
-       "item": 91
+       "item": 91,
+       "gives": [
+        2390
+       ]
       },
       {
        "kind": "obj",
@@ -73310,7 +75074,10 @@
        "target": "bat_bones",
        "id": 530,
        "label": "Bat bones",
-       "item": 233
+       "item": 233,
+       "gives": [
+        2391
+       ]
       },
       {
        "kind": "obj",
@@ -73319,7 +75086,10 @@
        "target": "guamjangervial",
        "id": 2390,
        "label": "Vial",
-       "item": 2391
+       "item": 2391,
+       "gives": [
+        2394
+       ]
       },
       {
        "kind": "talk",
@@ -73575,7 +75345,10 @@
        "target": "ogre_shaman",
        "id": 871,
        "label": "Ogre shaman",
-       "item": 2395
+       "item": 2395,
+       "gives": [
+        2382
+       ]
       },
       {
        "text": "Go to the Rock of Dalgroth.",
@@ -73596,7 +75369,10 @@
         2590,
         9449
        ],
-       "op": 2
+       "op": 2,
+       "gives": [
+        2383
+       ]
       },
       {
        "text": "Go out of the enclave.",
@@ -73873,6 +75649,9 @@
        "at": [
         2520,
         3426
+       ],
+       "gives": [
+        292
        ]
       },
       {
@@ -73924,6 +75703,9 @@
        "at": [
         2548,
         9565
+       ],
+       "gives": [
+        293
        ]
       },
       {
@@ -73954,7 +75736,10 @@
        "why": "He hands over the pebble.",
        "target": "golrie_waterfall_quest",
        "id": 306,
-       "label": "Golrie"
+       "label": "Golrie",
+       "gives": [
+        294
+       ]
       },
       {
        "text": "Go north-west to the tombstone.",
@@ -74026,6 +75811,9 @@
        "at": [
         2542,
         9811
+       ],
+       "gives": [
+        296
        ]
       },
       {
@@ -74058,6 +75846,9 @@
        "at": [
         2530,
         9844
+       ],
+       "gives": [
+        295
        ]
       },
       {
@@ -74151,6 +75942,9 @@
        "at": [
         2589,
         9888
+       ],
+       "gives": [
+        298
        ]
       },
       {
@@ -74426,7 +76220,10 @@
        "target": "dramen_staff",
        "id": 772,
        "label": "Dramen staff",
-       "op": 2
+       "op": 2,
+       "wears": [
+        772
+       ]
       },
       {
        "text": "Go back east to the swamp shed.",
@@ -74595,6 +76392,10 @@
        "at": [
         2442,
         9459
+       ],
+       "gives": [
+        4810,
+        4811
        ]
       },
       {
@@ -74607,6 +76408,9 @@
        "at": [
         2443,
         9459
+       ],
+       "gives": [
+        4809
        ]
       },
       {
@@ -74626,6 +76430,9 @@
        "at": [
         2438,
         9458
+       ],
+       "gives": [
+        4808
        ]
       }
      ],
@@ -74731,6 +76538,10 @@
        "at": [
         2593,
         3103
+       ],
+       "gives": [
+        970,
+        973
        ]
       },
       {
@@ -74743,6 +76554,10 @@
        "at": [
         2593,
         3104
+       ],
+       "gives": [
+        4837,
+        4817
        ]
       },
       {
@@ -74755,6 +76570,9 @@
        "at": [
         2590,
         3103
+       ],
+       "gives": [
+        4829
        ]
       },
       {
@@ -74791,6 +76609,9 @@
        "at": [
         2591,
         3103
+       ],
+       "gives": [
+        4814
        ]
       },
       {
@@ -74824,7 +76645,10 @@
        "target": "dragon_bartender",
        "id": 739,
        "label": "Bartender",
-       "item": 4814
+       "item": 4814,
+       "gives": [
+        4816
+       ]
       },
       {
        "text": "Go to the Wizards’ Guild bell.",
@@ -75003,7 +76827,10 @@
        "why": "Tell him who did it.",
        "target": "zogre_ogre_shaman",
        "id": 2038,
-       "label": "Grish"
+       "label": "Grish",
+       "gives": [
+        4839
+       ]
       },
       {
        "kind": "walk",
@@ -75152,7 +76979,10 @@
        "why": "The ogre artefact.",
        "target": "zogre_artifacts",
        "id": 4818,
-       "label": "Ogre artefact"
+       "label": "Ogre artefact",
+       "gives": [
+        4818
+       ]
       },
       {
        "text": "Go to Grish.",
