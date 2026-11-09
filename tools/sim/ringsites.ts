@@ -53,7 +53,7 @@ function reach(x: number, z: number, cap = 250): number {
     return seen.size;
 }
 
-/** A ring is nine locs in a 3x3. Every tile must be walkable AND hold nothing already. */
+/** A ring is nine locs in a 3x3. Every tile must be walkable and hold nothing already. */
 function freeBlock(x: number, z: number): boolean {
     for (let dx = -1; dx <= 1; dx++)
         for (let dz = -1; dz <= 1; dz++) {
@@ -66,13 +66,57 @@ function freeBlock(x: number, z: number): boolean {
     return true;
 }
 
-function bestSpot(x: number, z: number, r = 14) {
+/** IS THIS TILE OUTDOORS? An empty 3x3 is something a building interior has too, which is how a
+ * first draft put the Lighthouse ring among horror_lighthouse_doorway and a table, and
+ * Miscellania's in a viking bedroom. Proximity to furniture is the wrong test - it cannot tell
+ * "inside a room" from "on the grass beside a house", and tightening it to 3 tiles shoved Ape
+ * Atoll's ring 18 tiles into the trees and left Mort Myre with nowhere at all.
+ *
+ * Walls are the thing that actually distinguishes them. Flood out a little and measure the
+ * bounding box: a room is boxed in by its own walls and stays small, open ground reaches the
+ * edge of the window in every direction. Nothing indoors on this map spans 13 tiles both ways. */
+function openSky(x: number, z: number, span = 13, cap = 260): boolean {
+    const seen = new Set([`${x},${z}`]);
+    const q: [number, number][] = [[x, z]];
+    let x0 = x,
+        x1 = x,
+        z0 = z,
+        z1 = z;
+    while (q.length && seen.size < cap) {
+        const [cx, cz] = q.pop()!;
+        for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+        ]) {
+            const nx = cx + dx,
+                nz = cz + dz;
+            if (Math.abs(nx - x) > span || Math.abs(nz - z) > span) continue;
+            const k = `${nx},${nz}`;
+            if (seen.has(k) || !isZoneAllocated(0, nx, nz) || isFlagged(nx, nz, 0, CollisionFlag.WALK_BLOCKED)) continue;
+            seen.add(k);
+            q.push([nx, nz]);
+            if (nx < x0) x0 = nx;
+            if (nx > x1) x1 = nx;
+            if (nz < z0) z0 = nz;
+            if (nz > z1) z1 = nz;
+        }
+    }
+    return x1 - x0 >= span && z1 - z0 >= span;
+}
+
+function bestSpot(x: number, z: number, r = 12) {
     let best: { x: number; z: number; d: number; reach: number } | null = null;
     for (let dx = -r; dx <= r; dx++)
         for (let dz = -r; dz <= r; dz++) {
             const tx = x + dx,
                 tz = z + dz;
-            if (!freeBlock(tx, tz)) continue;
+            // A ring's 3x3 must fit inside ONE map square: maps/m<mx>_<mz>.jm2 holds only its own
+            // 64x64, so a centre on a local 0 or 63 would need its edge pieces written into the
+            // neighbouring file. Three candidates landed on z%64==0 before this line existed.
+            if (tx % 64 < 1 || tx % 64 > 62 || tz % 64 < 1 || tz % 64 > 62) continue;
+            if (!freeBlock(tx, tz) || !openSky(tx, tz)) continue;
             const d = Math.abs(dx) + Math.abs(dz);
             if (best && d >= best.d) continue;
             best = { x: tx, z: tz, d, reach: -1 };
@@ -119,7 +163,6 @@ const CANDS: [string, string, number, number][] = [
     ['BLR', "Legends' Guild", 2733, 3353],
     ['CIP', 'Miscellania', 2513, 3886],
     ['CIQ', 'NW of Yanille', 2528, 3127],
-    ['CKP', 'Cosmic entity plane', 2150, 4832],
     ['CKR', 'S of Tai Bwo Wannai', 2801, 3003],
     ['CKS', 'Canifis', 3447, 3470],
     ['CLR', 'Ape Atoll', 2707, 2787],
