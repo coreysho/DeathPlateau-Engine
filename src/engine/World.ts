@@ -2558,6 +2558,32 @@ class World {
     private static veteranCapeObj: number = -2;
 
     /**
+     * custom (2026-11-08) - THE VETERAN CAPE CAN BE FUSED INTO A MAX CAPE, and that is what these
+     * four ids are for. A veteran who fuses theirs owns no veteran_cape afterwards, so the "have
+     * you got one" count below had to learn to see the variant: without it the server read the
+     * fusion as a loss and handed out a free Veteran cape every single login.
+     *
+     * Taking the rank away has to see it too, and cannot simply delete it. The Max cape inside a
+     * variant was earned with a level 99 in every skill that has a cape, and that is not this
+     * rank's to take - so the variant is SPLIT, exactly as a knife splits it in game, and the
+     * player keeps the Max cape and hood they earned.
+     *
+     * The lookups are lazy for the same reason veteranCapeObj's is: ObjType is not loaded when
+     * this class is constructed, and a build without these records answers -1, which every use
+     * below checks for.
+     */
+    private static veteranFuseObjs: number[] | null = null;
+
+    /** veteran_max_cape, veteran_max_hood, max_cape, max_hood - or -1 each, looked up once. */
+    private static veteranFused(): number[] {
+        if (World.veteranFuseObjs === null) {
+            World.veteranFuseObjs = ['veteran_max_cape', 'veteran_max_hood', 'max_cape', 'max_hood']
+                .map((name: string): number => ObjType.getId(name));
+        }
+        return World.veteranFuseObjs;
+    }
+
+    /**
      * Give a veteran their cape, or take it back from somebody who is no longer one.
      *
      * Called at login as well as on the grant, so a cape that was dropped, destroyed or lost on
@@ -2581,7 +2607,12 @@ class World {
 
         const bank = InvType.getId('bank');
         const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
-        const have = held.reduce((n, inv) => n + player.invTotal(inv, obj), 0);
+        const count = (what: number): number =>
+            what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0);
+        const [variant, variantHood, maxCape, maxHood] = World.veteranFused();
+
+        // A FUSED CAPE STILL COUNTS AS HAVING ONE. See veteranFuseObjs.
+        const have = count(obj) + count(variant);
 
         if (!give) {
             for (const inv of held) {
@@ -2590,9 +2621,12 @@ class World {
                     player.invDel(inv, obj, n);
                 }
             }
+            const split = this.veteranSplit(player, held, variant, variantHood, maxCape, maxHood);
             if (have > 0) {
                 player.buildAppearance(player.appearanceInv);
-                player.messageGame('Your Veteran cape has been taken back.');
+                player.messageGame(split
+                    ? 'Your Veteran cape has been taken back; your Max cape and hood are whole again.'
+                    : 'Your Veteran cape has been taken back.');
             }
             return;
         }
@@ -2611,6 +2645,65 @@ class World {
             // Nowhere safe to put it. Say so rather than dropping it, and try again next login.
             player.messageGame('Your Veteran cape could not be given to you - your bank and inventory are both full.');
         }
+    }
+
+    /**
+     * custom (2026-11-08) - Turn a Veteran max cape back into a Max cape and hood, because the
+     * player is no longer a veteran. This is the knife path in max_cape_variants.rs2, done by the
+     * server: the variant and its hood go, the plain Max cape and hood come back.
+     *
+     * NOTHING IS DESTROYED IF THERE IS NOWHERE TO PUT THE REPLACEMENTS. The variant is left alone
+     * and false is returned, and the next login tries again - veteranCape is called at login with
+     * whatever the account's flag now says - so a player whose bank and inventory are both full
+     * keeps the variant until there is room rather than losing a Max cape to a full bank.
+     *
+     * @returns whether a variant was actually split.
+     */
+    private veteranSplit(player: Player, held: number[], variant: number, variantHood: number,
+        maxCape: number, maxHood: number): boolean {
+        if (variant === -1 || maxCape === -1) {
+            return false;
+        }
+        const total = (what: number): number =>
+            what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0);
+        const fused = total(variant);
+        if (fused < 1) {
+            return false;
+        }
+
+        // Where the replacements go. The bank first, for the same reason the cape itself prefers
+        // it: a full inventory drops things on the floor, and this is not the player's doing. Two
+        // slots per variant, because a cape and a hood both come back.
+        const bank = InvType.getId('bank');
+        const hoods = variantHood === -1 ? 0 : Math.min(fused, total(variantHood));
+        const need = fused + hoods;
+        const where = bank !== -1 && player.invFreeSpace(bank) >= need
+            ? bank
+            : player.invFreeSpace(InvType.INV) >= need
+                ? InvType.INV
+                : -1;
+        if (where === -1) {
+            player.messageGame('Your Veteran max cape could not be split - your bank and inventory are both full.');
+            return false;
+        }
+
+        for (const inv of held) {
+            const n = player.invTotal(inv, variant);
+            if (n > 0) {
+                player.invDel(inv, variant, n);
+            }
+            if (variantHood !== -1) {
+                const h = player.invTotal(inv, variantHood);
+                if (h > 0) {
+                    player.invDel(inv, variantHood, h);
+                }
+            }
+        }
+        player.invAdd(where, maxCape, fused);
+        if (hoods > 0 && maxHood !== -1) {
+            player.invAdd(where, maxHood, hoods);
+        }
+        return true;
     }
 
     /** Returns the safe name the request was filed under, or null if one is already in flight. */
