@@ -259,7 +259,7 @@ const generated: string[] = [];
 // step and still shows its text; it just carries no target, which is the safe end of the mistake:
 // a step with no highlight reads as "do this", a step with the wrong highlight points at a door in
 // another kingdom.
-const NPC_KINDS = new Set(['talk', 'useNpc', 'fight', 'herd', 'wakehunt']);
+const NPC_KINDS = new Set(['talk', 'useNpc', 'fight', 'herd']);
 const LOC_KINDS = new Set(['loc', 'useLoc', 'castLoc']);
 // `cast` names a spell ("magic:wind_blast"), which is neither an item nor anything standing in
 // the scene, so it stays a text-only step. Left out of OBJ_KINDS deliberately rather than left to
@@ -270,7 +270,10 @@ const WALK_KINDS = new Set(['go', 'mapexit', 'sneak']);
 /** The sim asserting the game agrees with it. Not instructions. */
 const ASSERT_KINDS = new Set(['varis', 'count', 'zone', 'nearnpc', 'hasnt']);
 /** The robot-only steps. See the header for why each one goes. */
-const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'press', 'say', 'sv', 'varbit', 'seed']);
+// `wakehunt` is in here for a reason worth stating: it is the sim running an npc's hunt by hand
+// because no real client is watching it. In a game with a player in it the hunt runs itself, so
+// there is nothing for the player to do and the row read "Chompy bird."
+const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'press', 'say', 'sv', 'varbit', 'seed', 'wakehunt']);
 
 /**
  * A note's wording, tidied for a player.
@@ -331,6 +334,168 @@ function explanation(act: string, why: string): string | undefined {
 /** How many paragraphs of sim commentary were left out, for the report. */
 let commentary = 0;
 
+// A walk's prose is a DESTINATION, not an instruction: "To the ruins of Uzer.", "Back to the
+// priests.", "North to Edgeville and down.", "The south gate, from outside." As a row it reads as
+// a label for somewhere rather than something to do, so it gets the verb it is missing. Which
+// verb depends on what follows: a preposition or a bearing wants "Go", a bare place wants "Go to",
+// and a phrase that already opens on a verb wants nothing.
+const HEADS_WITH_GO = new Set([
+    'to',
+    'back',
+    'into',
+    'down',
+    'up',
+    'round',
+    'across',
+    'through',
+    'out',
+    'past',
+    'along',
+    'over',
+    'inside',
+    'outside',
+    'north',
+    'south',
+    'east',
+    'west',
+    'north-west',
+    'north-east',
+    'south-west',
+    'south-east',
+    'northwest',
+    'northeast',
+    'southwest',
+    'southeast',
+    'upstairs',
+    'downstairs',
+    'in',
+    'on',
+    'behind',
+    'beside',
+    'toward',
+    'towards',
+    'via',
+    'off'
+]);
+const ALREADY_A_VERB = new Set([
+    'walk',
+    'go',
+    'head',
+    'climb',
+    'enter',
+    'cross',
+    'return',
+    'follow',
+    'leave',
+    'run',
+    'take',
+    'stand',
+    'step',
+    'travel',
+    'board',
+    'ride',
+    'swim',
+    'jump',
+    'squeeze',
+    'descend',
+    // Not ways of moving, but a leg's prose sometimes names what you went there to do - "ask
+    // Jack what is still up there" - and "Go to ask Jack" is not a sentence.
+    'ask',
+    'tell',
+    'speak',
+    'find'
+]);
+
+// Three shapes of prose that are NOT a destination, each of which came out as a sentence that
+// read like a translation. A phrase joined to the step before it ("and you are in the camp");
+// a phrase naming the JOURNEY rather than its end ("the walk back north out of the swamp", "the
+// long way round to the fountain"), where the destination is what follows the noun; and a whole
+// STATEMENT about the route ("the walk from Falador to the fortress is open ground and not this
+// quest"), which is a remark and not somewhere to go. Prefixing "Go to" to any of them produced
+// "Go to the walk back north out of the swamp."
+const JOINED = /^(?:and|then|so)\s+/i;
+const JOURNEY = /^(?:to\s+|all\s+)?the\s+(?:long\s+|short\s+|quick\s+|same\s+|only\s+|last\s+|first\s+)?(?:walk|trip|journey|run|trek|hike|way)\s+/i;
+
+/**
+ * Whether the phrase makes a claim rather than naming a place.
+ *
+ * A SUBJECT AT THE FRONT AND ITS VERB BEFORE ANY BREAK, which is narrower than it sounds and has
+ * to be. Hunting for a verb anywhere took "through the chamber to the crate the key is on" and
+ * "back down the road he has not walked in two hundred years" - plain destinations with a
+ * relative clause hanging off them - and stripped the instruction out of both. A statement in
+ * this table opens on its own subject instead: "the walk back to Falador is not this quest".
+ * So the phrase must START with one of the few words that can only be a subject here, and the
+ * verb must reach it without crossing a comma, semicolon or full stop.
+ */
+const STATEMENT = /^(?:the|a|an|this|that|there|it|he|she|they|you|we)\b[^,;.]*?\b(?:is|are|was|were|has|have)\b/i;
+
+function states(text: string): boolean {
+    return STATEMENT.test(text);
+}
+
+/**
+ * A server handle in a walk's prose, swapped for the name a player reads.
+ *
+ * The generated legs hand the thing they are walking to straight through as the note - a
+ * `gardener('brother_althric', ...)` or a ledge out of a table of them - so the row came out as
+ * "Go to brother_althric." and "Go to rocky_ledge2.", which are names out of the server's own
+ * source. The cache knows what each one is, and it is the same lookup the clickable steps use:
+ * npc first, then loc, then obj. An unknown handle at least loses its underscores.
+ */
+// Not a FILENAME: a note naming a script - "gnome_glider.rs2 has no teleport gate" - is already
+// the word a reader needs, and looking it up turned it into "Gnome glider.rs2".
+const HANDLE = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b(?!\.[a-z0-9]{2,4}\b)/g;
+
+function named(text: string): string {
+    return text.replace(HANDLE, token => {
+        for (const kind of ['talk', 'loc', 'obj']) {
+            const id = idOf(kind, token);
+            if (id < 0) continue;
+            const name = kind === 'talk' ? NpcType.get(id)?.name : kind === 'loc' ? LocType.get(id)?.name : ObjType.get(id)?.name;
+            if (name) return name;
+        }
+        return token.replace(/_/g, ' ');
+    });
+}
+
+/** A destination phrase as something to do: "To the circle." becomes "Go to the circle." */
+function walkText(text: string): string {
+    let t = named(text).trim().replace(JOINED, '');
+    if (!t) return 'Travel here.';
+    if (states(t)) return sentence(t);
+    t = t.replace(JOURNEY, '');
+    if (!t) return 'Travel here.';
+    const first = t
+        .split(/\s+/)[0]
+        .toLowerCase()
+        .replace(/[^a-z-]/g, '');
+    if (ALREADY_A_VERB.has(first)) return sentence(t);
+    // Lowercasing the first letter is right for "The south gate" and wrong for "Velorina's
+    // house", and nothing in the string says which - so only the words that are certainly not
+    // names get lowered: the articles and the prepositions and bearings listed above.
+    const common = HEADS_WITH_GO.has(first) || first === 'the' || first === 'a' || first === 'an';
+    const lead = common ? t.charAt(0).toLowerCase() + t.slice(1) : t;
+    return sentence(HEADS_WITH_GO.has(first) ? `Go ${lead}` : `Go to ${lead}`);
+}
+
+/**
+ * A debugname as a name, for the 447 steps whose target the cache has no name for.
+ *
+ * `fever_multi_cannon` is a handle out of the server's source and the quest has no other word for
+ * that cannon, so the row has to use it. Lowercased with spaces it read as a typo in the middle of
+ * a sentence - "Load fever multi cannon." - and capitalised it reads as the name of a thing.
+ */
+function titled(handle: string): string {
+    return (
+        handle
+            .replace(/_/g, ' ')
+            .replace(/\b[a-z]/g, c => c.toUpperCase())
+            // `golem_golem` is a quest prefix in front of its own subject, and "Talk to Golem Golem."
+            // is the handle showing through rather than a name.
+            .replace(/\b(\w+) \1\b/gi, '$1')
+    );
+}
+
 /** A fragment as a sentence: a capital at the front, a full stop at the back. */
 function sentence(text: string): string {
     const t = text.trim();
@@ -349,11 +514,17 @@ function sentence(text: string): string {
  * and name both from there gives a line that reads as an instruction, and leaves `why` to be the
  * explanation underneath, which is what it was written as.
  */
-function imperative(kind: string, name: string, op: number | undefined, id: number): string | null {
+function imperative(kind: string, name: string, op: number | undefined, id: number, item?: string | null): string | null {
     if (!name) return null;
     if (kind === 'talk') return `Talk to ${name}`;
     if (kind === 'fight') return `Kill ${name}`;
     if (kind === 'take') return `Pick up ${name}`;
+    if (kind === 'herd') return `Herd ${name}`;
+    // BEFORE THE OP LOOKUP BELOW, which reads ObjType for anything that is not a loc or a held
+    // item - and `id` here is the loc or the npc being used ON, so that lookup was asking the obj
+    // table for a loc's number and would answer with an unrelated item's right-click word.
+    if (kind === 'useLoc' || kind === 'useNpc') return item ? `Use ${item} on ${name}` : `Use an item on ${name}`;
+    if (kind === 'castLoc') return `Cast a spell on ${name}`;
 
     const slot = (op ?? 1) - 1;
     let verb: string | null = null;
@@ -362,7 +533,6 @@ function imperative(kind: string, name: string, op: number | undefined, id: numb
     else if (id >= 0) verb = ObjType.get(id)?.op?.[slot] ?? null;
 
     if (verb) return `${verb} ${name}`;
-    if (kind === 'useLoc' || kind === 'useNpc') return `Use an item on ${name}`;
     if (kind === 'loc' || kind === 'held') return `Use ${name}`;
     return name;
 }
@@ -435,7 +605,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             dropped[kind] = (dropped[kind] ?? 0) + 1;
             // A setpos is still worth a line: it is the walk between two legs.
             if (kind === 'setpos' && Array.isArray(s.setpos)) {
-                cur.steps.push({ text: sentence(prose(s.why)) || 'Travel here.', kind: 'walk', at: s.setpos as number[] });
+                cur.steps.push({ text: walkText(prose(s.why)), kind: 'walk', at: s.setpos as number[] });
             }
             continue;
         }
@@ -503,13 +673,21 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             }
         }
 
-        const act = imperative(kind, shown || target.replace(/_/g, ' '), typeof s.op === 'number' ? s.op : undefined, id);
+        // The item a `useNpc`/`useLoc` is holding, so the row can say WHICH item: the manifest
+        // carries it as `obj` beside the target, and without it every one of the 563 of them read
+        // "Use an item on Cauldron." - true, and no use to somebody standing at the cauldron.
+        let item: string | null = null;
+        if (typeof s.obj === 'string' && s.obj) {
+            const objId = idOf('obj', s.obj);
+            item = (objId >= 0 ? ObjType.get(objId)?.name : null) ?? titled(s.obj);
+        }
+        const act = imperative(kind, shown || titled(target), typeof s.op === 'number' ? s.op : undefined, id, item);
         const step: HelperStep = {
             kind: npc ? 'talk' : loc ? 'loc' : walk ? 'walk' : obj ? 'obj' : 'note',
             // The imperative leads the row. With no target to build one from - a walk - the sim's
             // own words are all there is, so they lead instead, as a sentence rather than a
             // fragment.
-            text: act ? act + '.' : sentence(why) || defaultText(kind, shown || target || String(raw)),
+            text: act ? act + '.' : walk ? walkText(why) : sentence(why) || defaultText(kind, shown || target || String(raw)),
             // And the sim's words go underneath, where a fragment reads correctly.
             why: act ? explanation(act, why) : undefined
         };
@@ -532,7 +710,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
 }
 
 function defaultText(kind: string, target: string): string {
-    const pretty = String(target).replace(/_/g, ' ');
+    const pretty = titled(String(target));
     if (kind === 'fight') return `Kill ${pretty}.`;
     if (kind === 'give') return `Give an item to ${pretty}.`;
     if (kind === 'take') return `Pick up ${pretty}.`;
