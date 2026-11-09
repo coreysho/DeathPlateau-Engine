@@ -12,6 +12,10 @@
 // So the assertions are about identity, not about "an animation played": that a teleport plays
 // 1979 and never 1988 is the whole bug, and a check that only asked whether SOME seq played would
 // have passed before the fix as happily as after it.
+//
+// The OTHER half of the same line - the height the spotanim is drawn at, which left the column
+// hanging off the floor - is a rule about models rather than about ancients, and lives in
+// tools/sim/spotground.ts.
 import * as H from './harness.js';
 import Player from '#/engine/entity/Player.js';
 import SeqType from '#/cache/config/SeqType.js';
