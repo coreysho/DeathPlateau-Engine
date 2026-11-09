@@ -59,6 +59,16 @@ type HelperStep = {
      * step still shows its text - it just cannot be highlighted.
      */
     id?: number;
+    /**
+     * What a PLAYER calls it: "Door", "Restless ghost", "Ghostspeak amulet".
+     *
+     * The debugname is the server's handle and some of them say nothing to anybody - the panel
+     * read "loc 1530" and "ghostx" where it meant a churchyard door and the ghost. The cache has
+     * the display name and the exporter has the cache, so it is resolved here; the client's
+     * getLocName could answer for locs but there is no equivalent for an npc that is not already
+     * standing in the scene, which is exactly the one the step is sending you to find.
+     */
+    label?: string;
     /** Where it is, when the manifest says. */
     at?: number[];
     /** Which right-click option, when it is not the first. */
@@ -81,10 +91,16 @@ type HelperStage = {
      */
     headings: string[];
     steps: HelperStep[];
-    /** Everything the player must be holding by the end of this leg. */
-    items: string[];
+    /**
+     * Everything the player must be holding by the end of this leg, with the obj id.
+     *
+     * The id is what makes the list a CHECKLIST rather than a note: the plugin ticks a row off
+     * with ctx.countObj(id), which needs the number. Emitted as strings at first, which left the
+     * panel unable to tell "you need a hammer" from "you have one".
+     */
+    items: { name: string; id: number; n: number }[];
     /** What must be WORN by the end of it - an equip is a different instruction from a carry. */
-    worn: string[];
+    worn: { name: string; id: number }[];
 };
 
 type HelperQuest = {
@@ -324,7 +340,8 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // every equip two lines, the second one invented by defaultText ("Wear amulet of
         // ghostspeak.") directly under the real one.
         if (kind === 'worn' && typeof s.why !== 'string') {
-            cur.worn.push(String(s.worn));
+            const wid = idOf('obj', String(s.worn));
+            cur.worn.push({ name: (wid >= 0 ? ObjType.get(wid)?.name : null) || String(s.worn), id: wid });
             continue;
         }
 
@@ -336,8 +353,13 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (kind === 'give' || kind === 'has') {
             const item = String(kind === 'give' ? s.give : s.has);
             const n = typeof s.n === 'number' ? s.n : 1;
-            const line = n > 1 ? `${item} x${n}` : item;
-            if (!cur.items.includes(line)) cur.items.push(line);
+            const id = idOf('obj', item);
+            if (id < 0) unresolved.set('item:' + item, (unresolved.get('item:' + item) ?? 0) + 1);
+            const shown = id >= 0 ? ObjType.get(id)?.name : null;
+            const seen = cur.items.find(x => x.name === item);
+            // The same item asked for twice in a leg means the larger count, not two rows.
+            if (seen) seen.n = Math.max(seen.n, n);
+            else cur.items.push({ name: shown || item, id, n });
             continue;
         }
 
@@ -365,8 +387,13 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (target) {
             step.target = target;
             const id = npc ? idOf('talk', target) : loc ? idOf('loc', target) : idOf('obj', target);
-            if (id >= 0) step.id = id;
-            else unresolved.set(kind + ':' + target, (unresolved.get(kind + ':' + target) ?? 0) + 1);
+            if (id >= 0) {
+                step.id = id;
+                const shown = npc ? NpcType.get(id)?.name : loc ? LocType.get(id)?.name : ObjType.get(id)?.name;
+                if (shown) step.label = shown;
+            } else {
+                unresolved.set(kind + ':' + target, (unresolved.get(kind + ':' + target) ?? 0) + 1);
+            }
         }
         if (Array.isArray(s.at)) step.at = s.at as number[];
         else if (walk && Array.isArray(raw)) step.at = raw as number[];
