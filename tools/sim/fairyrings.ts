@@ -77,7 +77,12 @@ const RINGS = [
     // on the grass outside his castle rather than in the throne room a first pass chose.
     { loc: '49_fairy_mushroom_ring', x: 3025, z: 4833, code: 'ALR', where: 'the Abyssal Area' },
     { loc: '50_fairy_mushroom_ring', x: 2440, z: 5146, code: 'BLP', where: 'the TzHaar city' },
-    { loc: '52_fairy_mushroom_ring', x: 2629, z: 4677, code: 'BJR', where: "the Fisher King's realm" }
+    { loc: '52_fairy_mushroom_ring', x: 2629, z: 4677, code: 'BJR', where: "the Fisher King's realm" },
+    // TWO THAT READ AS ABSENT TWICE, because neither answers to RuneScape's name for it: Tirannwn
+    // is here under the Regicide quest's prefix, and In Search of the Myreque is this server's
+    // "route" quest. The Myreque ring sits two tiles from their hideout door, underground.
+    { loc: '53_fairy_mushroom_ring', x: 2200, z: 3120, code: 'DLR', where: 'Isafdar' },
+    { loc: '55_fairy_mushroom_ring', x: 3500, z: 9810, code: 'DLS', where: "the Myreque's cave" }
 ];
 
 // the order each dial turns in, which is NOT alphabetical
@@ -184,7 +189,7 @@ for (const r of RINGS) {
     H.setVarBit(u, 'fairy_farmers_quest', FAIRY_COMPLETE);
     H.clearLogs();
     useRing(u, r);
-    check(`the ${r.where} ring opens the dial`, panelOpen(u), true);
+    check(`the ring at ${r.where} opens the dial`, panelOpen(u), true);
 }
 
 // ---------------------------------------------------------------- the gate
