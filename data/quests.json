@@ -22,6 +22,7 @@
        "text": "Father Reen, south of the Al Kharid bank."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -76,6 +77,7 @@
        "text": "Evil Dave, in his mother’s cellar under Edgeville."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to Edgeville and down.",
@@ -106,6 +108,7 @@
        "text": "\"Use a black mushroom or black dye on Silverlight to dye it black.\" Desert shirt and robe the same, and mushroom ink is the only thing that takes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -156,6 +159,7 @@
        "text": "The sigil mould."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the ruins of Uzer.",
@@ -185,6 +189,7 @@
        "text": "\"use a silver bar on any furnace and select demonic sigil\" - here it is the one kiln of the four that still works, and 30 Crafting, which was not asked for before."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-west to the working kiln.",
@@ -218,6 +223,7 @@
     {
      "from": 60,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -263,6 +269,7 @@
        "text": "The chant."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -307,6 +314,7 @@
        "text": "\"Choose your reward to finish the quest\" - ten thousand experience in a combat skill, which the quest used to pay as two thousand Crafting and one thousand Magic instead."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the priests.",
@@ -363,6 +371,7 @@
        "text": "Into Port Phasmatys and talk to Velorina."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -487,6 +496,7 @@
        "text": "Necrovarus at the Ectofuntus, outside the walls."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -535,6 +545,7 @@
        "text": "Back to Velorina, who names the old crone."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -583,6 +594,7 @@
        "text": "The crone east of the slayer tower, and her tea."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -682,6 +694,20 @@
       {
        "at": 21,
        "text": "The three map scraps - the captain chest, the lobster, the rocks."
+      }
+     ],
+     "marks": [
+      {
+       "at": 17,
+       "var": 205,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 18,
+       "var": 214,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -1093,6 +1119,7 @@
        "text": "The ghost captain, Dragontooth Island, and the dig."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -1165,6 +1192,20 @@
       {
        "at": 0,
        "text": "Ak-Haranu wants a bow with Robin name on it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 212,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 9,
+       "var": 212,
+       "varbit": true,
+       "is": 8
       }
      ],
      "steps": [
@@ -1335,6 +1376,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -1358,6 +1400,14 @@
       {
        "at": 8,
        "text": "Gravingas, in the square by the north gate, and ten signatures."
+      }
+     ],
+     "marks": [
+      {
+       "at": 20,
+       "var": 209,
+       "varbit": true,
+       "is": 10
       }
      ],
      "steps": [
@@ -1584,6 +1634,7 @@
        "text": "Show it to Necrovarus, and he drops a key."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -1635,6 +1686,14 @@
       {
        "at": 5,
        "text": "The crone, then Necrovarus, then Velorina."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 213,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -1762,6 +1821,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -1794,6 +1854,7 @@
     {
      "from": 12,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -1838,6 +1899,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -1873,6 +1935,7 @@
        "text": "Ava, in the west wing of Draynor Manor."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -1983,6 +2046,62 @@
       {
        "at": 21,
        "text": "Both birds to Ava."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 1701,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 4,
+       "var": 1701,
+       "varbit": false,
+       "is": 2
+      },
+      {
+       "at": 6,
+       "var": 1701,
+       "varbit": false,
+       "is": 3
+      },
+      {
+       "at": 8,
+       "var": 1701,
+       "varbit": false,
+       "is": 4
+      },
+      {
+       "at": 10,
+       "var": 1701,
+       "varbit": false,
+       "is": 5
+      },
+      {
+       "at": 12,
+       "var": 1701,
+       "varbit": false,
+       "is": 6
+      },
+      {
+       "at": 14,
+       "var": 1701,
+       "varbit": false,
+       "is": 7
+      },
+      {
+       "at": 16,
+       "var": 1701,
+       "varbit": false,
+       "is": 8
+      },
+      {
+       "at": 18,
+       "var": 1701,
+       "varbit": false,
+       "is": 9
       }
      ],
      "steps": [
@@ -2224,6 +2343,7 @@
        "text": "The Witch in the north-west corner wants five iron bars."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Witch next door.",
@@ -2252,6 +2372,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -2276,6 +2397,7 @@
        "text": "The iron mine north-east of Rimmington, and a hammer."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Rimmington mine.",
@@ -2314,6 +2436,7 @@
        "text": "The magnet to Ava."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Ava.",
@@ -2351,6 +2474,7 @@
        "text": "The undead trees in the garden, which an ordinary axe bounces off - and that is the step Ava wants reported."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out into the manor grounds.",
@@ -2376,6 +2500,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Ava.",
@@ -2406,6 +2531,7 @@
        "text": "Turael swaps his blessed axe for a mithril axe and a holy symbol."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Burthorpe.",
@@ -2444,6 +2570,7 @@
        "text": "The twigs to Ava, then ask her for the research notes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the manor grounds.",
@@ -2507,6 +2634,7 @@
        "text": "The notes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -2551,6 +2679,7 @@
        "text": "The translation back to Ava for the pattern, then the container."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -2579,6 +2708,7 @@
        "text": "The container to Ava."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -2637,6 +2767,7 @@
     {
      "from": 13,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -2672,6 +2803,7 @@
        "text": "Lady Servil, west of the Ardougne monastery, with a broken cart."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Lady Servil.",
@@ -2712,6 +2844,7 @@
        "text": "A guard’s uniform is in the chest in the north-east house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the house in the north-east corner.",
@@ -2757,6 +2890,7 @@
        "text": "The guard on the southern cells wants a decent drink."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -2836,6 +2970,7 @@
        "text": "Too much Khali brew and he hands over the keys."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Khazard bar.",
@@ -2896,6 +3031,7 @@
        "text": "Jeremy is in the north-eastern cell, and he runs for the arena."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Jeremy's cell.",
@@ -2938,6 +3074,7 @@
        "text": "Fight 1: the ogre, with his father in the arena."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -2958,6 +3095,7 @@
        "text": "Fight 2: Hengrad is the cellmate, and talking to him brings the guard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cell.",
@@ -2996,6 +3134,7 @@
        "text": "Fight 4 (optional): Khazard himself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -3011,6 +3150,7 @@
     {
      "from": 13,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Lady Servil.",
@@ -3036,6 +3176,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -3075,6 +3216,7 @@
        "text": "Reldo in the Varrock palace library."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -3120,6 +3262,7 @@
        "text": "The book itself, in the library bookcase."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -3165,6 +3308,7 @@
        "text": "Back to Reldo, who names Baraek."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -3186,6 +3330,7 @@
        "text": "Baraek in the market, for twenty coins."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the market place.",
@@ -3220,6 +3365,7 @@
        "text": "Straven, in the hideout under south-east Varrock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down into the hideout.",
@@ -3270,6 +3416,7 @@
        "text": "The report to Straven, who lets you in."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go up and west to the Blue Moon.",
@@ -3355,6 +3502,7 @@
        "text": "The certificate to King Roald."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west through the hideout to the chest room.",
@@ -3448,6 +3596,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -3483,6 +3632,7 @@
        "text": "King Arthur, at the round table."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -3547,6 +3697,7 @@
        "text": "Sir Gawain knows who trapped him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round the table to Gawain.",
@@ -3581,6 +3732,7 @@
        "text": "Sir Lancelot knows how the keep takes deliveries."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go upstairs to Lancelot.",
@@ -3618,6 +3770,7 @@
        "text": "Sir Mordred, inside the keep."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the Catherby docks.",
@@ -3685,6 +3838,7 @@
        "text": "Light the candle, stand on the magic symbol by the tower and drop the bats’ bones."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Catherby.",
@@ -3809,6 +3963,7 @@
        "text": "Excalibur on the crystal."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the lake.",
@@ -3898,6 +4053,7 @@
        "text": "Tell Arthur."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to the round table.",
@@ -3944,6 +4100,7 @@
        "text": "The boy by the east entrance to Taverley."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -4004,6 +4161,7 @@
        "text": "The cellar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west and north around the hedge to the front door.",
@@ -4166,6 +4324,7 @@
        "text": "The mouse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back up the ladder into the house.",
@@ -4244,6 +4403,7 @@
        "text": "The diary is upstairs, behind the door at the top, and reading it is what the journal calls the next step."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back in and over to the stairs.",
@@ -4326,6 +4486,7 @@
        "text": "The shed, and the experiment."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down and out through the back door.",
@@ -4444,6 +4605,7 @@
        "text": "The ball back to the boy."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -4508,6 +4670,7 @@
        "text": "The guard on the Barbarian Outpost gate, who wants proof you can drink like a barbarian."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -4535,6 +4698,7 @@
     {
      "from": 1,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -4565,6 +4729,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Elena in East Ardougne.",
@@ -4598,6 +4763,7 @@
        "text": "Jerico keeps pigeons, and the mourners watch the tower."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Jerico.",
@@ -4628,6 +4794,7 @@
        "text": "Seed on the tower, then open the cage loc_2067 is a WALL, and the only clear tile that reaches any of it is the inside corner at 2563,3301 - which is exactly what the guide means by standing in the corner where the two fences meet."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -4738,6 +4905,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -4760,6 +4928,7 @@
        "text": "Omart and Kilron have a rope ladder, and the guards are busy with birds."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -4800,6 +4969,7 @@
        "text": "A rotten apple from the mourners own yard, into their stew."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -4870,6 +5040,7 @@
        "text": "The key opens the caged room, and the distillator is in a crate."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the nurse hut, south-west of the church.",
@@ -5067,6 +5238,7 @@
        "text": "Back to Elena, who hands over the three agents and a sample."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Elena.",
@@ -5104,6 +5276,7 @@
        "text": "The chemist in Rimmington for touch paper."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the chemist in south-west Rimmington.",
@@ -5183,6 +5356,7 @@
        "text": "Guidor wife only lets priests in."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -5395,6 +5569,7 @@
        "text": "Elena, then the king who built the wall."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Elena.",
@@ -5420,6 +5595,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to King Lathas on the castle first floor.",
@@ -5469,6 +5645,7 @@
        "text": "Sir Amik Varze, top of the western tower of the White Knights castle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -5539,6 +5716,7 @@
        "text": "The grill, where the witch and the goblin can be overheard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "The walk from Falador to the fortress is open ground and not this quest.",
@@ -5748,6 +5926,14 @@
        "text": "Then a cabbage from anywhere else, which ruins the potion."
       }
      ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 130,
+       "varbit": false,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "text": "Go to two tiles south of the second push-wall, where it puts you.",
@@ -5812,6 +5998,7 @@
        "text": "Back to Sir Amik for the 2,500 coins."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "The walk back to Falador is not this quest.",
@@ -5837,6 +6024,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -5867,6 +6055,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Rantz.",
@@ -5973,6 +6162,7 @@
        "text": "Rantz takes six."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cave mouth.",
@@ -6337,6 +6527,7 @@
        "text": "Asking Rantz about the toadies is what gives permission to open his chest, and the chest is a Strength roll - one attempt in three drains a level instead of lifting the rock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -6364,6 +6555,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cave mouth.",
@@ -6414,6 +6606,7 @@
        "text": "Show Rantz the toad, drop it where he points, and wait."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -6546,6 +6739,7 @@
     {
      "from": 25,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the clearing south of him.",
@@ -6577,6 +6771,7 @@
        "text": "Rantz shoots and misses."
       }
      ],
+     "marks": [],
      "steps": [],
      "items": [],
      "worn": []
@@ -6584,6 +6779,7 @@
     {
      "from": 40,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Rantz.",
@@ -6618,6 +6814,7 @@
        "text": "The bow and the arrows have to be WORN - the combat proc reads inv_getobj(worn, rhand) and the quiver, and refuses anything else."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -6704,6 +6901,7 @@
        "text": "Rantz looks at it and tells you to cook it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -6755,6 +6953,7 @@
        "text": "The spit roast north of Rantz."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cave mouth.",
@@ -6847,6 +7046,7 @@
        "text": "Hand it over."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Rantz.",
@@ -6922,6 +7122,38 @@
       {
        "at": 21,
        "text": "Back to Kojo."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 10,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 6,
+       "var": 10,
+       "varbit": false,
+       "is": 2
+      },
+      {
+       "at": 10,
+       "var": 10,
+       "varbit": false,
+       "is": 3
+      },
+      {
+       "at": 16,
+       "var": 10,
+       "varbit": false,
+       "is": 4
+      },
+      {
+       "at": 20,
+       "var": 10,
+       "varbit": false,
+       "is": 5
       }
      ],
      "steps": [
@@ -7169,6 +7401,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -7208,6 +7441,7 @@
        "text": "The Cook in the kitchen of Lumbridge Castle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -7266,6 +7500,7 @@
        "text": "Back to the Cook with all three."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "The walk up the Lumbridge road is open ground and not this quest.",
@@ -7485,6 +7720,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -7534,6 +7770,7 @@
        "text": "Dimintheis wants the crest back."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -7651,6 +7888,7 @@
        "text": "Caleb in Catherby wants five cooked fish for his salad."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Caleb in Catherby.",
@@ -7681,6 +7919,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -7705,6 +7944,7 @@
        "text": "The gem trader in Al Kharid knows where Avan went."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the gem trader.",
@@ -7745,6 +7985,7 @@
        "text": "Avan wants a ring and a necklace of perfect gold."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to the scorpion mining pit.",
@@ -7778,6 +8019,7 @@
        "text": "Boot, at the far west end of the Dwarven Mine, knows where it is."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Boot under Ice Mountain.",
@@ -7809,6 +8051,14 @@
       {
        "at": 1,
        "text": "The Witchaven dungeon, and its three-lever door puzzle."
+      }
+     ],
+     "marks": [
+      {
+       "at": 26,
+       "var": 149,
+       "varbit": false,
+       "is": 48
       }
      ],
      "steps": [
@@ -8268,6 +8518,7 @@
        "text": "Johnathon is upstairs in the Jolly Boar Inn, poisoned."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Jolly Boar Inn.",
@@ -8300,6 +8551,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -8329,6 +8581,14 @@
       {
        "at": 7,
        "text": "Put the three together and take it to their father any two pieces together is enough of a click: the handler looks for all three in the pack and assembles the whole crest in one go."
+      }
+     ],
+     "marks": [
+      {
+       "at": 5,
+       "var": 149,
+       "varbit": false,
+       "is": 63
       }
      ],
      "steps": [
@@ -8425,6 +8685,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -8460,6 +8721,7 @@
        "text": "Captain Braindeath, in the brewery, who hands over the blindweed seed."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -8506,6 +8768,20 @@
       {
        "at": 13,
        "text": "The hopper, two floors up from the brewery floor."
+      }
+     ],
+     "marks": [
+      {
+       "at": 11,
+       "var": 1366,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 12,
+       "var": 1366,
+       "varbit": true,
+       "is": 5
       }
      ],
      "steps": [
@@ -8756,6 +9032,7 @@
        "text": "Back to Braindeath for a bucket, then 50% Luke's gate and the lake."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -8948,6 +9225,14 @@
       {
        "at": 0,
        "text": "The fishbowl and net off Braindeath, five sea creatures into the PRESSURE BARREL - not the hopper - and then the lever, which is dead until the barrel has all five."
+      }
+     ],
+     "marks": [
+      {
+       "at": 23,
+       "var": 1354,
+       "varbit": true,
+       "is": 5
       }
      ],
      "steps": [
@@ -9233,6 +9518,14 @@
        "text": "The wrench off Braindeath, blessed by Davey, and then the controls."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1355,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -9327,6 +9620,14 @@
       {
        "at": 0,
        "text": "Braindeath first, or the carcass does not drop, then a fever spider."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1355,
+       "varbit": true,
+       "is": 2
       }
      ],
      "steps": [
@@ -9431,6 +9732,7 @@
        "text": "A bucket off the output tap, which nothing in the old version ever did."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -9486,6 +9788,7 @@
        "text": "Captain Donnie, out by the patches with a placard, who drinks it and names Rabid Jack."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -9531,6 +9834,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -9575,6 +9879,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -9610,6 +9915,7 @@
        "text": "Denulth, in his tent in the Burthorpe camp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Denulth.",
@@ -9681,6 +9987,7 @@
        "text": "Eohric, on the castle floor above, names the guard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Eohric in the castle.",
@@ -9714,6 +10021,7 @@
        "text": "Harold, upstairs in the Toad and Chicken, will not talk about it his door is knocked on rather than opened - he has to say come in."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the inn, outside his room.",
@@ -9759,6 +10067,7 @@
        "text": "Eohric knows what Harold is keen on."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Eohric.",
@@ -9789,6 +10098,7 @@
        "text": "An Asgarnian ale loosens him up, and a Blurberry Special makes him too drunk to count his dice."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the inn.",
@@ -9834,6 +10144,7 @@
        "text": "He has a hundred gold, so one bet of a hundred and one bankrupts him - and a bankrupt Harold writes an IOU."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -9869,6 +10180,7 @@
        "text": "The IOU is written on the back of the combination."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -9897,6 +10209,7 @@
        "text": "Five stone balls on six stone plinths outside the equipment room."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -10075,6 +10388,44 @@
       {
        "at": 18,
        "text": "Back to Denulth with the combination and the path."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 315,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 5,
+       "var": 315,
+       "varbit": false,
+       "is": 2
+      },
+      {
+       "at": 7,
+       "var": 315,
+       "varbit": false,
+       "is": 3
+      },
+      {
+       "at": 9,
+       "var": 315,
+       "varbit": false,
+       "is": 4
+      },
+      {
+       "at": 13,
+       "var": 315,
+       "varbit": false,
+       "is": 7
+      },
+      {
+       "at": 17,
+       "var": 315,
+       "varbit": false,
+       "is": 8
       }
      ],
      "steps": [
@@ -10297,6 +10648,7 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -10336,6 +10688,7 @@
        "text": "Gypsy Aris, in the tent in Varrock square."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -10378,6 +10731,7 @@
        "text": "Sir Prysin, in Varrock palace."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north through the city into the palace.",
@@ -10429,6 +10783,7 @@
        "text": "Traiborn in the Wizards Tower wants 25 bones for his key, and takes them one conversation at a time the bones arrive now and not at the start, because twenty-five of them plus the keys fills the inventory - and a full inventory cannot pick the sewer key up."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go up the tower stairs.",
@@ -10562,6 +10917,7 @@
        "text": "Back to Prysin, who opens the box."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -10614,6 +10970,7 @@
        "text": "Then the incantation - four of them and only one works."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -10685,6 +11042,7 @@
        "text": "Irena, by Shantay Pass, whose daughter Ana went into the desert."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -10756,6 +11114,7 @@
        "text": "The Mercenary Captain, outside the camp gate."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -10787,6 +11146,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -10808,6 +11168,7 @@
        "text": "Now everything comes off."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "note",
@@ -10852,6 +11213,7 @@
        "text": "The slave on the east wall wants his chains picked and then your desert clothes for his own."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -10890,6 +11252,7 @@
        "text": "The big wooden doors in the north-east corner, which only open for somebody dressed as a slave."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -10989,6 +11352,7 @@
        "text": "The two guards at the cave mouth want a Tenti pineapple, and the only way they say so is \"I would like to mine in a different area\" and then agreeing with him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11027,6 +11391,7 @@
        "text": "Al Shabim of the Bedabin, a hundred squares west, will trade a pineapple for the technical plans in Captain Siad's chest - and hands over a copy of the key for it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11104,6 +11469,7 @@
        "text": "Captain Siad is upstairs in the camp jail."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11238,6 +11604,7 @@
        "text": "Back to Al Shabim with the plans."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -11326,6 +11693,7 @@
        "text": "The anvil is in the northern tent, and the tent is SEALED - its walls block every edge, so the only tile inside it a player can reach is the one bedabin_tentdoor teleports you onto."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11378,6 +11746,7 @@
     {
      "from": 14,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -11407,6 +11776,7 @@
        "text": "The dart buys the pineapple."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -11456,6 +11826,7 @@
        "text": "Back into the camp, back into the robes, and the guard gets his pineapple."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11568,6 +11939,7 @@
        "text": "Ride the cart down, then the north-west path to Ana - and she goes into the barrel rather than being talked to."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -11654,6 +12026,7 @@
     {
      "from": 18,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11684,6 +12057,7 @@
        "text": "Ana goes in the cart and then you do."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11725,6 +12099,7 @@
        "text": "She is in one of the barrels by the cart - only the ones within three squares of it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -11774,6 +12149,7 @@
        "text": "The lift, and a guard who offers to help carry it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11819,6 +12195,7 @@
        "text": "Up to the surface the way you came, and work the winch yourself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11888,6 +12265,7 @@
     {
      "from": 23,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11922,6 +12300,7 @@
        "text": "The wooden cart in the middle of the camp, and a cart driver who has to be talked round in eight menus."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -11958,6 +12337,7 @@
     {
      "from": 25,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -12021,6 +12401,7 @@
        "text": "Irena, Ana out of the barrel, and two skills of your choosing IT IS ALL ONE CONVERSATION."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -12056,6 +12437,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -12091,6 +12473,7 @@
        "text": "The hooded monk outside Paterdomus."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -12128,6 +12511,7 @@
        "text": "Doric’s whetstone, which takes the sword down to a slender blade."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to Doric’s hut.",
@@ -12170,6 +12554,7 @@
        "text": "The blade into the bow stave, and the bow into the pouch."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -12217,6 +12602,7 @@
        "text": "Behind the altar in the Entrana church, and walk away."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the monks’ ship to Entrana - and nobody searches a pouch.",
@@ -12252,6 +12638,14 @@
       {
        "at": 2,
        "text": "Search what is left of him."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 1467,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -12290,6 +12684,7 @@
        "text": "The high priest of Entrana, with what was left in his hand."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Entrana.",
@@ -12353,6 +12748,7 @@
        "text": "Doric, at the crossroads north of Falador."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -12397,6 +12793,7 @@
        "text": "Back with the lot."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -12418,6 +12815,7 @@
        "text": "The anvils, which he refuses before the quest is done."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -12477,6 +12875,7 @@
        "text": "The Guild Master, in the Champions' Guild south of Varrock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -12593,6 +12992,7 @@
        "text": "Oziach, in his hut west of Edgeville."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the road north-west out of Varrock to Edgeville.",
@@ -12676,6 +13076,32 @@
       {
        "at": 44,
        "text": "Klarense, on the Port Sarim dock, sells the Lady Lumbridge for 2,000."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 184,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 0,
+       "var": 187,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 1,
+       "var": 186,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 36,
+       "var": 184,
+       "varbit": false,
+       "is": 2
       }
      ],
      "steps": [
@@ -13220,6 +13646,7 @@
        "text": "Aboard, down the ladder, and three planks into the hull."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -13296,6 +13723,7 @@
        "text": "Ned in Draynor will crew her, once the map is in his hands."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to Draynor Village.",
@@ -13340,6 +13768,7 @@
        "text": "Back aboard, and Ned sails."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Port Sarim.",
@@ -13401,6 +13830,7 @@
        "text": "Elvarg, behind the gates."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north across Crandor to the volcano, past everything on it.",
@@ -13514,6 +13944,7 @@
        "text": "Down the mine ladder and through to the small cave."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -13624,6 +14055,26 @@
       {
        "at": 24,
        "text": "Ten encouraging things, which he only listens to once he is fed and armed."
+      }
+     ],
+     "marks": [
+      {
+       "at": 20,
+       "var": 2780,
+       "varbit": true,
+       "is": 20
+      },
+      {
+       "at": 24,
+       "var": 2782,
+       "varbit": true,
+       "is": 31
+      },
+      {
+       "at": 37,
+       "var": 2781,
+       "varbit": true,
+       "is": 10
       }
      ],
      "steps": [
@@ -14000,6 +14451,7 @@
        "text": "The Oneiromancer, south-east by the Astral Altar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -14049,6 +14501,7 @@
        "text": "Water, goutweed, and an astral rune smashed and ground."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -14152,6 +14605,14 @@
       {
        "at": 0,
        "text": "The Dream Hall, the potion on the brazier, and a tinderbox."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 2784,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -14270,6 +14731,7 @@
        "text": "The four fears, one after another, in the arena on 474's m28_80."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -14295,6 +14757,7 @@
        "text": "Back to the Oneiromancer, who felt it from there."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -14361,6 +14824,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -14400,6 +14864,7 @@
        "text": "Kaqemeex, at the stone circle north of Taverley."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -14451,6 +14916,7 @@
        "text": "Sanfew, upstairs in Taverley, who needs four enchanted meats."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south into the village and up the ladder.",
@@ -14489,6 +14955,7 @@
        "text": "All four back to Sanfew."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the ladder in the woods and through the dungeon.",
@@ -14611,6 +15078,7 @@
        "text": "Kaqemeex, who teaches Herblore."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back north to the circle.",
@@ -14660,6 +15128,7 @@
        "text": "Drezel, in the basement under Paterdomus."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -14733,6 +15202,7 @@
        "text": "In through the gate - Filliman will not appear unless you came that way, which is what %druidspirit = ^druidspirit_entered_swamp records."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Mort Myre gate.",
@@ -14775,6 +15245,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go south through the swamp to Filliman's camp.",
@@ -14817,6 +15288,7 @@
        "text": "The mirror shows him what he is."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the bench.",
@@ -14869,6 +15341,7 @@
     {
      "from": 25,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -14916,6 +15389,7 @@
        "text": "Back to Drezel for the blessing the spell needs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Drezel.",
@@ -14953,6 +15427,7 @@
        "text": "Stand next to a rotting log in the swamp and cast the spell, then pick what grows on it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to a rotting log.",
@@ -14978,6 +15453,7 @@
     {
      "from": 45,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15010,6 +15486,7 @@
        "text": "Show it to Filliman, who then stands between the three stones."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the camp.",
@@ -15050,6 +15527,7 @@
        "text": "Something from nature on the light-brown stone, the spent spell on the grey one, and the player standing on the third - the journal says the faith stone stands south of the spirit-to-become, and that is the one you stand on."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15123,6 +15601,7 @@
        "text": "Down into the grotto, and search it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15143,6 +15622,7 @@
     {
      "from": 65,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15170,6 +15650,7 @@
        "text": "The silver sickle for a blessed one, and a druid pouch."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15191,6 +15672,7 @@
        "text": "Out into the swamp, Bloom off the sickle, and fill the pouch."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15242,6 +15724,7 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -15263,6 +15746,7 @@
     {
      "from": 85,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -15354,6 +15838,7 @@
        "text": "The pouch makes a Ghast solid, and then it can be killed."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-west to the Ghasts.",
@@ -15394,6 +15879,7 @@
     {
      "from": 95,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15418,6 +15904,7 @@
     {
      "from": 100,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15448,6 +15935,7 @@
        "text": "Back to the grotto, which he turns into an Altar of Nature."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the camp.",
@@ -15514,6 +16002,7 @@
        "text": "Brother Omad, in the monastery south of Ardougne."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15556,6 +16045,7 @@
        "text": "Back to Omad with it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west into the forest.",
@@ -15661,6 +16151,7 @@
        "text": "Again, for the party and for Brother Cedric, who never came back with the wine."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15686,6 +16177,7 @@
        "text": "Cedric, drunk in the forest north-east of the monastery."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-east into the forest.",
@@ -15716,6 +16208,7 @@
        "text": "The water, and then the cart - both in the one conversation, so the stage jumps 40 to 60 and the yes/no about the cart is part of the same talk."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15740,6 +16233,7 @@
        "text": "The logs for the cart."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -15761,6 +16255,7 @@
        "text": "Tell Omad, collect eight law runes, and the monks throw a party."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the monastery.",
@@ -15786,6 +16281,7 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -15821,6 +16317,7 @@
        "text": "Indiana, digging in the desert north of the bandit camp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Indiana.",
@@ -15861,6 +16358,7 @@
        "text": "The Archaeological Expert at the Digsite translates them."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Digsite Exam Centre.",
@@ -15899,6 +16397,7 @@
        "text": "Indiana reads it and sends you to the bandit camp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Indiana.",
@@ -15936,6 +16435,7 @@
        "text": "The bartender will not talk to a stranger who has not bought a drink."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the bandit camp bar.",
@@ -15969,6 +16469,7 @@
        "text": "Eblis, on the east side of the camp, wants a scrying glass built."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -16010,6 +16511,7 @@
        "text": "Twelve magic logs, six molten glass, six steel bars, ashes, charcoal, bones and a blood rune."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -16129,6 +16631,7 @@
        "text": "The six mirrors south-east of the camp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the mirrors.",
@@ -16181,6 +16684,74 @@
       {
        "at": 54,
        "text": "Damis, twice - the first form falls and the second steps out of it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 373,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 5,
+       "var": 373,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 7,
+       "var": 373,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 9,
+       "var": 373,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 15,
+       "var": 373,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 18,
+       "var": 373,
+       "varbit": true,
+       "is": 7
+      },
+      {
+       "at": 21,
+       "var": 382,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 26,
+       "var": 382,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 46,
+       "var": 383,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 50,
+       "var": 383,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 57,
+       "var": 383,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -16981,6 +17552,7 @@
        "text": "Through the doorway, pray at the altar, and talk to what turns up the altar room is its own region of 130 tiles and the doorway is the only way in - region 0 on its north side, region 1 on its south - so the walk crosses the temple to the north face of it first."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the pyramid door.",
@@ -17122,6 +17694,7 @@
     {
      "from": 13,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Azzanadra.",
@@ -17147,6 +17720,7 @@
     {
      "from": 14,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -17166,6 +17740,14 @@
       {
        "at": 1,
        "text": "The portal only exists at all once the quest is done - dia_down is a multiloc on deserttreasure with multiloc=15 only clicked as dia_down, not dt_portal: dia_down is what m50_145 places and dt_portal is only what its multivar resolves to at stage 15, so a lookup by the child name finds nothing."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 747,
+       "varbit": false,
+       "is": 1
       }
      ],
      "steps": [
@@ -17217,6 +17799,7 @@
        "text": "Dondakan, at the gold rock south of Keldagrim."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -17235,6 +17818,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -17255,6 +17839,7 @@
        "text": "Rolad, the librarian in the Varrock palace library annexe."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to Varrock.",
@@ -17280,6 +17865,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -17301,6 +17887,7 @@
        "text": "The book carts in the dwarven mine - the base drawing and three overlays, one search each."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down into the dwarven mine.",
@@ -17404,6 +17991,7 @@
        "text": "Lay the overlays over the base and turn them until the lines meet."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -17434,6 +18022,7 @@
        "text": "Back to Dondakan, who reads what it actually says."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the rock.",
@@ -17463,6 +18052,7 @@
        "text": "The two engineers - one in Keldagrim and one who drinks near the mine."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north into Keldagrim.",
@@ -17510,6 +18100,7 @@
        "text": "The helmet has to be WORN, not carried - Dondakan says so."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -17564,6 +18155,7 @@
        "text": "Tell him what is in there."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -17595,6 +18187,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go up into the Taverley herb shop.",
@@ -17648,6 +18241,7 @@
        "text": "Mad Eadgar, who wants a parrot for his plan."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Trollheim.",
@@ -17694,6 +18288,7 @@
        "text": "Dry it, grind it, mix it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back down to Taverley.",
@@ -17887,6 +18482,7 @@
        "text": "B: and into Burntmeat’s stew, which he then eats himself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go up to the kitchen cauldron.",
@@ -17922,6 +18518,7 @@
        "text": "Burntmeat, who is not well, and the storeroom key."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round to Burntmeat.",
@@ -17952,6 +18549,7 @@
        "text": "The guard has no ops at all, so he is not talked past - the decoy is propped up where he can see it and he goes to argue with it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to the storeroom corridor.",
@@ -18023,6 +18621,7 @@
        "text": "Back to Sanfew, who did not expect it to work."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Taverley.",
@@ -18071,6 +18670,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Charlie.",
@@ -18105,6 +18705,7 @@
        "text": "Nickolaus's abandoned camp, west of the Gnome Stronghold."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to the camp.",
@@ -18179,6 +18780,7 @@
        "text": "Up the rocks (25 Agility) and along to the rocky outcrop."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the climbing rocks.",
@@ -18244,6 +18846,7 @@
        "text": "Nickolaus is shouting across the chasm."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -18317,6 +18920,7 @@
        "text": "The eagle will not let anybody past who is not dressed as an eagle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -19364,6 +19968,7 @@
        "text": "He goes back to his camp, and hands over the ferret."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the camp.",
@@ -19397,6 +20002,7 @@
        "text": "The ferret to Charlie."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Ardougne Zoo.",
@@ -19494,6 +20100,68 @@
       {
        "at": 35,
        "text": "The workbench, with the book still in the pack."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 2056,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 7,
+       "var": 2057,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 12,
+       "var": 2065,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 14,
+       "var": 2059,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 2058,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 17,
+       "var": 2060,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 21,
+       "var": 2066,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 24,
+       "var": 2061,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 26,
+       "var": 2063,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 34,
+       "var": 2062,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -19997,6 +20665,7 @@
        "text": "Awusah the Mayor, looking at a dry fountain."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -20052,6 +20721,7 @@
        "text": "Ghaslor the Elder, who blames the town rather than the spirits, and who hands over the Ballad of Jareesh - an obj in this quest’s own block that nothing gave out and nothing asked for."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to Ghaslor.",
@@ -20082,6 +20752,7 @@
        "text": "The cupboard, which holds two TORN robes - the finished ones were being handed out instead, which skips the needle and thread entirely."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to Shiratti’s building.",
@@ -20168,6 +20839,7 @@
        "text": "The crevice west of town, which only admits somebody dressed for the shrine and carrying something anybody down there would recognise."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -20228,6 +20900,7 @@
        "text": "The robe door, and then the spirits round the lake."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the foot of the corridor.",
@@ -20289,6 +20962,26 @@
       {
        "at": 3,
        "text": "Three doors, three golems, three channels."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 1448,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 9,
+       "var": 1447,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 12,
+       "var": 1446,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -20455,6 +21148,7 @@
        "text": "The genie, under the same crevice, the other fork."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back round the lake.",
@@ -20583,6 +21277,7 @@
        "text": "Ghaslor confirms it, Awusah wants to have been told, and the plinth is the only thing that reaches stage 60 - which is the one value where the fountain flows and elid_statuette_placed exists at all."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Ghaslor.",
@@ -20615,6 +21310,7 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Awusah.",
@@ -20640,6 +21336,7 @@
     {
      "from": 55,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the shrine plinth.",
@@ -20690,6 +21387,7 @@
        "text": "Lazim has been building a statue for four months."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Lazim at the building site.",
@@ -20737,6 +21435,7 @@
        "text": "Build it, and Lazim squares off the joins."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -20885,6 +21584,7 @@
        "text": "Five kilos of granite, and the face is your choice."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -20969,6 +21669,14 @@
        "text": "Four boulders out in the desert have shifted."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1595,
+       "varbit": true,
+       "is": 3
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -21003,6 +21711,32 @@
       {
        "at": 16,
        "text": "The four elements."
+      }
+     ],
+     "marks": [
+      {
+       "at": 17,
+       "var": 1577,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 19,
+       "var": 1578,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 31,
+       "var": 1579,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 34,
+       "var": 1576,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -21402,6 +22136,7 @@
        "text": "The head fits the pedestal exactly, and what comes out of the boneguard is the other Mahjarrat."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -21506,6 +22241,20 @@
        "text": "Behind it she has been listening the whole time."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1606,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 2,
+       "var": 1602,
+       "varbit": true,
+       "is": 4
+      }
+     ],
      "steps": [
       {
        "text": "Go to Akthanakos.",
@@ -21546,6 +22295,7 @@
     {
      "from": 65,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Akthanakos.",
@@ -21570,6 +22320,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -21605,6 +22356,7 @@
        "text": "No requirements and no items - the spade is on the floor of the manor."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -21629,6 +22381,7 @@
        "text": "In the front doors, up the centre staircase, then the spiral stairs west."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -21769,6 +22522,92 @@
       {
        "at": 46,
        "text": "Back up to Oddenstein with all three parts."
+      }
+     ],
+     "marks": [
+      {
+       "at": 22,
+       "var": 1801,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 24,
+       "var": 1796,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 25,
+       "var": 1802,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 28,
+       "var": 1802,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 29,
+       "var": 1797,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 30,
+       "var": 1800,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 33,
+       "var": 1795,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 34,
+       "var": 1794,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 36,
+       "var": 1794,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 37,
+       "var": 1795,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 39,
+       "var": 1795,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 40,
+       "var": 1799,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 41,
+       "var": 1802,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 42,
+       "var": 1798,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -22327,6 +23166,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -22366,6 +23206,7 @@
        "text": "Martin the Master Farmer, whose allotments are all dying."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22423,6 +23264,20 @@
       {
        "at": 5,
        "text": "Fairy Nuff, who has the Queen on her floor."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1807,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 0,
+       "var": 1808,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -22483,6 +23338,7 @@
     {
      "from": 20,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22517,6 +23373,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22542,6 +23399,7 @@
        "text": "Nuff moves a little of the Queen into an ordinary pair."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -22593,6 +23451,7 @@
        "text": "She asks for the Tanglefoot, and for a skull from Draynor."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22625,6 +23484,7 @@
        "text": "Three dull growing things, and then the thing under the floor."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back out of Zanaris to Draynor graveyard.",
@@ -22677,6 +23537,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22698,6 +23559,7 @@
        "text": "Her secateurs and the skull, both, in that room."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -22740,6 +23602,14 @@
       {
        "at": 3,
        "text": "The doctor is just inside the castle."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 203,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -22808,6 +23678,7 @@
        "text": "He cannot sew, so he wants a needle and five thread and does it himself - which is what %fenk_needle and %fenk_threads_given are for."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go upstairs, west room.",
@@ -23125,6 +23996,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -23168,6 +24040,20 @@
       {
        "at": 19,
        "text": "Cast it in silver and get it onto the roof."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 190,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 0,
+       "var": 191,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -23490,6 +24376,14 @@
        "text": "The storm, and then it goes for him and he locks it in the tower."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 194,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go back to the doctor.",
@@ -23517,6 +24411,14 @@
       {
        "at": 2,
        "text": "Lord Rologarth, who owned the place."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 198,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -23586,6 +24488,7 @@
        "text": "The ring is on the doctor's finger, and 25 Thieving gets it off."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back down to the doctor.",
@@ -23621,6 +24524,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -23657,6 +24561,7 @@
        "text": "Ali Morrisane, east of the gem trader in Al Kharid."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -23712,6 +24617,14 @@
       {
        "at": 4,
        "text": "Travel to Pollnivneach wiki step 4: three beers on Drunken Ali, one at a time, with the talk after each."
+      }
+     ],
+     "marks": [
+      {
+       "at": 11,
+       "var": 318,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -23869,6 +24782,14 @@
        "text": "Ask the bandits about the Menaphites, and the Menaphites about the bandits."
       }
      ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 315,
+       "varbit": true,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -23912,6 +24833,7 @@
        "text": "Both camels, 500 coins, and a receipt to each gang."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -23951,6 +24873,20 @@
       {
        "at": 4,
        "text": "Ali the Operator, in the big tent."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 316,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 4,
+       "var": 335,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -24014,6 +24950,14 @@
        "text": "Pickpocket a villager, badly, and go back."
       }
      ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 343,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -24055,6 +24999,26 @@
       {
        "at": 0,
        "text": "The urchin for 10 coins, then the villager he is pestering."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 340,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 2,
+       "var": 319,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 8,
+       "var": 319,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -24148,6 +25112,14 @@
        "text": "The blackjack, a villager on his own, and a quiet knock on the head."
       }
      ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 342,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -24233,6 +25205,14 @@
       {
        "at": 0,
        "text": "The disguise, the cactus, the door, the picture and the dial."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 320,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -24373,6 +25353,7 @@
        "text": "Hand them over, and find out what the gang is for."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -24439,6 +25420,32 @@
       {
        "at": 16,
        "text": "Ali the Hag wants both."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 341,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 4,
+       "var": 341,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 6,
+       "var": 321,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 10,
+       "var": 337,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -24679,6 +25686,7 @@
        "text": "The beer on the table by the door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -24710,6 +25718,14 @@
       {
        "at": 0,
        "text": "The Menaphite leader, and their tough guy."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 336,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -24746,6 +25762,7 @@
        "text": "Tell a villager, then the bandit leader, then his champion."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -24795,6 +25812,7 @@
        "text": "A villager, Ali the Mayor, and back to Morrisane."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -24831,6 +25849,7 @@
     {
      "from": 60,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the carpet back to Al Kharid.",
@@ -24864,6 +25883,7 @@
     {
      "from": 62,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -24894,6 +25914,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -24913,6 +25934,7 @@
     {
      "from": 1,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -24941,6 +25963,7 @@
        "text": "The gangplank at the end of the pier, and then cast off."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -24989,6 +26012,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -25016,6 +26040,62 @@
       {
        "at": 17,
        "text": "A plank in each hole and swamp paste over the plank."
+      }
+     ],
+     "marks": [
+      {
+       "at": 16,
+       "var": 1741,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 17,
+       "var": 1748,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 21,
+       "var": 1751,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 24,
+       "var": 1757,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 27,
+       "var": 1758,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 36,
+       "var": 1741,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 37,
+       "var": 1748,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 45,
+       "var": 1741,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 46,
+       "var": 1748,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -25567,6 +26647,14 @@
        "text": "Two hours with a shortened mast, and then Mos Le'Harmless."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1749,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "talk",
@@ -25583,6 +26671,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -25599,6 +26688,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -25634,6 +26724,7 @@
        "text": "The dwarf guarding the tunnel under White Wolf Mountain."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -25692,6 +26783,7 @@
        "text": "Bonzo takes five coins and puts you by the willow tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to Hemenster.",
@@ -25752,6 +26844,14 @@
        "text": "The garlic goes in the pipe the Stranger is fishing beside, and he swaps spots with you."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 12,
+       "varbit": false,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -25786,6 +26886,7 @@
        "text": "Three fish from the pipe spot, with red vine worms - which is what makes it a giant carp rather than a sardine."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -25823,6 +26924,7 @@
        "text": "The trophy back to the dwarf, who then lets anyone through his tunnel."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back east over the mountain.",
@@ -25876,6 +26978,7 @@
        "text": "Gertrude, in the house west of Varrock south of the Cooks Guild."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -25946,6 +27049,7 @@
        "text": "Shilop and Wilough in Varrock square want a hundred coins for the location."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -26037,6 +27141,7 @@
        "text": "She hisses at you, takes the milk, takes the sardine, and still will not leave - and then you can hear kittens."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -26110,6 +27215,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -26136,6 +27242,7 @@
        "text": "The kitten on Fluffs, and both of them go home."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -26224,6 +27331,7 @@
        "text": "Back to Gertrude."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to her house.",
@@ -26276,6 +27384,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -26312,6 +27421,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go into the Black Guard HQ, upstairs.",
@@ -26367,6 +27477,7 @@
        "text": "(optional in the walkthrough, and the only way to the seeds here): Elstan at the Falador allotment, who has been waiting two years to be written to."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east across the river and into the Laughing Miner.",
@@ -26457,6 +27568,7 @@
        "text": "The boarded-up tunnel."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the boarding.",
@@ -26495,6 +27607,7 @@
        "text": "Room 4: the archive."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -26564,6 +27677,7 @@
        "text": "Rooms 2 and 6: the chambers."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -26721,6 +27835,7 @@
        "text": "Back to Veldaban, who has been drinking in the same room as that man for two years and has never once let him finish."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back up to the Black Guard HQ.",
@@ -26746,6 +27861,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -26781,6 +27897,7 @@
        "text": "The king, who has bought her four hats already."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -26844,6 +27961,14 @@
       {
        "at": 4,
        "text": "The five gardeners."
+      }
+     ],
+     "marks": [
+      {
+       "at": 21,
+       "var": 988,
+       "varbit": true,
+       "is": 4
       }
      ],
      "steps": [
@@ -27132,6 +28257,7 @@
        "text": "Nine beds in the palace garden."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go into the palace garden.",
@@ -27718,6 +28844,7 @@
        "text": "The trolley, and two statues that do not belong to you."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the king.",
@@ -27842,6 +28969,7 @@
        "text": "The king, and then the queen."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the king.",
@@ -27888,6 +29016,7 @@
        "text": "Hammerspike Stoutbeard, in the tunnels between the dwarven mine and the city."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -27912,6 +29041,7 @@
        "text": "The trade floor referee, who explains why nobody will talk to you and what to do about it one conversation covers both halves of it - the refusal and the way round it - so the quest goes 5 to 15 in one go and never sits at 10."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -27957,6 +29087,7 @@
        "text": "Blasidar the sculptor, who wants a model before he will argue about a head with anybody."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go along the floor to Blue Opal.",
@@ -28006,6 +29137,14 @@
       {
        "at": 5,
        "text": "Blasidar takes the statue down and puts it back up with the right head and the same here: showing him the finished model and the statue coming down are one conversation, so 20 goes straight to 40."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 576,
+       "varbit": true,
+       "is": 7
       }
      ],
      "steps": [
@@ -28077,6 +29216,7 @@
        "text": "The Red Axe director, who is the one who loses by it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Red Axe office.",
@@ -28106,6 +29246,7 @@
        "text": "The Black Guard commander signs it off."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to the Black Guard.",
@@ -28156,6 +29297,7 @@
        "text": "The barman in the Rusty Anchor, Port Sarim."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -28199,6 +29341,7 @@
        "text": "The two generals in the goblin village, north of Falador."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north across Asgarnia to the village.",
@@ -28234,6 +29377,7 @@
        "text": "Orange first - orange dye on a goblin mail."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -28274,6 +29418,7 @@
        "text": "Then blue."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -28314,6 +29459,7 @@
        "text": "Then the brown they started with, which they settle on."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -28337,6 +29483,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -28372,6 +29519,7 @@
        "text": "The broken golem, and four lots of soft clay."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -28415,6 +29563,7 @@
     {
      "from": 1,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -28474,6 +29623,26 @@
       {
        "at": 27,
        "text": "The statuette in the alcove, then the four statues."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 347,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 14,
+       "var": 347,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 17,
+       "var": 347,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -28818,6 +29987,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -28888,6 +30058,7 @@
        "text": "Thammaron has been dead for a very long time."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -28918,6 +30089,14 @@
       {
        "at": 2,
        "text": "He does not believe you, so the mushroom becomes ink, the feather becomes a pen, the papyrus becomes a program, and the implement opens his head long enough to put it in."
+      }
+     ],
+     "marks": [
+      {
+       "at": 10,
+       "var": 353,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -29076,6 +30255,7 @@
        "text": "King Arthur at the round table."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -29117,6 +30297,7 @@
        "text": "Merlin, in the workshop next to the library."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go up the main staircase.",
@@ -29199,6 +30380,7 @@
        "text": "The Fisher King, and both of the options that matter."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Entrana.",
@@ -29406,6 +30588,7 @@
        "text": "Arthur’s feather, the sacks in Goblin Village, and Percival."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Camelot.",
@@ -29474,6 +30657,7 @@
        "text": "Arthur, who did not expect it either."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Karamja.",
@@ -29559,6 +30743,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to King Narnode.",
@@ -29593,6 +30778,7 @@
        "text": "Hazelmere, on the hill on the island east of Yanille."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Hazelmere.",
@@ -29636,6 +30822,7 @@
        "text": "The translation."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the King.",
@@ -29681,6 +30868,7 @@
        "text": "Glough, in the tree house in front of the Grand Tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Glough.",
@@ -29711,6 +30899,7 @@
        "text": "The King says Glough has caught a human."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the King.",
@@ -29741,6 +30930,7 @@
        "text": "Charlie, in the cage at the top of the tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go up the tree, to the top ladder.",
@@ -29784,6 +30974,7 @@
        "text": "Glough's journal is in the cupboard in his house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Glough's house.",
@@ -29830,6 +31021,7 @@
        "text": "Accuse him, and he has you arrested."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Glough.",
@@ -29875,6 +31067,7 @@
        "text": "The foreman, on the southern dock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out of the cage, onto the glider platform.",
@@ -29961,6 +31154,7 @@
        "text": "Charlie knows where Glough keeps his keys."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the stronghold.",
@@ -30032,6 +31226,7 @@
        "text": "The key opens the chest in Glough's house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Anita's house, west of the toad swamp.",
@@ -30094,6 +31289,7 @@
        "text": "The King still will not act, but the guards found four odd twigs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the King.",
@@ -30131,6 +31327,7 @@
        "text": "The four pillars of the watchtower in Glough’s house spell TUZO."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the watchtower tree.",
@@ -30242,6 +31439,7 @@
        "text": "Down the trapdoor, and Glough sets a Black demon on you."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -30283,6 +31481,7 @@
        "text": "The King is further up the passage, beside a ladder."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go along the passage to the King.",
@@ -30317,6 +31516,7 @@
        "text": "The rock to the King."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -30387,6 +31587,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Bert's house by the Yanille sand pit.",
@@ -30420,6 +31621,7 @@
        "text": "The Guard Captain is drunk and puts his tankard on it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the road to the Guard Captain.",
@@ -30464,6 +31666,7 @@
     {
      "from": 20,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Bert.",
@@ -30503,6 +31706,14 @@
       {
        "at": 3,
        "text": "Sandy keeps the original rota in his office, and will only look away once per distraction - so the desk and the mug are two separate trips to the window."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 1535,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -30579,6 +31790,7 @@
        "text": "The two rotas go back to Bert, who has been holding the charm that took his memory off him for a year without knowing what it was."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -30655,6 +31867,14 @@
       {
        "at": 5,
        "text": "The counter multiloc's other state is a counter \"with a vial standing on it\", which is how this works - the lens goes between her propped door and the vial."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 1537,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -30800,6 +32020,14 @@
        "text": "Distract him again, dose the mug, and ask all three questions."
       }
      ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 1536,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go back to Brimhaven.",
@@ -30874,6 +32102,7 @@
        "text": "Rarve plays it, and then does something for Bert that nobody asked him to - five earth runes and a bucket of the sand itself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Rarve with the orb.",
@@ -30971,6 +32200,7 @@
        "text": "Everything out of that pit that week went to the Entrana furnaces."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the sand heap on Entrana.",
@@ -31023,6 +32253,7 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Tell Bert.",
@@ -31064,6 +32295,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -31085,6 +32317,7 @@
        "text": "B: pickpocket him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -31130,6 +32363,7 @@
        "text": "D: and the start lever on the board, which is what sends the cart."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to the pool level (m43 70).",
@@ -31302,6 +32536,7 @@
        "text": "B: the Zealot’s key ON the valve."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-west to where the cart stopped.",
@@ -31423,6 +32658,7 @@
        "text": "The innocent looking key is an npc on a rock at 2788,4455, with four possessed cranes and seven mine carts round it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east along the level-5 track.",
@@ -31498,6 +32734,7 @@
        "text": "B: cut a shard off the outcrop with the chisel."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -31616,6 +32853,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -31665,6 +32903,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -31685,6 +32924,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cave entrance in the forest.",
@@ -31727,6 +32967,14 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [
+      {
+       "at": 0,
+       "var": 225,
+       "varbit": false,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go to the Carnilleans' cellar stairs.",
@@ -31784,6 +33032,14 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [
+      {
+       "at": 16,
+       "var": 224,
+       "varbit": false,
+       "is": 31
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -32026,6 +33282,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the butler.",
@@ -32180,6 +33437,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the cave.",
@@ -32251,6 +33509,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -32281,6 +33540,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -32308,6 +33568,14 @@
       {
        "at": 11,
        "text": "Clivet guards the raft, and offers you the other side of the story."
+      }
+     ],
+     "marks": [
+      {
+       "at": 10,
+       "var": 224,
+       "varbit": false,
+       "is": 31
       }
      ],
      "steps": [
@@ -32470,6 +33738,7 @@
        "text": "Alomone leads them, and will not be talked to."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -32526,6 +33795,7 @@
        "text": "Back up to the house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -32574,6 +33844,7 @@
        "text": "The evidence is in the cupboard in the room east of the stairs, and both Ceril and Jones have to be standing there to hear it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -32605,6 +33876,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -32640,6 +33912,7 @@
        "text": "Achietties, outside the Heroes’ Guild."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -32726,6 +33999,7 @@
        "text": "Katrine, in the Black Arm hideout in Varrock, sends you to Brimhaven."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -32935,6 +34209,7 @@
        "text": "The Brimhaven hideout, and the password through the door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to by ship to Brimhaven, into the alley.",
@@ -32972,6 +34247,7 @@
        "text": "Trobert hands over the stolen ID papers of Hartigen the Black Knight."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -33018,6 +34294,7 @@
        "text": "Garv on the mansion gate wants Hartigen - who is a Black Knight, so the black armour has to be WORN, not carried."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -33094,6 +34371,7 @@
        "text": "Report to Grip as his new deputy, ask what the duties are - which is how you learn the treasure room keys live in his jacket - and take the odd key he hands you, which is the one that opens the side door for your Phoenix partner."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go in to Grip.",
@@ -33123,6 +34401,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -33158,6 +34437,7 @@
        "text": "Hetty, in her house in Rimmington."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -33208,6 +34488,7 @@
        "text": "All four ingredients to her - she puts them in the cauldron herself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -33229,6 +34510,7 @@
        "text": "The last step is to drink from the cauldron, which is what completes it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -33269,6 +34551,7 @@
        "text": "Larrissa, stranded on the causeway outside the locked lighthouse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Larrissa.",
@@ -33396,6 +34679,38 @@
       {
        "at": 19,
        "text": "The strange wall."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 741,
+       "varbit": false,
+       "is": 18
+      },
+      {
+       "at": 6,
+       "var": 741,
+       "varbit": false,
+       "is": 19
+      },
+      {
+       "at": 8,
+       "var": 741,
+       "varbit": false,
+       "is": 23
+      },
+      {
+       "at": 16,
+       "var": 742,
+       "varbit": false,
+       "is": 7
+      },
+      {
+       "at": 26,
+       "var": 743,
+       "varbit": false,
+       "is": 63
       }
      ],
      "steps": [
@@ -33773,6 +35088,7 @@
        "text": "Back up into the real lighthouse - the copy is gone now - and up to Jossik's library, where he reads the casket with you."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -33904,6 +35220,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -33936,6 +35253,7 @@
        "text": "Out of the kitchen and through the portal in the dining hall."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -33987,6 +35305,7 @@
        "text": "Aris, who explains the nine victims and the chest."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -34017,6 +35336,158 @@
       {
        "at": 19,
        "text": "The Culinaromancer’s chest in the castle cellar, which opens its first tier of food the moment Aris has explained it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 16,
+       "var": 1892,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1867,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1895,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1896,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1878,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1904,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 1914,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 23,
+       "var": 1892,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 25,
+       "var": 1892,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 32,
+       "var": 1892,
+       "varbit": true,
+       "is": 7
+      },
+      {
+       "at": 55,
+       "var": 1896,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 70,
+       "var": 1867,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 80,
+       "var": 1867,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 90,
+       "var": 1895,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 93,
+       "var": 1895,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 116,
+       "var": 1878,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 121,
+       "var": 1878,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 121,
+       "var": 1883,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 124,
+       "var": 1879,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 125,
+       "var": 1878,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 135,
+       "var": 1904,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 138,
+       "var": 1904,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 140,
+       "var": 1904,
+       "varbit": true,
+       "is": 6
+      },
+      {
+       "at": 144,
+       "var": 1904,
+       "varbit": true,
+       "is": 7
+      },
+      {
+       "at": 162,
+       "var": 1914,
+       "varbit": true,
+       "is": 2
       }
      ],
      "steps": [
@@ -36382,6 +37853,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -36421,6 +37893,7 @@
        "text": "Redbeard Frank, in the Port Sarim pub."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -36484,6 +37957,26 @@
       {
        "at": 22,
        "text": "The rum to Frank, who hands over the chest key."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 74,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 14,
+       "var": 73,
+       "varbit": false,
+       "is": 10
+      },
+      {
+       "at": 16,
+       "var": 74,
+       "varbit": false,
+       "is": 2
       }
      ],
      "steps": [
@@ -36792,6 +38285,7 @@
        "text": "The chest upstairs in Varrock's Blue Moon Inn."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-east to Varrock and up the inn stairs. The chest has forceapproach and answers from its east side only - from the north or the west it does nothing at all.",
@@ -36852,6 +38346,7 @@
        "text": "Dig the flowerbed in Falador park, which Wyson guards."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west to Falador park.",
@@ -36877,6 +38372,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -36922,6 +38418,7 @@
        "text": "The High Priest."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -37012,6 +38509,7 @@
        "text": "The Embalmer, who needs linen, salt and sap."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the embalmer’s house.",
@@ -37042,6 +38540,7 @@
        "text": "B: Siamun has the linen - \"or from Raetul in Sophanem for 30 coins\"."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north out of the city to the pond.",
@@ -37142,6 +38641,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the temple.",
@@ -37190,6 +38690,7 @@
        "text": "\"Take the canopic jar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the carpenter.",
@@ -37344,6 +38845,7 @@
        "text": "The ceremony, and what comes to it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east past the pit to the ceremony.",
@@ -37368,6 +38870,7 @@
     {
      "from": 24,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back west to the ladder.",
@@ -37392,6 +38895,7 @@
     {
      "from": 25,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the chamber.",
@@ -37416,6 +38920,7 @@
     {
      "from": 26,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -37446,6 +38951,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Flying Horse Inn in north-west Ardougne.",
@@ -37501,6 +39007,7 @@
        "text": "The lever in the alcove is trapped, and Thieving 42 finds the trap."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the temple.",
@@ -38150,6 +39657,7 @@
     {
      "from": 20,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -38175,6 +39683,7 @@
        "text": "The Fire Warrior of Lesarkus takes damage from ice arrows and nothing else."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -38267,6 +39776,7 @@
        "text": "Lucien takes it, between Edgeville and the Grand Exchange."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the witch by the lava.",
@@ -38420,6 +39930,7 @@
        "text": "Wizard Mizgog, top floor of the Wizards Tower."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -38470,6 +39981,7 @@
        "text": "Back with the lot - 875 Magic and the amulet of accuracy."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -38486,6 +39998,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -38521,6 +40034,7 @@
        "text": "Ask an examiner in the Exam Centre about an exam."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -38594,6 +40108,7 @@
        "text": "Back to the examiner, who sits you down for the first exam straight away - and it cannot be passed, because the correct answer to each question is only OFFERED once the student who knows it has told you."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Varrock museum.",
@@ -38684,6 +40199,20 @@
       {
        "at": 28,
        "text": "The first exam, with all three answers now on the menu."
+      }
+     ],
+     "marks": [
+      {
+       "at": 16,
+       "var": 133,
+       "varbit": false,
+       "is": 2
+      },
+      {
+       "at": 28,
+       "var": 132,
+       "varbit": false,
+       "is": 42
       }
      ],
      "steps": [
@@ -39044,6 +40573,7 @@
        "text": "The second exam."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -39184,6 +40714,7 @@
        "text": "The last exam."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -39334,6 +40865,7 @@
        "text": "Terry Balando reads the talisman and writes you an invitation to the private shafts, which goes to any workman who is not standing on one."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -39591,6 +41123,26 @@
       {
        "at": 33,
        "text": "Down the western winch again, the compound on the bricks and a tinderbox to it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 133,
+       "varbit": false,
+       "is": 134
+      },
+      {
+       "at": 11,
+       "var": 133,
+       "varbit": false,
+       "is": 142
+      },
+      {
+       "at": 21,
+       "var": 133,
+       "varbit": false,
+       "is": 158
       }
      ],
      "steps": [
@@ -40088,6 +41640,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -40114,6 +41667,7 @@
        "text": "The way out of the new cave is the same rope, one mapsquare north of where it was - then Terry Balando gets the tablet."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -40195,6 +41749,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -40225,6 +41780,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -40299,6 +41855,7 @@
        "text": "The jungle is sealed behind its own undergrowth - kharazi_jungle_tree and kharazi_jungle_plant locs all along the north edge, and nothing else gets in."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -40470,6 +42027,7 @@
        "text": "A Jungle forester south of Shilo trades the notes for a bullroarer and it is the map USED on him, not a conversation - talking only offers three questions about the jungle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back out of the jungle to the foresters.",
@@ -40514,6 +42072,7 @@
        "text": "Swing it by a totem pole and Gujuo comes out of the trees."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back into the jungle, to a totem pole.",
@@ -40560,6 +42119,7 @@
        "text": "The mossy rock in the north-west, and 50 Agility to crawl inside."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the mossy rocks in the north-west.",
@@ -40597,6 +42157,7 @@
        "text": "Ungadulu is inside a flaming octagram and the only way to speak to him is to INVESTIGATE the fire wall (op2) from within ten tiles of him - there is no zone trigger and no way to reach him, and a plain click on him only gets \"run for your life\" and a curse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -40634,6 +42195,7 @@
        "text": "Out of the cave and swing the bullroarer again."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -40704,6 +42266,7 @@
        "text": "A reed cut with the machete, and the reed used on the pool to syphon the water out - the gap in the rocks is too narrow for the bowl itself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -40852,6 +42415,7 @@
        "text": "The book held open in front of Ungadulu, and the demon comes out of him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the mossy rocks in the north-west.",
@@ -41411,6 +42975,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -41453,6 +43018,7 @@
        "text": "Germinated in the bowl of pure sacred water, which empties it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -41506,6 +43072,7 @@
        "text": "The pool the water came from has gone."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the water pool.",
@@ -41554,6 +43121,7 @@
        "text": "Gujuo again - the source of the spring, and the recipe for the bravery potion."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to a totem pole in the jungle.",
@@ -41606,6 +43174,7 @@
        "text": "A rope on the winch over the hole, the bravery potion inside you, and down into the Viyeldi caves."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -41762,6 +43331,7 @@
        "text": "The three chunks fused in the ancient furnace - 50 Crafting."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -42025,6 +43595,7 @@
        "text": "The glowing heart into the recess by the dragon’s teeth."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -42094,6 +43665,7 @@
        "text": "A boulder stoppers the stream, and pushing it brings Echned Zekin out of the water."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -42164,6 +43736,7 @@
        "text": "Back down to the stream, and the dagger handed over."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -42542,6 +44115,7 @@
        "text": "With the spirit gone the boulder moves, and the source is a pool of sacred water."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -42615,6 +44189,7 @@
        "text": "Now the tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back up to the jungle, at a patch of fertile soil.",
@@ -42730,6 +44305,7 @@
        "text": "The carved pole used on the tribe’s corrupted one."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the tribe’s totem pole.",
@@ -42765,6 +44341,7 @@
        "text": "Gujuo comes out of the trees on his own this time - the replacement npc_add-s him with npc_setmode(opplayer2), so he walks over and starts the conversation himself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -42838,6 +44415,7 @@
        "text": "Radimus, in the study, takes the gilded pole AND the completed map."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the Legends’ Guild study.",
@@ -42868,6 +44446,7 @@
        "text": "The other Radimus, in the main hall, gives the four lots of 7,650 XP."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go into the Legends’ Guild main hall.",
@@ -42921,6 +44500,7 @@
        "text": "Sigmund, the Duke’s advisor, hands out the quest."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Sigmund on the castle first floor.",
@@ -42967,6 +44547,7 @@
        "text": "One of four Lumbridge residents saw the creature, picked at random when the quest starts."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to the kitchen.",
@@ -43000,6 +44581,7 @@
        "text": "Tell the Duke."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back up to Duke Horacio.",
@@ -43033,6 +44615,7 @@
        "text": "The kitchen trapdoor, a pickaxe on the rubble, and the brooch."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the kitchen trapdoor.",
@@ -43087,6 +44670,7 @@
        "text": "Show the Duke the brooch."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -43157,6 +44741,7 @@
        "text": "Reldo, then the northernmost bookcase on the west wall the library is a sealed 42-tile room - the tiles north of z 3497 are a map wall with no door loc on it, so the jump has to land inside."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Varrock palace library.",
@@ -43225,6 +44810,7 @@
        "text": "The goblin generals know the old greeting."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Goblin Village.",
@@ -43255,6 +44841,7 @@
        "text": "Bow to Mistag at the far end of the mine."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back through the hole in the cellar wall.",
@@ -43285,6 +44872,7 @@
        "text": "He explains what brought the wall down."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -43319,6 +44907,14 @@
       {
        "at": 16,
        "text": "The Duke dismisses Sigmund and signs a treaty."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 539,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -43536,6 +45132,7 @@
        "text": "Mistag takes the treaty."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Mistag.",
@@ -43568,6 +45165,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -43598,6 +45196,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Lokar.",
@@ -43700,6 +45299,7 @@
        "text": "Brundt the Chieftain, in the Rellekka longhall, issues the seal."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Brundt.",
@@ -43744,6 +45344,7 @@
        "text": "The Lady Zay is jinxed."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Lokar.",
@@ -43815,6 +45416,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -43871,6 +45473,7 @@
     {
      "from": 40,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -43910,6 +45513,38 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [
+      {
+       "at": 3,
+       "var": 3094,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 6,
+       "var": 3094,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 9,
+       "var": 3094,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 15,
+       "var": 3094,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 17,
+       "var": 3094,
+       "varbit": true,
+       "is": 5
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -44110,6 +45745,7 @@
     {
      "from": 60,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -44314,6 +45950,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -44346,6 +45983,7 @@
        "text": "The Oneiromancer, in her hut south of the village."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Oneiromancer.",
@@ -44376,6 +46014,7 @@
        "text": "The waking sleep potion."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Baba Yaga's house.",
@@ -44572,6 +46211,7 @@
        "text": "The Lunar staff - a Dramen staff at the air, fire, water and earth altars, in that order and only in that order."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the air altar.",
@@ -44748,6 +46388,14 @@
       {
        "at": 33,
        "text": "All eight pieces to the Oneiromancer, who gives them back with the kindling and the staff and the potion."
+      }
+     ],
+     "marks": [
+      {
+       "at": 41,
+       "var": 1742,
+       "varbit": false,
+       "is": 255
       }
      ],
      "steps": [
@@ -45275,6 +46923,7 @@
        "text": "Soak the kindling, put the whole outfit on, light the brazier and burn the kindling on it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -45433,6 +47082,7 @@
     {
      "from": 130,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -45477,6 +47127,7 @@
        "text": "Back to the Oneiromancer."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the middle.",
@@ -45525,6 +47176,14 @@
     {
      "from": 150,
      "headings": [],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1235,
+       "varbit": false,
+       "is": 1
+      }
+     ],
      "steps": [],
      "items": [
       {
@@ -45560,6 +47219,7 @@
        "text": "Jorral, in the outpost on the road north of Ardougne."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -45628,6 +47288,7 @@
        "text": "Jorral takes all three, and then has a problem - the outpost has been marked for demolition for six years."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the Ardougne market.",
@@ -45906,6 +47567,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the castle in Ardougne.",
@@ -45938,6 +47600,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the outpost.",
@@ -45970,6 +47633,14 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [
+      {
+       "at": 4,
+       "var": 1390,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "talk",
@@ -46050,6 +47721,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -46076,6 +47748,14 @@
       {
        "at": 12,
        "text": "Back to Lawgof, who has lost contact with the southern watchtower."
+      }
+     ],
+     "marks": [
+      {
+       "at": 12,
+       "var": 1,
+       "varbit": false,
+       "is": 2016
       }
      ],
      "steps": [
@@ -46252,6 +47932,7 @@
        "text": "The tower is two ladders up, and the lower one refuses to open its trap door until Lawgof has asked for the guard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -46393,6 +48074,7 @@
        "text": "The goblin cave outside the south-east corner of the Fishing Guild."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -46440,6 +48122,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -46468,6 +48151,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -46539,6 +48223,7 @@
        "text": "The cannon in the shed."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -46586,6 +48271,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -46671,6 +48357,7 @@
        "text": "Lawgof has no idea what it fires, so Nulodion at the Black Guard camp the shed door shuts behind you while the cannon is being worked on, and the tile the player is standing on is one of the two it takes a click from."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -46710,6 +48397,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Black Guard camp gate.",
@@ -46769,6 +48457,7 @@
        "text": "Both of them back to Lawgof."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back west to the fence.",
@@ -46815,6 +48504,7 @@
        "text": "Hamal is in the longhouse at the east end, behind a tent door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the path below the camp, south of the rockslide.",
@@ -46955,6 +48645,14 @@
       {
        "at": 7,
        "text": "Climb, vault, plank, and listen to the pool from the island."
+      }
+     ],
+     "marks": [
+      {
+       "at": 7,
+       "var": 261,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -47161,6 +48859,68 @@
       {
        "at": 24,
        "text": "Both errands done, so she asks for the third thing."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 262,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 0,
+       "var": 263,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 4,
+       "var": 262,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 6,
+       "var": 262,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 13,
+       "var": 262,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 15,
+       "var": 262,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 17,
+       "var": 263,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 21,
+       "var": 263,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 23,
+       "var": 263,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 24,
+       "var": 266,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -47544,6 +49304,20 @@
        "text": "He is a man in a bear skin and he has had thirty years of being a god."
       }
      ],
+     "marks": [
+      {
+       "at": 12,
+       "var": 267,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 12,
+       "var": 268,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -47698,6 +49472,7 @@
        "text": "Out of the cave and show him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -47772,6 +49547,14 @@
        "text": "Ragnar has kept her necklace for ten years."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 264,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go to Ragnar by the water.",
@@ -47806,6 +49589,7 @@
        "text": "Bury her on the island with the necklace on, and build the cairn."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the goat pen.",
@@ -47987,6 +49771,20 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [
+      {
+       "at": 0,
+       "var": 273,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 1,
+       "var": 273,
+       "varbit": true,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -48007,6 +49805,7 @@
     {
      "from": 90,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -48040,6 +49839,14 @@
       {
        "at": 2,
        "text": "King Vargas, up on the first floor of the south-west castle - which is six clicks away through four doors and a staircase, and a guard who only lets a Heroes’ Guild member past."
+      }
+     ],
+     "marks": [
+      {
+       "at": 14,
+       "var": 77,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -48215,6 +50022,7 @@
        "text": "East over the bridge to Etceteria, and Queen Sigrid upstairs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -48373,6 +50181,7 @@
        "text": "Back west to Vargas, who wants the anthem changed first."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back across the bridge and up the castle - walked above.",
@@ -48401,6 +50210,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Etceteria.",
@@ -48435,6 +50245,7 @@
        "text": "Sigrid will not have it, Ghrim makes something of it, and then she signs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the Miscellania throne room.",
@@ -48572,6 +50383,7 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Vargas.",
@@ -48612,6 +50424,7 @@
        "text": "Derrik at the anvil north of the castle makes a giant nib out of an iron bar, and the nib on a log is the pen."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down and out of the castle - walked above.",
@@ -48738,6 +50551,50 @@
       {
        "at": 40,
        "text": "Vargas makes you regent."
+      }
+     ],
+     "marks": [
+      {
+       "at": 5,
+       "var": 2340,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 12,
+       "var": 2340,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 18,
+       "var": 2340,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 18,
+       "var": 91,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 18,
+       "var": 92,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 18,
+       "var": 93,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 22,
+       "var": 75,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -49202,6 +51059,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -49257,6 +51115,14 @@
       {
        "at": 4,
        "text": "Back to Narnode, who writes the orders."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 122,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -49376,6 +51242,7 @@
        "text": "The launch panel - solve it, or buy the code off Glough real step 10: Waydar, and the glider to Crash Island."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -49417,6 +51284,14 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [
+      {
+       "at": 5,
+       "var": 124,
+       "varbit": true,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -49493,6 +51368,14 @@
        "text": "Garkor, who now tells you where the mould and the dentures are instead of handing them over."
       }
      ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 131,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -49561,6 +51444,7 @@
        "text": "The warehouse, the crate with no bottom, and the cave under it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -49722,6 +51606,14 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [
+      {
+       "at": 5,
+       "var": 131,
+       "varbit": true,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "kind": "talk",
@@ -49893,6 +51785,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -50047,6 +51940,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50128,6 +52022,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50192,6 +52087,7 @@
     {
      "from": 11,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50345,6 +52241,7 @@
     {
      "from": 12,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Grand Tree by glider - the same world travel in reverse.",
@@ -50439,6 +52336,7 @@
     {
      "from": 12,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50489,6 +52387,7 @@
     {
      "from": 13,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50522,6 +52421,7 @@
     {
      "from": 14,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -50546,6 +52446,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the Grand Tree by glider again - world travel, as above.",
@@ -50591,6 +52492,7 @@
        "text": "Arianwyn in Lletya has read the mourners' list and knows what it is for."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50625,6 +52527,14 @@
       {
        "at": 1,
        "text": "In through the mourners' own dig, west along the cave, and in at the east wall of the temple."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1330,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -50668,6 +52578,7 @@
        "text": "Five bodies in the cave east of the temple, and one of them is Nissyen Edern."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -50704,6 +52615,7 @@
        "text": "The black crystal is on the top floor, and Arianwyn wants a piece of it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -50886,6 +52798,7 @@
        "text": "Arianwyn sings over the sliver, and what comes back is his crystal with the old one inside it - empty, and wanting an altar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -51008,6 +52921,7 @@
     {
      "from": 34,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the mourners' dig under West Ardougne - Mourning's End Part I walks this.",
@@ -51176,6 +53090,14 @@
     {
      "from": 42,
      "headings": [],
+     "marks": [
+      {
+       "at": 2,
+       "var": 1327,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "obj",
@@ -51344,6 +53266,14 @@
        "text": "The ruins are four tiles west of him, and the talisman opens them."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1327,
+       "varbit": true,
+       "is": 2
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -51405,6 +53335,7 @@
        "text": "The charged crystal goes back into the one it was cut from - which is on the TOP floor, so the whole climb again in reverse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -51535,6 +53466,14 @@
        "text": "Out one last time, to tell Arianwyn in person."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1331,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -51650,6 +53589,7 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -51680,6 +53620,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Islwyn.",
@@ -51710,6 +53651,7 @@
        "text": "Eluned stands two tiles from him, and takes you there."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -51756,6 +53698,7 @@
        "text": "Oronwen, north-west of the Lletya crystal, mends the trousers."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the high pass.",
@@ -51919,6 +53862,7 @@
        "text": "All of it on, and in through the front door of the HQ."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -52020,6 +53964,7 @@
        "text": "The gnome on the rack."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go across the yard.",
@@ -52087,6 +54032,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -52129,6 +54075,7 @@
        "text": "A barrel of rotten apples, the press, the naphtha and the sieve."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the orchard outside the west wall.",
@@ -52246,6 +54193,7 @@
        "text": "The quarters keep their food in three places and all three need a dose - the stew cauldron, the cooking shelves and the ration crate upstairs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the quarters.",
@@ -52332,6 +54280,7 @@
        "text": "The desk: the head mourner is in no state to stop anybody now."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the yard.",
@@ -52405,6 +54354,7 @@
        "text": "The rack, and the device."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -52527,6 +54477,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -52548,6 +54499,7 @@
        "text": "A dye into the bellows, the bellows into a toad, the toad into the device, and the device at a flock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -52787,6 +54739,7 @@
     {
      "from": 12,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Elena.",
@@ -52817,6 +54770,7 @@
        "text": "Back to Arianwyn in Lletya."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Lletya.",
@@ -52842,6 +54796,7 @@
     {
      "from": 20,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -52877,6 +54832,7 @@
        "text": "Any guard round the mansion will take you on."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the guard outside the mansion.",
@@ -52943,6 +54899,26 @@
       {
        "at": 25,
        "text": "Thread, prints and poison together is conclusive."
+      }
+     ],
+     "marks": [
+      {
+       "at": 20,
+       "var": 193,
+       "varbit": false,
+       "is": 1
+      },
+      {
+       "at": 22,
+       "var": 193,
+       "varbit": false,
+       "is": 2
+      },
+      {
+       "at": 24,
+       "var": 193,
+       "varbit": false,
+       "is": 3
       }
      ],
      "steps": [
@@ -53317,6 +55293,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -53347,6 +55324,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -53371,6 +55349,7 @@
        "text": "Florin, at the gate."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the swamp road to the village gate.",
@@ -53425,6 +55404,7 @@
        "text": "B: the village leader."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -53479,6 +55459,7 @@
        "text": "The furnace in the south-east corner - mend it, load it, light it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the general store.",
@@ -53780,6 +55761,7 @@
        "text": "Gadderanks."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the barrel outside the store.",
@@ -53832,6 +55814,7 @@
        "text": "Which this build does after the fight rather than before it: the inn’s back wall, off the trapdoor."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Aurel.",
@@ -53998,6 +55981,7 @@
        "text": "Veliaf in the cellar, and the boy who wants to be a priest \"Who is Ivan?\" is a line he says for you, not an option - there is no menu here."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -54039,6 +56023,7 @@
        "text": "B: north through Mort Myre to Ulizius’s gate, where two of them are waiting on the Paterdomus side Ulizius’s gate at the top of Mort Myre is Nature Spirit’s loc and not this quest’s, so the run steps past it rather than through it - and Ivan’s own timer brings him to whoever he is following when the swamp gets between the two of them, which is what the walk relies on over four map squares with a gate in them."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go across to the ladder, where Veliaf says he is.",
@@ -54106,6 +56091,7 @@
        "text": "C: Drezel, who keeps the boy and hands over a key he has had for eleven years and never used."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go into the temple catacombs.",
@@ -54136,6 +56122,7 @@
        "text": "The keyhole in a wall with no door in it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the keyhole.",
@@ -54230,6 +56217,7 @@
        "text": "The boards in the Hollows, two hundred years of nails."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the Hollows.",
@@ -54259,6 +56247,7 @@
     {
      "from": 100,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -54323,6 +56312,7 @@
        "text": "B: soft clay against the carving."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back into the tomb.",
@@ -54360,6 +56350,7 @@
     {
      "from": 104,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the Burgh de Rott furnace.",
@@ -54419,6 +56410,7 @@
        "text": "C: the well, on a rope."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the well.",
@@ -54473,6 +56465,7 @@
        "text": "Veliaf, who does not let go of it for a moment."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the cellar.",
@@ -54505,6 +56498,7 @@
     {
      "from": 110,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -54535,6 +56529,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -54560,6 +56555,7 @@
        "text": "The three parts, one conversation each."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -54583,6 +56579,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -54606,6 +56603,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -54646,6 +56644,7 @@
        "text": "Back up to the professor, who hands the glass back."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -54847,6 +56846,7 @@
        "text": "Cast the lens, and hand over lens and mould."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -54893,6 +56893,7 @@
        "text": "The Observatory itself is reached through the cavern."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -54966,6 +56967,7 @@
        "text": "Reward: the assistant stands you a drink afterwards."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the reception room.",
@@ -54998,6 +57000,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the grave.",
@@ -55074,6 +57077,7 @@
        "text": "Phantuwti Fanstuwi Farsight, in the Seers' Village tower."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the seer.",
@@ -55144,6 +57148,7 @@
        "text": "The vane is on the roof, three floors up, and the only way is the ladder behind him and then the one above it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55208,6 +57213,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55291,6 +57297,7 @@
        "text": "Tassie Slipcast does the ornament for five soft clay."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the potter.",
@@ -55328,6 +57335,7 @@
        "text": "Hammerspike Stoutbeard does the directionals, for the sealed pot."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -55382,6 +57390,7 @@
        "text": "All three back on the roof at once - weathervanefixed is one bit and there is no half-mended state for it to show."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the tower.",
@@ -55448,6 +57457,14 @@
        "text": "The seer can forecast again, and writes a report."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 258,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -55492,6 +57509,20 @@
       {
        "at": 17,
        "text": "The pilot takes the report and flies again."
+      }
+     ],
+     "marks": [
+      {
+       "at": 16,
+       "var": 256,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 244,
+       "varbit": true,
+       "is": 255
       }
      ],
      "steps": [
@@ -55715,6 +57746,7 @@
        "text": "Edmond is looking for his daughter."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -55783,6 +57815,7 @@
        "text": "His wife makes the gas mask, and her picture is in the house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -55824,6 +57857,7 @@
        "text": "He explains the digging."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55909,6 +57943,7 @@
        "text": "Four buckets of water, then the spade."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -55937,6 +57972,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55957,6 +57993,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55977,6 +58014,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -55997,6 +58035,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -56022,6 +58061,7 @@
        "text": "The grill at the far end of the sewer, and the rope."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -56062,6 +58102,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -56087,6 +58128,7 @@
        "text": "Jethick recognises the picture and lends you a book."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -56149,6 +58191,7 @@
        "text": "The Rehnisons, then Milli upstairs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -56184,6 +58227,7 @@
     {
      "from": 21,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -56200,6 +58244,7 @@
     {
      "from": 22,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -56242,6 +58287,7 @@
        "text": "The house with the black cross, and the mourner on the door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south of the square, to the house with the cross.",
@@ -56279,6 +58325,7 @@
        "text": "The clerk, then Bravek the city warder."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the big building north of the manhole.",
@@ -56308,6 +58355,7 @@
     {
      "from": 25,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -56357,6 +58405,7 @@
        "text": "He signs a warrant."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -56424,6 +58473,7 @@
        "text": "The barrel, the cellar, and Elena behind a locked gate."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the house with the cross.",
@@ -56526,6 +58576,7 @@
        "text": "Back through the sewer to Edmond."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the mud pile in the sewer.",
@@ -56571,6 +58622,7 @@
     {
      "from": 29,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -56606,6 +58658,7 @@
        "text": "King Roald, in Varrock palace."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -56651,6 +58704,7 @@
        "text": "Knock at the temple doors."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the temple on the Salve.",
@@ -56690,6 +58744,7 @@
        "text": "The mausoleum trapdoor is east of the temple, and the dog is at the far west end of the passages below it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round to the trapdoor.",
@@ -56752,6 +58807,7 @@
        "text": "Tell the king, who explains what you have just done."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Varrock.",
@@ -56782,6 +58838,7 @@
        "text": "The temple doors open now."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the temple.",
@@ -56846,6 +58903,7 @@
        "text": "The golden key swaps for the iron one in whichever monument holds it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back down to the monks.",
@@ -56923,6 +58981,7 @@
        "text": "Part 2 step 1: Chancellor Hassan, in the Al Kharid palace."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -57020,6 +59079,7 @@
        "text": "Part 2 step 2: Spymaster Osman, outside the palace to the north."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round to the north side of the palace.",
@@ -57076,6 +59136,14 @@
       {
        "at": 13,
        "text": "Part 3 step 5: Leela hands the key over, and the disguise is complete."
+      }
+     ],
+     "marks": [
+      {
+       "at": 12,
+       "var": 274,
+       "varbit": false,
+       "is": 1
       }
      ],
      "steps": [
@@ -57306,6 +59374,7 @@
        "text": "Part 3 step 6: Joe, and all three beers one offer is all three: he takes the first and then helps himself to the other two."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back east to the jail.",
@@ -57339,6 +59408,7 @@
        "text": "Part 3 step 7: the rope on Keli."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -57365,6 +59435,7 @@
        "text": "Part 3 step 9: the Prince puts the disguise on and walks out."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -57399,6 +59470,7 @@
        "text": "Part 3 step 10: and Hassan pays."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the Al Kharid palace.",
@@ -57424,6 +59496,7 @@
     {
      "from": 110,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -57459,6 +59532,7 @@
        "text": "The Odd Old Man, by his bone pile north-east of Varrock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -57540,6 +59614,7 @@
        "text": "Gertrude, who does not teach it herself."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -57574,6 +59649,7 @@
        "text": "B: the two of them in the sewers, who both want a smell of the cat."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the manhole and east, past the palace.",
@@ -57618,6 +59694,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -57698,6 +59775,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -57719,6 +59797,7 @@
        "text": "Jimmy Dazzler, who is on the guest list and cannot be seen with a pole."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Ardougne.",
@@ -57755,6 +59834,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the first rat.",
@@ -57916,6 +59996,7 @@
        "text": "B: back to Jimmy, who names Hooknosed Jack."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back out through the gate.",
@@ -57953,6 +60034,7 @@
        "text": "Jack, the rat poison, and four cheeses."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to south-east Varrock.",
@@ -57983,6 +60065,7 @@
        "text": "B: and Jack’s own cat has eaten one of them."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -58121,6 +60204,7 @@
        "text": "There is still something upstairs, and it is not a rat the size of a rat."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go west across Varrock.",
@@ -58251,6 +60335,7 @@
        "text": "B: Jack, who did not believe it, and Smokin’ Joe’s name."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to Jack.",
@@ -58281,6 +60366,7 @@
        "text": "Joe, under Keldagrim, and eleven years of rats in a wall."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Keldagrim.",
@@ -58358,6 +60444,7 @@
        "text": "The Face, by the Port Sarim fishing shop, who runs everything else."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -58403,6 +60490,7 @@
        "text": "The docks, and eight notes in the scroll’s order - D, G, E, F sharp, high D, B, C sharp, A."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Pollnivneach.",
@@ -58487,6 +60575,7 @@
        "text": "Felkrash, down the manhole, who keeps the book."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the manhole beside her.",
@@ -58549,6 +60638,62 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [
+      {
+       "at": 2,
+       "var": 670,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 659,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 19,
+       "var": 660,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 22,
+       "var": 661,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 24,
+       "var": 662,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 26,
+       "var": 663,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 41,
+       "var": 686,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 53,
+       "var": 664,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 55,
+       "var": 665,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go to Sir Tiffy.",
@@ -59210,6 +61355,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -59245,6 +61391,7 @@
        "text": "King Lathas, on the first floor of Ardougne castle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to King Lathas.",
@@ -59306,6 +61453,7 @@
        "text": "Idris tries to warn you and is cut down for it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the well in Iban's temple.",
@@ -59362,6 +61510,7 @@
        "text": "Lord Iorwerth, at the camp in the north-west."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -59424,6 +61573,7 @@
        "text": "The Elf Tracker, south past the Poison Waste."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south past the Poison Waste, to the tracker.",
@@ -59461,6 +61611,7 @@
        "text": "Past the guarded path and into Tyras Camp, where General Hining will not let anyone near the King."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south-west into Tyras Camp.",
@@ -59486,6 +61637,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the tracker.",
@@ -59516,6 +61668,7 @@
        "text": "Iorwerth takes the pendant back and hands over the Big Book O’ Bangs, three barrels and the limestone."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to Iorwerth.",
@@ -59570,6 +61723,7 @@
        "text": "The barrel into the sling, and a tinderbox to the fuse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -59971,6 +62125,7 @@
        "text": "Back to Iorwerth for the sealed letter."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to Iorwerth.",
@@ -59996,6 +62151,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -60033,6 +62189,7 @@
        "text": "Hand it over anyway, exactly as Arianwyn asks."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east over the pass, home to Ardougne.",
@@ -60058,6 +62215,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -60093,6 +62251,7 @@
        "text": "No requirements and no items."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -60117,6 +62276,7 @@
        "text": "Father Urhney's shack, in the east of Lumbridge Swamp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round the back of the castle, west through the wood, then east across the swamp.",
@@ -60167,6 +62327,7 @@
        "text": "The churchyard, through the door on the east side of the church."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -60261,6 +62422,7 @@
        "text": "The skull, in the Wizards Tower basement."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the road south-west to the tower island.",
@@ -60371,6 +62533,7 @@
        "text": "The skull goes in the coffin."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the churchyard.",
@@ -60441,6 +62604,7 @@
        "text": "No requirements."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -60465,6 +62629,7 @@
        "text": "Juliet, upstairs in the mansion west of the west bank."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the road out of the west gate to the Leptoc mansion.",
@@ -60569,6 +62734,7 @@
        "text": "The message back to Romeo."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back east through the gate to the square.",
@@ -60606,6 +62772,7 @@
        "text": "Father Lawrence, in Varrock church."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-east across the city to the church.",
@@ -60636,6 +62803,7 @@
        "text": "The Apothecary, south-west of the square."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back down through the city.",
@@ -60674,6 +62842,7 @@
        "text": "The potion to Juliet."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out of the south-east gate to the mine.",
@@ -60835,6 +63004,7 @@
        "text": "Romeo is told."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the square one last time.",
@@ -60881,6 +63051,7 @@
        "text": "Vanstrom Klause, in the chair in the north-east corner of the pub."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -60965,6 +63136,7 @@
        "text": "Cyreg Paddlehorn, by his boat on the east side of Mort’ton."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the boat at the Barrows bridge.",
@@ -61005,6 +63177,7 @@
        "text": "North on foot to the rope bridge."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -61084,6 +63257,7 @@
        "text": "The doors in the earth, round the back of the tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -61165,6 +63339,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61218,6 +63393,7 @@
        "text": "The weapons, and the man from the tavern coming through the door behind you."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61239,6 +63415,7 @@
        "text": "The Skeleton Hellhound."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61275,6 +63452,7 @@
        "text": "The chair is empty and there is somebody else in it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -61363,6 +63541,7 @@
        "text": "Islwyn, at his campfire in Isafdar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61397,6 +63576,7 @@
        "text": "Eluned, beside him, knows the rite and what it needs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61418,6 +63598,7 @@
        "text": "Glarial’s tomb, and the three moss giants in it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the tombstone.",
@@ -61503,6 +63684,7 @@
        "text": "Back to Eluned, who wakes the seed."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back west to Isafdar.",
@@ -61533,6 +63715,7 @@
        "text": "Plant it beside the chalice at the bottom of the waterfall, where Glarial lies now."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the chalice.",
@@ -61569,6 +63752,7 @@
        "text": "Tell Islwyn, and take the bow."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the campfire.",
@@ -61597,6 +63781,7 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -61632,6 +63817,7 @@
        "text": "No requirements and no items."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -61730,6 +63916,7 @@
        "text": "The Wizards Tower, south-west, and Sedridor in the cellar."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the road down past Lumbridge swamp to the tower island.",
@@ -61844,6 +64031,7 @@
        "text": "Aubury, in the rune shop in south-east Varrock."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -61905,6 +64093,7 @@
        "text": "\"then speak to him again\" - the notes come on the second conversation."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -61929,6 +64118,7 @@
        "text": "Back to Sedridor with the notes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the road down past Lumbridge swamp to the tower island.",
@@ -62033,6 +64223,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -62063,6 +64254,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -62089,6 +64281,7 @@
        "text": "A Seer."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to Seers’ Village, at the house door.",
@@ -62153,6 +64346,7 @@
        "text": "Back to the Seer, who gives up the other two in one conversation the door is swapped for an open one that stays open for a while, so on the second visit there may be nothing called loc_1530 to click - which is not a failure."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go round the dungeon - dragons, demons, spiders.",
@@ -62258,6 +64452,7 @@
        "text": "All three back to Thormac."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to the Barbarian Village helmet shop.",
@@ -62419,6 +64614,7 @@
        "text": "Caroline, on the north Ardougne shore."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -62468,6 +64664,7 @@
        "text": "Holgart, whose boat is full of holes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to a few steps east to the boat.",
@@ -62502,6 +64699,7 @@
        "text": "Holgart patches the boat and sails you out."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -62584,6 +64782,7 @@
        "text": "Kennith is hiding in a sealed room on the upper deck, and you shout across to him through the wall."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go across the platform to the ladder.",
@@ -62657,6 +64856,7 @@
        "text": "Tell Holgart, who sails off to look for Kent."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back down to the boat.",
@@ -62687,6 +64887,7 @@
        "text": "Kent, washed up on the island, and he pulls a slug off your neck."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -62720,6 +64921,7 @@
        "text": "The sticks on the deck are damp, and the broken glass is a lens."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -62837,6 +65039,7 @@
        "text": "Now the fishermen are afraid of the torch, so the ladder is safe."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the ladder.",
@@ -62911,6 +65114,7 @@
        "text": "Kick the loose panel in the east wall of his room."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -62938,6 +65142,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -62991,6 +65196,7 @@
        "text": "Swing the crane round so he can ride the net down to the boat."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -63023,6 +65229,7 @@
        "text": "Holgart takes the boy home, then you, then Caroline pays."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down to the boat.",
@@ -63065,6 +65272,7 @@
     {
      "from": 12,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -63104,6 +65312,7 @@
        "text": "Fred the Farmer, in his house north of Lumbridge."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -63146,6 +65355,7 @@
        "text": "Twenty balls to Fred, one conversation at a time."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out to his pen.",
@@ -63246,6 +65456,7 @@
     {
      "from": 22,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -63285,6 +65496,7 @@
        "text": "Councillor Halgrive, in the graveyard south of the Ardougne church."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -63317,6 +65529,7 @@
        "text": "Doctor Orbon in the church sells his own plague suit for 100 coins."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north into the church.",
@@ -63363,6 +65576,32 @@
       {
        "at": 46,
        "text": "Back to Halgrive, who refunds the suit and pays 3000 on top."
+      }
+     ],
+     "marks": [
+      {
+       "at": 16,
+       "var": 61,
+       "varbit": false,
+       "is": 12
+      },
+      {
+       "at": 26,
+       "var": 61,
+       "varbit": false,
+       "is": 108
+      },
+      {
+       "at": 36,
+       "var": 61,
+       "varbit": false,
+       "is": 876
+      },
+      {
+       "at": 46,
+       "var": 61,
+       "varbit": false,
+       "is": 7020
       }
      ],
      "steps": [
@@ -63874,6 +66113,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -63913,6 +66153,7 @@
        "text": "The belt on Trufitus in Tai Bwo Wannai is what starts the quest."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Mosol Rei.",
@@ -64020,6 +66261,32 @@
        "text": "The mound of earth south-west of the Shipyard."
       }
      ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 116,
+       "varbit": false,
+       "is": 3
+      },
+      {
+       "at": 3,
+       "var": 116,
+       "varbit": false,
+       "is": 4
+      },
+      {
+       "at": 4,
+       "var": 116,
+       "varbit": false,
+       "is": 5
+      },
+      {
+       "at": 5,
+       "var": 116,
+       "varbit": false,
+       "is": 6
+      }
+     ],
      "steps": [
       {
        "text": "Go to the mound of earth.",
@@ -64109,6 +66376,7 @@
        "text": "The cave."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -64287,6 +66555,7 @@
        "text": "Cairn Isle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -64367,6 +66636,7 @@
        "text": "The palm trees hide the doors into the tomb of Rashiliyia, the bone shard is chiselled into the bone key, and the beads have to be WORN."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the dolmen.",
@@ -64537,6 +66807,7 @@
        "text": "The ancient gate, with the beads on."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -64582,6 +66853,7 @@
        "text": "Three plain bones into the skeletal door, one recess at a time."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go through the dungeon to the tomb doors.",
@@ -64656,6 +66928,14 @@
        "text": "The dolmen in the tomb, and Nazastarool three times over - zombie, skeleton, ghost, each one summoned by the MESBOX of the one before."
       }
      ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 117,
+       "varbit": false,
+       "is": 4084
+      }
+     ],
      "steps": [
       {
        "text": "Go to the dolmen chamber.",
@@ -64721,6 +67001,7 @@
        "text": "Her remains on the dolmen under Cairn Isle, where she was looking for her son."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the dolmen under Cairn Isle.",
@@ -64776,6 +67057,7 @@
        "text": "Launa, beside the rift."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -64820,6 +67102,20 @@
        "text": "A rope on the edge, and down."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 2034,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 1,
+       "var": 2032,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -64856,6 +67152,7 @@
        "text": "ANGER: a rack of four weapons, and each creature only takes damage from its own."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -64923,6 +67220,7 @@
        "text": "FEAR: six holes and one reaper hiding in one of them, which moves after every kill - so every round is \"look in all six, then kill what came out\"."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -64956,6 +67254,7 @@
        "text": "CONFUSION: five doors, and among five creatures only one is real."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -64990,6 +67289,14 @@
       {
        "at": 2,
        "text": "HOPELESSNESS: five creatures, three forms each, fifteen kills each one killed comes back smaller, so which of the three forms is in front of you is not something the run can plan - it takes whichever one is there."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 2031,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -65043,6 +67350,14 @@
       {
        "at": 6,
        "text": "Tolna by the rift, which is what completes it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 2025,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -65113,6 +67428,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -65152,6 +67468,7 @@
        "text": "The Squire, in the White Knights' Castle courtyard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -65198,6 +67515,7 @@
        "text": "Reldo, in the north room of the Varrock palace library."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east across Asgarnia and Misthalin to the palace.",
@@ -65231,6 +67549,7 @@
        "text": "Thurgo, in the hut south of Port Sarim."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south-west to Mudskipper Point.",
@@ -65260,6 +67579,7 @@
     {
      "from": 3,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -65284,6 +67604,7 @@
        "text": "Back to the Squire, who remembers the portrait in Vyvin’s cupboard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back west to Falador.",
@@ -65318,6 +67639,7 @@
        "text": "The portrait to Thurgo, who then wants blurite ore."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Mudskipper Point.",
@@ -65366,6 +67688,7 @@
        "text": "The Squire takes it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the ladder on the hill and north past the pirates.",
@@ -65472,6 +67795,7 @@
        "text": "Herman Caranos, outside the palisade, counting the holes in it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -65558,6 +67882,20 @@
       {
        "at": 25,
        "text": "Again: back to Herman, who moves on to the second problem."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 2099,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 11,
+       "var": 2099,
+       "varbit": true,
+       "is": 3
       }
      ],
      "steps": [
@@ -65911,6 +68249,14 @@
     {
      "from": 10,
      "headings": [],
+     "marks": [
+      {
+       "at": 10,
+       "var": 2106,
+       "varbit": true,
+       "is": 5
+      }
+     ],
      "steps": [
       {
        "kind": "walk",
@@ -66072,6 +68418,7 @@
        "text": "The man the letter is addressed to, who is in Draynor pretending to be a pensioner."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Draynor.",
@@ -66101,6 +68448,7 @@
        "text": "In this telling: the Wise Old Man looks at them, and then the water takes him out in four seconds and they carry him into the office."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Kathy Corkat's boat.",
@@ -66143,6 +68491,7 @@
     {
      "from": 40,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -66163,6 +68512,7 @@
        "text": "As the cache allows it: Arnold has Herman's book and the packet of bone seeds that was in the old man's hand, and the book wants seven bones."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -66227,6 +68577,14 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [
+      {
+       "at": 7,
+       "var": 2108,
+       "varbit": true,
+       "is": 7
+      }
+     ],
      "steps": [
       {
        "kind": "obj",
@@ -66325,6 +68683,7 @@
        "text": "Herman starts it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -66349,6 +68708,7 @@
     {
      "from": 100,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -66418,6 +68778,7 @@
        "text": "Herman, twice - once for the news and once for the count."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -66482,6 +68843,7 @@
     {
      "from": 190,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -66498,6 +68860,7 @@
     {
      "from": 200,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -66528,6 +68891,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -66640,6 +69004,20 @@
       {
        "at": 8,
        "text": "Up the ladder and through the peephole."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 3110,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 7,
+       "var": 3111,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -66777,6 +69155,7 @@
        "text": "Back to Brother Tranquility, who ferries you off the island."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the windmill.",
@@ -66809,6 +69188,7 @@
     {
      "from": 30,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the monastery north of Edgeville.",
@@ -66870,6 +69250,7 @@
        "text": "A holy symbol on, back to the island, and recite it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -66914,6 +69295,7 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -66959,6 +69341,32 @@
       {
        "at": 4,
        "text": "Build the crate beside him, floor it, fill it, whistle, post it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 3115,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 5,
+       "var": 3115,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 6,
+       "var": 3115,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 7,
+       "var": 3115,
+       "varbit": true,
+       "is": 4
       }
      ],
      "steps": [
@@ -67109,6 +69517,7 @@
     {
      "from": 70,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -67158,6 +69567,26 @@
       {
        "at": 6,
        "text": "The keg against the monastery gate, the fuse, and a tinderbox."
+      }
+     ],
+     "marks": [
+      {
+       "at": 8,
+       "var": 3113,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 9,
+       "var": 3112,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 9,
+       "var": 3114,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -67286,6 +69715,7 @@
        "text": "The kit to the doctor, and the cat-and-ball while he works."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -67438,6 +69868,14 @@
        "text": "Brother Tranquility, then the fight."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 3116,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "text": "Go up to Brother Tranquility.",
@@ -67482,6 +69920,7 @@
     {
      "from": 110,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -67497,6 +69936,7 @@
     {
      "from": 120,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the windmill.",
@@ -67528,6 +69968,7 @@
     {
      "from": 130,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -67564,6 +70005,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -67594,6 +70036,7 @@
        "text": "The R.P.D.T."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-east by boat and road to Ardougne.",
@@ -67681,6 +70124,7 @@
        "text": "Ask the R.P.D.T."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -67705,6 +70149,7 @@
        "text": "Cromperty teleports you to his own block, which is now in the mansion."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go east to Cromperty’s house.",
@@ -67740,6 +70185,7 @@
        "text": "The hall the crate is in is sealed off; the way west is the door on its west side, then the small hall, then the combination door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -67816,6 +70262,7 @@
        "text": "The maze."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -67890,6 +70337,7 @@
        "text": "Commander Montai on the battlefield wants six loads of logs."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north out of the maze to the battlefield.",
@@ -67918,6 +70366,7 @@
     {
      "from": 2,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -67939,6 +70388,7 @@
        "text": "Then he sends you after the three tracker gnomes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -67967,6 +70417,7 @@
        "text": "The ballista, with 4, 3 and 5 in that order."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north into the heart of the battlefield.",
@@ -68057,6 +70508,7 @@
        "text": "The wall can only be climbed from the south, and the commander inside objects to both the climb and the chest."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north to the breached wall.",
@@ -68169,6 +70621,7 @@
        "text": "Back to Bolren with it - and the village has been raided in the meantime, so the other two orbs are gone as well."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the maze entrance.",
@@ -68228,6 +70681,7 @@
        "text": "The warlord in the valley north-west of the stronghold."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go north-west.",
@@ -68258,6 +70712,7 @@
        "text": "Home, for the ceremony at the spirit tree."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back.",
@@ -68309,6 +70764,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -68339,6 +70795,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the stronghold's west room, where Ug is crying.",
@@ -68368,6 +70825,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -68420,6 +70878,7 @@
        "text": "Tenzing knows where it grows and that you will need a sled, and Dunstan is the man who builds one."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -68484,6 +70943,7 @@
     {
      "from": 15,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Dunstan's forge.",
@@ -68514,6 +70974,7 @@
     {
      "from": 20,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -68559,6 +71020,7 @@
        "text": "Swamp tar from the Lumbridge swamp and a bucket of wax off the Catherby beehives, mixed in a cake tin."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -68628,6 +71090,7 @@
        "text": "End: the flowers are in the clearing the ride lands in."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Trollheim, at the mouth of the cave.",
@@ -68764,6 +71227,7 @@
        "text": "Ug will not hand it over himself while Arrg is alive."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -68878,6 +71342,7 @@
        "text": "The duel."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -68940,6 +71405,7 @@
        "text": "Pretty rocks, and then Ug needs insulting into asking her out."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -68992,6 +71458,7 @@
     {
      "from": 45,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -69034,6 +71501,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Denulth at the Imperial Guard camp.",
@@ -69069,6 +71537,7 @@
        "text": "Dad holds the arena, and the gate wakes him up."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the arena gate on the west side.",
@@ -69126,6 +71595,7 @@
        "text": "Down to the prison level and through the locked door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -69251,6 +71721,7 @@
        "text": "The two guards are asleep, one cell key each."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -69326,6 +71797,14 @@
        "text": "Dunstan the smith is Godric’s father."
       }
      ],
+     "marks": [
+      {
+       "at": 1,
+       "var": 0,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -69364,6 +71843,7 @@
     {
      "from": 50,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -69399,6 +71879,7 @@
        "text": "Unferth, bald, in a chair."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -69489,6 +71970,14 @@
        "text": "Bob, on the counter of Bob's Axes in Lumbridge."
       }
      ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 1032,
+       "varbit": true,
+       "is": 4
+      }
+     ],
      "steps": [
       {
        "text": "Go south-east across Asgarnia and Misthalin to Lumbridge.",
@@ -69517,6 +72006,32 @@
       {
        "at": 1,
        "text": "The five chores."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 1029,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 4,
+       "var": 1030,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 7,
+       "var": 1031,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 17,
+       "var": 1033,
+       "varbit": true,
+       "is": 4
       }
      ],
      "steps": [
@@ -69725,6 +72240,7 @@
        "text": "Bob half-remembers being someone called Robert."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Lumbridge.",
@@ -69757,6 +72273,14 @@
       {
        "at": 3,
        "text": "Back to Bob with the name, and he sends you home."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 1036,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -69810,6 +72334,7 @@
        "text": "Unferth says it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to the cottage garden.",
@@ -69855,6 +72380,7 @@
        "text": "Neite lifts the curse."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back out to the garden.",
@@ -69884,6 +72410,7 @@
        "text": "The reward."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -69899,6 +72426,7 @@
     {
      "from": 80,
      "headings": [],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -69934,6 +72462,7 @@
        "text": "King Lathas, upstairs in Ardougne Castle."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to King Lathas.",
@@ -70037,6 +72566,7 @@
        "text": "Cloth on an arrow, light it, equip bow and arrow, and shoot the guide rope."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -70184,6 +72714,7 @@
        "text": "Down the well of voyage."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -70388,6 +72919,7 @@
        "text": "On the unicorn: search the cage, take a piece of railing, drop the boulder on the unicorn with it, then search the cage again for the horn."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the unicorn cage.",
@@ -70496,6 +73028,7 @@
     {
      "from": 4,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to onto Sir Jerro.",
@@ -70676,6 +73209,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the tunnel down.",
@@ -70722,6 +73256,7 @@
     {
      "from": 6,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Klank.",
@@ -70863,6 +73398,7 @@
     {
      "from": 7,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to Klank.",
@@ -71251,6 +73787,7 @@
     {
      "from": 8,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the altar.",
@@ -71281,6 +73818,7 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to Koftik.",
@@ -71369,6 +73907,7 @@
        "text": "Morgan, in his house in Draynor Village."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -71422,6 +73961,7 @@
        "text": "Dr Harlow, in the BLUE MOON INN south of Varrock square - which is where Morgan now says he is."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -71512,6 +74052,7 @@
        "text": "The coffin in the middle of the room wakes him up."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -71627,6 +74168,7 @@
        "text": "Brundt the Chieftain, in the longhall."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -71726,6 +74268,7 @@
        "text": "Brundt, with all seven votes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -73763,6 +76306,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the trellis on the north wall.",
@@ -73899,6 +76443,7 @@
        "text": "The wizard reads the nails and names the ogre tribes."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -74035,6 +76580,7 @@
        "text": "The wizard assembles the three parts into the ogre relic."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -74401,6 +76947,7 @@
        "text": "The north-west gate."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -74488,6 +77035,7 @@
        "text": "A city guard sets a riddle whose answer is a death rune."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the market.",
@@ -74600,6 +77148,7 @@
     {
      "from": 5,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -74630,6 +77179,7 @@
        "text": "The mad skavid, in the cave inside the city, has the second crystal."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the fifth skavid cave.",
@@ -74900,6 +77450,7 @@
        "text": "Nightshade on an Enclave guard, back in the city."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the nightshade.",
@@ -74963,6 +77514,7 @@
        "text": "Out again, and the wizard explains the potion."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out of the enclave.",
@@ -75042,6 +77594,7 @@
        "text": "The wizard puts the magic in it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -75149,6 +77702,7 @@
        "text": "Show all four to the wizard."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -75495,6 +78049,7 @@
        "text": "The lever to the west."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -75515,6 +78070,14 @@
     {
      "from": 13,
      "headings": [],
+     "marks": [
+      {
+       "at": 1,
+       "var": 212,
+       "varbit": false,
+       "is": 14
+      }
+     ],
      "steps": [
       {
        "kind": "obj",
@@ -75565,6 +78128,7 @@
        "text": "Almera, in the house at the top of the falls."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -75596,6 +78160,7 @@
        "text": "The raft downstream lands beside Hudon, which is the whole of that step - the raft itself notices him."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go out the back to the raft.",
@@ -75630,6 +78195,7 @@
        "text": "The Book on Baxtorian, in the bookcase upstairs in Hadley’s house."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go south to the house.",
@@ -75684,6 +78250,7 @@
        "text": "Glarial’s tombstone, west of the village."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go down the ladder in the village and along the cellar.",
@@ -75792,6 +78359,7 @@
        "text": "The door on the ledge only opens for someone carrying the amulet."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go along the tomb to the coffin.",
@@ -75923,6 +78491,7 @@
        "text": "A crate inside holds the key to the inner door."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go through the caves to the crate.",
@@ -75988,6 +78557,7 @@
        "text": "Six pillars, three runes each - air, earth and water on every one of them, eighteen placements in all."
       }
      ],
+     "marks": [],
      "steps": [],
      "items": [
       {
@@ -76035,6 +78605,7 @@
        "text": "The warrior in the swamp camp, who gives it away by denying it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -76075,6 +78646,7 @@
        "text": "Chop at the trees until the leprechaun comes out of one."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -76118,6 +78690,7 @@
        "text": "The Dramen tree is in the cave under Entrana, and a tree spirit stands in front of it."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go to the monks’ ship to Entrana and down into the cave.",
@@ -76160,6 +78733,7 @@
        "text": "Now the tree can be cut."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "loc",
@@ -76184,6 +78758,7 @@
        "text": "Carve the branch with a knife."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -76213,6 +78788,7 @@
        "text": "The shed in the middle of the swamp."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",
@@ -76282,6 +78858,7 @@
     {
      "from": 0,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "talk",
@@ -76304,6 +78881,14 @@
       {
        "at": 0,
        "text": "The guard east of him brings the barricade down."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 496,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -76374,6 +78959,7 @@
        "text": "Brentle Vahn never got out, and his tankard puts him in the Dragon Inn."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -76478,6 +79064,26 @@
       {
        "at": 15,
        "text": "Rarve wants the whole case, not a hunch."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 489,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 9,
+       "var": 491,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 10,
+       "var": 492,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -76750,6 +79356,7 @@
        "text": "Cont: he will not drink anything you hand him, but there is a cup of cold tea on his drawers."
       }
      ],
+     "marks": [],
      "steps": [
       {
        "text": "Go back to his room.",
@@ -76783,6 +79390,14 @@
     {
      "from": 9,
      "headings": [],
+     "marks": [
+      {
+       "at": 0,
+       "var": 495,
+       "varbit": true,
+       "is": 1
+      }
+     ],
      "steps": [
       {
        "kind": "loc",
@@ -76809,6 +79424,20 @@
       {
        "at": 2,
        "text": "Down into the tomb again, then the chamber under it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 499,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 0,
+       "var": 498,
+       "varbit": true,
+       "is": 1
       }
      ],
      "steps": [
@@ -76972,6 +79601,7 @@
     {
      "from": 14,
      "headings": [],
+     "marks": [],
      "steps": [
       {
        "kind": "obj",

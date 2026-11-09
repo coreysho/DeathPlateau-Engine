@@ -128,6 +128,20 @@ type HelperStage = {
      * can show the heading the step it is naming actually sits under.
      */
     headings: { at: number; text: string }[];
+    /**
+     * The quest's own flags, and the step each one is true from: "feud_var_drink is 3 by here".
+     *
+     * THE SECOND HAND ON THE CLOCK. A quest's progress varp moves once a leg and says nothing
+     * about the steps inside it, but the quests keep their own working flags as they go - how
+     * many beers Drunken Ali has had, which gangs have been asked - and the sims already assert
+     * them, 278 times, as `{ varis: 'feud_var_drink', to: 3 }`. Those were dropped as robot-only
+     * checks. They are the opposite: they are the only thing in the game that can say a step
+     * whose only trace is a flag has been taken.
+     *
+     * `at` is the index of the step the flag is true FROM, so everything before it is done; a
+     * mark at the end of the list says the leg itself is finished, whatever its varp still says.
+     */
+    marks: { at: number; var: number; varbit: boolean; is: number }[];
     steps: HelperStep[];
     /**
      * Everything the player must be holding by the end of this leg, with the obj id.
@@ -601,7 +615,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
     /** Every handle the sim hands the player: the shopping list, gathered over the whole run. */
     const given = new Set<string>();
     const stages: HelperStage[] = [];
-    let cur: HelperStage = { from: 0, headings: [], steps: [], items: [], worn: [] };
+    let cur: HelperStage = { from: 0, headings: [], marks: [], steps: [], items: [], worn: [] };
 
     const push = () => {
         if (cur.steps.length || cur.items.length || cur.worn.length || cur.headings.length) stages.push(cur);
@@ -641,7 +655,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             // settled onto THIS leg before the leg is closed.
             flushNotes();
             push();
-            cur = { from: Number(s.stage), headings: [], steps: [], items: [], worn: [] };
+            cur = { from: Number(s.stage), headings: [], marks: [], steps: [], items: [], worn: [] };
             continue;
         }
 
@@ -649,6 +663,19 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (!kind) continue;
 
         if (ASSERT_KINDS.has(kind)) {
+            // `varis` is the exception among the assertions: the others check the world agrees
+            // with the sim, this one records how far the quest's own flags have moved. A target
+            // of 0 is "not set yet", which is true before anything happens and marks nothing.
+            if (kind === 'varis' && typeof s.varis === 'string' && typeof s.to === 'number' && s.to > 0) {
+                const bit = VarBitType.getId(s.varis);
+                const varp = bit === -1 ? VarPlayerType.getByName(s.varis) : null;
+                const id = bit !== -1 ? bit : (varp?.id ?? -1);
+                if (id >= 0) {
+                    cur.marks.push({ at: cur.steps.length, var: id, varbit: bit !== -1, is: s.to });
+                } else {
+                    unresolved.set('var:' + s.varis, (unresolved.get('var:' + s.varis) ?? 0) + 1);
+                }
+            }
             dropped[kind] = (dropped[kind] ?? 0) + 1;
             continue;
         }
