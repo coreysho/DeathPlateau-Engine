@@ -78,11 +78,10 @@ const RINGS = [
     { loc: '49_fairy_mushroom_ring', x: 3025, z: 4833, code: 'ALR', where: 'the Abyssal Area' },
     { loc: '50_fairy_mushroom_ring', x: 2440, z: 5146, code: 'BLP', where: 'the TzHaar city' },
     { loc: '52_fairy_mushroom_ring', x: 2629, z: 4677, code: 'BJR', where: "the Fisher King's realm" },
-    // TWO THAT READ AS ABSENT TWICE, because neither answers to RuneScape's name for it: Tirannwn
-    // is here under the Regicide quest's prefix, and In Search of the Myreque is this server's
-    // "route" quest. The Myreque ring sits two tiles from their hideout door, underground.
-    { loc: '53_fairy_mushroom_ring', x: 2200, z: 3120, code: 'DLR', where: 'Isafdar' },
-    { loc: '55_fairy_mushroom_ring', x: 3500, z: 9810, code: 'DLS', where: "the Myreque's cave" }
+    // READ AS ABSENT TWICE, because Tirannwn does not answer to RuneScape's name for it: it is
+    // here under the Regicide quest's prefix. DLS, the Myreque's cave, was found the same way and
+    // then deliberately removed - see the note in fairy_rings.constant for why.
+    { loc: '53_fairy_mushroom_ring', x: 2200, z: 3120, code: 'DLR', where: 'Isafdar' }
 ];
 
 // the order each dial turns in, which is NOT alphabetical
@@ -356,6 +355,39 @@ check(
     /nothing happens/i.test(
         H.mesgs
             .filter(m => m.who === lost.username)
+            .map(m => m.text)
+            .join(' ')
+    ),
+    true
+);
+
+// ---------------------------------------------------------------- and DLS really is gone
+//
+// DLS WAS BUILT AND THEN REMOVED, and deleting a ring along with its test would prove nothing at
+// all - the suite would pass either way. So the removal gets its own assertions: no ring stands
+// at the tile any more, and the code now falls through to the ring that hums and does nothing,
+// which is what every unbuilt code does. If anybody re-adds the case without the loc, or the loc
+// without the case, one of these two fails.
+console.log('\nand DLS, which was removed on purpose, goes nowhere');
+check('no ring is left at 3500,9810', H.locsNear('55_fairy_mushroom_ring', 3500, 9810).length, 0);
+
+const gone = H.makePlayer('fr_gone', 2412, 4440);
+H.loginOrder(gone);
+H.setVarBit(gone, 'fairy_farmers_quest', FAIRY_COMPLETE);
+H.setVar(gone, 'fairy_ring_dial', 0);
+H.clearLogs();
+useRing(gone, RINGS[0]);
+dialTo(gone, 'DLS');
+const stoodDls = at(gone);
+H.clearLogs();
+H.ifButton(gone, 'fairy_rings:enter_box');
+settle();
+check('DLS does not move anybody', at(gone), stoodDls);
+check(
+    '...and the ring says so',
+    /nothing happens/i.test(
+        H.mesgs
+            .filter(m => m.who === gone.username)
             .map(m => m.text)
             .join(' ')
     ),
