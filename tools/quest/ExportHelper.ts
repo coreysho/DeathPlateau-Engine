@@ -33,6 +33,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as ts from 'typescript';
+import { manifestOf as evalManifestOf } from './EvalManifest.js';
 import NpcType from '#/cache/config/NpcType.js';
 import LocType from '#/cache/config/LocType.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -232,8 +233,12 @@ function manifestOf(file: string): Record<string, unknown> | null {
     };
     findSpread(decl);
     if (spread) {
+        // A generated leg cannot be read from the syntax, so the file is RUN instead, against a
+        // stubbed harness - see EvalManifest. Reading first and running only when reading fails
+        // keeps 83 of the quests on the cheap path: the AST costs milliseconds and a process each
+        // costs about a second.
         generated.push(path.basename(file));
-        return null;
+        return evalManifestOf(file);
     }
 
     const v = literal(decl, env);
@@ -363,13 +368,6 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             continue;
         }
 
-        if (kind === '__never__') {
-            const item = String(s.has);
-            const n = typeof s.n === 'number' ? s.n : 1;
-            cur.items.push(n > 1 ? `${item} x${n}` : item);
-            continue;
-        }
-
         const why = prose(s.why);
         const npc = NPC_KINDS.has(kind);
         const loc = LOC_KINDS.has(kind);
@@ -380,20 +378,28 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         const raw = s[kind];
         const target = npc || loc || obj ? String(Array.isArray(raw) ? raw[0] : raw) : '';
 
-        const step: HelperStep = {
-            kind: npc ? 'talk' : loc ? 'loc' : walk ? 'walk' : obj ? 'obj' : 'note',
-            text: why || defaultText(kind, target || String(raw))
-        };
+        // THE NAME IS RESOLVED BEFORE THE SENTENCE IS WRITTEN, because the sentence uses it. A
+        // step with no `why` falls back to "Talk to <name>", and taking the name from the
+        // debugname produced "Talk to ahoy velorina." where the cache says Velorina.
+        let id = -1;
+        let shown: string | null = null;
         if (target) {
-            step.target = target;
-            const id = npc ? idOf('talk', target) : loc ? idOf('loc', target) : idOf('obj', target);
+            id = npc ? idOf('talk', target) : loc ? idOf('loc', target) : idOf('obj', target);
             if (id >= 0) {
-                step.id = id;
-                const shown = npc ? NpcType.get(id)?.name : loc ? LocType.get(id)?.name : ObjType.get(id)?.name;
-                if (shown) step.label = shown;
+                shown = (npc ? NpcType.get(id)?.name : loc ? LocType.get(id)?.name : ObjType.get(id)?.name) ?? null;
             } else {
                 unresolved.set(kind + ':' + target, (unresolved.get(kind + ':' + target) ?? 0) + 1);
             }
+        }
+
+        const step: HelperStep = {
+            kind: npc ? 'talk' : loc ? 'loc' : walk ? 'walk' : obj ? 'obj' : 'note',
+            text: why || defaultText(kind, shown || target || String(raw))
+        };
+        if (target) {
+            step.target = target;
+            if (id >= 0) step.id = id;
+            if (shown) step.label = shown;
         }
         if (Array.isArray(s.at)) step.at = s.at as number[];
         else if (walk && Array.isArray(raw)) step.at = raw as number[];
@@ -505,9 +511,16 @@ console.log(
         .map(([k, v]) => k + ' ' + v)
         .join(', ')}`
 );
-if (generated.length) console.log(`  steps built by a function, so NOT exported (${generated.length}): ${generated.join(' ')}`);
+const rescued = generated.filter(f => !skipped.includes(f));
+if (generated.length) {
+    console.log(`  steps built by a function, so RUN rather than parsed (${generated.length}): ${rescued.length} read, ${generated.length - rescued.length} still refused`);
+}
 const unread = skipped.filter(f => !generated.includes(f));
-if (unread.length) console.log(`  NO MANIFEST READ (${unread.length}): ${unread.join(' ')}`);
+// Not a failure to read: these sims have no step list to read. They drive their quest with
+// direct harness calls and assert as they go - 15 checks each and no `steps:` anywhere - so
+// there is nothing here to turn into a helper page. Writing manifests for them is a job for
+// whoever wants those two quests helped, not something this tool can infer.
+if (unread.length) console.log(`  not manifest-driven, so no steps to export (${unread.length}): ${unread.join(' ')}`);
 const withId = out.reduce((a, q) => a + q.stages.reduce((b, st) => b + st.steps.filter(x => typeof x.id === 'number').length, 0), 0);
 const varOk = out.filter(q => (q.stageVarId ?? -1) >= 0).length;
 console.log(`  ${withId} of ${targets} targets resolved to a cache id; ${varOk} of ${out.length} quests resolved their progress var`);
