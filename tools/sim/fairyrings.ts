@@ -16,6 +16,8 @@
 import * as H from './harness.ts';
 import Component from '#/cache/config/Component.js';
 import type Player from '#/engine/entity/Player.js';
+import LocType from '#/cache/config/LocType.js';
+import SeqType from '#/cache/config/SeqType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 
 const VarpId = (name: string) => {
@@ -112,6 +114,31 @@ for (const r of RINGS) {
     const near = H.locsNear(r.loc, r.x, r.z);
     const hit = near.find(l => l.x === r.x && l.z === r.z);
     check(`${r.where} has a ring at ${r.x},${r.z}`, hit !== undefined, true);
+}
+
+// ---------------------------------------------------------------- and they LOOK like rings
+//
+// THE BUG THIS EXISTS FOR, and it reached a deployed world. 377 placed five of these as loc_9158
+// with minigame_start_icon edges; only the Zanaris ones were ever mushroom rings. Activating the
+// five gave them a name and a click and left them on those models, so Edgeville had a fairy ring
+// that teleported correctly and could not be seen. Every check in this file passed, because not
+// one of them asked what the thing looked like.
+//
+// The hub is the reference rather than a model name written out here: whatever the ring in Zanaris
+// is made of is what a fairy ring looks like in this world, and the other five have to match it.
+console.log('\nand they look like the one in Zanaris');
+const modelsOf = (name: string) => {
+    const id = LocType.getId(name);
+    if (id === -1) throw new Error('no such loc: ' + name);
+    return (LocType.get(id).models ?? []).join(',');
+};
+for (const piece of ['', '_edge', '_corner']) {
+    const want = modelsOf(`64_fairy_mushroom_ring${piece}`);
+    check(`the hub's ${piece || 'centre'} has a model at all`, want.length > 0, true);
+    for (const r of RINGS) {
+        if (r.loc.startsWith('64_')) continue;
+        check(`${r.where}'s ${piece || 'centre'} is the same model`, modelsOf(`${r.loc}${piece}`), want);
+    }
 }
 
 // ---------------------------------------------------------------- every ring opens the dial
@@ -223,6 +250,40 @@ for (const r of RINGS) {
     settle();
     check(`${r.code} lands at ${r.where}`, at(t), `${r.x},${r.z}`);
 }
+
+// ---------------------------------------------------------------- the animation
+//
+// ALSO FOUND IN A DEPLOYED WORLD. anim() sets what the client plays next, so a vanish, a jump and
+// an appear in one tick reach the client as nothing: only the last anim survives the tick, and by
+// then the player has moved. The fix is a delay either side, and this is what holds it there.
+console.log('\nand it plays the teleport rather than blinking');
+const seqId = (n: string) => {
+    const id = SeqType.getId(n);
+    if (id === -1) throw new Error('no such seq: ' + n);
+    return id;
+};
+const VANISH = seqId('human_fairy_vanish');
+const APPEAR = seqId('human_fairy_appear');
+
+const anim = H.makePlayer('fr_anim', 2412, 4440);
+H.loginOrder(anim);
+H.setVarBit(anim, 'fairy_farmers_quest', FAIRY_COMPLETE);
+H.setVar(anim, 'fairy_ring_dial', 0);
+H.clearLogs();
+useRing(anim, RINGS[0]);
+dialTo(anim, 'DKR');
+H.clearLogs();
+H.ifButton(anim, 'fairy_rings:enter_box');
+settle();
+const played = H.anims.filter(a => a.who === anim.username);
+const vanish = played.find(a => a.seq === VANISH);
+const appear = played.find(a => a.seq === APPEAR);
+check('the vanish reaches the client', vanish !== undefined, true);
+check('and so does the appear', appear !== undefined, true);
+// THE ORDER AND THE GAP ARE THE WHOLE POINT. Both on one tick is the bug, not the fix.
+check('the vanish comes first', vanish && appear ? vanish.tick < appear.tick : false, true);
+check('...with a tick between them, so each is actually seen', vanish && appear ? appear.tick - vanish.tick >= 2 : false, true);
+check('and the player still arrived', at(anim), '3129,3496');
 
 // ---------------------------------------------------------------- a code that goes nowhere
 console.log('\na code with nothing at the other end');
