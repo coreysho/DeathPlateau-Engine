@@ -15,15 +15,19 @@
 // standard human animations and walks perfectly well (feud_villager_1_1, tbwcu_gabooty) - and an
 // npc with both is simply mobile.
 //
-// TWO KINDS OF FALSE POSITIVE, both handled rather than hand-waved:
+// ONE KIND OF FALSE POSITIVE, handled rather than hand-waved: MoveRestrict.NOMOVE npcs already
+// cannot move whatever their wanderrange says, so they are not faults (32 of them).
+// Npc.wanderMode and Npc.updateMovement both check it.
 //
-//   * MoveRestrict.NOMOVE npcs already cannot move whatever their wanderrange says, so they are
-//     not faults (32 of them). Npc.wanderMode and Npc.updateMovement both check it.
-//   * A MULTINPC SHELL is drawn as whichever npc its varp resolves to, so the shell's own missing
-//     walkanim says nothing about what the player sees. wom_multi and swan_multioutside are
-//     shells for the Wise Old Man and Herman Caranos. They are skipped here, and 44 of them whose
-//     resolved forms also lack a walkanim are a separate question - some of those probably should
-//     be pinned too, but the answer depends on the quest rather than on the config.
+// AND ONE THAT LOOKS LIKE A SECOND AND IS NOT. A multinpc shell is DRAWN as whichever npc its varp
+// resolves to, so it is tempting to ask the resolved form about the walkanim - and asking the
+// wrong one gives 44 false alarms, the Feud and Tai Bwo Wannai villagers among them. The client
+// settles it: Client.java copies readyanim and walkanim off the SHELL at npc creation (opcodes 13
+// and 14/17, field1424 and field1448) and the resolved type is only consulted later, in
+// NpcType.method475, for the MODEL. So the shell's own animations are what plays, and the rule
+// below is the same for a shell as for anything else. feud_villager_multi_1 carries
+// human_walk_f/b/l/r and walks perfectly well; its resolved forms carry nothing and never needed
+// to.
 //
 // EXEMPTIONS are named, not guessed - see EXEMPT below.
 import * as H from './harness.js';
@@ -71,7 +75,6 @@ for (const [type, count] of spawned) {
     const name = t.debugname ?? String(type);
 
     if (t.moverestrict === MoveRestrict.NOMOVE) continue;
-    if ((t.multinpc ?? []).some(id => id !== undefined && id !== -1 && id !== 65535)) continue;
     if (t.walkanim !== -1) continue;
 
     if (EXEMPT.has(name)) {
