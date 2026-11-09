@@ -71,7 +71,18 @@ const RINGS = [
     { loc: '38_fairy_mushroom_ring', x: 3108, z: 3149, code: 'DIS', where: "the Wizards' Tower" },
     { loc: '42_fairy_mushroom_ring', x: 2970, z: 2978, code: 'DKP', where: 'the Karamja gnome glider' },
     { loc: '43_fairy_mushroom_ring', x: 2706, z: 3777, code: 'DKS', where: 'the polar hunter area' },
-    { loc: '45_fairy_mushroom_ring', x: 3414, z: 3005, code: 'DLQ', where: 'north of Nardah' }
+    { loc: '45_fairy_mushroom_ring', x: 3414, z: 3005, code: 'DLQ', where: 'north of Nardah' },
+    // THREE OTHER REALMS, which the surrounding-landmark check is the only reason to trust: the
+    // abyss sits beside abyss_exit_to_fire, the TzHaar one among the TzHaar, and the Fisher King's
+    // on the grass outside his castle rather than in the throne room a first pass chose.
+    { loc: '49_fairy_mushroom_ring', x: 3025, z: 4833, code: 'ALR', where: 'the Abyssal Area' },
+    { loc: '50_fairy_mushroom_ring', x: 2440, z: 5146, code: 'BLP', where: 'the TzHaar city' },
+    { loc: '52_fairy_mushroom_ring', x: 2629, z: 4677, code: 'BJR', where: "the Fisher King's realm" },
+    // TWO THAT READ AS ABSENT TWICE, because neither answers to RuneScape's name for it: Tirannwn
+    // is here under the Regicide quest's prefix, and In Search of the Myreque is this server's
+    // "route" quest. The Myreque ring sits two tiles from their hideout door, underground.
+    { loc: '53_fairy_mushroom_ring', x: 2200, z: 3120, code: 'DLR', where: 'Isafdar' },
+    { loc: '55_fairy_mushroom_ring', x: 3500, z: 9810, code: 'DLS', where: "the Myreque's cave" }
 ];
 
 // the order each dial turns in, which is NOT alphabetical
@@ -178,7 +189,7 @@ for (const r of RINGS) {
     H.setVarBit(u, 'fairy_farmers_quest', FAIRY_COMPLETE);
     H.clearLogs();
     useRing(u, r);
-    check(`the ${r.where} ring opens the dial`, panelOpen(u), true);
+    check(`the ring at ${r.where} opens the dial`, panelOpen(u), true);
 }
 
 // ---------------------------------------------------------------- the gate
