@@ -720,6 +720,36 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 VoteService.ledger().credit('staff', ref, who, count, Date.now(), 0);
                 VoteService.deliver(who);
                 player.messageGame(`vote: credited ${count} to ${who}`);
+            } else if (cmd === 'veteran') {
+                // custom (2026-11-06) - the rank for the players who tested before launch. The
+                // account does not have to be logged in: the list is worked through after the
+                // wipe, when most of them will not be.
+                //
+                // ::veteran <username>      give it
+                // ::veteran <username> off  take it back
+                if (args.length < 1) {
+                    player.messageGame('Usage: ::veteran <username> [off]');
+                    return false;
+                }
+
+                // The name is everything except a trailing "off", because a display name with a
+                // space in it has already been split into two arguments by the time it gets here.
+                // ::ban and ::mute take args[0] alone and quietly act on the wrong name when one
+                // is typed that way; this is given out by hand from a list of display names, so it
+                // takes "Bob Smith" and "bob_smith" alike.
+                const grant = args[args.length - 1] !== 'off';
+                const name = (grant ? args : args.slice(0, -1)).join(' ');
+                if (name.length === 0) {
+                    player.messageGame('Usage: ::veteran <username> [off]');
+                    return false;
+                }
+
+                const filed = World.requestVeteran(player.username, name, grant);
+                if (filed === null) {
+                    player.messageGame(`veteran: ${name} is already being changed, or is not a name.`);
+                } else {
+                    player.messageGame(`veteran: ${grant ? 'granting' : 'removing'}...`);
+                }
             } else if (cmd === 'giveother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {

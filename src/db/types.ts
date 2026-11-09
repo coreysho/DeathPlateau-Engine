@@ -11,6 +11,7 @@ export type account = {
     muted_until: string | null;
     banned_until: string | null;
     staffmodlevel: Generated<number>;
+    veteran: Generated<number>;
     members: Generated<number>;
 };
 export type account_login = {

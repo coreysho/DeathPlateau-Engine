@@ -30,10 +30,16 @@ export function shouldRebuildVersionListPack() {
         shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.varp', 'data/pack/client/versionlist') ||
         shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.varbit', 'data/pack/client/versionlist') ||
         shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.seq', 'data/pack/client/versionlist') ||
-        shouldBuildFileAny('tools/pack/versionlist', 'data/pack/client/versionlist') ||
-        shouldBuildFileAny('tools/pack/map', 'data/pack/client/versionlist') ||
-        shouldBuildFileAny('tools/pack/interface', 'data/pack/client/versionlist') ||
-        shouldBuildFileAny('tools/pack/config', 'data/pack/client/versionlist') ||
+        // THE WHOLE PACKER, not the four directories this used to name. What goes in the
+        // versionlist is a crc of each packed model, animation, song and map, so anything that
+        // changes the bytes a packer writes changes it too - and graphics (models), midi, sound,
+        // sprite, chat and the files at the top of tools/pack were all missing from the list. Miss
+        // one and the versionlist keeps the previous build's crcs, which is not a stale versionlist
+        // but a stale CLIENT: a client decides whether its own copy of a model is current by
+        // comparing it against these crcs, so it keeps the old one through every restart and only
+        // deleting the cache by hand fixes it. shouldBuildFileAny recurses, so one line covers the
+        // tree and cannot fall behind it. CacheCheck.checkVersionList is the backstop if it does.
+        shouldBuildFileAny('tools/pack', 'data/pack/client/versionlist') ||
         shouldBuildFile('data/raw/wordenc', 'data/pack/client/versionlist')
     );
 }
