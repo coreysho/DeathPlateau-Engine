@@ -84,15 +84,21 @@ type HelperStage = {
     /** The quest varp value this leg begins at. */
     from: number;
     /**
-     * The wiki headings for this leg, in the order they appear.
+     * The wiki headings for this leg, each with the step it is written in front of.
      *
      * A LIST, because a leg often spans two of them and because a single `heading` put every
      * quest's wording one leg late: "wiki step 1: Father Aereck" sits BEFORE the talk step it
      * introduces and before the `stage:` that closes the leg, so holding it for the next stage
      * described Father Aereck above the walk to Father Urhney's shack. A heading describes the
      * steps that follow it inside the leg it is written in, and nothing else.
+     *
+     * AND WITH `at`, THE STEP IT INTRODUCES, for the same reason one leg late was wrong. 199 of
+     * the 892 legs carry more than one heading - Elemental Workshop I is one leg with eleven, the
+     * whole quest, because its varp only moves at the end - so a panel that showed the first of
+     * them described the bookcase while the player was at the furnace. With the index, the panel
+     * can show the heading the step it is naming actually sits under.
      */
-    headings: string[];
+    headings: { at: number; text: string }[];
     steps: HelperStep[];
     /**
      * Everything the player must be holding by the end of this leg, with the obj id.
@@ -575,7 +581,9 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         const joined = noteRun.join(' ').replace(/\s+/g, ' ').trim();
         noteRun = [];
         const { heading, text } = tidy(joined);
-        if (heading && text) cur.headings.push(sentence(text));
+        // `cur.steps.length` is the index the NEXT step will take, which is the first step this
+        // heading introduces: a heading is written before the steps it describes.
+        if (heading && text) cur.headings.push({ at: cur.steps.length, text: sentence(text) });
         else if (!heading) commentary++;
     };
 
