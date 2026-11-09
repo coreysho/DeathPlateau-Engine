@@ -41,14 +41,37 @@ const check = (what: string, got: unknown, want: unknown) => {
 
 const FAIRY_COMPLETE = 100; // ^fairy_complete, quest_fairy.constant
 
-// the rings as the map places them: loc name, centre tile, and the code that reaches it
+// the rings as the map places them: loc name, centre tile, and the code that reaches it.
+// Every coordinate was probed by tools/sim/ringsites.ts, never estimated - see the note in
+// fairy_rings.constant about the three first drafts that were in the wrong place.
 const RINGS = [
     { loc: '64_fairy_mushroom_ring', x: 2412, z: 4434, code: 'BKS', where: 'Zanaris' },
     { loc: '1_fairy_mushroom_ring', x: 2319, z: 3619, code: 'AKQ', where: 'Piscatoris' },
     { loc: '6_fairy_mushroom_ring', x: 2644, z: 3495, code: 'ALS', where: "McGrubor's Wood" },
     { loc: '27_fairy_mushroom_ring', x: 3129, z: 3496, code: 'DKR', where: 'Edgeville' },
-    { loc: '37_fairy_mushroom_ring', x: 3082, z: 3206, code: 'AIQ', where: 'Port Sarim' },
-    { loc: '47_fairy_mushroom_ring', x: 2705, z: 3576, code: 'CJR', where: 'Sinclair Mansion' }
+    { loc: '47_fairy_mushroom_ring', x: 2705, z: 3576, code: 'CJR', where: 'Sinclair Mansion' },
+    // AIQ USED TO POINT HERE and called it Port Sarim. A flood fill reaches 40 tiles and stops:
+    // it is an islet, which is what RuneScape's CLP is. AIQ is Mudskipper Point, below.
+    { loc: '37_fairy_mushroom_ring', x: 3082, z: 3206, code: 'CLP', where: 'Draynor island' },
+    { loc: '3_fairy_mushroom_ring', x: 2995, z: 3113, code: 'AIQ', where: 'Mudskipper Point' },
+    { loc: '4_fairy_mushroom_ring', x: 2780, z: 3614, code: 'AJR', where: 'Rellekka slayer cave' },
+    { loc: '7_fairy_mushroom_ring', x: 2556, z: 2924, code: 'AKS', where: 'Feldip hunter area' },
+    { loc: '10_fairy_mushroom_ring', x: 2505, z: 3634, code: 'ALP', where: 'the Lighthouse' },
+    { loc: '14_fairy_mushroom_ring', x: 3600, z: 3523, code: 'ALQ', where: 'the Haunted Woods' },
+    { loc: '15_fairy_mushroom_ring', x: 3230, z: 3106, code: 'BIQ', where: 'the Kalphite Hive' },
+    { loc: '18_fairy_mushroom_ring', x: 2596, z: 3277, code: 'BIS', where: 'Ardougne zoo' },
+    { loc: '19_fairy_mushroom_ring', x: 2393, z: 3045, code: 'BKP', where: 'Chompy marsh' },
+    { loc: '23_fairy_mushroom_ring', x: 3470, z: 3430, code: 'BKR', where: 'Mort Myre' },
+    { loc: '24_fairy_mushroom_ring', x: 2733, z: 3353, code: 'BLR', where: "the Legends' Guild" },
+    { loc: '25_fairy_mushroom_ring', x: 2511, z: 3886, code: 'CIP', where: 'Miscellania' },
+    { loc: '29_fairy_mushroom_ring', x: 2521, z: 3127, code: 'CIQ', where: 'north-west of Yanille' },
+    { loc: '30_fairy_mushroom_ring', x: 2797, z: 3009, code: 'CKR', where: 'south of Tai Bwo Wannai' },
+    { loc: '33_fairy_mushroom_ring', x: 3447, z: 3470, code: 'CKS', where: 'Canifis' },
+    { loc: '36_fairy_mushroom_ring', x: 2712, z: 2785, code: 'CLR', where: 'Ape Atoll' },
+    { loc: '38_fairy_mushroom_ring', x: 3108, z: 3149, code: 'DIS', where: "the Wizards' Tower" },
+    { loc: '42_fairy_mushroom_ring', x: 2970, z: 2978, code: 'DKP', where: 'the Karamja gnome glider' },
+    { loc: '43_fairy_mushroom_ring', x: 2706, z: 3777, code: 'DKS', where: 'the polar hunter area' },
+    { loc: '45_fairy_mushroom_ring', x: 3414, z: 3005, code: 'DLQ', where: 'north of Nardah' }
 ];
 
 // the order each dial turns in, which is NOT alphabetical
@@ -311,12 +334,12 @@ H.setVarBit(lost, 'fairy_farmers_quest', FAIRY_COMPLETE);
 H.setVar(lost, 'fairy_ring_dial', 0);
 H.clearLogs();
 useRing(lost, RINGS[0]);
-dialTo(lost, 'DLQ'); // north of Nardah in RuneScape; no ring on this map
+dialTo(lost, 'AIP'); // one of RuneScape's nine unused combinations, and also code 0
 const stood = at(lost);
 H.clearLogs();
 H.ifButton(lost, 'fairy_rings:enter_box');
 settle();
-check('DLQ does not move anybody', at(lost), stood);
+check('AIP does not move anybody', at(lost), stood);
 check(
     'and the ring says so',
     /nothing happens/i.test(
