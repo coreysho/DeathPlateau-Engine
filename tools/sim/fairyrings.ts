@@ -71,7 +71,13 @@ const RINGS = [
     { loc: '38_fairy_mushroom_ring', x: 3108, z: 3149, code: 'DIS', where: "the Wizards' Tower" },
     { loc: '42_fairy_mushroom_ring', x: 2970, z: 2978, code: 'DKP', where: 'the Karamja gnome glider' },
     { loc: '43_fairy_mushroom_ring', x: 2706, z: 3777, code: 'DKS', where: 'the polar hunter area' },
-    { loc: '45_fairy_mushroom_ring', x: 3414, z: 3005, code: 'DLQ', where: 'north of Nardah' }
+    { loc: '45_fairy_mushroom_ring', x: 3414, z: 3005, code: 'DLQ', where: 'north of Nardah' },
+    // THREE OTHER REALMS, which the surrounding-landmark check is the only reason to trust: the
+    // abyss sits beside abyss_exit_to_fire, the TzHaar one among the TzHaar, and the Fisher King's
+    // on the grass outside his castle rather than in the throne room a first pass chose.
+    { loc: '49_fairy_mushroom_ring', x: 3025, z: 4833, code: 'ALR', where: 'the Abyssal Area' },
+    { loc: '50_fairy_mushroom_ring', x: 2440, z: 5146, code: 'BLP', where: 'the TzHaar city' },
+    { loc: '52_fairy_mushroom_ring', x: 2629, z: 4677, code: 'BJR', where: "the Fisher King's realm" }
 ];
 
 // the order each dial turns in, which is NOT alphabetical
