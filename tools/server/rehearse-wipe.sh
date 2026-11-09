@@ -18,8 +18,8 @@
 # carries on, because a slightly torn copy still rehearses the wipe perfectly well.
 #
 # WHAT TO LOOK FOR at the end: accounts still there, hiscore and collection_log at zero, the
-# trading post's board empty with only staff left holding a collection box, and the vote ledger
-# owing people what they had. If the numbers are not what you expect, you have found
+# trading post's board empty with only staff left holding a collection box, no clan channels left
+# but the staff ones and Help, and the vote ledger owing people what they had. If the numbers are not what you expect, you have found
 # out today rather than on launch day.
 set -eu
 
@@ -81,6 +81,14 @@ if [ -f "$ROOT/data/tradingpost/$PROFILE.sqlite" ]; then
     copy_db "$ROOT/data/tradingpost/$PROFILE.sqlite" "$SANDBOX/data/tradingpost/$PROFILE.sqlite"
 else
     echo "==> no trading post database to copy (nothing has been listed on this world)"
+fi
+
+if [ -f "$ROOT/data/clans/$PROFILE.sqlite" ]; then
+    echo "==> copying the clan chats"
+    mkdir -p "$SANDBOX/data/clans"
+    copy_db "$ROOT/data/clans/$PROFILE.sqlite" "$SANDBOX/data/clans/$PROFILE.sqlite"
+else
+    echo "==> no clan database to copy (no channel has been made on this world)"
 fi
 
 echo "==> copying the character saves"
@@ -145,6 +153,21 @@ db.close();
 const fs = require("fs");
 const left = fs.existsSync(`data/players/${profile}`) ? fs.readdirSync(`data/players/${profile}`).filter(f => f.endsWith(".sav")).length : 0;
 console.log(`    saves left in place    ${left}`);
+
+const clanFile = `data/clans/${profile}.sqlite`;
+if (fs.existsSync(clanFile)) {
+    const c = new DatabaseSync(clanFile);
+    let owners = [];
+    try {
+        owners = c.prepare("select owner from channel order by owner").all().map(r => r.owner);
+    } catch {
+        owners = [];
+    }
+    console.log(`    channels left          ${owners.length} (${owners.join(", ")})`);
+    console.log(`    last-channel rows      ${count(c, "last_channel")}`);
+    console.log(`    help-seeded rows       ${count(c, "help_seeded")}`);
+    c.close();
+}
 
 const marketFile = `data/tradingpost/${profile}.sqlite`;
 if (fs.existsSync(marketFile)) {

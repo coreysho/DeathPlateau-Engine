@@ -50,6 +50,21 @@
  *                        Staff keep their characters, so what the post is holding FOR STAFF comes
  *                        back to their collection box rather than being destroyed - the board ends
  *                        up empty either way, and that is the part players see.
+ *   clan chats           data/clans/<profile>.sqlite, which is a third database and username-keyed
+ *                        like the post. A wiped player's channel goes with his character, along
+ *                        with the record of which channel he was last in and the note saying he
+ *                        has already been put in Help once - that last one matters, because
+ *                        keeping it would leave his brand-new character the only new character on
+ *                        the world that is NOT put in the Help channel at login.
+ *                        TWO KINDS OF CHANNEL SURVIVE. Staff own theirs and keep their characters.
+ *                        And the Help channel is owned by 'help', which is not a player at all:
+ *                        its name and settings are made in game and meant to outlive a restart, so
+ *                        a wipe that deleted it would quietly undo them.
+ *                        A channel's member list is not stored as a membership - it is a copy of
+ *                        the OWNER'S friends list, refreshed from the friend server when he logs
+ *                        in. Staff keep their friends list, so there is nothing here to prune: a
+ *                        wiped player stops being in a staff clan when he stops being in that
+ *                        staff member's friends, which is a decision for the staff member.
  *
  * NOTHING IS DELETED, it is moved. The saves go to data/players/<profile>/wiped-<timestamp>/,
  * db.sqlite is copied to db.sqlite.bak-<timestamp>, and the trading post to
@@ -178,6 +193,18 @@ async function main() {
         }
     }
 
+    // THE CLAN CHATS, the third database, checked here with the other two.
+    const clanFile = `data/clans/${profile}.sqlite`;
+    const CLANS = ['channel', 'last_channel', 'help_seeded'] as const;
+    const clans = fs.existsSync(clanFile) ? new DatabaseSync(clanFile) : null;
+    if (clans) {
+        const tables = new Set((clans.prepare("select name from sqlite_master where type = 'table'").all() as unknown as { name: string }[]).map(row => row.name));
+        const absent = CLANS.filter(table => !tables.has(table));
+        if (absent.length > 0) {
+            fail(`${clanFile} has no ${absent.join(', ')} table, so it is not a clan database. Check the path before wiping.`);
+        }
+    }
+
     const accounts = await db.selectFrom('account').select(['id', 'username', 'staffmodlevel']).execute();
     const staff = accounts.filter(a => (a.staffmodlevel ?? 0) > 0);
     const players = accounts.filter(a => (a.staffmodlevel ?? 0) === 0);
@@ -232,6 +259,21 @@ async function main() {
         staffBoxes = boxes.filter(name => staffNames.has(name)).length;
     }
 
+    // WHAT SURVIVES IN THE CLAN DATABASE: a staff member's own channel, and 'help', which is the
+    // Help channel and not a player. Everything else is a wiped character's.
+    const CLAN_KEEP = new Set([...staffNames, 'help']);
+    let channels = 0;
+    let channelsKept = 0;
+    let lastRows = 0;
+    let seededRows = 0;
+    if (clans) {
+        const owners = (clans.prepare('SELECT owner FROM channel').all() as { owner: string }[]).map(row => row.owner.toLowerCase());
+        channels = owners.length;
+        channelsKept = owners.filter(owner => CLAN_KEEP.has(owner)).length;
+        lastRows = Number((clans.prepare('SELECT COUNT(*) n FROM last_channel').get() as { n: number }).n);
+        seededRows = Number((clans.prepare('SELECT COUNT(*) n FROM help_seeded').get() as { n: number }).n);
+    }
+
     console.log(`profile          ${profile}`);
     console.log(`staff kept       ${staff.length}${staff.length ? ` (${staff.map(a => a.username).join(', ')})` : ''}`);
     console.log(`players wiped    ${players.length}, of which ${withSave} have a character`);
@@ -243,6 +285,11 @@ async function main() {
         console.log(`trading post     ${openListings} open listing(s), ${pendingOffers} pending offer(s), ${boxCount} collection box(es) of which ${staffBoxes} staff`);
     } else {
         console.log(`trading post     no database at ${marketFile} - nothing on the board to clear`);
+    }
+    if (clans) {
+        console.log(`clan chats       ${channels} channel(s), ${channelsKept} kept (staff and Help); ${lastRows} last-channel, ${seededRows} help-seeded row(s)`);
+    } else {
+        console.log(`clan chats       no database at ${clanFile} - nothing to clear`);
     }
     for (const row of carrying) {
         console.log(`                 ${row.username}: ${row.tickets}`);
@@ -367,6 +414,49 @@ async function main() {
             throw err;
         }
         market.close();
+    }
+
+    // ---------------------------------------------------------------- the clan chats
+    if (clans) {
+        const clanBak = `${clanFile}.bak-${stamp}`;
+        clans.exec(`VACUUM INTO '${clanBak.replace(/'/g, "''")}'`);
+        console.log(`backed up        ${clanBak}`);
+
+        let gone = 0;
+        let dangling = 0;
+        let last = 0;
+        let seeded = 0;
+        clans.exec('BEGIN');
+        try {
+            const keep = [...CLAN_KEEP];
+            const list = keep.map(() => '?').join(', ');
+
+            // A channel owned by somebody who is neither staff nor 'help'. That includes one owned
+            // by a name with no account row at all - the clan equivalent of an orphan save, and
+            // deleted rather than reported, because leaving it would hand the channel to whoever
+            // registers that username next.
+            gone = Number(clans.prepare(`DELETE FROM channel WHERE lower(owner) NOT IN (${list})`).run(...keep).changes);
+
+            // Which channel a player was last in. The wiped players' rows go; so does a staff
+            // member's row pointing at a channel that has just been deleted, which would otherwise
+            // try to put him into a clan that is not there at login.
+            last = Number(clans.prepare(`DELETE FROM last_channel WHERE lower(player) NOT IN (${list})`).run(...keep).changes);
+            dangling = Number(clans.prepare('DELETE FROM last_channel WHERE lower(owner) NOT IN (SELECT lower(owner) FROM channel)').run().changes);
+
+            // AND THE NOTE SAYING HE HAS ALREADY BEEN PUT IN HELP. Keeping it for a wiped player
+            // would make his new character the only new character on the world that does not get
+            // the Help channel. Staff keep theirs: their character is untouched, so re-seeding
+            // them would put them back into a channel they may have left on purpose.
+            seeded = Number(clans.prepare(`DELETE FROM help_seeded WHERE lower(player) NOT IN (${list})`).run(...keep).changes);
+            clans.exec('COMMIT');
+
+            console.log(`clan chats       ${gone} channel(s) deleted, ${channelsKept} kept`);
+            console.log(`                 ${last} last-channel row(s) taken${dangling > 0 ? `, ${dangling} left pointing at nothing` : ''}, ${seeded} help-seeded row(s) taken`);
+        } catch (err) {
+            clans.exec('ROLLBACK');
+            throw err;
+        }
+        clans.close();
     }
 
     // ---------------------------------------------------------------- the derived rows
