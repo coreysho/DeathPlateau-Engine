@@ -18,6 +18,7 @@ import Component from '#/cache/config/Component.js';
 import type Player from '#/engine/entity/Player.js';
 import LocType from '#/cache/config/LocType.js';
 import SeqType from '#/cache/config/SeqType.js';
+import SpotanimType from '#/cache/config/SpotanimType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 
 const VarpId = (name: string) => {
@@ -284,6 +285,23 @@ check('and so does the appear', appear !== undefined, true);
 check('the vanish comes first', vanish && appear ? vanish.tick < appear.tick : false, true);
 check('...with a tick between them, so each is actually seen', vanish && appear ? appear.tick - vanish.tick >= 2 : false, true);
 check('and the player still arrived', at(anim), '3129,3496');
+
+// AND THE SPOTANIM, which is the other half of what "no animation" meant. The seq is the player
+// shrinking away; without an effect beside it the whole teleport is a fade to nothing and back.
+// A spotanim is a per-tick mask exactly like an anim, so the same one-tick collapse that ate the
+// appear would eat this - hence the same two assertions about order and gap.
+const RING_GFX = (() => {
+    const id = SpotanimType.getId('fairy_flower_ring');
+    if (id === -1) throw new Error('no such spotanim: fairy_flower_ring');
+    return id;
+})();
+const sparks = H.spotanims.filter(g => g.who === anim.username && g.spotanim === RING_GFX);
+check('the departure has an effect, not just a fade', sparks.length >= 1, true);
+check('and so does the arrival', sparks.length >= 2, true);
+// Height 0 puts it on the ground around the feet. A ring model at head height is a different
+// effect entirely, and the number is the only thing in the call that says which.
+check('...both at ground level', sparks.every(g => g.height === 0), true);
+check('...a tick apart, so neither is swallowed', sparks.length >= 2 ? sparks[1].tick - sparks[0].tick >= 2 : false, true);
 
 // ---------------------------------------------------------------- a code that goes nowhere
 console.log('\na code with nothing at the other end');
