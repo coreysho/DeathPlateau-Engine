@@ -379,5 +379,67 @@ H.choose(dialer2, 'multi2:com_1');
 settle();
 check('and the first option opens the dial', panelOpen(dialer2), true);
 
+// ---------------------------------------------------------------- the right-click back to Zanaris
+//
+// BKS is the code every player dials most, so every surface ring carries a "Zanaris" option that
+// dials it for them. Two halves have to be true for that to work and neither implies the other:
+// the option has to EXIST in the right-click menu (a loc op, the one thing here with no
+// server-side behaviour to observe) and the trigger behind it has to go somewhere.
+console.log('\nthe right-click shortcut back to Zanaris');
+const ZANARIS = '2412,4434';
+const opOf = (loc: string, n: number) => LocType.get(LocType.getId(loc)).op?.[n - 1] ?? null;
+
+// The surface rings, which are RINGS minus the Zanaris one it starts with.
+const SURFACE = RINGS.slice(1);
+for (const r of SURFACE) {
+    check(`${r.where}'s ring offers it`, opOf(r.loc, 2), 'Zanaris');
+}
+// AND THE RINGS IN ZANARIS DO NOT, which is the half a "does the option work" test would miss.
+// All three of these stand in Zanaris already, so the option would teleport you across the room.
+for (const loc of ['64_fairy_mushroom_ring', 'fairy_mushroom_ring', 'fairy_mushroom_ring3']) {
+    check(`${loc} does not offer it, being in Zanaris`, opOf(loc, 2), null);
+}
+
+for (const r of SURFACE) {
+    // ON the ring tile: blockwalk is off, so this is a legal stand, and it keeps five different
+    // map squares' pathing out of a test that is about the trigger. The 47_ case below walks in.
+    const back = H.makePlayer(`fr_z${r.code}`, r.x, r.z);
+    H.loginOrder(back);
+    H.setVarBit(back, 'fairy_farmers_quest', FAIRY_COMPLETE);
+    H.clearLogs();
+    H.opLoc(back, r.x, r.z, r.loc, 2);
+    settle();
+    check(`${r.where} -> Zanaris`, at(back), ZANARIS);
+    // WITHOUT THE PANEL. The point of the shortcut is that it does not open one; if it did, this
+    // would be the dial with extra steps and the player would still be spelling out BKS.
+    check('...without opening the dial', panelOpen(back), false);
+}
+
+// THE GATE AGAIN, on the new door. The shortcut never opens the panel, so it cannot lean on the
+// ENTER button's check the way the dial does - its own check is the only one standing.
+const sneak = H.makePlayer('fr_zsneak', 3129, 3498);
+H.loginOrder(sneak);
+H.setVarBit(sneak, 'fairy_farmers_quest', 0);
+H.clearLogs();
+H.opLoc(sneak, 3129, 3496, '27_fairy_mushroom_ring', 2);
+settle();
+// They DO walk up to the ring - p_walk runs before the gate, as it does on a left click - so the
+// thing to assert is that they are refused, not that they never moved. Asserting the tile they
+// stop on would be asserting the pathfinder.
+check('without the quest the shortcut refuses', at(sneak) === ZANARIS, false);
+check('...and they are still standing in Edgeville', sneak.x > 3000 && sneak.z < 4000, true);
+check('...and the ring says so', textSeen(sneak).includes('mushrooms are pretty'), true);
+
+// AND IT IS THE SAME TELEPORT, not a bare telejump: the shortcut routes through
+// fairy_ring_travel, so it gets the animation and the spotanim the dial does.
+const zanim = H.makePlayer('fr_zanim', 2705, 3578);
+H.loginOrder(zanim);
+H.setVarBit(zanim, 'fairy_farmers_quest', FAIRY_COMPLETE);
+H.clearLogs();
+H.opLoc(zanim, 2705, 3576, '47_fairy_mushroom_ring', 2);
+settle();
+check('the shortcut animates too', H.anims.some(a => a.who === zanim.username && a.seq === VANISH), true);
+check('...and sparkles', H.spotanims.filter(g => g.who === zanim.username && g.spotanim === RING_GFX).length >= 2, true);
+
 console.log(`\n${ok} ok, ${bad} failed`);
 process.exit(bad > 0 ? 1 : 0);
