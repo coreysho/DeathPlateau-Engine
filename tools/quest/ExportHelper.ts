@@ -72,6 +72,15 @@ type HelperStep = {
     label?: string;
     /** Where it is, when the manifest says. */
     at?: number[];
+    /**
+     * The obj the step is HOLDING, for a step that uses one thing on another.
+     *
+     * "Use Battered key on Odd looking wall" is a loc step whose target is the wall; the key is
+     * the other half of it, and the plugin needs the id to find it in the bag - to highlight the
+     * slot, and to tell how far into the leg the player has got. An `obj` step's own `id` is
+     * already the item, so this is only set where the target is something else.
+     */
+    item?: number;
     /** Which right-click option, when it is not the first. */
     op?: number;
     /** Dialogue options to choose, in order. */
@@ -106,10 +115,17 @@ type HelperStage = {
      * The id is what makes the list a CHECKLIST rather than a note: the plugin ticks a row off
      * with ctx.countObj(id), which needs the number. Emitted as strings at first, which left the
      * panel unable to tell "you need a hammer" from "you have one".
+     *
+     * `bring` SEPARATES THE SHOPPING LIST FROM THE QUEST'S OWN ITEMS, and it is the difference
+     * between a useful list and a nagging one. A sim hands itself what a player would bring from
+     * the bank (`give: 'knife'`) and ASSERTS what the quest hands over as it goes (`has:
+     * 'elemental_workshop_key'`). Both end up in this list because both have to be in the bag,
+     * but only the first is something to go and fetch: the panel was telling a player to bring a
+     * key that is sewn into a book they have not found yet.
      */
-    items: { name: string; id: number; n: number }[];
+    items: { name: string; id: number; n: number; bring: boolean; handle?: string }[];
     /** What must be WORN by the end of it - an equip is a different instruction from a carry. */
-    worn: { name: string; id: number }[];
+    worn: { name: string; id: number; bring: boolean; handle?: string }[];
 };
 
 type HelperQuest = {
@@ -556,6 +572,8 @@ function prose(why: unknown): string {
 
 function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<string, number> } {
     const dropped: Record<string, number> = {};
+    /** Every handle the sim hands the player: the shopping list, gathered over the whole run. */
+    const given = new Set<string>();
     const stages: HelperStage[] = [];
     let cur: HelperStage = { from: 0, headings: [], steps: [], items: [], worn: [] };
 
@@ -635,7 +653,12 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // ghostspeak.") directly under the real one.
         if (kind === 'worn' && typeof s.why !== 'string') {
             const wid = idOf('obj', String(s.worn));
-            cur.worn.push({ name: (wid >= 0 ? ObjType.get(wid)?.name : null) || String(s.worn), id: wid });
+            cur.worn.push({
+                name: (wid >= 0 ? ObjType.get(wid)?.name : null) || String(s.worn),
+                id: wid,
+                bring: false,
+                handle: String(s.worn)
+            });
             continue;
         }
 
@@ -650,10 +673,14 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             const id = idOf('obj', item);
             if (id < 0) unresolved.set('item:' + item, (unresolved.get('item:' + item) ?? 0) + 1);
             const shown = id >= 0 ? ObjType.get(id)?.name : null;
+            // ONCE GIVEN, ALWAYS BROUGHT. A sim hands itself the knife at the top and asserts it
+            // again three legs later; the second mention is the same knife out of the same bank
+            // trip, not something the quest handed over, so the whole run's `give` list decides.
+            if (kind === 'give') given.add(item);
             const seen = cur.items.find(x => x.name === item);
             // The same item asked for twice in a leg means the larger count, not two rows.
             if (seen) seen.n = Math.max(seen.n, n);
-            else cur.items.push({ name: shown || item, id, n });
+            else cur.items.push({ name: shown || item, id, n, bring: false, handle: item });
             continue;
         }
 
@@ -685,8 +712,10 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // carries it as `obj` beside the target, and without it every one of the 563 of them read
         // "Use an item on Cauldron." - true, and no use to somebody standing at the cauldron.
         let item: string | null = null;
+        let itemId = -1;
         if (typeof s.obj === 'string' && s.obj) {
             const objId = idOf('obj', s.obj);
+            itemId = objId;
             item = (objId >= 0 ? ObjType.get(objId)?.name : null) ?? titled(s.obj);
         }
         const act = imperative(kind, shown || titled(target), typeof s.op === 'number' ? s.op : undefined, id, item);
@@ -704,6 +733,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             if (id >= 0) step.id = id;
             if (shown) step.label = shown;
         }
+        if (itemId >= 0) step.item = itemId;
         if (Array.isArray(s.at)) step.at = s.at as number[];
         else if (walk && Array.isArray(raw)) step.at = raw as number[];
         if (typeof s.op === 'number') step.op = s.op;
@@ -714,6 +744,15 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
     // otherwise lose it, and with it the heading of the final leg.
     flushNotes();
     push();
+    // THE WHOLE RUN DECIDES, so this is settled here and not as each item is pushed: a knife
+    // given at the top of the sim is a knife to bring in every leg that asks for it, and a leg
+    // that only ever says `has` is asking for something the quest itself hands over.
+    for (const stage of stages) {
+        for (const item of [...stage.items, ...stage.worn]) {
+            item.bring = item.handle !== undefined && given.has(item.handle);
+            delete item.handle;
+        }
+    }
     return { stages, dropped };
 }
 
