@@ -76,6 +76,8 @@ type HelperStep = {
     op?: number;
     /** Dialogue options to choose, in order. */
     picks?: string[];
+    /** The sim's own note about this step, shown under the instruction rather than as it. */
+    why?: string;
 };
 
 type HelperStage = {
@@ -280,8 +282,89 @@ const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'clos
  */
 function tidy(note: string): { heading: boolean; text: string } {
     const m = /^wiki(?: step)?s?\s*([0-9]+(?:\s*[-,and]+\s*[0-9]+)*)?\s*:?\s*(.*)$/i.exec(note.trim());
-    if (m) return { heading: true, text: (m[2] || '').trim() };
-    return { heading: false, text: note.trim() };
+    if (!m) return { heading: false, text: note.trim() };
+
+    // A leading comma or "and" is left behind when the prefix was "wiki steps 5 and the one
+    // after it" - the number list stops at the first non-digit and the rest keeps its connective,
+    // which put a heading on the page reading ", taken here because it is the same row of boxes".
+    let text = (m[2] || '')
+        .trim()
+        .replace(/^[\s,;:-]+/, '')
+        .replace(/^and\s+/i, '');
+
+    // THE WIKI'S SENTENCE, AND NOT THE PARAGRAPH IT SITS IN. A run of notes is one comment, and
+    // the guide's wording is only its opening: "the bookcase on the east wall of the house
+    // south-west of the bank." is followed, in the same run, by "The house is a sealed 34-tile
+    // pocket ... questrun walks on canTravel and canTravel does not open doors", which is the
+    // author explaining the sim. The wrapping hides the join - "a knife or any slash weapon
+    // opens" / "it. The 377 cache has no slashed-book obj" splits a sentence across two entries -
+    // so the cut is made after joining, at the first sentence end, which is where the guide's
+    // step reliably finishes and the commentary reliably starts.
+    const end = /[.!?](?:\s|$)/.exec(text);
+    if (end) text = text.slice(0, end.index + 1);
+    return { heading: true, text: text.trim() };
+}
+
+/**
+ * The sim's note, unless it only repeats the instruction above it.
+ *
+ * `{ held: 'amulet_of_ghostspeak', op: 2, why: 'wear it' }` becomes "Wear Ghostspeak amulet." with
+ * "Wear it." under it, which is the same sentence twice and the second one less informative. A
+ * note that opens on the same verb as the instruction is saying nothing the row has not said.
+ */
+function explanation(act: string, why: string): string | undefined {
+    if (!why) return undefined;
+    const verb = (t: string) =>
+        t
+            .trim()
+            .split(/\s+/)[0]
+            .toLowerCase()
+            .replace(/[^a-z]/g, '');
+    // ONLY A BARE RESTATEMENT GOES. Matching on the verb alone was too much: "open the coffin -
+    // this is what summons the ghost" starts with the same word as "Open Coffin." and is the one
+    // thing on the row worth reading. Three words or fewer is the restatement - "wear it",
+    // "search it" - and anything longer has something of its own to say.
+    if (verb(act) && verb(act) === verb(why) && why.trim().split(/\s+/).length <= 3) return undefined;
+    return sentence(why);
+}
+
+/** How many paragraphs of sim commentary were left out, for the report. */
+let commentary = 0;
+
+/** A fragment as a sentence: a capital at the front, a full stop at the back. */
+function sentence(text: string): string {
+    const t = text.trim();
+    if (!t) return '';
+    const head = t.charAt(0).toUpperCase() + t.slice(1);
+    return /[.!?]$/.test(head) ? head : head + '.';
+}
+
+/**
+ * The action a step is, as an imperative: "Search Bookcase", "Open Door", "Talk to Velorina".
+ *
+ * WHY NOT THE SIM'S OWN WORDS. A manifest's `why` is written to be read AFTER the step it
+ * annotates - "open it; the only way into the house", "in, and beside the bookcase" - so as a
+ * row's heading it is a lowercase fragment whose verb has nothing attached to it. The cache
+ * already knows the verb: a loc carries its right-click ops, and op 1 of that door is "Open". Verb
+ * and name both from there gives a line that reads as an instruction, and leaves `why` to be the
+ * explanation underneath, which is what it was written as.
+ */
+function imperative(kind: string, name: string, op: number | undefined, id: number): string | null {
+    if (!name) return null;
+    if (kind === 'talk') return `Talk to ${name}`;
+    if (kind === 'fight') return `Kill ${name}`;
+    if (kind === 'take') return `Pick up ${name}`;
+
+    const slot = (op ?? 1) - 1;
+    let verb: string | null = null;
+    if (kind === 'loc' && id >= 0) verb = LocType.get(id)?.op?.[slot] ?? null;
+    else if (kind === 'held' && id >= 0) verb = ObjType.get(id)?.iop?.[slot] ?? null;
+    else if (id >= 0) verb = ObjType.get(id)?.op?.[slot] ?? null;
+
+    if (verb) return `${verb} ${name}`;
+    if (kind === 'useLoc' || kind === 'useNpc') return `Use an item on ${name}`;
+    if (kind === 'loc' || kind === 'held') return `Use ${name}`;
+    return name;
 }
 
 /**
@@ -304,12 +387,37 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (cur.steps.length || cur.items.length || cur.worn.length || cur.headings.length) stages.push(cur);
     };
 
+    // The note run being gathered, joined and classified by flushNotes below.
+    let noteRun: string[] = [];
+
+    /**
+     * Turn the gathered run into a heading, or throw it away.
+     *
+     * A run that opens "wiki step 3:" is the GUIDE's own wording for this leg, which is the one
+     * thing in a manifest written for a person doing the quest. Everything else is the sim author
+     * explaining the sim to the next developer - "The house is a sealed 34-tile pocket with one
+     * shut door, so the door comes first - questrun walks on canTravel and canTravel does not open
+     * doors", "The 377 cache has no slashed-book obj" - which is worth keeping in the sim and is
+     * noise in a quest helper. Elemental Workshop showed eleven such rows above three real steps.
+     */
+    const flushNotes = () => {
+        if (!noteRun.length) return;
+        const joined = noteRun.join(' ').replace(/\s+/g, ' ').trim();
+        noteRun = [];
+        const { heading, text } = tidy(joined);
+        if (heading && text) cur.headings.push(sentence(text));
+        else if (!heading) commentary++;
+    };
+
     for (const entry of raw) {
         if (!entry || typeof entry !== 'object') continue;
         const s = entry as Record<string, unknown>;
 
         // A `stage:` marker closes the current leg and opens the next one at that varp value.
         if ('stage' in s) {
+            // A heading sits immediately before the stage it introduces, so the run has to be
+            // settled onto THIS leg before the leg is closed.
+            flushNotes();
             push();
             cur = { from: Number(s.stage), headings: [], steps: [], items: [], worn: [] };
             continue;
@@ -327,18 +435,21 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             dropped[kind] = (dropped[kind] ?? 0) + 1;
             // A setpos is still worth a line: it is the walk between two legs.
             if (kind === 'setpos' && Array.isArray(s.setpos)) {
-                cur.steps.push({ text: prose(s.why) || 'Travel here.', kind: 'walk', at: s.setpos as number[] });
+                cur.steps.push({ text: sentence(prose(s.why)) || 'Travel here.', kind: 'walk', at: s.setpos as number[] });
             }
             continue;
         }
 
+        // NOTES ARE A PARAGRAPH HARD-WRAPPED INTO SEVERAL ENTRIES, not several notes. A manifest
+        // is source code with a line length, so one comment is written as a run of `{ note: ... }`
+        // broken at about ninety characters. Treating each as its own step put a sentence fragment
+        // in every row - "it. The 377 cache has", "questrun walks on canTravel and canTravel does
+        // not open .." - so the run is gathered and joined before anything is decided about it.
         if (kind === 'note') {
-            const { heading, text } = tidy(String(s.note));
-            if (!text) continue;
-            if (heading) cur.headings.push(text);
-            else cur.steps.push({ text, kind: 'note' });
+            noteRun.push(String(s.note));
             continue;
         }
+        flushNotes();
 
         // AN ASSERTION, NOT AN INSTRUCTION. `{ held: x, op: 2, why: 'wear it' }` is the click;
         // the `{ worn: x }` after it is the sim checking the click worked. Emitting both gave
@@ -392,9 +503,15 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             }
         }
 
+        const act = imperative(kind, shown || target.replace(/_/g, ' '), typeof s.op === 'number' ? s.op : undefined, id);
         const step: HelperStep = {
             kind: npc ? 'talk' : loc ? 'loc' : walk ? 'walk' : obj ? 'obj' : 'note',
-            text: why || defaultText(kind, shown || target || String(raw))
+            // The imperative leads the row. With no target to build one from - a walk - the sim's
+            // own words are all there is, so they lead instead, as a sentence rather than a
+            // fragment.
+            text: act ? act + '.' : sentence(why) || defaultText(kind, shown || target || String(raw)),
+            // And the sim's words go underneath, where a fragment reads correctly.
+            why: act ? explanation(act, why) : undefined
         };
         if (target) {
             step.target = target;
@@ -407,6 +524,9 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         if (Array.isArray(s.picks)) step.picks = (s.picks as unknown[]).map(String);
         cur.steps.push(step);
     }
+    // A quest whose last entry is a note - the closing remark most of them end on - would
+    // otherwise lose it, and with it the heading of the final leg.
+    flushNotes();
     push();
     return { stages, dropped };
 }
@@ -511,6 +631,7 @@ console.log(
         .map(([k, v]) => k + ' ' + v)
         .join(', ')}`
 );
+console.log(`  and ${commentary} paragraphs of sim commentary, which explain the sim rather than the quest`);
 const rescued = generated.filter(f => !skipped.includes(f));
 if (generated.length) {
     console.log(`  steps built by a function, so RUN rather than parsed (${generated.length}): ${rescued.length} read, ${generated.length - rescued.length} still refused`);
