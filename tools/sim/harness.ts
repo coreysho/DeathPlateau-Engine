@@ -656,8 +656,40 @@ export function opObj(p: Player, x: number, z: number, objName: string, op: numb
 }
 
 /** What clicking an op on an npc does: OpNpcHandler, minus the visibility checks. */
+/**
+ * The op word a PLAYER would see on this npc right now, or null when the menu has not got one.
+ *
+ * A multinpc is one id whose ops live on a child the varbit picks, and OpNpcHandler resolves that
+ * child before it will accept a click - "bad client: not a valid npc option" otherwise. So an op
+ * the cache puts on a later state is one a player cannot reach yet, which is a quest that stops.
+ * Resolved the same way and in the same order as the handler, because the handler is the thing
+ * being stood in for.
+ */
+export function npcOpWord(p: Player, npc: Npc, op: number): string | null {
+    let type = NpcType.get(npc.type);
+    if (type.multivarp !== -1) {
+        const state = p.getVar(type.multivarp) as number;
+        if (state >= 0 && state < type.multinpc.length && type.multinpc[state] !== -1) {
+            type = NpcType.get(type.multinpc[state]);
+        }
+    } else if (type.multivarbit !== -1) {
+        const state = p.getVarBit(type.multivarbit);
+        if (state >= 0 && state < type.multinpc.length && type.multinpc[state] !== -1) {
+            type = NpcType.get(type.multinpc[state]);
+        }
+    }
+    const word = type.op?.[op - 1] ?? null;
+    return word === 'hidden' ? null : word;
+}
+
 export function opNpc(p: Player, npc: Npc, op: number) {
     if (p.delayed) return false;
+    // THE MENU DECIDES, as it does for a player. This used to go straight to setInteraction, so a
+    // sim could click an option nobody can see: The Feud granted the villagers' Knock-Out state
+    // only after a villager had been knocked out, and the sim walked through the quest anyway.
+    if (!npcOpWord(p, npc, op)) {
+        throw new Error(`op${op} is not on ${NpcType.get(npc.type).debugname ?? npc.type}'s menu - a player could not click it here`);
+    }
     p.clearPendingAction();
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
     p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPC1 + (op - 1));
