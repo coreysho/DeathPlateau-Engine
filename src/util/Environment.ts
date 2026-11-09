@@ -230,6 +230,26 @@ export default {
     NODE_SCRIPT_COVERAGE: tryParseBoolean(process.env.NODE_SCRIPT_COVERAGE, false),
     NODE_SCRIPT_COVERAGE_FILE: tryParseString(process.env.NODE_SCRIPT_COVERAGE_FILE, 'data/coverage.txt'),
 
+    // custom (2026-11-09) - the PUBLIC market feed (server/market/MarketFeed.ts), which is the
+    // other half of the relay below: that one DMs a seller their own notices, this one tells
+    // everybody else a thing is for sale. Off unless MARKET_FEED_WEBHOOK is set, and off it
+    // costs one string comparison per listing.
+    //
+    // MARKET_FEED_WEBHOOK IS A SECRET - whoever holds it can post to that channel as the
+    // server - so it belongs in .env and never in a commit. It is never printed, only whether
+    // there is one.
+    //
+    // MARKET_FEED_MIN keeps the bronze daggers out: a listing worth less than this many coins
+    // is not posted. MARKET_FEED_EVERY is the gap between cards, which is what stops a busy
+    // evening becoming a channel nobody reads.
+    //
+    // MARKET_CARD_ICONS is where tools/models/ObjIconFiles.java wrote the item icons - on the
+    // live box, the website's public/icons. Unset, and cards still draw, with an empty slot.
+    MARKET_FEED_WEBHOOK: tryParseString(process.env.MARKET_FEED_WEBHOOK, ''),
+    MARKET_FEED_MIN: tryParseInt(process.env.MARKET_FEED_MIN, 50000),
+    MARKET_FEED_EVERY: tryParseInt(process.env.MARKET_FEED_EVERY, 15000),
+    MARKET_CARD_ICONS: tryParseString(process.env.MARKET_CARD_ICONS, ''),
+
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.
     DISCORD_TOKEN: tryParseString(process.env.DISCORD_TOKEN, ''),

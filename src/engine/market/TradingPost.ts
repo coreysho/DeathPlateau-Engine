@@ -92,6 +92,11 @@ export type TpHooks = {
     // lists items - what the offer holds, one line each, because "+ 4 items" is not enough to
     // decide from.
     notice?(username: string, text: string, offer?: number, items?: string[]): void;
+    // custom (2026-11-09) - a listing was made and is now OPEN. Where the public Discord feed
+    // plugs in (server/market/MarketFeed.ts). Called AFTER the transaction commits, so a card is
+    // never posted for a listing that was rolled back, and never while the market holds a
+    // half-finished trade.
+    listed?(listing: Listing): void;
     now(): number;
 };
 
@@ -295,15 +300,27 @@ export default class TradingPost {
             return `You can only have ${TP_MAX_LISTINGS} items on the trading post at once.`;
         }
 
+        const created = this.hooks.now();
+        let id = 0;
         this.atomic(undo => {
             const taken = seller.del(obj, count);
             undo.push(() => seller.add(obj, taken));
             if (taken !== count) {
                 throw new Error(`list: took ${taken} of ${count}`);
             }
-            this.db.prepare('INSERT INTO listing (seller, obj, count, buyout, created) VALUES (?, ?, ?, ?, ?)').run(seller.username, base, count, buyout, this.hooks.now());
+            const row = this.db.prepare('INSERT INTO listing (seller, obj, count, buyout, created) VALUES (?, ?, ?, ?, ?)').run(seller.username, base, count, buyout, created);
+            id = Number(row.lastInsertRowid);
         });
         this.hooks.changed(seller.username);
+        // AFTER the commit, and never allowed to fail the listing: whatever a feed does with this,
+        // the item is already on the market and the seller has already parted with it.
+        if (id > 0 && this.hooks.listed) {
+            try {
+                this.hooks.listed({ id, seller: seller.username, obj: base, count, buyout, created, state: ListingState.OPEN });
+            } catch {
+                /* a notifier is not allowed to break a trade */
+            }
+        }
         return '';
     }
 
