@@ -7,6 +7,24 @@ import RebuildNormal from '#/network/game/server/model/RebuildNormal.js';
 import RebuildRegion from '#/network/game/server/model/RebuildRegion.js';
 
 export default class BuildArea {
+    // How far out, in zones, zone updates keep being sent - loc_add/loc_change/loc_del, ground objs,
+    // projectiles, spotanims. Static locs come from the client's own map files and fill the whole
+    // 104x104 scene by themselves, but anything a script places or changes exists ONLY in these
+    // updates, so past this radius a spawned loc, an opened door or a dropped item is never sent at
+    // all. This was 3 - a 7x7 window, ~28 tiles - which is short of what the client draws even at
+    // its default 25 and less than half of the 52 it now offers, so the far part of the scene showed
+    // the map's own buildings and none of ours.
+    //
+    // 6 is the build area itself (13x13 zones), so a dynamic loc is sent as far out as the client
+    // could draw it. The loop below stays clamped to the build area regardless, and that clamp is
+    // what keeps the zone coordinate inside the single byte UpdateZoneFullFollows gives it:
+    // (zone << 3) - zoneOrigin(origin) spans 0..96 across the scene and overflows outside it.
+    //
+    // Cost is per player per tick: 169 zones walked instead of 49, each asked for pending events.
+    // Bandwidth only grows where zones actually have events - an empty zone writes nothing - so the
+    // tick budget is what to watch on a busy world, and this is the one number to lower.
+    static readonly ACTIVE_ZONE_RADIUS = 6;
+
     // constructor
     readonly player: Player;
     readonly loadedZones: Set<number>;
@@ -53,8 +71,10 @@ export default class BuildArea {
         const topZ = originZ + 6;
         const bottomZ = originZ - 6;
 
-        for (let x = centerX - 3; x <= centerX + 3; x++) {
-            for (let z = centerZ - 3; z <= centerZ + 3; z++) {
+        const radius = BuildArea.ACTIVE_ZONE_RADIUS;
+
+        for (let x = centerX - radius; x <= centerX + radius; x++) {
+            for (let z = centerZ - radius; z <= centerZ + radius; z++) {
                 // check if the zone is within the build area
                 if (x < leftX || x > rightX || z > topZ || z < bottomZ) {
                     continue;
