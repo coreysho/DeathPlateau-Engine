@@ -38,9 +38,22 @@
  *                        progress ranked against players who start at nothing.
  *   collection_log       the same.
  *   friendlist           a fresh account has no friends list. (ignorelist goes with it.)
+ *   the trading post     every listing and every offer on the board, and the collection box of
+ *                        anybody whose character is going. THE POST IS A SEPARATE DATABASE -
+ *                        data/tradingpost/<profile>.sqlite, not db.sqlite and not the save - and
+ *                        everything in it is keyed on a USERNAME, which is the one thing a wipe
+ *                        deliberately keeps. Left alone it hands a player his pre-wipe items back
+ *                        across the wipe: an open listing is holding the item he put up, a pending
+ *                        offer is holding the coins he bid, and the collection box is holding
+ *                        whatever he has not picked up yet. None of that is in the save file, so
+ *                        moving the save does not touch any of it.
+ *                        Staff keep their characters, so what the post is holding FOR STAFF comes
+ *                        back to their collection box rather than being destroyed - the board ends
+ *                        up empty either way, and that is the part players see.
  *
- * NOTHING IS DELETED, it is moved. The saves go to data/players/<profile>/wiped-<timestamp>/ and
- * db.sqlite is copied to db.sqlite.bak-<timestamp> before a single row is touched. A wipe is the
+ * NOTHING IS DELETED, it is moved. The saves go to data/players/<profile>/wiped-<timestamp>/,
+ * db.sqlite is copied to db.sqlite.bak-<timestamp>, and the trading post to
+ * <its file>.bak-<timestamp>, before a single row is touched. A wipe is the
  * one irreversible thing a server does, and it is done once, at the worst possible moment to
  * discover a mistake.
  *
@@ -148,6 +161,23 @@ async function main() {
         fail(`the database has no ${missing.join(', ')} table. It is behind the schema - run npm run sqlite:migrate first, then this again.`);
     }
 
+    // THE TRADING POST, WHICH THIS USED TO MISS ENTIRELY. Checked here with the rest, before
+    // anything is touched, for the same reason: a DELETE against a table that is not there is
+    // reported as "0 rows", which reads exactly like a board that was already empty.
+    const marketFile = `data/tradingpost/${profile}.sqlite`;
+    const MARKET = ['listing', 'offer', 'offer_item', 'collect', 'notice'] as const;
+    // existsSync FIRST: `new DatabaseSync` on a missing path creates the file, and a wipe that
+    // invents an empty market is a wipe that reports having cleared one. A world where nobody has
+    // ever used the post has no file, and that is not an error.
+    const market = fs.existsSync(marketFile) ? new DatabaseSync(marketFile) : null;
+    if (market) {
+        const tables = new Set((market.prepare("select name from sqlite_master where type = 'table'").all() as unknown as { name: string }[]).map(row => row.name));
+        const absent = MARKET.filter(table => !tables.has(table));
+        if (absent.length > 0) {
+            fail(`${marketFile} has no ${absent.join(', ')} table, so it is not a trading post database. Check the path before wiping.`);
+        }
+    }
+
     const accounts = await db.selectFrom('account').select(['id', 'username', 'staffmodlevel']).execute();
     const staff = accounts.filter(a => (a.staffmodlevel ?? 0) > 0);
     const players = accounts.filter(a => (a.staffmodlevel ?? 0) === 0);
@@ -185,12 +215,34 @@ async function main() {
         }
     }
 
+    // WHAT THE POST IS HOLDING, counted before anything moves so the dry run reports the numbers
+    // the real one acts on. Staff are matched by lowercased name because that is what the post
+    // stores and the comparison has to survive somebody registering as "Corey" and listing as
+    // "corey".
+    const staffNames = new Set(staff.map(a => a.username.toLowerCase()));
+    let openListings = 0;
+    let pendingOffers = 0;
+    let boxCount = 0;
+    let staffBoxes = 0;
+    if (market) {
+        openListings = Number((market.prepare('SELECT COUNT(*) n FROM listing WHERE state = 0').get() as { n: number }).n);
+        pendingOffers = Number((market.prepare('SELECT COUNT(*) n FROM offer WHERE state = 0').get() as { n: number }).n);
+        const boxes = (market.prepare('SELECT DISTINCT player FROM collect').all() as { player: string }[]).map(row => row.player.toLowerCase());
+        boxCount = boxes.length;
+        staffBoxes = boxes.filter(name => staffNames.has(name)).length;
+    }
+
     console.log(`profile          ${profile}`);
     console.log(`staff kept       ${staff.length}${staff.length ? ` (${staff.map(a => a.username).join(', ')})` : ''}`);
     console.log(`players wiped    ${players.length}, of which ${withSave} have a character`);
     console.log(`vote carried     ${carrying.reduce((n, c) => n + c.tickets, 0)} tickets across ${carrying.length} player(s)`);
     if (orphans.length > 0) {
         console.log(`orphan saves     ${orphans.length} with no account row${orphanToo ? ' - will be moved too' : ' - LEFT ALONE (pass --orphans to move them)'}`);
+    }
+    if (market) {
+        console.log(`trading post     ${openListings} open listing(s), ${pendingOffers} pending offer(s), ${boxCount} collection box(es) of which ${staffBoxes} staff`);
+    } else {
+        console.log(`trading post     no database at ${marketFile} - nothing on the board to clear`);
     }
     for (const row of carrying) {
         console.log(`                 ${row.username}: ${row.tickets}`);
@@ -248,6 +300,74 @@ async function main() {
         }
     }
     console.log(`characters       ${moved} moved to ${attic}`);
+
+    // ---------------------------------------------------------------- the trading post
+    if (market) {
+        // VACUUM INTO, NOT A FILE COPY. The post runs in WAL mode, so its newest commits can still
+        // be sitting in the -wal file beside it; copying the .sqlite on its own would be a backup
+        // with the last trades missing. VACUUM INTO reads through the journal the way a reader
+        // does. (Doubling the quote is for a path with an apostrophe in it, which no profile has
+        // and which costs nothing to survive.)
+        const marketBak = `${marketFile}.bak-${stamp}`;
+        market.exec(`VACUUM INTO '${marketBak.replace(/'/g, "''")}'`);
+        console.log(`backed up        ${marketBak}`);
+
+        // ONE TRANSACTION, refund then clear. Between the two the board holds items that nothing
+        // records a claim to, and a crash there would be the one state nobody can reconstruct.
+        let returned = 0;
+        market.exec('BEGIN');
+        try {
+            const credit = market.prepare('INSERT INTO collect (player, obj, count) VALUES (?, ?, ?) ON CONFLICT (player, obj) DO UPDATE SET count = count + excluded.count');
+            const coinsObj = ObjType.getId('coins');
+
+            // STAFF ONLY, because everyone else's box is deleted a few lines down and crediting it
+            // first would be writing a row in order to delete it. An open listing holds the item
+            // its seller put up; a pending offer holds the coins its buyer bid and anything he put
+            // with them. This is the same place the post itself returns them to.
+            for (const row of market.prepare('SELECT seller, obj, count FROM listing WHERE state = 0').all() as { seller: string; obj: number; count: number }[]) {
+                if (staffNames.has(row.seller.toLowerCase())) {
+                    credit.run(row.seller, row.obj, row.count);
+                    returned++;
+                }
+            }
+            for (const row of market.prepare('SELECT id, buyer, coins FROM offer WHERE state = 0').all() as { id: number; buyer: string; coins: number }[]) {
+                if (!staffNames.has(row.buyer.toLowerCase())) {
+                    continue;
+                }
+                if (row.coins > 0) {
+                    credit.run(row.buyer, coinsObj, row.coins);
+                    returned++;
+                }
+                for (const item of market.prepare('SELECT obj, count FROM offer_item WHERE offer = ?').all(row.id) as { obj: number; count: number }[]) {
+                    credit.run(row.buyer, item.obj, item.count);
+                    returned++;
+                }
+            }
+
+            // THE WHOLE BOARD, not just the open rows: a sold or cancelled listing is the record of
+            // a pre-wipe economy, and the post shows a seller his own closed listings.
+            const notices = Number(market.prepare('DELETE FROM notice').run().changes);
+            const items = Number(market.prepare('DELETE FROM offer_item').run().changes);
+            const offers = Number(market.prepare('DELETE FROM offer').run().changes);
+            const listings = Number(market.prepare('DELETE FROM listing').run().changes);
+
+            // The boxes last, so they are still there to be credited into above.
+            const names = [...staffNames];
+            const boxes = Number(
+                names.length > 0
+                    ? market.prepare(`DELETE FROM collect WHERE lower(player) NOT IN (${names.map(() => '?').join(', ')})`).run(...names).changes
+                    : market.prepare('DELETE FROM collect').run().changes
+            );
+            market.exec('COMMIT');
+
+            console.log(`trading post     ${listings} listing(s), ${offers} offer(s), ${items} offered item(s), ${notices} notice(s) cleared`);
+            console.log(`                 ${boxes} box row(s) taken, ${returned} line(s) returned to staff`);
+        } catch (err) {
+            market.exec('ROLLBACK');
+            throw err;
+        }
+        market.close();
+    }
 
     // ---------------------------------------------------------------- the derived rows
     const ids = players.map(a => a.id);
