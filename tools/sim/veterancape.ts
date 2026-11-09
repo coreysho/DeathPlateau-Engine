@@ -106,6 +106,53 @@ check('  and off their back', held(worn), 0);
 World.veteranCape(worn, false);
 check('  taking it twice is harmless', held(worn), 0);
 
-H.despawn(vet, worn, lost, full);
+console.log('\nFUSED INTO A MAX CAPE, IT IS STILL THEIRS');
+// THE FREE-CAPE BUG THIS SECTION EXISTS FOR. A veteran can use their cape on a Max cape and get
+// a Veteran max cape, which consumes the Veteran cape. Before World.veteranFused() the reclaim
+// above saw no veteran_cape, called that a loss, and handed out a replacement - at every login,
+// for ever, to anyone who had fused one.
+const VARIANT = ObjType.getId('veteran_max_cape');
+const VHOOD = ObjType.getId('veteran_max_hood');
+const MCAPE = ObjType.getId('max_cape');
+const MHOOD = ObjType.getId('max_hood');
+check('  the variant packed', VARIANT !== -1, true);
+check('  and its hood', VHOOD !== -1, true);
+check('  it is named', VARIANT === -1 ? '' : ObjType.get(VARIANT).name, 'Veteran max cape');
+check('  untradeable, like the cape it was made from', VARIANT === -1 ? false : ObjType.get(VARIANT).tradeable, false);
+
+const fused = player('vetcape_e', 3230, 3222);
+fused.buildAppearance(InvType.WORN);
+fused.invAdd(bank, VARIANT, 1);
+fused.invAdd(bank, VHOOD, 1);
+check('  holds the variant and no Veteran cape', held(fused), 0);
+World.veteranCape(fused, true);
+check('  no free Veteran cape for a fused one', held(fused), 0);
+World.veteranCape(fused, true);
+check('  and none on the next login either', held(fused), 0);
+
+console.log('\nTAKING THE RANK SPLITS IT RATHER THAN DESTROYING A MAX CAPE');
+// The Max cape inside a variant was earned with a 99 in every skill that has a cape. It is not
+// this rank's to take, so the server does what a knife does: the variant goes, the plain Max
+// cape and hood come back.
+World.veteranCape(fused, false);
+check('  the variant is gone', fused.invTotal(bank, VARIANT), 0);
+check('  and its hood with it', fused.invTotal(bank, VHOOD), 0);
+check('  the Max cape came back', fused.invTotal(bank, MCAPE), 1);
+check('  and the Max hood', fused.invTotal(bank, MHOOD), 1);
+check('  and no Veteran cape was handed out on the way', held(fused), 0);
+World.veteranCape(fused, false);
+check('  doing it again changes nothing', fused.invTotal(bank, MCAPE), 1);
+
+console.log('\nA WORN VARIANT IS FOUND TOO');
+const fusedworn = player('vetcape_f', 3232, 3222);
+fusedworn.buildAppearance(InvType.WORN);
+fusedworn.invAdd(InvType.WORN, VARIANT, 1);
+World.veteranCape(fusedworn, true);
+check('  no free cape for one on their back', held(fusedworn), 0);
+World.veteranCape(fusedworn, false);
+check('  and the rank being taken strips it', fusedworn.invTotal(InvType.WORN, VARIANT), 0);
+check('  handing back the Max cape', fusedworn.invTotal(bank, MCAPE), 1);
+
+H.despawn(vet, worn, lost, full, fused, fusedworn);
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);
