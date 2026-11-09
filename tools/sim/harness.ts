@@ -52,6 +52,11 @@ export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
+// Every spotanim the server puts on a player. Like an anim it is a per-tick mask, so two in one
+// tick means the client only ever sees the second - which is exactly the failure this exists to
+// catch. A spotanim is also the half of a teleport or a spell that a config reader cannot see:
+// the seq can be right and the effect missing, and the only earlier way to tell was to log in.
+export const spotanims: { tick: number; who: string; spotanim: number; height: number }[] = [];
 // ...and the same for npcs. Whether a monster PLAYED its attack, block or death animation was
 // unanswerable from a sim until this existed - the params can all be present and correct and still
 // never reach the client, and a config reader cannot tell the difference.
@@ -164,6 +169,11 @@ export async function boot() {
         if (seq !== -1) anims.push({ tick: World.currentTick, who: this.username, seq });
         return origAnim.call(this, seq, delay);
     };
+    const origSpotanim = (Player.prototype as any).spotanim;
+    (Player.prototype as any).spotanim = function (spotanim: number, height: number, delay: number) {
+        if (spotanim !== -1) spotanims.push({ tick: World.currentTick, who: this.username, spotanim, height });
+        return origSpotanim.call(this, spotanim, height, delay);
+    };
     const origNpcAnim = (Npc.prototype as any).playAnimation;
     (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
         if (seq !== -1) npcAnims.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), seq });
@@ -227,6 +237,7 @@ export function clearLogs() {
     npcHits.length = 0;
     says.length = 0;
     anims.length = 0;
+    spotanims.length = 0;
     npcAnims.length = 0;
     mesgs.length = 0;
 }
