@@ -37,6 +37,12 @@ process.env.MARKET_FEED_MIN = '50000';
 process.env.MARKET_FEED_EVERY = String(EVERY);
 process.env.MARKET_CARD_ICONS = process.env.MARKET_CARD_ICONS ?? 'C:/DeathPlateauWeb/public/icons';
 
+// THIS IMPORT MUST STAY DYNAMIC, for the reason in the header: Environment reads process.env when
+// it is first imported, and the five lines above are what it has to read. A static import hoists
+// above them, the feed comes up off, and the first check here fails - so the lint rule's own
+// advice ("import it statically at the top") would break this test. The rule is about dynamic
+// '#/...' from a worker thread, which kills the process; this is a standalone script.
+// eslint-disable-next-line no-restricted-syntax
 const { MarketFeed } = await import('#/server/market/MarketFeed.js');
 
 let ok = 0;
@@ -44,7 +50,8 @@ let bad = 0;
 function check(what: string, got: unknown, want: unknown): void {
     const pass = JSON.stringify(got) === JSON.stringify(want);
     console.log(`  ${pass ? 'ok  ' : 'FAIL'}   ${what}: ${JSON.stringify(got)}${pass ? '' : ` (wanted ${JSON.stringify(want)})`}`);
-    pass ? ok++ : bad++;
+    if (pass) ok++;
+    else bad++;
 }
 
 MarketFeed.init();
