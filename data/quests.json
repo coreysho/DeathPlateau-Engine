@@ -108,16 +108,31 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "The shirt."
+       "kind": "obj",
+       "text": "Use Black mushroom ink on Desert shirt.",
+       "why": "The shirt.",
+       "target": "desert_shirt",
+       "id": 1833,
+       "label": "Desert shirt",
+       "item": 4622
       },
       {
-       "kind": "note",
-       "text": "The robe."
+       "kind": "obj",
+       "text": "Use Black mushroom ink on Desert robe.",
+       "why": "The robe.",
+       "target": "desert_robe",
+       "id": 1835,
+       "label": "Desert robe",
+       "item": 4622
       },
       {
-       "kind": "note",
-       "text": "And the sword - the mesbox for this one is not captured, so the obj below is the check."
+       "kind": "obj",
+       "text": "Use Black mushroom ink on Silverlight.",
+       "why": "And the sword - the mesbox for this one is not captured, so the obj below is the check.",
+       "target": "silverlight",
+       "id": 2402,
+       "label": "Silverlight",
+       "item": 4622
       }
      ],
      "items": [
@@ -178,8 +193,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Cast the sigil."
+       "kind": "obj",
+       "text": "Use Demonic sigil mould on Silver bar.",
+       "why": "Cast the sigil.",
+       "target": "silver_bar",
+       "id": 2355,
+       "label": "Silver bar",
+       "item": 6747
       }
      ],
      "items": [
@@ -747,8 +767,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Needle, silk and thread."
+       "kind": "obj",
+       "text": "Use Needle on Model ship.",
+       "why": "Needle, silk and thread.",
+       "target": "ahoy_toy_boat",
+       "id": 4253,
+       "label": "Model ship",
+       "item": 1733
       },
       {
        "kind": "walk",
@@ -821,8 +846,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Red, blue and yellow."
+       "kind": "obj",
+       "text": "Use Red dye on Model ship.",
+       "why": "Red, blue and yellow.",
+       "target": "ahoy_toy_boat_repaired",
+       "id": 4254,
+       "label": "Model ship",
+       "item": 1763
       },
       {
        "kind": "loc",
@@ -973,8 +1003,12 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Use Ahoy Map Scrap 1 on Ahoy Map Scrap 2."
+       "kind": "obj",
+       "text": "Use Map scrap on Map scrap.",
+       "target": "ahoy_map_scrap_2",
+       "id": 4275,
+       "label": "Map scrap",
+       "item": 4274
       }
      ],
      "items": [
@@ -1266,8 +1300,12 @@
      "headings": [],
      "steps": [
       {
-       "kind": "note",
-       "text": "Use Ahoy Translation Manual on Ahoy Book Of Haricanto."
+       "kind": "obj",
+       "text": "Use Translation manual on Book of haricanto.",
+       "target": "ahoy_book_of_haricanto",
+       "id": 4248,
+       "label": "Book of haricanto",
+       "item": 4249
       }
      ],
      "items": [],
@@ -1323,8 +1361,12 @@
        "label": "Ghost Innkeeper"
       },
       {
-       "kind": "note",
-       "text": "Use Bucket Ectoplasm on Ahoy Bedsheet."
+       "kind": "obj",
+       "text": "Use Bucket of slime on Bedsheet.",
+       "target": "ahoy_bedsheet",
+       "id": 4284,
+       "label": "Bedsheet",
+       "item": 4286
       },
       {
        "kind": "obj",
@@ -2187,8 +2229,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Hammer the bar."
+       "kind": "obj",
+       "text": "Use Hammer on Selected iron.",
+       "why": "Hammer the bar.",
+       "target": "animmag_selected_iron",
+       "id": 10301,
+       "label": "Selected iron",
+       "item": 2347
       }
      ],
      "items": [
@@ -2478,8 +2525,13 @@
        "op": 1
       },
       {
-       "kind": "note",
-       "text": "Make the container."
+       "kind": "obj",
+       "text": "Use Polished buttons on A pattern.",
+       "why": "Make the container.",
+       "target": "animmag_pattern",
+       "id": 10307,
+       "label": "A pattern",
+       "item": 10309
       },
       {
        "kind": "talk",
@@ -3613,8 +3665,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Light the candle."
+       "kind": "obj",
+       "text": "Use Tinderbox on Black candle.",
+       "why": "Light the candle.",
+       "target": "unlit_black_candle",
+       "id": 38,
+       "label": "Black candle",
+       "item": 590
       },
       {
        "kind": "obj",
@@ -5894,28 +5951,58 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Cut the first log."
+       "kind": "obj",
+       "text": "Use Knife on Achey tree logs.",
+       "why": "Cut the first log.",
+       "target": "achey_tree_logs",
+       "id": 2862,
+       "label": "Achey tree logs",
+       "item": 946
       },
       {
-       "kind": "note",
-       "text": "The second."
+       "kind": "obj",
+       "text": "Use Knife on Achey tree logs.",
+       "why": "The second.",
+       "target": "achey_tree_logs",
+       "id": 2862,
+       "label": "Achey tree logs",
+       "item": 946
       },
       {
-       "kind": "note",
-       "text": "The third."
+       "kind": "obj",
+       "text": "Use Knife on Achey tree logs.",
+       "why": "The third.",
+       "target": "achey_tree_logs",
+       "id": 2862,
+       "label": "Achey tree logs",
+       "item": 946
       },
       {
-       "kind": "note",
-       "text": "And the fourth."
+       "kind": "obj",
+       "text": "Use Knife on Achey tree logs.",
+       "why": "And the fourth.",
+       "target": "achey_tree_logs",
+       "id": 2862,
+       "label": "Achey tree logs",
+       "item": 946
       },
       {
-       "kind": "note",
-       "text": "Flight six shafts."
+       "kind": "obj",
+       "text": "Use Feather on Ogre arrow shaft.",
+       "why": "Flight six shafts.",
+       "target": "ogre_arrow_shaft",
+       "id": 2864,
+       "label": "Ogre arrow shaft",
+       "item": 314
       },
       {
-       "kind": "note",
-       "text": "And the other six."
+       "kind": "obj",
+       "text": "Use Feather on Ogre arrow shaft.",
+       "why": "And the other six.",
+       "target": "ogre_arrow_shaft",
+       "id": 2864,
+       "label": "Ogre arrow shaft",
+       "item": 314
       },
       {
        "text": "Go to the wolves.",
@@ -5943,28 +6030,58 @@
        "label": "Wolf bones"
       },
       {
-       "kind": "note",
-       "text": "Chisel the first bone."
+       "kind": "obj",
+       "text": "Use Chisel on Wolf bones.",
+       "why": "Chisel the first bone.",
+       "target": "wolf_bones",
+       "id": 2859,
+       "label": "Wolf bones",
+       "item": 1755
       },
       {
-       "kind": "note",
-       "text": "The second."
+       "kind": "obj",
+       "text": "Use Chisel on Wolf bones.",
+       "why": "The second.",
+       "target": "wolf_bones",
+       "id": 2859,
+       "label": "Wolf bones",
+       "item": 1755
       },
       {
-       "kind": "note",
-       "text": "The third."
+       "kind": "obj",
+       "text": "Use Chisel on Wolf bones.",
+       "why": "The third.",
+       "target": "wolf_bones",
+       "id": 2859,
+       "label": "Wolf bones",
+       "item": 1755
       },
       {
-       "kind": "note",
-       "text": "And the fourth."
+       "kind": "obj",
+       "text": "Use Chisel on Wolf bones.",
+       "why": "And the fourth.",
+       "target": "wolf_bones",
+       "id": 2859,
+       "label": "Wolf bones",
+       "item": 1755
       },
       {
-       "kind": "note",
-       "text": "Make six."
+       "kind": "obj",
+       "text": "Use Wolfbone arrowtips on Flighted ogre arrow.",
+       "why": "Make six.",
+       "target": "ogre_headless_arrow",
+       "id": 2865,
+       "label": "Flighted ogre arrow",
+       "item": 2861
       },
       {
-       "kind": "note",
-       "text": "And six more."
+       "kind": "obj",
+       "text": "Use Wolfbone arrowtips on Flighted ogre arrow.",
+       "why": "And six more.",
+       "target": "ogre_headless_arrow",
+       "id": 2865,
+       "label": "Flighted ogre arrow",
+       "item": 2861
       },
       {
        "text": "Go back to Rantz.",
@@ -8041,8 +8158,13 @@
        "label": "Crest part"
       },
       {
-       "kind": "note",
-       "text": "Put them together."
+       "kind": "obj",
+       "text": "Use Crest part on Crest part.",
+       "why": "Put them together.",
+       "target": "caleb_crest",
+       "id": 780,
+       "label": "Crest part",
+       "item": 779
       },
       {
        "text": "Go back to Dimintheis in Varrock.",
@@ -10976,8 +11098,13 @@
      "headings": [],
      "steps": [
       {
-       "kind": "note",
-       "text": "Ten feathers on the tip."
+       "kind": "obj",
+       "text": "Use Feather on Prototype dart tip.",
+       "why": "Ten feathers on the tip.",
+       "target": "thprotodarttip",
+       "id": 1853,
+       "label": "Prototype dart tip",
+       "item": 314
       }
      ],
      "items": [
@@ -11760,12 +11887,22 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Hide the blade in the stave."
+       "kind": "obj",
+       "text": "Use Slender blade on Shortbow.",
+       "why": "Hide the blade in the stave.",
+       "target": "shortbow",
+       "id": 841,
+       "label": "Shortbow",
+       "item": 6817
       },
       {
-       "kind": "note",
-       "text": "And the bow in the pouch."
+       "kind": "obj",
+       "text": "Use Bow-sword on Large pouch.",
+       "why": "And the bow in the pouch.",
+       "target": "devious_glowingpouch",
+       "id": 6819,
+       "label": "Large pouch",
+       "item": 6818
       }
      ],
      "items": [
@@ -12690,8 +12827,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "One use assembles all three."
+       "kind": "obj",
+       "text": "Use Map part on Map part.",
+       "why": "One use assembles all three.",
+       "target": "mappart2",
+       "id": 1536,
+       "label": "Map part",
+       "item": 1535
       },
       {
        "text": "Go north up the Port Sarim waterfront and out onto his dock.",
@@ -13634,20 +13776,40 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "The herb."
+       "kind": "obj",
+       "text": "Use Goutweed on Dream vial (water).",
+       "why": "The herb.",
+       "target": "dream_vial_water",
+       "id": 10433,
+       "label": "Dream vial (water)",
+       "item": 3261
       },
       {
-       "kind": "note",
-       "text": "The hammer."
+       "kind": "obj",
+       "text": "Use Hammer on Astral rune.",
+       "why": "The hammer.",
+       "target": "astralrune",
+       "id": 8606,
+       "label": "Astral rune",
+       "item": 2347
       },
       {
-       "kind": "note",
-       "text": "The pestle."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Astral rune shards.",
+       "why": "The pestle.",
+       "target": "astral_rune_shards",
+       "id": 10436,
+       "label": "Astral rune shards",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "And the potion."
+       "kind": "obj",
+       "text": "Use Ground astral rune on Dream vial (herb).",
+       "why": "And the potion.",
+       "target": "dream_vial_herb",
+       "id": 10434,
+       "label": "Dream vial (herb)",
+       "item": 10437
       }
      ],
      "items": [
@@ -15768,16 +15930,31 @@
        "label": "Malak"
       },
       {
-       "kind": "note",
-       "text": "Grind the garlic."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Garlic.",
+       "why": "Grind the garlic.",
+       "target": "garlic",
+       "id": 1550,
+       "label": "Garlic",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "Garlic into the pot."
+       "kind": "obj",
+       "text": "Use Garlic powder on Blessed pot.",
+       "why": "Garlic into the pot.",
+       "target": "fd_silver_pot_blood_blessed",
+       "id": 4661,
+       "label": "Blessed pot",
+       "item": 4668
       },
       {
-       "kind": "note",
-       "text": "And the spice."
+       "kind": "obj",
+       "text": "Use Spice on Blessed pot.",
+       "why": "And the spice.",
+       "target": "fd_silver_pot_blood_garlic_blessed",
+       "id": 4663,
+       "label": "Blessed pot",
+       "item": 2007
       },
       {
        "text": "Go to Dessous's tomb, from the north.",
@@ -17195,8 +17372,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "The fake man."
+       "kind": "obj",
+       "text": "Use Dirty robe on Drunk parrot.",
+       "why": "The fake man.",
+       "target": "eadgar_drunk_parrot",
+       "id": 3266,
+       "label": "Drunk parrot",
+       "item": 3267
       },
       {
        "text": "Go back up to Trollheim.",
@@ -17238,12 +17420,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Grind it."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Dried thistle.",
+       "why": "Grind it.",
+       "target": "eadgar_dried_troll_thistle",
+       "id": 3263,
+       "label": "Dried thistle",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "Mix the potion."
+       "kind": "obj",
+       "text": "Use Vial of water on Ground thistle.",
+       "why": "Mix the potion.",
+       "target": "eadgar_ground_troll_thistle",
+       "id": 3264,
+       "label": "Ground thistle",
+       "item": 227
       }
      ],
      "items": [
@@ -18928,8 +19120,13 @@
        "label": "Battered book"
       },
       {
-       "kind": "note",
-       "text": "Cut the spine."
+       "kind": "obj",
+       "text": "Use Knife on Battered book.",
+       "why": "Cut the spine.",
+       "target": "elemental_workshop_shield_book",
+       "id": 2886,
+       "label": "Battered book",
+       "item": 946
       },
       {
        "kind": "walk",
@@ -19462,12 +19659,22 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "The top."
+       "kind": "obj",
+       "text": "Use Needle on Torn robe.",
+       "why": "The top.",
+       "target": "elid_robetop_torn",
+       "id": 6788,
+       "label": "Torn robe",
+       "item": 1733
       },
       {
-       "kind": "note",
-       "text": "The bottoms."
+       "kind": "obj",
+       "text": "Use Needle on Torn robe.",
+       "why": "The bottoms.",
+       "target": "elid_robebottoms_torn",
+       "id": 6789,
+       "label": "Torn robe",
+       "item": 1733
       }
      ],
      "items": [
@@ -19817,8 +20024,13 @@
        "label": "Awusah the Mayor"
       },
       {
-       "kind": "note",
-       "text": "The soles."
+       "kind": "obj",
+       "text": "Use Knife on Shoes.",
+       "why": "The soles.",
+       "target": "elid_shoes",
+       "id": 6790,
+       "label": "Shoes",
+       "item": 946
       },
       {
        "text": "Go back west.",
@@ -20098,12 +20310,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Carve the base."
+       "kind": "obj",
+       "text": "Use Chisel on Sandstone (32kg).",
+       "why": "Carve the base.",
+       "target": "enakh_sandstone_huge_base+legs",
+       "id": 6986,
+       "label": "Sandstone (32kg)",
+       "item": 7004
       },
       {
-       "kind": "note",
-       "text": "And the body."
+       "kind": "obj",
+       "text": "Use Chisel on Sandstone (20kg).",
+       "why": "And the body.",
+       "target": "enakh_sandstone_huge_body",
+       "id": 6985,
+       "label": "Sandstone (20kg)",
+       "item": 7004
       },
       {
        "kind": "walk",
@@ -20203,8 +20425,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Carve a Zamorak head.",
+       "kind": "obj",
+       "text": "Use Chisel on Granite (5kg).",
+       "why": "Carve a Zamorak head.",
+       "target": "enakh_granite_medium",
+       "id": 6983,
+       "label": "Granite (5kg)",
+       "item": 7004,
        "picks": [
         "Zamorak."
        ]
@@ -21092,8 +21319,13 @@
        "label": "Poison"
       },
       {
-       "kind": "note",
-       "text": "And poison it."
+       "kind": "obj",
+       "text": "Use Poison on Fish food.",
+       "why": "And poison it.",
+       "target": "fish_food",
+       "id": 272,
+       "label": "Fish food",
+       "item": 273
       },
       {
        "text": "Go across the ground floor to the south-east room.",
@@ -22088,8 +22320,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Join them."
+       "kind": "obj",
+       "text": "Use Marble amulet on Obsidian amulet.",
+       "why": "Join them.",
+       "target": "fenk_obsidian_amulet",
+       "id": 4188,
+       "label": "Obsidian amulet",
+       "item": 4187
       },
       {
        "text": "Go to the Hair of the Dog in Canifis.",
@@ -22145,8 +22382,13 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "The brain goes in first."
+       "kind": "obj",
+       "text": "Use Pickled brain on Decapitated head.",
+       "why": "The brain goes in first.",
+       "target": "fenk_head_empty",
+       "id": 4197,
+       "label": "Decapitated head",
+       "item": 4199
       },
       {
        "text": "Go to the memorial below the railings.",
@@ -22510,16 +22752,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Lash one on."
+       "kind": "obj",
+       "text": "Use Garden cane on Garden brush.",
+       "why": "Lash one on.",
+       "target": "fenk_brush0",
+       "id": 4190,
+       "label": "Garden brush",
+       "item": 4189
       },
       {
-       "kind": "note",
-       "text": "And another."
+       "kind": "obj",
+       "text": "Use Garden cane on Extended brush.",
+       "why": "And another.",
+       "target": "fenk_brush1",
+       "id": 4191,
+       "label": "Extended brush",
+       "item": 4189
       },
       {
-       "kind": "note",
-       "text": "And the third."
+       "kind": "obj",
+       "text": "Use Garden cane on Extended brush.",
+       "why": "And the third.",
+       "target": "fenk_brush2",
+       "id": 4192,
+       "label": "Extended brush",
+       "item": 4189
       },
       {
        "text": "Go upstairs to the west room.",
@@ -22557,8 +22814,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "The conductor."
+       "kind": "obj",
+       "text": "Use Silver bar on Conductor mould.",
+       "why": "The conductor.",
+       "target": "fenk_lightning_mould",
+       "id": 4200,
+       "label": "Conductor mould",
+       "item": 2355
       },
       {
        "text": "Go up to the roof.",
@@ -22896,8 +23158,12 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Use Feud Karidian Turban on Feud Karidian Fakebeard."
+       "kind": "obj",
+       "text": "Use Karidian headpiece on Fake beard.",
+       "target": "feud_karidian_fakebeard",
+       "id": 4593,
+       "label": "Fake beard",
+       "item": 4591
       },
       {
        "text": "Go to the magic carpet from Shantay Pass - world travel, not this quest.",
@@ -25083,8 +25349,13 @@
        "label": "Doogle leaves"
       },
       {
-       "kind": "note",
-       "text": "A doogle sardine."
+       "kind": "obj",
+       "text": "Use Doogle leaves on Raw sardine.",
+       "why": "A doogle sardine.",
+       "target": "raw_sardine",
+       "id": 327,
+       "label": "Raw sardine",
+       "item": 1573
       },
       {
        "kind": "walk",
@@ -27298,8 +27569,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Dye it."
+       "kind": "obj",
+       "text": "Use Orange dye on Goblin mail.",
+       "why": "Dye it.",
+       "target": "goblin_armour",
+       "id": 288,
+       "label": "Goblin mail",
+       "item": 1769
       },
       {
        "kind": "talk",
@@ -27330,8 +27606,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Dye the second one."
+       "kind": "obj",
+       "text": "Use Blue dye on Goblin mail.",
+       "why": "Dye the second one.",
+       "target": "goblin_armour",
+       "id": 288,
+       "label": "Goblin mail",
+       "item": 1767
       },
       {
        "kind": "talk",
@@ -28009,16 +28290,31 @@
        "id": 1907
       },
       {
-       "kind": "note",
-       "text": "Black dye in the vial."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Black mushroom.",
+       "why": "Black dye in the vial.",
+       "target": "golem_mushroom",
+       "id": 4620,
+       "label": "Black mushroom",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "A quill."
+       "kind": "obj",
+       "text": "Use Black mushroom ink on Phoenix feather.",
+       "why": "A quill.",
+       "target": "golem_phoenixfeather",
+       "id": 4621,
+       "label": "Phoenix feather",
+       "item": 4622
       },
       {
-       "kind": "note",
-       "text": "The new instructions."
+       "kind": "obj",
+       "text": "Use Papyrus on Phoenix quill pen.",
+       "why": "The new instructions.",
+       "target": "golem_pen",
+       "id": 4623,
+       "label": "Phoenix quill pen",
+       "item": 970
       },
       {
        "kind": "talk",
@@ -29656,16 +29952,31 @@
        "label": "Betty"
       },
       {
-       "kind": "note",
-       "text": "Juice."
+       "kind": "obj",
+       "text": "Use Redberries on Bottled water.",
+       "why": "Juice.",
+       "target": "handsand_bottle_water",
+       "id": 6953,
+       "label": "Bottled water",
+       "item": 1951
       },
       {
-       "kind": "note",
-       "text": "Dye."
+       "kind": "obj",
+       "text": "Use White berries on Redberry juice.",
+       "why": "Dye.",
+       "target": "handsand_redberry_juice",
+       "id": 6954,
+       "label": "Redberry juice",
+       "item": 239
       },
       {
-       "kind": "note",
-       "text": "The lens."
+       "kind": "obj",
+       "text": "Use Pink dye on Lantern lens.",
+       "why": "The lens.",
+       "target": "bullseye_lantern_lens",
+       "id": 4542,
+       "label": "Lantern lens",
+       "item": 6955
       },
       {
        "kind": "talk",
@@ -30553,8 +30864,13 @@
      "headings": [],
      "steps": [
       {
-       "kind": "note",
-       "text": "String the shard."
+       "kind": "obj",
+       "text": "Use Ball of wool on Salve shard.",
+       "why": "String the shard.",
+       "target": "crystalshard_necklace_unstrung",
+       "id": 4082,
+       "label": "Salve shard",
+       "item": 1759
       }
      ],
      "items": [
@@ -31713,8 +32029,13 @@
        "label": "Fire feather"
       },
       {
-       "kind": "note",
-       "text": "Make the oily rod."
+       "kind": "obj",
+       "text": "Use Blamish oil on Fishing rod.",
+       "why": "Make the oily rod.",
+       "target": "fishing_rod",
+       "id": 307,
+       "label": "Fishing rod",
+       "item": 1582
       },
       {
        "text": "Go down into the Taverley dungeon, to the lava.",
@@ -31743,8 +32064,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Light a fire."
+       "kind": "obj",
+       "text": "Use Tinderbox on Logs.",
+       "why": "Light a fire.",
+       "target": "logs",
+       "id": 1511,
+       "label": "Logs",
+       "item": 590
       },
       {
        "kind": "loc",
@@ -33114,8 +33440,13 @@
        "id": 3401
       },
       {
-       "kind": "note",
-       "text": "Drop a coin in the ale."
+       "kind": "obj",
+       "text": "Use Coins on Asgarnian ale.",
+       "why": "Drop a coin in the ale.",
+       "target": "asgarnian_ale",
+       "id": 1905,
+       "label": "Asgarnian ale",
+       "item": 995
       },
       {
        "kind": "talk",
@@ -33265,8 +33596,13 @@
        "label": "Donie"
       },
       {
-       "kind": "note",
-       "text": "Mix the cake."
+       "kind": "obj",
+       "text": "Use Pot of flour on Cake tin.",
+       "why": "Mix the cake.",
+       "target": "cake_tin",
+       "id": 1887,
+       "label": "Cake tin",
+       "item": 1933
       },
       {
        "text": "Go to the range south of the castle.",
@@ -33453,8 +33789,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Spoil it properly."
+       "kind": "obj",
+       "text": "Use Ashes on Fruit blast.",
+       "why": "Spoil it properly.",
+       "target": "fruit_blast",
+       "id": 2084,
+       "label": "Fruit blast",
+       "item": 592
       },
       {
        "text": "Go back to Lumbridge castle, to the portal.",
@@ -33551,16 +33892,31 @@
        "label": "General Bentnoze"
       },
       {
-       "kind": "note",
-       "text": "Soggy bread."
+       "kind": "obj",
+       "text": "Use Bucket of water on Bread.",
+       "why": "Soggy bread.",
+       "target": "bread",
+       "id": 2309,
+       "label": "Bread",
+       "item": 1929
       },
       {
-       "kind": "note",
-       "text": "Spicy maggots."
+       "kind": "obj",
+       "text": "Use Spice on Fishing bait.",
+       "why": "Spicy maggots.",
+       "target": "fishing_bait",
+       "id": 313,
+       "label": "Fishing bait",
+       "item": 2007
       },
       {
-       "kind": "note",
-       "text": "Dyed oranges."
+       "kind": "obj",
+       "text": "Use Red dye on Orange slices.",
+       "why": "Dyed oranges.",
+       "target": "orange_slices",
+       "id": 2112,
+       "label": "Orange slices",
+       "item": 1763
       },
       {
        "kind": "walk",
@@ -33842,24 +34198,49 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Grind the kelp."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Kelp.",
+       "why": "Grind the kelp.",
+       "target": "hundred_pirate_kelp",
+       "id": 7516,
+       "label": "Kelp",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "The crab meat."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Crab meat.",
+       "why": "The crab meat.",
+       "target": "hundred_pirate_giant_crab_meat",
+       "id": 7518,
+       "label": "Crab meat",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "The cod."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Raw cod.",
+       "why": "The cod.",
+       "target": "raw_cod",
+       "id": 341,
+       "label": "Raw cod",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "And breadcrumbs."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Bread.",
+       "why": "And breadcrumbs.",
+       "target": "bread",
+       "id": 2309,
+       "label": "Bread",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "Mix the fishcake."
+       "kind": "obj",
+       "text": "Use Ground kelp on Breadcrumbs.",
+       "why": "Mix the fishcake.",
+       "target": "hundred_pirate_breadcrumbs",
+       "id": 7515,
+       "label": "Breadcrumbs",
+       "item": 7517
       },
       {
        "text": "Go back to the Lumbridge range.",
@@ -34008,16 +34389,31 @@
        "label": "Evil Dave"
       },
       {
-       "kind": "note",
-       "text": "The first dose."
+       "kind": "obj",
+       "text": "Use Red spice (4) on Stew.",
+       "why": "The first dose.",
+       "target": "stew",
+       "id": 2003,
+       "label": "Stew",
+       "item": 7480
       },
       {
-       "kind": "note",
-       "text": "The second."
+       "kind": "obj",
+       "text": "Use Red spice (3) on Spicy stew.",
+       "why": "The second.",
+       "target": "hundred_dave_stew",
+       "id": 7479,
+       "label": "Spicy stew",
+       "item": 7481
       },
       {
-       "kind": "note",
-       "text": "And the third."
+       "kind": "obj",
+       "text": "Use Red spice (2) on Spicy stew.",
+       "why": "And the third.",
+       "target": "hundred_dave_stew",
+       "id": 7479,
+       "label": "Spicy stew",
+       "item": 7482
       },
       {
        "kind": "talk",
@@ -34232,8 +34628,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Light a fire."
+       "kind": "obj",
+       "text": "Use Tinderbox on Logs.",
+       "why": "Light a fire.",
+       "target": "logs",
+       "id": 1511,
+       "label": "Logs",
+       "item": 590
       },
       {
        "kind": "loc",
@@ -34578,16 +34979,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Slice the banana."
+       "kind": "obj",
+       "text": "Use Knife on Red banana.",
+       "why": "Slice the banana.",
+       "target": "hundred_ilm_red_banana",
+       "id": 7572,
+       "label": "Red banana",
+       "item": 946
       },
       {
-       "kind": "note",
-       "text": "Grind the nuts."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Tchiki monkey nuts.",
+       "why": "Grind the nuts.",
+       "target": "hundred_ilm_tchiki_monkey_nuts",
+       "id": 7573,
+       "label": "Tchiki monkey nuts",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "Stuff the snake."
+       "kind": "obj",
+       "text": "Use Sliced red banana on Snake corpse.",
+       "why": "Stuff the snake.",
+       "target": "hundred_ilm_snake_corpse",
+       "id": 7576,
+       "label": "Snake corpse",
+       "item": 7574
       },
       {
        "text": "Go back to the Lumbridge range.",
@@ -37538,8 +37954,13 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "Cut it - the student wants a cut opal."
+       "kind": "obj",
+       "text": "Use Chisel on Uncut opal.",
+       "why": "Cut it - the student wants a cut opal.",
+       "target": "uncut_opal",
+       "id": 1625,
+       "label": "Uncut opal",
+       "item": 1755
       },
       {
        "kind": "walk",
@@ -38522,20 +38943,40 @@
        "item": 700
       },
       {
-       "kind": "note",
-       "text": "Grind the charcoal."
+       "kind": "obj",
+       "text": "Use Charcoal on Pestle and mortar.",
+       "why": "Grind the charcoal.",
+       "target": "pestle_and_mortar",
+       "id": 233,
+       "label": "Pestle and mortar",
+       "item": 973
       },
       {
-       "kind": "note",
-       "text": "Mix the chemicals."
+       "kind": "obj",
+       "text": "Use Ammonium nitrate on Nitroglycerin.",
+       "why": "Mix the chemicals.",
+       "target": "nitroglycerin",
+       "id": 703,
+       "label": "Nitroglycerin",
+       "item": 701
       },
       {
-       "kind": "note",
-       "text": "Add the charcoal."
+       "kind": "obj",
+       "text": "Use Ground charcoal on Mixed chemicals.",
+       "why": "Add the charcoal.",
+       "target": "precharcoalmixture",
+       "id": 705,
+       "label": "Mixed chemicals",
+       "item": 704
       },
       {
-       "kind": "note",
-       "text": "Add the root."
+       "kind": "obj",
+       "text": "Use Arcenia root on Mixed chemicals.",
+       "why": "Add the root.",
+       "target": "postcharcoalmixture",
+       "id": 706,
+       "label": "Mixed chemicals",
+       "item": 708
       },
       {
        "kind": "walk",
@@ -40021,8 +40462,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Germinate the seeds."
+       "kind": "obj",
+       "text": "Use Yommi tree seeds on Golden bowl.",
+       "why": "Germinate the seeds.",
+       "target": "goldbowlbless_pure",
+       "id": 726,
+       "label": "Golden bowl",
+       "item": 735
       }
      ],
      "items": [
@@ -40151,8 +40597,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Mix the bravery potion."
+       "kind": "obj",
+       "text": "Use Ardrigal on Snakeweed mixture.",
+       "why": "Mix the bravery potion.",
+       "target": "snakeweed_sol",
+       "id": 737,
+       "label": "Snakeweed mixture",
+       "item": 1528
       },
       {
        "kind": "obj",
@@ -42603,12 +43054,22 @@
      "headings": [],
      "steps": [
       {
-       "kind": "note",
-       "text": "The lens into the lantern."
+       "kind": "obj",
+       "text": "Use Emerald lens on Bullseye lantern.",
+       "why": "The lens into the lantern.",
+       "target": "bullseye_lantern_nolens",
+       "id": 4544,
+       "label": "Bullseye lantern",
+       "item": 10428
       },
       {
-       "kind": "note",
-       "text": "And light it."
+       "kind": "obj",
+       "text": "Use Tinderbox on Emerald lantern.",
+       "why": "And light it.",
+       "target": "lunar_emerald_lantern",
+       "id": 10429,
+       "label": "Emerald lantern",
+       "item": 590
       },
       {
        "kind": "loc",
@@ -42895,12 +43356,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Guam in."
+       "kind": "obj",
+       "text": "Use Guam leaf on Vial of water.",
+       "why": "Guam in.",
+       "target": "lunar_vial_water",
+       "id": 10421,
+       "label": "Vial of water",
+       "item": 249
       },
       {
-       "kind": "note",
-       "text": "And marrentill."
+       "kind": "obj",
+       "text": "Use Marrentill on Guam vial.",
+       "why": "And marrentill.",
+       "target": "lunar_guam_vial",
+       "id": 10422,
+       "label": "Guam vial",
+       "item": 251
       },
       {
        "text": "Go to the Suqah on the east of the island.",
@@ -42936,12 +43407,22 @@
        "label": "Suqah hide"
       },
       {
-       "kind": "note",
-       "text": "Grind the tooth."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Suqah tooth.",
+       "why": "Grind the tooth.",
+       "target": "suqah_tooth",
+       "id": 10416,
+       "label": "Suqah tooth",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "And the potion is made."
+       "kind": "obj",
+       "text": "Use Ground tooth on Guam-marr vial.",
+       "why": "And the potion is made.",
+       "target": "lunar_guam_marr_vial",
+       "id": 10424,
+       "label": "Guam-marr vial",
+       "item": 10417
       },
       {
        "text": "Go back to the Oneiromancer.",
@@ -43319,29 +43800,49 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Sew the torso.",
+       "kind": "obj",
+       "text": "Use Needle on Suqah leather.",
+       "why": "Sew the torso.",
+       "target": "suqah_leather",
+       "id": 10419,
+       "label": "Suqah leather",
+       "item": 1733,
        "picks": [
         "Lunar torso"
        ]
       },
       {
-       "kind": "note",
-       "text": "The trousers.",
+       "kind": "obj",
+       "text": "Use Needle on Suqah leather.",
+       "why": "The trousers.",
+       "target": "suqah_leather",
+       "id": 10419,
+       "label": "Suqah leather",
+       "item": 1733,
        "picks": [
         "Lunar trousers"
        ]
       },
       {
-       "kind": "note",
-       "text": "The gloves.",
+       "kind": "obj",
+       "text": "Use Needle on Suqah leather.",
+       "why": "The gloves.",
+       "target": "suqah_leather",
+       "id": 10419,
+       "label": "Suqah leather",
+       "item": 1733,
        "picks": [
         "Lunar gloves"
        ]
       },
       {
-       "kind": "note",
-       "text": "And the boots.",
+       "kind": "obj",
+       "text": "Use Needle on Suqah leather.",
+       "why": "And the boots.",
+       "target": "suqah_leather",
+       "id": 10419,
+       "label": "Suqah leather",
+       "item": 1733,
        "picks": [
         "Lunar boots"
        ]
@@ -43647,8 +44148,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Soak the kindling."
+       "kind": "obj",
+       "text": "Use Waking sleep vial on Kindling.",
+       "why": "Soak the kindling.",
+       "target": "lunar_kindling",
+       "id": 10426,
+       "label": "Kindling",
+       "item": 10425
       },
       {
        "kind": "obj",
@@ -44033,8 +44539,13 @@
        "label": "Spade"
       },
       {
-       "kind": "note",
-       "text": "The key turns."
+       "kind": "obj",
+       "text": "Use Enchanted key on Chest.",
+       "why": "The key turns.",
+       "target": "makinghistory_chest",
+       "id": 6759,
+       "label": "Chest",
+       "item": 6754
       },
       {
        "text": "Go to Rellekka.",
@@ -46953,8 +47464,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Carve the pen."
+       "kind": "obj",
+       "text": "Use Giant nib on Logs.",
+       "why": "Carve the pen.",
+       "target": "logs",
+       "id": 1511,
+       "label": "Logs",
+       "item": 3897
       },
       {
        "text": "Go back up to Vargas.",
@@ -48116,8 +48632,12 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Use Mm Amulet Of Monkey Speak Without String on Ball Of Wool."
+       "kind": "obj",
+       "text": "Use M'speak amulet on Ball of wool.",
+       "target": "ball_of_wool",
+       "id": 1759,
+       "label": "Ball of wool",
+       "item": 4022
       }
      ],
      "items": [
@@ -50080,8 +50600,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Wash the top."
+       "kind": "obj",
+       "text": "Use Tegid's soap on Bloody mourner top.",
+       "why": "Wash the top.",
+       "target": "mourning_bloody_mourner_top",
+       "id": 6064,
+       "label": "Bloody mourner top",
+       "item": 6072
       },
       {
        "text": "Go back to Lletya, and Oronwen.",
@@ -50394,8 +50919,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Cut it with naphtha."
+       "kind": "obj",
+       "text": "Use Barrel of naphtha on Apple barrel.",
+       "why": "Cut it with naphtha.",
+       "target": "mourning_applebarrel_mush",
+       "id": 6094,
+       "label": "Apple barrel",
+       "item": 3221
       },
       {
        "kind": "loc",
@@ -50411,8 +50941,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Strain it."
+       "kind": "obj",
+       "text": "Use Sieve on Toxic naphtha.",
+       "why": "Strain it.",
+       "target": "mourning_toxic_naphtha",
+       "id": 6096,
+       "label": "Toxic naphtha",
+       "item": 6097
       }
      ],
      "items": [
@@ -50771,16 +51306,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Red into the bellows."
+       "kind": "obj",
+       "text": "Use Red dye on Ogre bellows.",
+       "why": "Red into the bellows.",
+       "target": "empty_ogre_bellows",
+       "id": 2871,
+       "label": "Ogre bellows",
+       "item": 1763
       },
       {
-       "kind": "note",
-       "text": "And into a toad."
+       "kind": "obj",
+       "text": "Use Red dye bellows on Bloated toad.",
+       "why": "And into a toad.",
+       "target": "bloated_toad",
+       "id": 2875,
+       "label": "Bloated toad",
+       "item": 6085
       },
       {
-       "kind": "note",
-       "text": "Load the device."
+       "kind": "obj",
+       "text": "Use Red toad on Fixed device.",
+       "why": "Load the device.",
+       "target": "mourning_paint_gun",
+       "id": 6082,
+       "label": "Fixed device",
+       "item": 6090
       },
       {
        "kind": "talk",
@@ -50800,16 +51350,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Green."
+       "kind": "obj",
+       "text": "Use Green dye on Ogre bellows.",
+       "why": "Green.",
+       "target": "empty_ogre_bellows",
+       "id": 2871,
+       "label": "Ogre bellows",
+       "item": 1771
       },
       {
-       "kind": "note",
-       "text": "Into a toad."
+       "kind": "obj",
+       "text": "Use Green dye bellows on Bloated toad.",
+       "why": "Into a toad.",
+       "target": "bloated_toad",
+       "id": 2875,
+       "label": "Bloated toad",
+       "item": 6088
       },
       {
-       "kind": "note",
-       "text": "Load it."
+       "kind": "obj",
+       "text": "Use Green toad on Fixed device.",
+       "why": "Load it.",
+       "target": "mourning_paint_gun",
+       "id": 6082,
+       "label": "Fixed device",
+       "item": 6092
       },
       {
        "kind": "talk",
@@ -50829,16 +51394,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Blue."
+       "kind": "obj",
+       "text": "Use Blue dye on Ogre bellows.",
+       "why": "Blue.",
+       "target": "empty_ogre_bellows",
+       "id": 2871,
+       "label": "Ogre bellows",
+       "item": 1767
       },
       {
-       "kind": "note",
-       "text": "Into a toad."
+       "kind": "obj",
+       "text": "Use Blue dye bellows on Bloated toad.",
+       "why": "Into a toad.",
+       "target": "bloated_toad",
+       "id": 2875,
+       "label": "Bloated toad",
+       "item": 6086
       },
       {
-       "kind": "note",
-       "text": "Load it."
+       "kind": "obj",
+       "text": "Use Blue toad on Fixed device.",
+       "why": "Load it.",
+       "target": "mourning_paint_gun",
+       "id": 6082,
+       "label": "Fixed device",
+       "item": 6089
       },
       {
        "kind": "talk",
@@ -50858,16 +51438,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Yellow."
+       "kind": "obj",
+       "text": "Use Yellow dye on Ogre bellows.",
+       "why": "Yellow.",
+       "target": "empty_ogre_bellows",
+       "id": 2871,
+       "label": "Ogre bellows",
+       "item": 1765
       },
       {
-       "kind": "note",
-       "text": "Into a toad."
+       "kind": "obj",
+       "text": "Use Yellow dye bellows on Bloated toad.",
+       "why": "Into a toad.",
+       "target": "bloated_toad",
+       "id": 2875,
+       "label": "Bloated toad",
+       "item": 6087
       },
       {
-       "kind": "note",
-       "text": "Load it."
+       "kind": "obj",
+       "text": "Use Yellow toad on Fixed device.",
+       "why": "Load it.",
+       "target": "mourning_paint_gun",
+       "id": 6082,
+       "label": "Fixed device",
+       "item": 6091
       },
       {
        "kind": "talk",
@@ -51211,12 +51806,22 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "Dust the necklace."
+       "kind": "obj",
+       "text": "Use Pot of flour on Silver necklace.",
+       "why": "Dust the necklace.",
+       "target": "murdernecklace",
+       "id": 1796,
+       "label": "Silver necklace",
+       "item": 1933
       },
       {
-       "kind": "note",
-       "text": "Lift her print."
+       "kind": "obj",
+       "text": "Use Silver necklace on Flypaper.",
+       "why": "Lift her print.",
+       "target": "murderpaper",
+       "id": 1811,
+       "label": "Flypaper",
+       "item": 1797
       },
       {
        "text": "Go back to the flour barrel.",
@@ -51241,16 +51846,31 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "Dust the dagger."
+       "kind": "obj",
+       "text": "Use Pot of flour on Criminal's dagger.",
+       "why": "Dust the dagger.",
+       "target": "murderweapon",
+       "id": 1813,
+       "label": "Criminal's dagger",
+       "item": 1933
       },
       {
-       "kind": "note",
-       "text": "And lift the one on it."
+       "kind": "obj",
+       "text": "Use Criminal's dagger on Flypaper.",
+       "why": "And lift the one on it.",
+       "target": "murderpaper",
+       "id": 1811,
+       "label": "Flypaper",
+       "item": 1814
       },
       {
-       "kind": "note",
-       "text": "Compare them."
+       "kind": "obj",
+       "text": "Use Anna's print on Unknown print.",
+       "why": "Compare them.",
+       "target": "murderfingerprint1",
+       "id": 1822,
+       "label": "Unknown print",
+       "item": 1816
       },
       {
        "text": "Go to the Seers' Village pub.",
@@ -51641,16 +52261,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Ten axes."
+       "kind": "obj",
+       "text": "Use Bronze axe on Crate.",
+       "why": "Ten axes.",
+       "target": "burgh_generalstore_crate",
+       "id": 7630,
+       "label": "Crate",
+       "item": 1351
       },
       {
-       "kind": "note",
-       "text": "Three tinderboxes."
+       "kind": "obj",
+       "text": "Use Tinderbox on Crate.",
+       "why": "Three tinderboxes.",
+       "target": "burgh_generalstore_crate",
+       "id": 7630,
+       "label": "Crate",
+       "item": 590
       },
       {
-       "kind": "note",
-       "text": "Ten mackerel."
+       "kind": "obj",
+       "text": "Use Raw mackerel on Crate.",
+       "why": "Ten mackerel.",
+       "target": "burgh_generalstore_crate",
+       "id": 7630,
+       "label": "Crate",
+       "item": 353
       },
       {
        "kind": "talk",
@@ -52898,8 +53533,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Cast the lens."
+       "kind": "obj",
+       "text": "Use Molten glass on Lens mould.",
+       "why": "Cast the lens.",
+       "target": "lens_mould",
+       "id": 602,
+       "label": "Lens mould",
+       "item": 1775
       },
       {
        "kind": "talk",
@@ -54396,12 +55036,22 @@
        "op": 1
       },
       {
-       "kind": "note",
-       "text": "Chocolaty milk."
+       "kind": "obj",
+       "text": "Use Chocolate dust on Bucket of milk.",
+       "why": "Chocolaty milk.",
+       "target": "bucket_milk",
+       "id": 1927,
+       "label": "Bucket of milk",
+       "item": 1975
       },
       {
-       "kind": "note",
-       "text": "And the cure."
+       "kind": "obj",
+       "text": "Use Snape grass on Chocolatey milk.",
+       "why": "And the cure.",
+       "target": "chocolaty_milk",
+       "id": 1977,
+       "label": "Chocolatey milk",
+       "item": 231
       },
       {
        "kind": "talk",
@@ -55169,8 +55819,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Blonde."
+       "kind": "obj",
+       "text": "Use Yellow dye on Wig.",
+       "why": "Blonde.",
+       "target": "plainwig",
+       "id": 2421,
+       "label": "Wig",
+       "item": 1765
       },
       {
        "text": "Go east to the jail.",
@@ -55957,8 +56612,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Poison all four at once."
+       "kind": "obj",
+       "text": "Use Rat poison on Cheese.",
+       "why": "Poison all four at once.",
+       "target": "cheese",
+       "id": 1985,
+       "label": "Cheese",
+       "item": 24
       },
       {
        "text": "Go into the warehouse, south of the ladder.",
@@ -56261,8 +56921,13 @@
        "label": "Smokin' Joe"
       },
       {
-       "kind": "note",
-       "text": "Light it."
+       "kind": "obj",
+       "text": "Use Tinderbox on Pot of weeds.",
+       "why": "Light it.",
+       "target": "ratcatchers_weedpot",
+       "id": 6771,
+       "label": "Pot of weeds",
+       "item": 590
       },
       {
        "text": "Go along to the hole.",
@@ -56987,12 +57652,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Water into the tin."
+       "kind": "obj",
+       "text": "Use Vial of liquid on Tin.",
+       "why": "Water into the tin.",
+       "target": "rd_tin",
+       "id": 5592,
+       "label": "Tin",
+       "item": 5582
       },
       {
-       "kind": "note",
-       "text": "And the gypsum."
+       "kind": "obj",
+       "text": "Use Gypsum on Tin.",
+       "why": "And the gypsum.",
+       "target": "rd_tin_of_crap_empty",
+       "id": 5600,
+       "label": "Tin",
+       "item": 5579
       },
       {
        "kind": "loc",
@@ -57008,12 +57683,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Fill it with tin."
+       "kind": "obj",
+       "text": "Use Tin ore powder on Tin.",
+       "why": "Fill it with tin.",
+       "target": "rd_keymould",
+       "id": 5594,
+       "label": "Tin",
+       "item": 5583
       },
       {
-       "kind": "note",
-       "text": "And cupric ore."
+       "kind": "obj",
+       "text": "Use Cupric ore powder on Tin.",
+       "why": "And cupric ore.",
+       "target": "rd_full_keymould_tin",
+       "id": 5595,
+       "label": "Tin",
+       "item": 5584
       },
       {
        "kind": "loc",
@@ -57029,8 +57714,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Chip the plaster away."
+       "kind": "obj",
+       "text": "Use Knife on Tin.",
+       "why": "Chip the plaster away.",
+       "target": "rd_full_keymould_complete",
+       "id": 5598,
+       "label": "Tin",
+       "item": 5605
       },
       {
        "kind": "loc",
@@ -57622,12 +58312,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Grind it into the pot."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Quicklime.",
+       "why": "Grind it into the pot.",
+       "target": "regicide_quicklime",
+       "id": 3213,
+       "label": "Quicklime",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "And grind the sulphur."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Sulphur.",
+       "why": "And grind the sulphur.",
+       "target": "regicide_sulphar",
+       "id": 3209,
+       "label": "Sulphur",
+       "item": 233
       },
       {
        "text": "Go to by sea and road to Rimmington.",
@@ -57669,16 +58369,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "The quicklime."
+       "kind": "obj",
+       "text": "Use Pot of quicklime on Barrel of naphtha.",
+       "why": "The quicklime.",
+       "target": "regicide_barrel_naphtha",
+       "id": 3221,
+       "label": "Barrel of naphtha",
+       "item": 3214
       },
       {
-       "kind": "note",
-       "text": "And the sulphur."
+       "kind": "obj",
+       "text": "Use Ground sulphur on Naphtha mix.",
+       "why": "And the sulphur.",
+       "target": "regicide_barrel_naphtha_quicklime_mix",
+       "id": 3223,
+       "label": "Naphtha mix",
+       "item": 3215
       },
       {
-       "kind": "note",
-       "text": "The cloth as a fuse."
+       "kind": "obj",
+       "text": "Use Cloth on Barrel bomb.",
+       "why": "The cloth as a fuse.",
+       "target": "regicide_barrel_lid",
+       "id": 3218,
+       "label": "Barrel bomb",
+       "item": 3224
       },
       {
        "text": "Go back west to the catapult north of Tyras Camp.",
@@ -60341,8 +61056,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Mix them."
+       "kind": "obj",
+       "text": "Use Swamp tar on Pot of flour.",
+       "why": "Mix them.",
+       "target": "pot_flour",
+       "id": 1933,
+       "label": "Pot of flour",
+       "item": 1939
       },
       {
        "kind": "walk",
@@ -60353,8 +61073,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Light a fire."
+       "kind": "obj",
+       "text": "Use Tinderbox on Logs.",
+       "why": "Light a fire.",
+       "target": "logs",
+       "id": 1511,
+       "label": "Logs",
+       "item": 590
       },
       {
        "kind": "loc",
@@ -60602,8 +61327,13 @@
        "label": "Broken glass"
       },
       {
-       "kind": "note",
-       "text": "Dry them in the sun."
+       "kind": "obj",
+       "text": "Use Broken glass on Damp sticks.",
+       "why": "Dry them in the sun.",
+       "target": "damp_sticks",
+       "id": 1467,
+       "label": "Damp sticks",
+       "item": 1469
       },
       {
        "kind": "obj",
@@ -62166,12 +62896,22 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "Chisel the pommel."
+       "kind": "obj",
+       "text": "Use Chisel on Sword pommel.",
+       "why": "Chisel the pommel.",
+       "target": "zqbevsword",
+       "id": 623,
+       "label": "Sword pommel",
+       "item": 1755
       },
       {
-       "kind": "note",
-       "text": "Thread them."
+       "kind": "obj",
+       "text": "Use Bronze wire on Bone beads.",
+       "why": "Thread them.",
+       "target": "zqbonebeads",
+       "id": 618,
+       "label": "Bone beads",
+       "item": 1794
       },
       {
        "kind": "loc",
@@ -62208,8 +62948,13 @@
        "op": 2
       },
       {
-       "kind": "note",
-       "text": "Chisel the bone key."
+       "kind": "obj",
+       "text": "Use Chisel on Bone shard.",
+       "why": "Chisel the bone key.",
+       "target": "zqboneshard",
+       "id": 604,
+       "label": "Bone shard",
+       "item": 1755
       },
       {
        "kind": "obj",
@@ -63952,32 +64697,67 @@
      "headings": [],
      "steps": [
       {
-       "kind": "note",
-       "text": "One."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "One.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Two."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Two.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Three."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Three.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Four."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Four.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Five."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Five.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Six."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Six.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
-       "kind": "note",
-       "text": "Seven."
+       "kind": "obj",
+       "text": "Use Bones on Bone seeds.",
+       "why": "Seven.",
+       "target": "swan_army",
+       "id": 7950,
+       "label": "Bone seeds",
+       "item": 526
       },
       {
        "kind": "obj",
@@ -66214,12 +66994,22 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "In the tin."
+       "kind": "obj",
+       "text": "Use Swamp tar on Bucket of wax.",
+       "why": "In the tin.",
+       "target": "bucket_wax",
+       "id": 30,
+       "label": "Bucket of wax",
+       "item": 1939
       },
       {
-       "kind": "note",
-       "text": "Wax the sled."
+       "kind": "obj",
+       "text": "Use Sled on Wax.",
+       "why": "Wax the sled.",
+       "target": "trollromance_wax",
+       "id": 4085,
+       "label": "Wax",
+       "item": 4083
       }
      ],
      "items": [
@@ -67693,12 +68483,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Wrap the arrow."
+       "kind": "obj",
+       "text": "Use Damp cloth on Bronze arrow.",
+       "why": "Wrap the arrow.",
+       "target": "bronze_arrow",
+       "id": 882,
+       "label": "Bronze arrow",
+       "item": 1485
       },
       {
-       "kind": "note",
-       "text": "Light it."
+       "kind": "obj",
+       "text": "Use Bronze fire arrows on Tinderbox.",
+       "why": "Light it.",
+       "target": "tinderbox",
+       "id": 590,
+       "label": "Tinderbox",
+       "item": 598
       },
       {
        "kind": "obj",
@@ -68652,16 +69452,31 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "The dove."
+       "kind": "obj",
+       "text": "Use Iban's dove on Doll of iban.",
+       "why": "The dove.",
+       "target": "ibandoll",
+       "id": 1492,
+       "label": "Doll of iban",
+       "item": 1496
       },
       {
-       "kind": "note",
-       "text": "The shadow."
+       "kind": "obj",
+       "text": "Use Iban's shadow on Doll of iban.",
+       "why": "The shadow.",
+       "target": "ibandoll",
+       "id": 1492,
+       "label": "Doll of iban",
+       "item": 1500
       },
       {
-       "kind": "note",
-       "text": "And the ashes."
+       "kind": "obj",
+       "text": "Use Iban's ashes on Doll of iban.",
+       "why": "And the ashes.",
+       "target": "ibandoll",
+       "id": 1492,
+       "label": "Doll of iban",
+       "item": 1502
       },
       {
        "kind": "obj",
@@ -69431,8 +70246,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Carve it."
+       "kind": "obj",
+       "text": "Use Knife on Branch.",
+       "why": "Carve it.",
+       "target": "viking_musical_tree_branch",
+       "id": 3692,
+       "label": "Branch",
+       "item": 946
       },
       {
        "kind": "walk",
@@ -69564,8 +70384,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "String the lyre."
+       "kind": "obj",
+       "text": "Use Golden wool on Unstrung lyre.",
+       "why": "String the lyre.",
+       "target": "viking_unstrung_lyre",
+       "id": 3688,
+       "label": "Unstrung lyre",
+       "item": 3694
       },
       {
        "text": "Go to Seers' Village - world travel, not the quest.",
@@ -69686,8 +70511,13 @@
        "label": "Sigli the Huntsman"
       },
       {
-       "kind": "note",
-       "text": "Light it."
+       "kind": "obj",
+       "text": "Use Tinderbox on Strange object.",
+       "why": "Light it.",
+       "target": "viking_firecracker",
+       "id": 3713,
+       "label": "Strange object",
+       "item": 590
       },
       {
        "kind": "walk",
@@ -70717,8 +71547,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Paint the wooden disk."
+       "kind": "obj",
+       "text": "Use Sticky red goop on Wooden disk.",
+       "why": "Paint the wooden disk.",
+       "target": "viking_uncoloured_wooden_coin",
+       "id": 3744,
+       "label": "Wooden disk",
+       "item": 3746
       },
       {
        "kind": "loc",
@@ -70783,8 +71618,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Bucket into jug: jug 3, bucket 2."
+       "kind": "obj",
+       "text": "Use Full bucket on Empty jug.",
+       "why": "Bucket into jug: jug 3, bucket 2.",
+       "target": "viking_jug_empty",
+       "id": 3732,
+       "label": "Empty jug",
+       "item": 3722
       },
       {
        "kind": "loc",
@@ -70800,8 +71640,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Bucket into jug: jug 2, bucket 0."
+       "kind": "obj",
+       "text": "Use 2/5ths full bucket on Empty jug.",
+       "why": "Bucket into jug: jug 2, bucket 0.",
+       "target": "viking_jug_empty",
+       "id": 3732,
+       "label": "Empty jug",
+       "item": 3725
       },
       {
        "kind": "loc",
@@ -70817,8 +71662,13 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Top the jug up: jug 3, bucket 4."
+       "kind": "obj",
+       "text": "Use Full bucket on 2/3rds full jug.",
+       "why": "Top the jug up: jug 3, bucket 4.",
+       "target": "viking_jug_2",
+       "id": 3730,
+       "label": "2/3rds full jug",
+       "item": 3722
       },
       {
        "kind": "loc",
@@ -70834,12 +71684,22 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Fill the vase."
+       "kind": "obj",
+       "text": "Use 4/5ths full bucket on Vase.",
+       "why": "Fill the vase.",
+       "target": "viking_airtight_vase",
+       "id": 3734,
+       "label": "Vase",
+       "item": 3723
       },
       {
-       "kind": "note",
-       "text": "Seal it."
+       "kind": "obj",
+       "text": "Use Vase lid on Vase of water.",
+       "why": "Seal it.",
+       "target": "viking_airtight_vase_water",
+       "id": 3735,
+       "label": "Vase of water",
+       "item": 3737
       },
       {
        "kind": "loc",
@@ -72426,20 +73286,40 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Guam into the vial."
+       "kind": "obj",
+       "text": "Use Guam leaf on Vial of water.",
+       "why": "Guam into the vial.",
+       "target": "vial_water",
+       "id": 227,
+       "label": "Vial of water",
+       "item": 249
       },
       {
-       "kind": "note",
-       "text": "Then the jangerberries."
+       "kind": "obj",
+       "text": "Use Unfinished potion on Jangerberries.",
+       "why": "Then the jangerberries.",
+       "target": "jangerberries",
+       "id": 247,
+       "label": "Jangerberries",
+       "item": 91
       },
       {
-       "kind": "note",
-       "text": "Grind the bat bones."
+       "kind": "obj",
+       "text": "Use Pestle and mortar on Bat bones.",
+       "why": "Grind the bat bones.",
+       "target": "bat_bones",
+       "id": 530,
+       "label": "Bat bones",
+       "item": 233
       },
       {
-       "kind": "note",
-       "text": "And the bones last."
+       "kind": "obj",
+       "text": "Use Ground bat bones on Vial.",
+       "why": "And the bones last.",
+       "target": "guamjangervial",
+       "id": 2390,
+       "label": "Vial",
+       "item": 2391
       },
       {
        "kind": "talk",
@@ -73512,8 +74392,13 @@
      ],
      "steps": [
       {
-       "kind": "note",
-       "text": "Make the staff."
+       "kind": "obj",
+       "text": "Use Knife on Dramen branch.",
+       "why": "Make the staff.",
+       "target": "dramen_branch",
+       "id": 771,
+       "label": "Dramen branch",
+       "item": 946
       }
      ],
      "items": [

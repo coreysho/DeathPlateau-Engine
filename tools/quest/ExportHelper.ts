@@ -286,7 +286,11 @@ const LOC_KINDS = new Set(['loc', 'useLoc', 'castLoc']);
 // `cast` names a spell ("magic:wind_blast"), which is neither an item nor anything standing in
 // the scene, so it stays a text-only step. Left out of OBJ_KINDS deliberately rather than left to
 // fail a lookup: four permanent entries in the unresolved report would hide the next real one.
-const OBJ_KINDS = new Set(['held', 'take']);
+// `use: ['knife', 'book']` is one item on another, and both halves are in the bag. It was
+// landing in none of these sets, so 181 of them came out as a note with the sim's aside for its
+// text ("The shirt.") and no item on them at all - which is exactly the step a helper should be
+// pointing at, twice over: the thing in your hand and the thing you click.
+const OBJ_KINDS = new Set(['held', 'take', 'use']);
 /** Tiles, not names: the instruction is "be here", and `at` already carries where. */
 const WALK_KINDS = new Set(['go', 'mapexit', 'sneak']);
 /** The sim asserting the game agrees with it. Not instructions. */
@@ -545,7 +549,9 @@ function imperative(kind: string, name: string, op: number | undefined, id: numb
     // BEFORE THE OP LOOKUP BELOW, which reads ObjType for anything that is not a loc or a held
     // item - and `id` here is the loc or the npc being used ON, so that lookup was asking the obj
     // table for a loc's number and would answer with an unrelated item's right-click word.
-    if (kind === 'useLoc' || kind === 'useNpc') return item ? `Use ${item} on ${name}` : `Use an item on ${name}`;
+    if (kind === 'useLoc' || kind === 'useNpc' || kind === 'use') {
+        return item ? `Use ${item} on ${name}` : `Use an item on ${name}`;
+    }
     if (kind === 'castLoc') return `Cast a spell on ${name}`;
 
     const slot = (op ?? 1) - 1;
@@ -692,7 +698,11 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // `fight: ['a','b']` is one npc that changes form mid-fight; the first name is the one
         // standing there when the player arrives, so that is what gets highlighted.
         const raw = s[kind];
-        const target = npc || loc || obj ? String(Array.isArray(raw) ? raw[0] : raw) : '';
+        // THE SECOND HALF IS THE TARGET. `use: ['knife', 'book']` reads "use the knife on the
+        // book": the book is what the step is about and the knife is what is in your hand, which
+        // is the same shape as a useLoc with both halves in the inventory.
+        const pair = kind === 'use' && Array.isArray(raw) && raw.length >= 2;
+        const target = npc || loc || obj ? String(pair ? raw[1] : Array.isArray(raw) ? raw[0] : raw) : '';
 
         // THE NAME IS RESOLVED BEFORE THE SENTENCE IS WRITTEN, because the sentence uses it. A
         // step with no `why` falls back to "Talk to <name>", and taking the name from the
@@ -713,10 +723,11 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         // "Use an item on Cauldron." - true, and no use to somebody standing at the cauldron.
         let item: string | null = null;
         let itemId = -1;
-        if (typeof s.obj === 'string' && s.obj) {
-            const objId = idOf('obj', s.obj);
+        const held = typeof s.obj === 'string' && s.obj ? s.obj : pair ? String(raw[0]) : null;
+        if (held) {
+            const objId = idOf('obj', held);
             itemId = objId;
-            item = (objId >= 0 ? ObjType.get(objId)?.name : null) ?? titled(s.obj);
+            item = (objId >= 0 ? ObjType.get(objId)?.name : null) ?? titled(held);
         }
         const act = imperative(kind, shown || titled(target), typeof s.op === 'number' ? s.op : undefined, id, item);
         const step: HelperStep = {
