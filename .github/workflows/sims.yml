@@ -203,6 +203,20 @@ jobs:
           # the same thing lunar does from the other direction: a runner is a good deal faster
           # than this container, so these caps are generous there and honest here.
           #
+          # AND fairyrings GREW, the same way audit7 did. It was six rings and about ninety
+          # checks; it is twenty-nine rings and 326 checks, every one of them dialled by pressing
+          # arrows. It took 319s here against the 180s cap, so it was killed, retried, killed
+          # again, and reported as "fails twice" on a night it passes alone - which is this
+          # comment's whole subject appearing for the sixth time. Its arrow loop was settling 20
+          # ticks per press for an [if_button] that sets three text labels and returns; at 2 it
+          # is 175s. That is still a cap it only just fits inside, which is the audit7 trap
+          # exactly, so it gets its own.
+          #
+          # seedstall was the same night's other cap victim and is nobody's regression: 189s and
+          # 9 of 9 checks here, nine seconds past the cap. It was reported red beside a sim that
+          # really had broken, which is the cost of a cap a sim sits on top of - two failures
+          # that look identical and are not.
+          #
           # lunar is the one that proved it, and it is worth writing down how it looked, because
           # it looked exactly like a regression and was not one. It timed out TWICE on a runner
           # on one night having passed the night before, so the first guess was that something
@@ -217,7 +231,7 @@ jobs:
           # the next it times out twice and reads as "fails twice". That is the audit7 trap with
           # a different sim, and the fix is the same: give it its own cap.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
