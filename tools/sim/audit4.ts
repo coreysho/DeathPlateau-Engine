@@ -428,7 +428,14 @@ guard('icslittle', () => {
     check('two jars taken, their shelves empty', [H.invCount(p, 'ics_little_canopic_jar_intestines'), H.invCount(p, 'ics_little_canopic_jar_liver'), H.getVarBit(p, 'ics_intestinespot_vis'), H.getVarBit(p, 'ics_liverpot_vis')], [1, 1, 1, 1]);
     del(p, 'ics_little_canopic_jar_liver');
     const back = at(p);
-    talk(p, 'ics_little_priest_ceremony'); // anyone; the check is on the town priest below
+    // A PLAYER CANNOT CLICK THE CEREMONY BEFORE IT STARTS, and this line used to not know that:
+    // it talked to the ceremony Priest here purely to have talked to somebody - its own comment
+    // said "anyone; the check is on the town priest below" - and 981a228's menu guard stopped it.
+    // It was right to. Both ceremony npcs are multis on ics_little_var that resolve from stage 19
+    // (^icslittle_ceremony), and the jars are still being collected here. So the rule the guard
+    // enforces is asserted instead of a click being thrown away.
+    const cerPriest = H.npcNear('ics_little_priest_ceremony', 3306, 9197);
+    check('the ceremony priest offers nothing before the ceremony', cerPriest ? H.npcOpWord(p, cerPriest, 1) : 'no npc at all', null);
     p.teleport(3282, 2772, 0);
     H.tick(1);
     talk(p, 'ics_little_hipriest_town');
