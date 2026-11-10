@@ -10,6 +10,12 @@
  *
  *   account              the username and the password hash. Players log in with what they
  *                        already have; nobody re-registers, nobody is locked out.
+ *   saved logins         account_token, which is what the client keeps instead of the password -
+ *                        one row per account per computer. The account survives a wipe, so the
+ *                        saved login has to survive with it: clearing the table would make
+ *                        everybody whose launcher remembers them type their password again on
+ *                        launch day, for no gain. A token expires on its own after a month unused,
+ *                        and can be cancelled per account without this.
  *   staff                any account with staffmodlevel > 0 is not touched at all - not its save,
  *                        not its hiscores, not its collection log. Staff keep their characters.
  *   the vote ledger      untouched, so cooldowns and uncollected tickets carry over...
