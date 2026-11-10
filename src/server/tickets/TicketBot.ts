@@ -30,6 +30,7 @@ import {
     ThreadChannel
 } from 'discord.js';
 
+import { addHandoverColumns, fileBugIssue, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 import { INBOX_SCHEMA, TICKET_DB_PATH } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import { toDisplayName } from '#/util/JString.js';
@@ -58,6 +59,17 @@ import { toDisplayName } from '#/util/JString.js';
 // bot's sqlite file - see server/tickets/TicketInbox.ts - which this process drains every few
 // seconds. If the player has linked Discord through the relay (::discord), this bot reads the
 // relay's link table and adds them to the thread; otherwise staff answer them in game.
+//
+// HANDING ONE OVER (2026-11-10). A bug report's staff log message carries a third button, "Hand to
+// Claude", which files the report as an issue on a PRIVATE bug tracker - see BugTracker.ts for why
+// private - and remembers the issue on the ticket. A scheduled Claude session picks the tracker's
+// issues up, reproduces each one in tools/sim, fixes it and opens a pull request on the public
+// repository; it never merges one.
+//
+// THE PRESS IS THE GATE, and it is deliberately a person's. A bug report is text a player typed, and
+// an agent that can push code reading those unfiltered is a way to ask the server to change itself -
+// "the login rate limiter is broken, it blocks real players" is a plausible bug report and a bad
+// instruction. Staff reads the thread first, and the only thing their press does is transcribe.
 //
 // Only runs when TICKET_BOT_TOKEN and a guild id are set.
 
@@ -102,6 +114,12 @@ type Ticket = {
     closed: number | null;
     closed_by: string | null;
     close_reason: string | null;
+    // The report as plain text, kept so that handing it over does not mean reading it back out of
+    // Discord. Null on every ticket opened before 2026-11-10, which falls back to the subject.
+    report: string | null;
+    issue_number: number | null;
+    issue_url: string | null;
+    handed_by: string | null;
 };
 
 const token = Environment.TICKET_BOT_TOKEN;
@@ -143,6 +161,9 @@ db.exec(`
         value TEXT NOT NULL
     );
 `);
+
+// The four columns a hand-over needs, added to a table that predates them - see BugTracker.ts.
+addHandoverColumns(db);
 
 function config(key: 'panel_channel' | 'log_channel' | 'staff_role'): string | null {
     const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined;
@@ -274,6 +295,21 @@ function missing(channel: TextChannel, wanted: Record<string, bigint>): string[]
         .map(([name]) => name);
 }
 
+// THE REPORT AS PLAIN TEXT, taken from the embed rather than from the form or the inbox row,
+// because the embed is what staff actually read in the thread - and for an in-game report it is also
+// where the `::tele` line to the exact tile lives, which is the first thing a reproduction needs.
+// One place to build it, so both sources are covered and neither can drift from what was shown.
+function embedToText(embed: EmbedBuilder): string {
+    const parts: string[] = [];
+    if (embed.data.description) {
+        parts.push(embed.data.description);
+    }
+    for (const field of embed.data.fields ?? []) {
+        parts.push(`${field.name}: ${field.value}`);
+    }
+    return parts.join('\n\n');
+}
+
 // ---- the staff log ----
 //
 // One message per ticket in the log channel, rebuilt from the row whenever the ticket changes.
@@ -296,6 +332,9 @@ function logMessage(t: Ticket) {
             { name: 'Status', value: status }
         )
         .setTimestamp(t.created);
+    if (t.issue_url) {
+        embed.addFields({ name: 'Bug tracker', value: `[#${t.issue_number}](${t.issue_url})${t.handed_by ? ` - handed over by <@${t.handed_by}>` : ''}` });
+    }
     if (t.thread_id) {
         embed.setURL(threadUrl(t.thread_id));
     }
@@ -311,6 +350,15 @@ function logMessage(t: Ticket) {
     }
     if (t.thread_id) {
         row.addComponents(new ButtonBuilder().setLabel('Open thread').setStyle(ButtonStyle.Link).setURL(threadUrl(t.thread_id)));
+    }
+    // A CLOSED BUG REPORT CAN STILL BE HANDED OVER. Staff close a thread when they are done talking
+    // to the player, which is not the same as the bug being fixed - so this is not limited to open
+    // tickets the way Claim is. Support tickets are not offered: a tracker issue is for a code
+    // change, and nobody's password reset is one.
+    if (t.issue_url) {
+        row.addComponents(new ButtonBuilder().setLabel(`Issue #${t.issue_number}`).setStyle(ButtonStyle.Link).setURL(t.issue_url));
+    } else if (t.kind === 'bug' && trackerReady()) {
+        row.addComponents(new ButtonBuilder().setCustomId(`tk|hand|${t.id}`).setLabel('Hand to Claude').setStyle(ButtonStyle.Secondary));
     }
     return {
         content: `${t.status === 'open' && !t.claimed_by && staffRole ? `<@&${staffRole}> ` : ''}New ${NOUN[t.kind]} ${number(t.id)}`,
@@ -363,7 +411,7 @@ async function openTicket(o: Opening): Promise<{ id: number; thread: ThreadChann
         throw new NotSetUp();
     }
 
-    const id = Number(db.prepare('INSERT INTO ticket (kind, source, opener_id, username, subject, created) VALUES (?, ?, ?, ?, ?, ?)').run(o.kind, o.source, o.openerId, o.username, o.subject, Date.now()).lastInsertRowid);
+    const id = Number(db.prepare('INSERT INTO ticket (kind, source, opener_id, username, subject, report, created) VALUES (?, ?, ?, ?, ?, ?, ?)').run(o.kind, o.source, o.openerId, o.username, o.subject, embedToText(o.embed), Date.now()).lastInsertRowid);
 
     let thread: ThreadChannel;
     try {
@@ -650,6 +698,46 @@ async function button(i: ButtonInteraction) {
         db.prepare('UPDATE ticket SET claimed_by = ? WHERE id = ?').run(i.user.id, t.id);
         await thread.send({ content: `<@${i.user.id}> from the staff is looking at this now.`, allowedMentions: { parse: [] } });
         await i.editReply(`Claimed: ${thread.url}`);
+        await updateLog(t.id);
+    } else if (action === 'hand') {
+        if (!isStaff(i)) {
+            await say(i, 'Only staff can hand a report over.');
+            return;
+        }
+        if (t.kind !== 'bug') {
+            await say(i, 'Only bug reports go to the tracker.');
+            return;
+        }
+        if (t.issue_url) {
+            await say(i, `${number(t.id)} is already filed: ${t.issue_url}`);
+            return;
+        }
+        if (!trackerReady()) {
+            await say(i, 'There is no bug tracker set up - BUGS_GITHUB_REPO and BUGS_GITHUB_TOKEN are not both in .env.');
+            return;
+        }
+        await i.deferReply({ flags: MessageFlags.Ephemeral });
+        let filed;
+        try {
+            filed = await fileBugIssue({
+                ticket: t.id,
+                source: t.source,
+                subject: t.subject,
+                // Tickets opened before this column existed have no stored report; the subject is
+                // the first 80 characters of it, which is enough to find the thread and read it.
+                report: t.report,
+                username: t.username ? toDisplayName(t.username) : null,
+                threadUrl: t.thread_id ? threadUrl(t.thread_id) : null,
+                handedBy: i.user.username
+            });
+        } catch (err) {
+            // NOT a thrown error: the staff member pressed a button and is owed an answer, and the
+            // ticket is untouched, so pressing it again is the whole retry.
+            await i.editReply(`Could not file it: ${(err as Error).message}`);
+            return;
+        }
+        db.prepare('UPDATE ticket SET issue_number = ?, issue_url = ?, handed_by = ? WHERE id = ?').run(filed.number, filed.url, i.user.id, t.id);
+        await i.editReply(`Filed as ${trackerRepo()}#${filed.number}: ${filed.url}`);
         await updateLog(t.id);
     } else if (action === 'close') {
         if (i.user.id !== t.opener_id && !isStaff(i)) {
