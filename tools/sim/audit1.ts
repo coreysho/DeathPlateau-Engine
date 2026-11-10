@@ -149,6 +149,10 @@ if (run('mourning')) {
     const p = player('mourn1', 2292, 3147);
     H.setVar(p, 'roving_elves_quest', 10);
     H.setVar(p, 'biohazard', 16); // Roving Elves -> Regicide -> Underground Pass -> Biohazard
+    // AND PLAGUE CITY, which the chain above already implies and this did not set. It is not
+    // decoration: Elena's door is [oploc1,elenadoor2] gated on ^elena_complete, and her door is
+    // the only thing that spawns the elena2_vis this section talks to twice.
+    H.setVar(p, 'elenaquest', 29); // ^elena_complete
     const start = qp(p);
     talk(p, 'roving_islwyn');
     check('Islwyn starts it', H.getVar(p, 'mourning_quest'), 1);
@@ -188,7 +192,13 @@ if (run('mourning')) {
     op(p, 2035, 4629, 'mourning_gnome_rack', 1);
     check('the gnome on the rack: stage 5', H.getVar(p, 'mourning_quest'), 5);
 
-    talk(p, 'elena2');
+    // HER DOOR IS THE STEP, see the note in quest_mourning_run.ts: elena2 is an unresolved
+    // multinpc with no op, and doors.rs2 npc_adds the elena2_vis a player actually talks to.
+    p.teleport(2592, 3341, 0);
+    H.tick(2);
+    op(p, 2592, 3339, 'elenadoor2', 1);
+    H.tick(12);
+    talk(p, 'elena2_vis');
     check('Elena gives the sieve: stage 6', [H.getVar(p, 'mourning_quest'), H.invCount(p, 'mourning_sieve')], [6, 1]);
     p.teleport(2474, 3362, 0);
     H.tick(2);
@@ -271,7 +281,12 @@ if (run('mourning')) {
         [H.getVarBit(p, 'mourning_sheep_red'), H.getVarBit(p, 'mourning_sheep_green'), H.getVarBit(p, 'mourning_sheep_blue'), H.getVarBit(p, 'mourning_sheep_yellow'), H.getVar(p, 'mourning_quest')],
         [1, 1, 1, 1, 12]
     );
-    talk(p, 'elena2');
+    // And again, because npc_add gives her 200 ticks and this is long past them.
+    p.teleport(2592, 3341, 0);
+    H.tick(2);
+    op(p, 2592, 3339, 'elenadoor2', 1);
+    H.tick(12);
+    talk(p, 'elena2_vis');
     check('Elena has seen them: stage 13', H.getVar(p, 'mourning_quest'), 13);
     H.give(p, 'mourning_teleport_crystal_4'); // (the sim emptied the pack before the HQ)
     held(p, 'mourning_teleport_crystal_4', 1);
