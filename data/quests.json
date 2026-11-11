@@ -1900,21 +1900,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 15,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Ectophial",
-       "id": 4251,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -2768,21 +2753,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 13,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Ava's accumulator",
-       "id": 10311,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -3176,21 +3146,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 15,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 1095,
-       "bring": true
-      }
-     ],
      "worn": []
     }
    ]
@@ -3594,21 +3549,6 @@
        "id": 769,
        "n": 1,
        "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 10,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 600,
-       "bring": true
       }
      ],
      "worn": []
@@ -4702,9 +4642,327 @@
     },
     {
      "from": 1,
-     "headings": [],
-     "marks": [],
-     "steps": [],
+     "headings": [
+      {
+       "at": 3,
+       "text": "Blurberry’s, the Gnome Stronghold."
+      },
+      {
+       "at": 5,
+       "text": "The Dead Man’s Chest, Brimhaven."
+      },
+      {
+       "at": 7,
+       "text": "The Dragon Inn, Yanille."
+      },
+      {
+       "at": 9,
+       "text": "The Flying Horse Inn, Ardougne."
+      },
+      {
+       "at": 11,
+       "text": "The Forester’s Arms, Seers’ Village."
+      },
+      {
+       "at": 13,
+       "text": "The Jolly Boar Inn, north-east of Varrock."
+      },
+      {
+       "at": 15,
+       "text": "The Karamja Spirits Bar."
+      },
+      {
+       "at": 17,
+       "text": "The Rising Sun, Falador."
+      },
+      {
+       "at": 19,
+       "text": "The Rusty Anchor, Port Sarim."
+      },
+      {
+       "at": 21,
+       "text": "Back to the guard, who lets you in from then on."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 77,
+       "varbit": false,
+       "is": 9
+      },
+      {
+       "at": 4,
+       "var": 77,
+       "varbit": false,
+       "is": 25
+      },
+      {
+       "at": 6,
+       "var": 77,
+       "varbit": false,
+       "is": 57
+      },
+      {
+       "at": 8,
+       "var": 77,
+       "varbit": false,
+       "is": 121
+      },
+      {
+       "at": 10,
+       "var": 77,
+       "varbit": false,
+       "is": 249
+      },
+      {
+       "at": 12,
+       "var": 77,
+       "varbit": false,
+       "is": 505
+      },
+      {
+       "at": 14,
+       "var": 77,
+       "varbit": false,
+       "is": 1017
+      },
+      {
+       "at": 16,
+       "var": 77,
+       "varbit": false,
+       "is": 2041
+      },
+      {
+       "at": 18,
+       "var": 77,
+       "varbit": false,
+       "is": 4089
+      },
+      {
+       "at": 20,
+       "var": 77,
+       "varbit": false,
+       "is": 8185
+      }
+     ],
+     "steps": [
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        3226,
+        3400,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "bluemoon_bartender",
+       "id": 733,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2481,
+        3490,
+        1
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Blurberry.",
+       "why": "Drink it and get signed.",
+       "target": "blurberry",
+       "id": 848,
+       "label": "Blurberry",
+       "picks": []
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2798,
+        3155,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "deadmans_bartender",
+       "id": 735,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2555,
+        3077,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "dragon_bartender",
+       "id": 739,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2575,
+        3321,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "flyinghorse_bartender",
+       "id": 738,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2691,
+        3494,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "foresters_bartender",
+       "id": 737,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        3277,
+        3488,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "jollyboar_bartender",
+       "id": 731,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2925,
+        3143,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Zambo.",
+       "why": "Drink it and get signed.",
+       "target": "zambo",
+       "id": 568,
+       "label": "Zambo",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        2955,
+        3374,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Emily.",
+       "why": "Drink it and get signed.",
+       "target": "risingsun_barmaid",
+       "id": 736,
+       "label": "Emily",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go to the bar.",
+       "kind": "walk",
+       "at": [
+        3049,
+        3258,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bartender.",
+       "why": "Drink it and get signed.",
+       "target": "rustyanchor_bartender",
+       "id": 734,
+       "label": "Bartender",
+       "picks": [
+        "barcrawl"
+       ]
+      },
+      {
+       "text": "Go back north to the outpost.",
+       "kind": "walk",
+       "at": [
+        2544,
+        3569,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Barbarian guard.",
+       "why": "Show him the card.",
+       "target": "barbguard1",
+       "id": 384,
+       "label": "Barbarian guard"
+      }
+     ],
      "items": [
       {
        "name": "Barcrawl card",
@@ -6033,21 +6291,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 4,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 2500,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -7410,21 +7653,6 @@
        "bring": true
       }
      ]
-    },
-    {
-     "from": 8,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 500,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -7726,35 +7954,6 @@
        "id": 1933,
        "n": 1,
        "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 2,
-     "headings": [],
-     "marks": [],
-     "steps": [
-      {
-       "kind": "loc",
-       "text": "Use Raw beef on Cooking range.",
-       "why": "Cook on his range.",
-       "target": "cooksquestrange",
-       "id": 114,
-       "label": "Cooking range",
-       "item": 2132,
-       "at": [
-        3212,
-        3215
-       ]
-      }
-     ],
-     "items": [
-      {
-       "name": "Raw beef",
-       "id": 2132,
-       "n": 1,
-       "bring": true
       }
      ],
      "worn": []
@@ -8450,10 +8649,11 @@
        "at": [
         3272,
         3185
-       ],
-       "gives": [
-        773
        ]
+      },
+      {
+       "kind": "note",
+       "text": "A ruby ring."
       },
       {
        "kind": "loc",
@@ -8466,10 +8666,11 @@
        "at": [
         3272,
         3185
-       ],
-       "gives": [
-        774
        ]
+      },
+      {
+       "kind": "note",
+       "text": "A ruby necklace."
       },
       {
        "text": "Go to Avan.",
@@ -8689,21 +8890,6 @@
       {
        "name": "Family crest",
        "id": 782,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 11,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Steel gauntlets",
-       "id": 778,
        "n": 1,
        "bring": false
       }
@@ -9888,21 +10074,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 9,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Holy wrench",
-       "id": 6714,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -10180,6 +10351,10 @@
        "picks": [
         "Would you like to gamble?"
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Roll the dice."
       }
      ],
      "items": [],
@@ -10652,21 +10827,6 @@
       {
        "name": "Secret way map",
        "id": 3104,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 80,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Steel claws",
-       "id": 3097,
        "n": 1,
        "bring": false
       }
@@ -12446,21 +12606,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 30,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Wrought iron key",
-       "id": 1843,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -12821,46 +12966,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 100,
-     "headings": [
-      {
-       "at": 0,
-       "text": "The anvils, which he refuses before the quest is done."
-      }
-     ],
-     "marks": [],
-     "steps": [
-      {
-       "kind": "loc",
-       "text": "Use Bronze bar on Anvil.",
-       "why": "His anvil, now that he allows it.",
-       "target": "doric_anvil",
-       "id": 2782,
-       "label": "Anvil",
-       "item": 2349,
-       "at": [
-        2950,
-        3451
-       ]
-      }
-     ],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 180,
-       "bring": false
-      },
-      {
-       "name": "Bronze bar",
-       "id": 2349,
-       "n": 1,
-       "bring": true
-      }
-     ],
      "worn": []
     }
    ]
@@ -14836,21 +14941,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 70,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Dreamy lamp",
-       "id": 10438,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -16292,21 +16382,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 80,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Law rune",
-       "id": 563,
-       "n": 8,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -17789,47 +17864,6 @@
        "label": "Azzanadra",
        "also": [
         1971
-       ]
-      }
-     ],
-     "items": [],
-     "worn": []
-    },
-    {
-     "from": 15,
-     "headings": [
-      {
-       "at": 1,
-       "text": "The portal only exists at all once the quest is done - dia_down is a multiloc on deserttreasure with multiloc=15 only clicked as dia_down, not dt_portal: dia_down is what m50_145 places and dt_portal is only what its multivar resolves to at stage 15, so a lookup by the child name finds nothing."
-      }
-     ],
-     "marks": [
-      {
-       "at": 0,
-       "var": 747,
-       "varbit": false,
-       "is": 1
-      }
-     ],
-     "steps": [
-      {
-       "text": "Go to the portal.",
-       "kind": "walk",
-       "at": [
-        3233,
-        9311,
-        0
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Use Dia Down.",
-       "why": "Out of the temple.",
-       "target": "dia_down",
-       "id": 6550,
-       "at": [
-        3233,
-        9312
        ]
       }
      ],
@@ -22406,21 +22440,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 70,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Camulet",
-       "id": 6707,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -23248,21 +23267,6 @@
        "name": "Oil can",
        "id": 277,
        "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 3,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 300,
        "bring": false
       }
      ],
@@ -24619,23 +24623,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 8,
-     "headings": [],
-     "marks": [],
-     "steps": [
-      {
-       "kind": "talk",
-       "text": "Talk to Lord Rologarth.",
-       "why": "He has his hall back.",
-       "target": "fenk_creature_released",
-       "id": 1672,
-       "label": "Lord Rologarth"
-      }
-     ],
-     "items": [],
-     "worn": []
     }
    ]
   },
@@ -25300,6 +25287,7 @@
        "label": "Villager",
        "op": 4,
        "also": [
+        1887,
         1891
        ]
       },
@@ -25310,7 +25298,11 @@
        "target": "feud_villager_multi_3",
        "id": 1895,
        "label": "Villager",
-       "op": 5
+       "op": 5,
+       "also": [
+        1887,
+        1891
+       ]
       },
       {
        "kind": "walk",
@@ -26033,21 +26025,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 62,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Oak-blackjack",
-       "id": 4599,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -26839,21 +26816,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 7,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 10000,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -27544,27 +27506,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 6,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Chocolate cake",
-       "id": 1897,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Stew",
-       "id": 2003,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -28021,21 +27962,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 70,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Dwarven stout(m)",
-       "id": 5747,
-       "n": 2,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -29646,21 +29572,6 @@
        "id": 288,
        "n": 1,
        "bring": true
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 6,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Gold bar",
-       "id": 2357,
-       "n": 1,
-       "bring": false
       }
      ],
      "worn": []
@@ -32434,32 +32345,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 80,
-     "headings": [],
-     "marks": [],
-     "steps": [
-      {
-       "text": "Tell Bert.",
-       "kind": "walk",
-       "at": [
-        2550,
-        3101,
-        0
-       ]
-      },
-      {
-       "kind": "talk",
-       "text": "Talk to Bert.",
-       "why": "He remembers them all now.",
-       "target": "handsand_bert",
-       "id": 3108,
-       "label": "Bert"
-      }
-     ],
-     "items": [],
-     "worn": []
     }
    ]
   },
@@ -33029,40 +32914,6 @@
       {
        "name": "Salve shard",
        "id": 4082,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 6,
-     "headings": [],
-     "marks": [],
-     "steps": [
-      {
-       "kind": "obj",
-       "text": "Use Ball of wool on Salve shard.",
-       "why": "String the shard.",
-       "target": "crystalshard_necklace_unstrung",
-       "id": 4082,
-       "label": "Salve shard",
-       "item": 1759,
-       "gives": [
-        4081
-       ]
-      }
-     ],
-     "items": [
-      {
-       "name": "Ball of wool",
-       "id": 1759,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Salve amulet",
-       "id": 4081,
        "n": 1,
        "bring": false
       }
@@ -33690,21 +33541,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 9,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 2000,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -34056,21 +33892,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 9,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 2005,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -34581,21 +34402,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 11,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Miscellaneous key",
-       "id": 1586,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -38042,21 +37848,6 @@
        "bring": true
       }
      ]
-    },
-    {
-     "from": 5,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Antique lamp",
-       "id": 7498,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -38560,27 +38351,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 4,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Emerald",
-       "id": 1605,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Gold ring",
-       "id": 1635,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -39120,21 +38890,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 26,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Catspeak amulet",
-       "id": 4677,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -40198,21 +39953,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 2,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Amulet of accuracy",
-       "id": 1478,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -41955,21 +41695,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 9,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Gold bar",
-       "id": 2357,
-       "n": 2,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -45074,6 +44799,10 @@
         3318,
         9615
        ]
+      },
+      {
+       "kind": "note",
+       "text": "The Goblin Bow, in front of Mistag."
       }
      ],
      "items": [],
@@ -45372,21 +45101,6 @@
       {
        "name": "Peace treaty",
        "id": 5012,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 11,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Ring of life",
-       "id": 2570,
        "n": 1,
        "bring": false
       }
@@ -47388,28 +47102,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 150,
-     "headings": [],
-     "marks": [
-      {
-       "at": 0,
-       "var": 1235,
-       "varbit": false,
-       "is": 1
-      }
-     ],
-     "steps": [],
-     "items": [
-      {
-       "name": "Astral rune",
-       "id": 8606,
-       "n": 50,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -47847,78 +47539,6 @@
       {
        "name": "Letter",
        "id": 6757,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 4,
-     "headings": [],
-     "marks": [
-      {
-       "at": 4,
-       "var": 1390,
-       "varbit": true,
-       "is": 1
-      }
-     ],
-     "steps": [
-      {
-       "kind": "talk",
-       "text": "Talk to Jorral.",
-       "why": "He points the key at the graves.",
-       "target": "makinghistory_jorral",
-       "id": 2932,
-       "label": "Jorral",
-       "gives": [
-        6754
-       ]
-      },
-      {
-       "text": "Go down into the woods below the outpost.",
-       "kind": "walk",
-       "at": [
-        2435,
-        3337,
-        0
-       ]
-      },
-      {
-       "kind": "obj",
-       "text": "Feel Enchanted key.",
-       "target": "makinghistory_key",
-       "id": 6754,
-       "label": "Enchanted key"
-      },
-      {
-       "kind": "obj",
-       "text": "Dig Spade.",
-       "target": "spade",
-       "id": 952,
-       "label": "Spade",
-       "gives": [
-        6760
-       ]
-      }
-     ],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 750,
-       "bring": false
-      },
-      {
-       "name": "Enchanted key",
-       "id": 6754,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Guthix mjolnir",
-       "id": 6760,
        "n": 1,
        "bring": false
       }
@@ -50026,21 +49646,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 90,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Bearhead",
-       "id": 4502,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -50770,11 +50375,11 @@
        "text": "Courting Prince Brand."
       },
       {
-       "at": 22,
+       "at": 24,
        "text": "The people."
       },
       {
-       "at": 40,
+       "at": 42,
        "text": "Vargas makes you regent."
       }
      ],
@@ -50786,37 +50391,37 @@
        "is": 1
       },
       {
-       "at": 12,
+       "at": 13,
        "var": 2340,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 18,
+       "at": 19,
        "var": 2340,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 18,
+       "at": 19,
        "var": 91,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 18,
+       "at": 19,
        "var": 92,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 18,
+       "at": 19,
        "var": 93,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 22,
+       "at": 24,
        "var": 75,
        "varbit": true,
        "is": 1
@@ -50886,6 +50491,10 @@
         2502,
         3851
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Applaud him in his own room."
       },
       {
        "kind": "talk",
@@ -51034,6 +50643,10 @@
         2502,
         3851
        ]
+      },
+      {
+       "kind": "note",
+       "text": "And a blown kiss."
       },
       {
        "kind": "talk",
@@ -53813,21 +53426,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 50,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Crystal trinket",
-       "id": 6653,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -55031,21 +54629,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 20,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "New key",
-       "id": 6104,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -55524,21 +55107,6 @@
        "name": "Killer's print",
        "id": 1815,
        "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 2,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 2000,
        "bring": false
       }
      ],
@@ -56622,6 +56190,10 @@
         3527,
         3209
        ]
+      },
+      {
+       "kind": "note",
+       "text": "The rod."
       }
      ],
      "items": [
@@ -56735,21 +56307,6 @@
        "label": "Veliaf Hurtz"
       }
      ],
-     "items": [
-      {
-       "name": "Rod of ivandis(10)",
-       "id": 7639,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 110,
-     "headings": [],
-     "marks": [],
-     "steps": [],
      "items": [
       {
        "name": "Rod of ivandis(10)",
@@ -57241,62 +56798,6 @@
       {
        "name": "Uncut sapphire",
        "id": 1623,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 8,
-     "headings": [],
-     "marks": [],
-     "steps": [
-      {
-       "text": "Go to the grave.",
-       "kind": "walk",
-       "at": [
-        2461,
-        3226,
-        0
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Read Grave of Scorpius.",
-       "target": "scorpiusgrave",
-       "id": 2211,
-       "label": "Grave of Scorpius",
-       "at": [
-        2462,
-        3227
-       ]
-      },
-      {
-       "kind": "talk",
-       "text": "Talk to Spirit of Scorpius.",
-       "why": "Ask his counsel.",
-       "target": "spirit_of_scorpius",
-       "id": 492,
-       "label": "Spirit of Scorpius",
-       "picks": [
-        "I seek your wisdom."
-       ],
-       "gives": [
-        1594
-       ]
-      }
-     ],
-     "items": [
-      {
-       "name": "Jug of wine",
-       "id": 1993,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Unholy mould",
-       "id": 1594,
        "n": 1,
        "bring": false
       }
@@ -58880,21 +58381,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 29,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "A magic scroll",
-       "id": 1505,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -59163,6 +58649,10 @@
       {
        "at": 4,
        "text": "The golden key swaps for the iron one in whichever monument holds it."
+      },
+      {
+       "at": 12,
+       "text": "The iron key opens the cell."
       }
      ],
      "marks": [],
@@ -59203,6 +58693,122 @@
         9890,
         0
        ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base1",
+       "id": 3493,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3416,
+        9890
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base2",
+       "id": 3494,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3423,
+        9895
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base3",
+       "id": 3495,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3428,
+        9890
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base4",
+       "id": 3496,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3423,
+        9884
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base5",
+       "id": 3497,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3427,
+        9894
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base6",
+       "id": 3498,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3427,
+        9885
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Golden key on Monument.",
+       "why": "Try the golden key.",
+       "target": "priestperil_grave_base7",
+       "id": 3499,
+       "label": "Monument",
+       "item": 2944,
+       "at": [
+        3418,
+        9894
+       ],
+       "gives": [
+        2945
+       ]
+      },
+      {
+       "text": "Go back up to the cell.",
+       "kind": "walk",
+       "at": [
+        3416,
+        3488,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Iron key on Cell door.",
+       "why": "Unlock it.",
+       "target": "pip_prisondoor",
+       "id": 3463,
+       "label": "Cell door",
+       "item": 2945,
+       "at": [
+        3415,
+        3489
+       ]
       }
      ],
      "items": [
@@ -59211,6 +58817,240 @@
        "id": 2944,
        "n": 1,
        "bring": false
+      },
+      {
+       "name": "Iron key",
+       "id": 2945,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 6,
+     "headings": [
+      {
+       "at": 1,
+       "text": "A bucket of water from the well below, blessed by Drezel, poured over the vampire’s coffin."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go down to the well.",
+       "kind": "walk",
+       "at": [
+        3423,
+        9891,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bucket on Well.",
+       "why": "Fill it.",
+       "target": "priestperil_well",
+       "id": 3485,
+       "label": "Well",
+       "item": 1925,
+       "at": [
+        3423,
+        9890
+       ],
+       "gives": [
+        2953
+       ]
+      },
+      {
+       "text": "Go back up to Drezel.",
+       "kind": "walk",
+       "at": [
+        3416,
+        3487,
+        2
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Use Bucket of water on Drezel.",
+       "why": "He blesses it.",
+       "target": "priestperiltrappedmonk",
+       "id": 1048,
+       "label": "Drezel",
+       "item": 2953,
+       "gives": [
+        2954
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Cell door.",
+       "why": "Out of the cell block.",
+       "target": "pip_prisondoor",
+       "id": 3463,
+       "label": "Cell door",
+       "at": [
+        3415,
+        3489
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Cell door.",
+       "why": "Through - the shared door proc takes two clicks.",
+       "target": "pip_prisondoor",
+       "id": 3463,
+       "label": "Cell door",
+       "at": [
+        3415,
+        3489
+       ]
+      },
+      {
+       "text": "Go out past the gate, which shuts itself behind you.",
+       "kind": "walk",
+       "at": [
+        3414,
+        3487,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bucket of water on Coffin.",
+       "why": "Douse it.",
+       "target": "priestperil_coffin_noanim",
+       "id": 3480,
+       "label": "Coffin",
+       "item": 2954,
+       "at": [
+        3413,
+        3486
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Bucket of water",
+       "id": 2953,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Bucket of water",
+       "id": 2954,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 7,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Tell Drezel he is free, and he goes down to the monuments."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back through the gate to him.",
+       "kind": "walk",
+       "at": [
+        3416,
+        3489,
+        2
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Drezel.",
+       "why": "He leaves the cell.",
+       "target": "priestperiltrappedmonk",
+       "id": 1048,
+       "label": "Drezel"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 8,
+     "headings": [
+      {
+       "at": 1,
+       "text": "The repair - fifty rune essences for the blessing of the Salve."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go down and east to the monument.",
+       "kind": "walk",
+       "at": [
+        3439,
+        9894,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Drezel.",
+       "why": "He explains the damage and asks for essences.",
+       "target": "priestperiltrappedmonk2",
+       "id": 1049,
+       "label": "Drezel"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 10,
+     "headings": [],
+     "marks": [
+      {
+       "at": 1,
+       "var": 302,
+       "varbit": false,
+       "is": 35
+      }
+     ],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Use Rune essence on Drezel.",
+       "why": "The first load of twenty-five.",
+       "target": "priestperiltrappedmonk2",
+       "id": 1049,
+       "label": "Drezel",
+       "item": 1436
+      },
+      {
+       "kind": "talk",
+       "text": "Use Rune essence on Drezel.",
+       "why": "The second.",
+       "target": "priestperiltrappedmonk2",
+       "id": 1049,
+       "label": "Drezel",
+       "item": 1436
+      }
+     ],
+     "items": [
+      {
+       "name": "Rune essence",
+       "id": 1436,
+       "n": 25,
+       "bring": true
+      },
+      {
+       "name": "Rune essence",
+       "id": 1436,
+       "n": 25,
+       "bring": true
       }
      ],
      "worn": []
@@ -59754,21 +59594,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 110,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 700,
-       "bring": true
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -59848,6 +59673,429 @@
        "id": 1333,
        "n": 1,
        "bring": true
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 16,
+       "text": "Back to the bone pile, and a fire to boil them over."
+      },
+      {
+       "at": 32,
+       "text": "All five, polished, back to the old man."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go to the goblins.",
+       "kind": "walk",
+       "at": [
+        2460,
+        3182,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Goblin.",
+       "why": "One in four of them leaves a bone.",
+       "target": "goblin",
+       "id": 100,
+       "label": "Goblin"
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Goblin skull.",
+       "why": "Off the floor.",
+       "target": "rag_goblin_bone",
+       "id": 7812,
+       "label": "Goblin skull",
+       "gives": [
+        7812
+       ]
+      },
+      {
+       "text": "Go to the brownbears.",
+       "kind": "walk",
+       "at": [
+        2693,
+        3340,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Bear.",
+       "why": "One in four of them leaves a bone.",
+       "target": "brownbear",
+       "id": 105,
+       "label": "Bear"
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Bear ribs.",
+       "why": "Off the floor.",
+       "target": "rag_bear_bone",
+       "id": 7815,
+       "label": "Bear ribs",
+       "gives": [
+        7815
+       ]
+      },
+      {
+       "text": "Go to the ramunsheereds.",
+       "kind": "walk",
+       "at": [
+        3195,
+        3272,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Ram.",
+       "why": "One in four of them leaves a bone.",
+       "target": "ramunsheered",
+       "id": 3673,
+       "label": "Ram"
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Ram skull.",
+       "why": "Off the floor.",
+       "target": "rag_ram_bone",
+       "id": 7818,
+       "label": "Ram skull",
+       "gives": [
+        7818
+       ]
+      },
+      {
+       "text": "Go to the unicorns.",
+       "kind": "walk",
+       "at": [
+        3280,
+        3355,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Unicorn.",
+       "why": "One in four of them leaves a bone.",
+       "target": "unicorn",
+       "id": 89,
+       "label": "Unicorn"
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Unicorn bone.",
+       "why": "Off the floor.",
+       "target": "rag_unicorn_bone",
+       "id": 7821,
+       "label": "Unicorn bone",
+       "gives": [
+        7821
+       ]
+      },
+      {
+       "text": "Go to the giantrats.",
+       "kind": "walk",
+       "at": [
+        2971,
+        3693,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Giant rat.",
+       "why": "One in four of them leaves a bone.",
+       "target": "giantrat",
+       "id": 86,
+       "label": "Giant rat"
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Giant rat bone.",
+       "why": "Off the floor.",
+       "target": "rag_giant_rat_bone",
+       "id": 7824,
+       "label": "Giant rat bone",
+       "gives": [
+        7824
+       ]
+      },
+      {
+       "text": "Go back to the Odd Old Man.",
+       "kind": "walk",
+       "at": [
+        3360,
+        3507,
+        0
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Tinderbox on Logs.",
+       "why": "Light a fire.",
+       "target": "logs",
+       "id": 1511,
+       "label": "Logs",
+       "item": 590
+      },
+      {
+       "kind": "obj",
+       "text": "Use Jug of vinegar on Pot.",
+       "why": "A pot of vinegar.",
+       "target": "pot_empty",
+       "id": 1931,
+       "label": "Pot",
+       "item": 7810
+      },
+      {
+       "kind": "obj",
+       "text": "Use Goblin skull on Pot of vinegar.",
+       "why": "Steep the rag_goblin_bone.",
+       "target": "rag_pot_vinegar",
+       "id": 7811,
+       "label": "Pot of vinegar",
+       "item": 7812
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bone in vinegar on Fire.",
+       "why": "Boil it.",
+       "target": "fire",
+       "id": 2732,
+       "label": "Fire",
+       "item": 7813,
+       "at": [
+        3360,
+        3507
+       ],
+       "gives": [
+        7814
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Jug of vinegar on Pot.",
+       "why": "A pot of vinegar.",
+       "target": "pot_empty",
+       "id": 1931,
+       "label": "Pot",
+       "item": 7810
+      },
+      {
+       "kind": "obj",
+       "text": "Use Bear ribs on Pot of vinegar.",
+       "why": "Steep the rag_bear_bone.",
+       "target": "rag_pot_vinegar",
+       "id": 7811,
+       "label": "Pot of vinegar",
+       "item": 7815
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bone in vinegar on Fire.",
+       "why": "Boil it.",
+       "target": "fire",
+       "id": 2732,
+       "label": "Fire",
+       "item": 7816,
+       "at": [
+        3360,
+        3507
+       ],
+       "gives": [
+        7817
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Jug of vinegar on Pot.",
+       "why": "A pot of vinegar.",
+       "target": "pot_empty",
+       "id": 1931,
+       "label": "Pot",
+       "item": 7810
+      },
+      {
+       "kind": "obj",
+       "text": "Use Ram skull on Pot of vinegar.",
+       "why": "Steep the rag_ram_bone.",
+       "target": "rag_pot_vinegar",
+       "id": 7811,
+       "label": "Pot of vinegar",
+       "item": 7818
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bone in vinegar on Fire.",
+       "why": "Boil it.",
+       "target": "fire",
+       "id": 2732,
+       "label": "Fire",
+       "item": 7819,
+       "at": [
+        3360,
+        3507
+       ],
+       "gives": [
+        7820
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Jug of vinegar on Pot.",
+       "why": "A pot of vinegar.",
+       "target": "pot_empty",
+       "id": 1931,
+       "label": "Pot",
+       "item": 7810
+      },
+      {
+       "kind": "obj",
+       "text": "Use Unicorn bone on Pot of vinegar.",
+       "why": "Steep the rag_unicorn_bone.",
+       "target": "rag_pot_vinegar",
+       "id": 7811,
+       "label": "Pot of vinegar",
+       "item": 7821
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bone in vinegar on Fire.",
+       "why": "Boil it.",
+       "target": "fire",
+       "id": 2732,
+       "label": "Fire",
+       "item": 7822,
+       "at": [
+        3360,
+        3507
+       ],
+       "gives": [
+        7823
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Jug of vinegar on Pot.",
+       "why": "A pot of vinegar.",
+       "target": "pot_empty",
+       "id": 1931,
+       "label": "Pot",
+       "item": 7810
+      },
+      {
+       "kind": "obj",
+       "text": "Use Giant rat bone on Pot of vinegar.",
+       "why": "Steep the rag_giant_rat_bone.",
+       "target": "rag_pot_vinegar",
+       "id": 7811,
+       "label": "Pot of vinegar",
+       "item": 7824
+      },
+      {
+       "kind": "loc",
+       "text": "Use Bone in vinegar on Fire.",
+       "why": "Boil it.",
+       "target": "fire",
+       "id": 2732,
+       "label": "Fire",
+       "item": 7825,
+       "at": [
+        3360,
+        3507
+       ],
+       "gives": [
+        7826
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go round to him.",
+       "at": [
+        3359,
+        3506
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Odd Old Man.",
+       "why": "Hand them over.",
+       "target": "rag_odd_old_man",
+       "id": 3670,
+       "label": "Odd Old Man"
+      }
+     ],
+     "items": [
+      {
+       "name": "Goblin skull",
+       "id": 7812,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Bear ribs",
+       "id": 7815,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Ram skull",
+       "id": 7818,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Unicorn bone",
+       "id": 7821,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Giant rat bone",
+       "id": 7824,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Goblin skull",
+       "id": 7814,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Bear ribs",
+       "id": 7817,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Ram skull",
+       "id": 7820,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Unicorn bone",
+       "id": 7823,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Giant rat bone",
+       "id": 7826,
+       "n": 1,
+       "bring": false
       }
      ],
      "worn": []
@@ -61619,21 +61867,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 2,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 3000,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -61979,15 +62212,15 @@
        "text": "The Chemist in Rimmington, and his fractionalising still."
       },
       {
-       "at": 19,
+       "at": 24,
        "text": "Both dusts into the naphtha, then the cloth for a fuse."
       },
       {
-       "at": 23,
+       "at": 28,
        "text": "Of the assassination: the guard on the catapult has had no rations since morning."
       },
       {
-       "at": 25,
+       "at": 30,
        "text": "The barrel into the sling, and a tinderbox to the fuse."
       }
      ],
@@ -62203,10 +62436,27 @@
        "at": [
         2927,
         3212
-       ],
-       "gives": [
-        3221
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Tar valve fully open."
+      },
+      {
+       "kind": "note",
+       "text": "Release valve to the middle, which holds it there."
+      },
+      {
+       "kind": "note",
+       "text": "Coal on the burner."
+      },
+      {
+       "kind": "note",
+       "text": "More coal."
+      },
+      {
+       "kind": "note",
+       "text": "And more coal."
       },
       {
        "kind": "obj",
@@ -62478,21 +62728,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 15,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 15000,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -64047,21 +64282,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 10,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "New crystal bow",
-       "id": 4212,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -64484,21 +64704,6 @@
       {
        "name": "Notes",
        "id": 291,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 6,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Air talisman",
-       "id": 1438,
        "n": 1,
        "bring": false
       }
@@ -65550,21 +65755,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 12,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Oyster pearls",
-       "id": 413,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -65731,21 +65921,6 @@
        "id": 1759,
        "n": 20,
        "bring": true
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 22,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 60,
-       "bring": false
       }
      ],
      "worn": []
@@ -66399,21 +66574,6 @@
        "bring": false
       }
      ]
-    },
-    {
-     "from": 3,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 3100,
-       "bring": true
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -67715,21 +67875,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 7,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 500,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -69156,21 +69301,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 200,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 25000,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -70274,27 +70404,6 @@
       }
      ],
      "worn": []
-    },
-    {
-     "from": 130,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Blessed lamp",
-       "id": 11504,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Prayer book",
-       "id": 11503,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -70493,6 +70602,18 @@
       {
        "at": 1,
        "text": "The hall the crate is in is sealed off; the way west is the door on its west side, then the small hall, then the combination door."
+      },
+      {
+       "at": 12,
+       "text": "The stairs are trapped, and the op walks you to their north end before anything happens."
+      },
+      {
+       "at": 14,
+       "text": "Upstairs is a ring of rooms off one corridor - two more doors between the stairs and the museum room with the chest in it."
+      },
+      {
+       "at": 22,
+       "text": "All the way back to Brimhaven."
       }
      ],
      "marks": [],
@@ -70543,9 +70664,171 @@
         2634,
         3323
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Dial it round."
+      },
+      {
+       "kind": "note",
+       "text": "Dial it round."
+      },
+      {
+       "kind": "note",
+       "text": "Dial it round."
+      },
+      {
+       "kind": "note",
+       "text": "Dial it round."
+      },
+      {
+       "kind": "note",
+       "text": "Enter KURT."
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Through it.",
+       "target": "combodoor",
+       "id": 2705,
+       "label": "Door",
+       "at": [
+        2634,
+        3323
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go into the back of the house.",
+       "at": [
+        2632,
+        3323
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Investigate Stairs.",
+       "why": "Search for the trap.",
+       "target": "totemtrapstairs",
+       "id": 2711,
+       "label": "Stairs",
+       "at": [
+        2631,
+        3322
+       ],
+       "op": 2
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-up Stairs.",
+       "why": "Climb them safely.",
+       "target": "totemtrapstairs",
+       "id": 2711,
+       "label": "Stairs",
+       "at": [
+        2631,
+        3322
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the corridor door.",
+       "at": [
+        2632,
+        3320
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "target": "loc_1533",
+       "id": 1533,
+       "label": "Door",
+       "at": [
+        2632,
+        3319
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go east along the corridor.",
+       "at": [
+        2638,
+        3319
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "The museum door.",
+       "target": "loc_1533",
+       "id": 1533,
+       "label": "Door",
+       "at": [
+        2638,
+        3319
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go in to the chest.",
+       "at": [
+        2638,
+        3322
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Chest.",
+       "target": "totemshutchest",
+       "id": 2709,
+       "label": "Chest",
+       "at": [
+        2638,
+        3324
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Search Chest.",
+       "why": "Take the totem.",
+       "target": "totemopenchest",
+       "id": 2710,
+       "label": "Chest",
+       "at": [
+        2638,
+        3324
+       ],
+       "gives": [
+        1857
+       ]
+      },
+      {
+       "text": "Go out of the mansion and back by boat.",
+       "kind": "walk",
+       "at": [
+        2791,
+        3181,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Kangai Mau.",
+       "why": "Hand it over.",
+       "target": "kangai_mau",
+       "id": 846,
+       "label": "Kangai Mau"
       }
      ],
-     "items": [],
+     "items": [
+      {
+       "name": "Totem",
+       "id": 1857,
+       "n": 1,
+       "bring": false
+      }
+     ],
      "worn": []
     }
    ]
@@ -71065,21 +71348,6 @@
       {
        "name": "Orbs of protection",
        "id": 588,
-       "n": 1,
-       "bring": false
-      }
-     ],
-     "worn": []
-    },
-    {
-     "from": 9,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Gnome amulet",
-       "id": 589,
        "n": 1,
        "bring": false
       }
@@ -71764,33 +72032,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 45,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Uncut diamond",
-       "id": 1617,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Uncut ruby",
-       "id": 1619,
-       "n": 2,
-       "bring": false
-      },
-      {
-       "name": "Uncut emerald",
-       "id": 1621,
-       "n": 4,
-       "bring": false
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -72148,21 +72389,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 50,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Law talisman",
-       "id": 1458,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -72741,21 +72967,6 @@
       }
      ],
      "items": [],
-     "worn": []
-    },
-    {
-     "from": 80,
-     "headings": [],
-     "marks": [],
-     "steps": [],
-     "items": [
-      {
-       "name": "Present",
-       "id": 6542,
-       "n": 1,
-       "bring": false
-      }
-     ],
      "worn": []
     }
    ]
@@ -78386,43 +78597,6 @@
      ],
      "items": [],
      "worn": []
-    },
-    {
-     "from": 13,
-     "headings": [],
-     "marks": [
-      {
-       "at": 1,
-       "var": 212,
-       "varbit": false,
-       "is": 14
-      }
-     ],
-     "steps": [
-      {
-       "kind": "obj",
-       "text": "Read Spell scroll.",
-       "target": "watchtowerspell",
-       "id": 2396,
-       "label": "Spell scroll",
-       "op": 1
-      }
-     ],
-     "items": [
-      {
-       "name": "Spell scroll",
-       "id": 2396,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 5080,
-       "bring": true
-      }
-     ],
-     "worn": []
     }
    ]
   },
@@ -78875,10 +79049,271 @@
       {
        "at": 0,
        "text": "Six pillars, three runes each - air, earth and water on every one of them, eighteen placements in all."
+      },
+      {
+       "at": 19,
+       "text": "The amulet on the statue, which raises the room placing it raises the whole room and moves the player 38 tiles east into the raised copy of it, so again the step cannot check where the player is afterwards."
       }
      ],
      "marks": [],
-     "steps": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2562,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2562,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2562,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2562,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2562,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2562,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2562,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2562,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2562,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2562,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2562,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2562,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2562,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2562,
+        9914
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2562,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2562,
+        9914
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2562,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2562,
+        9914
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2569,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2569,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2569,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2569,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2569,9910.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2569,
+        9910
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2569,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2569,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2569,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2569,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2569,9912.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2569,
+        9912
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Air rune on Pillar.",
+       "why": "Air on 2569,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 556,
+       "at": [
+        2569,
+        9914
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Earth rune on Pillar.",
+       "why": "Earth on 2569,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 557,
+       "at": [
+        2569,
+        9914
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Water rune on Pillar.",
+       "why": "Water on 2569,9914.",
+       "target": "stonepillar_small_waterfall_quest",
+       "id": 2004,
+       "label": "Pillar",
+       "item": 555,
+       "at": [
+        2569,
+        9914
+       ]
+      },
+      {
+       "text": "Go round to the statue.",
+       "kind": "walk",
+       "at": [
+        2565,
+        9915,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Glarial's amulet on Statue of Glarial.",
+       "why": "The amulet.",
+       "target": "statue_queen_waterfall_quest",
+       "id": 2006,
+       "label": "Statue of Glarial",
+       "item": 295,
+       "at": [
+        2565,
+        9916
+       ]
+      }
+     ],
      "items": [
       {
        "name": "Air rune",
@@ -78899,6 +79334,42 @@
        "bring": true
       }
      ],
+     "worn": []
+    },
+    {
+     "from": 8,
+     "headings": [
+      {
+       "at": 1,
+       "text": "The ashes into the chalice, which is the treasure."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go to the chalice in the raised room.",
+       "kind": "walk",
+       "at": [
+        2603,
+        9911,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Glarial's urn on Chalice of Eternity.",
+       "why": "Pour the ashes.",
+       "target": "baxtorian_chalice_waterfall_quest",
+       "id": 2014,
+       "label": "Chalice of Eternity",
+       "item": 296,
+       "at": [
+        2603,
+        9910
+       ]
+      }
+     ],
+     "items": [],
      "worn": []
     }
    ]
@@ -79688,8 +80159,12 @@
        ]
       },
       {
-       "kind": "note",
-       "text": "Drug the tea.",
+       "kind": "obj",
+       "text": "Cup of tea.",
+       "why": "Drug the tea.",
+       "target": "zogre_cup_of_tea_sithix",
+       "id": 4838,
+       "label": "Cup of tea",
        "item": 4836,
        "at": [
         2592,

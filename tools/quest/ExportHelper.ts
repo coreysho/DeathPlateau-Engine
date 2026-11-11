@@ -305,7 +305,15 @@ function manifestOf(file: string): Record<string, unknown> | null {
         ts.forEachChild(n, findSpread);
     };
     findSpread(decl);
-    if (spread) {
+    // AND STEPS APPENDED AFTER THE LITERAL, which is the other way a manifest is generated and
+    // was the one nothing looked for. Five runs build their middle with `m.steps.push(...)` after
+    // the declaration - the ten bars of the barcrawl, the whole of Rag and Bone Man - and reading
+    // only the literal took the first step of each quest and silently dropped the rest. 119 steps
+    // across five quests, every one of them a thing a player has to click. A spread inside the
+    // literal was the only shape this knew about because it was the only shape the first five
+    // quests used.
+    const appends = /\bsteps\s*\.\s*push\s*\(/.test(src.getFullText());
+    if (spread || appends) {
         // A generated leg cannot be read from the syntax, so the file is RUN instead, against a
         // stubbed harness - see EvalManifest. Reading first and running only when reading fails
         // keeps 83 of the quests on the cheap path: the AST costs milliseconds and a process each
@@ -339,7 +347,11 @@ const LOC_KINDS = new Set(['loc', 'useLoc', 'castLoc']);
 // landing in none of these sets, so 181 of them came out as a note with the sim's aside for its
 // text ("The shirt.") and no item on them at all - which is exactly the step a helper should be
 // pointing at, twice over: the thing in your hand and the thing you click.
-const OBJ_KINDS = new Set(['held', 'take', 'use']);
+// `useObj` is an item used on one lying on the ground - the drugged tea in Zogre Flesh Eaters is
+// the only one in the corpus - and it was in none of these sets, so it came out as a note with
+// the sim's aside for its text and nothing to say which items it was about. The comment at the
+// top of this file claimed it was kept; it was not.
+const OBJ_KINDS = new Set(['held', 'take', 'use', 'useObj']);
 /** Tiles, not names: the instruction is "be here", and `at` already carries where. */
 const WALK_KINDS = new Set(['go', 'mapexit', 'sneak']);
 /** The sim asserting the game agrees with it. Not instructions. */
@@ -348,7 +360,14 @@ const ASSERT_KINDS = new Set(['varis', 'count', 'zone', 'nearnpc', 'hasnt']);
 // `wakehunt` is in here for a reason worth stating: it is the sim running an npc's hunt by hand
 // because no real client is watching it. In a game with a player in it the hunt runs itself, so
 // there is nothing for the player to do and the row read "Chompy bird."
-const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'press', 'say', 'sv', 'varbit', 'seed', 'wakehunt']);
+// `press` was in here and should never have been: it is a BUTTON A PLAYER CLICKS. The Goblin Bow
+// emote in front of Mistag, the combination dial on the Tribal Totem door, the valves on
+// Regicide's still, the ruby ring in Family Crest's crafting window - twelve steps across seven
+// quests, every one of them required, and dropping them left The Lost Tribe with a leg that had
+// nothing to do in it at all. It carries no target a plugin can highlight, because an interface
+// button is not a thing in the world, so it comes out as its own prose - which is the difference
+// between telling a player to bow and telling them nothing.
+const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'say', 'sv', 'varbit', 'seed', 'wakehunt']);
 
 /**
  * A note's wording, tidied for a player.
@@ -1027,6 +1046,7 @@ for (const file of fs
         continue;
     }
     const { stages, dropped } = stepsOf(m.steps);
+    const done = Number(m.done ?? 0);
     for (const [k, v] of Object.entries(dropped)) allDropped[k] = (allDropped[k] ?? 0) + v;
     // A quest tracks progress in either a varp or a varbit, and the client reads the two
     // differently (getVarp by id; getVarbit decodes a range out of its parent varp), so which it
@@ -1051,9 +1071,16 @@ for (const file of fs
         name: String(m.quest ?? file),
         source: String(m.source ?? ''),
         stageVar: m.stageVar,
-        done: Number(m.done ?? 0),
+        done,
         start: Array.isArray(m.start) ? (m.start as number[]) : [],
-        stages
+        // NOTHING AFTER THE QUEST IS FINISHED. A sim does not stop at the last step: it goes on to
+        // check what the quest paid out - the anvil in Doric's, the Salve amulet in Haunted Mine,
+        // the Enchanted key hunt after Making History - and those rows were landing in the leg at
+        // `done`, where the panel already reads the quest as complete and shows none of them. They
+        // were invisible noise rather than a visible lie, but a quest helper's table should hold
+        // the quest and stop. Nine quests carried them, and the Feud's own stuck-character fixture
+        // would have been the tenth.
+        stages: done > 0 ? stages.filter(st => st.from < done) : stages
     });
 }
 
