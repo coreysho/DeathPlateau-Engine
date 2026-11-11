@@ -7,8 +7,12 @@
 // the two live in different repositories: the engine measures a line's width and decides where to
 // wrap it, the client draws the icon. When they disagree the server wraps at a width the client
 // does not draw, AND split carries the unrecognised marker onto continuation lines as if it were a
-// colour - a second icon at the front of every wrapped line. 'a', the tenth icon, was missing here
-// for exactly that reason.
+// colour - a second icon at the front of every wrapped line.
+//
+// 'a', the tenth icon, was missing here until 8e09c59 - which fixed it one commit before the Helper
+// rank that needs it, so nobody ever saw the symptom. What is still missing is anything that CHECKS
+// the two agree. The comment on isIconTag now says it has to match the client; a comment saying so
+// is not a check that it does.
 //
 // So this prints the engine's half of the contract and the client's run_chaticontest.py compares it
 // against its own, which is the only place both halves exist at once. Nothing here asserts: a tool
