@@ -382,6 +382,15 @@ function logMessage(t: Ticket) {
     } else if (t.kind === 'bug' && trackerReady()) {
         row.addComponents(new ButtonBuilder().setCustomId(`tk|hand|${t.id}`).setLabel('Hand to Claude').setStyle(ButtonStyle.Secondary));
     }
+    // CLOSING WITHOUT OPENING THE THREAD. Claim has always been here, so staff pick a ticket up from
+    // the log and then have to go and find the thread to put it down again. This is the same
+    // customId the thread's own Close button carries, so the handler above is reached unchanged -
+    // opener-or-staff, and the reason form as the "are you sure". Last in the row deliberately:
+    // nothing already on the message moves, so no finger that has learned where Hand to Claude sits
+    // lands on something else.
+    if (t.status === 'open') {
+        row.addComponents(new ButtonBuilder().setCustomId(`tk|close|${t.id}`).setLabel('Close').setStyle(ButtonStyle.Secondary));
+    }
     return {
         content: `${t.status === 'open' && !t.claimed_by && staffRole ? `<@&${staffRole}> ` : ''}New ${NOUN[t.kind]} ${number(t.id)}`,
         embeds: [embed],
