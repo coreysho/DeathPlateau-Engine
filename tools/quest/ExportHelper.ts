@@ -719,7 +719,7 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             continue;
         }
 
-        const kind = Object.keys(s).find(k => !['why', 'picks', 'op', 'at', 'want', 'tries', 'until', 'soft', 'n', 'r', 'exact', 'obj'].includes(k));
+        const kind = Object.keys(s).find(k => !['why', 'picks', 'op', 'at', 'want', 'tries', 'until', 'soft', 'n', 'r', 'exact', 'obj', 'how'].includes(k));
         if (!kind) continue;
 
         if (ASSERT_KINDS.has(kind)) {
@@ -803,7 +803,13 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
             // ONCE GIVEN, ALWAYS BROUGHT. A sim hands itself the knife at the top and asserts it
             // again three legs later; the second mention is the same knife out of the same bank
             // trip, not something the quest handed over, so the whole run's `give` list decides.
-            if (kind === 'give') given.add(item);
+            // A `give` that says HOW the player gets the thing is the sim standing in for a step
+            // of the quest (a cupboard that only answers when somebody is not standing beside
+            // it, so it cannot be clicked in a run that has to pass every time). That is a step
+            // to do, not an item to bring, so it becomes the step and stays off the shopping list.
+            const how = kind === 'give' && typeof s.how === 'string' ? s.how.trim() : '';
+            if (how) cur.steps.push({ kind: 'note', text: sentence(how) });
+            else if (kind === 'give') given.add(item);
             const seen = cur.items.find(x => x.name === item);
             // The same item asked for twice in a leg means the larger count, not two rows.
             if (seen) seen.n = Math.max(seen.n, n);

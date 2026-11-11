@@ -68040,12 +68040,16 @@
        "text": "Sir Vyvin's room, top floor of the castle, and his cupboard."
       },
       {
-       "at": 1,
+       "at": 2,
        "text": "The portrait to Thurgo, who then wants blurite ore."
       }
      ],
      "marks": [],
      "steps": [
+      {
+       "kind": "note",
+       "text": "Search the cupboard in Sir Vyvin’s room, top floor of Falador castle, for the portrait."
+      },
       {
        "text": "Go back to Mudskipper Point.",
        "kind": "walk",
@@ -68072,7 +68076,7 @@
        "name": "Portrait",
        "id": 666,
        "n": 1,
-       "bring": true
+       "bring": false
       }
      ],
      "worn": []

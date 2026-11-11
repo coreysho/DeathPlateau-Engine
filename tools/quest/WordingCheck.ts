@@ -101,6 +101,22 @@ for (const rule of RULES) {
     if (hits.length > 8) console.log(`         ... and ${hits.length - 8} more`);
 }
 
+// A STEP THE SIM HANDS OVER IS STILL A STEP THE PLAYER HAS TO DO. A manifest gives itself an item it
+// cannot get legitimately in a run (`give: 'knights_portrait'`), and the exporter used to drop that
+// as part of the shopping list, so the helper said "bring a Portrait" and never said where it comes
+// from. These are the quests known to have such a step; each must still tell the player to do it.
+const MUST_TELL: { quest: string; what: string; text: RegExp }[] = [{ quest: "THE KNIGHT'S SWORD", what: "the portrait comes out of Sir Vyvin's cupboard", text: /cupboard/i }];
+for (const need of MUST_TELL) {
+    const quest = table.quests.find(q => q.name === need.quest);
+    const said = quest?.stages.some(stage => stage.steps.some(step => need.text.test(step.text)));
+    if (said) {
+        console.log(`  ok   ${need.quest} tells the player ${need.what}`);
+        continue;
+    }
+    failed++;
+    console.log(`  FAIL ${need.quest} never tells the player ${need.what}`);
+}
+
 // The table is only worth reading if it has the quests in it: an empty file passes every rule
 // above and would make this check a decoration.
 if (rows.length < 1000) {

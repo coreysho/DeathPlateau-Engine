@@ -57,7 +57,7 @@ const m: Manifest = {
         { note: 'used to measure that distance from the PLAYER instead, which deadlocked outright: an' },
         { note: 'npc parks itself while somebody stands beside it, so Vyvin never moved and the' },
         { note: 'portrait could not be got at all. See the note on the proc.' },
-        { give: 'knights_portrait' },
+        { give: 'knights_portrait', how: 'Search the cupboard in Sir Vyvin’s room, top floor of Falador castle, for the portrait' },
 
         { note: 'wiki step 5: the portrait to Thurgo, who then wants blurite ore' },
         { setpos: [3001, 3145, 0], why: 'back to Mudskipper Point' },
