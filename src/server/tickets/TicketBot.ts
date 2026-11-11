@@ -30,7 +30,7 @@ import {
     ThreadChannel
 } from 'discord.js';
 
-import { addHandoverColumns, fileBugIssue, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
+import { addHandoverColumns, bugTicketIds, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 import { INBOX_SCHEMA, TICKET_DB_PATH } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import { toDisplayName } from '#/util/JString.js';
@@ -299,7 +299,12 @@ function missing(channel: TextChannel, wanted: Record<string, bigint>): string[]
 // because the embed is what staff actually read in the thread - and for an in-game report it is also
 // where the `::tele` line to the exact tile lives, which is the first thing a reproduction needs.
 // One place to build it, so both sources are covered and neither can drift from what was shown.
-function embedToText(embed: EmbedBuilder): string {
+// Both an EmbedBuilder we are about to send and an Embed Discord handed back expose .data, so the
+// backfill below can flatten a message that was posted weeks ago exactly as openTicket flattens a
+// fresh one. Readonly fields, because that is how a received embed types its own.
+type EmbedLike = { data: { description?: string; fields?: readonly { name: string; value: string }[] } };
+
+function embedToText(embed: EmbedLike): string {
     const parts: string[] = [];
     if (embed.data.description) {
         parts.push(embed.data.description);
@@ -783,6 +788,86 @@ async function modal(i: ModalSubmitInteraction) {
     }
 }
 
+// ---- the backlog ----
+//
+// WHAT THIS IS FOR. The hand-over columns were added on 2026-11-10 to a table that had been filing
+// tickets since September, so every bug report before that has report = NULL: handing one over would
+// file an issue carrying only its subject, which for a ::bug report is the first 80 characters and
+// nothing else - no world, no coordinates, no ::tele line. The detail is not lost, though. The bot
+// posted all of it as an embed in the thread's first message, so it can be read back and stored.
+//
+// AND THE BUTTON DOES NOT SHOW ON THEM EITHER, for an unrelated reason: a staff log message is only
+// rebuilt when the ticket changes (claim, close, reopen), so an older message still carries the two
+// buttons it was posted with. Rebuilding every bug ticket's message is the other half of this.
+//
+// NOT threadOf(). That helper marks a ticket closed when Discord says the thread is gone, which is
+// right when somebody is trying to use the thread and quite wrong here: a backfill that closed forty
+// tickets as a side effect of reading them would be a disaster, and a silent one.
+const BACKFILL_LIMIT = 500;
+
+async function readOnlyThread(threadId: string): Promise<ThreadChannel | null> {
+    try {
+        const channel = await client.channels.fetch(threadId);
+        return channel?.isThread() ? channel : null;
+    } catch {
+        return null;
+    }
+}
+
+async function backfillBugReports(i: RepliableInteraction) {
+    const missing = reportsToRecover(db, BACKFILL_LIMIT);
+    const store = db.prepare('UPDATE ticket SET report = ? WHERE id = ?');
+
+    let filled = 0;
+    const unreadable: number[] = [];
+    for (const t of missing) {
+        const thread = await readOnlyThread(t.thread_id);
+        if (!thread) {
+            unreadable.push(t.id);
+            continue;
+        }
+        try {
+            // The oldest message the BOT posted that carries an embed: that is the detail message
+            // openTicket sent. Picking it by author and embed rather than by position, because a
+            // player can have posted a screenshot before it in a thread that was reopened.
+            const messages = await thread.messages.fetch({ limit: 100 });
+            const detail = [...messages.values()]
+                .filter(m => m.author.id === client.user?.id && m.embeds.length > 0)
+                .sort((a, b) => a.createdTimestamp - b.createdTimestamp)[0];
+            if (!detail) {
+                unreadable.push(t.id);
+                continue;
+            }
+            const text = embedToText(detail.embeds[0]);
+            if (!text) {
+                unreadable.push(t.id);
+                continue;
+            }
+            store.run(text, t.id);
+            filled++;
+        } catch (err) {
+            console.log(`Ticket bot: could not read ${number(t.id)} back for the backfill: ${(err as Error).message}`);
+            unreadable.push(t.id);
+        }
+    }
+
+    // EVERY bug ticket, not only the ones just filled: a closed bug report can still be handed over,
+    // and its log message is as stale as an open one's. An edit never pings, so forty of them do not
+    // wake the staff role forty times.
+    const all = bugTicketIds(db, BACKFILL_LIMIT);
+    for (const id of all) {
+        await updateLog(id);
+    }
+
+    const lines = [
+        `Looked at **${missing.length}** bug report${missing.length === 1 ? '' : 's'} with no stored detail.`,
+        `Recovered **${filled}** from their threads.`,
+        unreadable.length ? `Could not read **${unreadable.length}**: ${unreadable.map(id => number(id)).join(', ')} - the thread is gone, or its first message is not there any more. They can still be handed over; the issue will carry the subject only.` : null,
+        `Rebuilt **${all.length}** staff log message${all.length === 1 ? '' : 's'}, so the hand-over button shows on them${trackerReady() ? '' : ' - except it will not, because no bug tracker is configured yet'}.`
+    ].filter(Boolean);
+    await i.editReply(lines.join('\n'));
+}
+
 async function command(i: ChatInputCommandInteraction) {
     if (i.commandName === 'ticketsetup') {
         await setup(i);
@@ -801,6 +886,16 @@ async function command(i: ChatInputCommandInteraction) {
         const open = db.prepare("SELECT * FROM ticket WHERE status = 'open' ORDER BY id LIMIT 25").all() as Ticket[];
         const lines = open.map(t => `**${number(t.id)}** ${t.kind} · ${clip(t.subject, 60)} · ${t.thread_id ? threadUrl(t.thread_id) : 'no thread'} · ${t.claimed_by ? `<@${t.claimed_by}>` : 'unclaimed'}`);
         await i.reply({ content: lines.length ? `**Open tickets**\n${lines.join('\n')}` : 'No open tickets.', flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
+        return;
+    }
+
+    if (sub === 'backfill') {
+        if (!isStaff(i)) {
+            await say(i, 'Only staff can run the backfill.');
+            return;
+        }
+        await i.deferReply({ flags: MessageFlags.Ephemeral });
+        await backfillBugReports(i);
         return;
     }
 
@@ -932,7 +1027,8 @@ client.once(Events.ClientReady, async ready => {
                         type: ApplicationCommandOptionType.Subcommand,
                         options: [{ name: 'user', description: 'Who to add', type: ApplicationCommandOptionType.User, required: true }]
                     },
-                    { name: 'list', description: 'Staff: every open ticket', type: ApplicationCommandOptionType.Subcommand }
+                    { name: 'list', description: 'Staff: every open ticket', type: ApplicationCommandOptionType.Subcommand },
+                    { name: 'backfill', description: 'Staff: recover older bug reports and show the hand-over button on them', type: ApplicationCommandOptionType.Subcommand }
                 ]
             }
         ]);

@@ -45,6 +45,25 @@ export function addHandoverColumns(db: DatabaseSync): void {
     }
 }
 
+// WHICH TICKETS THE BACKFILL TOUCHES, as two queries rather than two strings typed into the bot,
+// so that a fixture database can prove they pick the right rows. Getting either wrong is quiet: too
+// narrow and part of the backlog is skipped for good, too wide and a support ticket or a report that
+// already has its detail gets overwritten with something else.
+export type BacklogRow = { id: number; thread_id: string };
+
+// Bug reports with no stored detail that still have a thread to read it back from. A support ticket
+// is never included: there is nothing to hand over. Nor is a bug whose report is already stored -
+// re-reading it could only replace good detail with whatever the thread looks like now.
+export function reportsToRecover(db: DatabaseSync, limit: number): BacklogRow[] {
+    return db.prepare("SELECT id, thread_id FROM ticket WHERE kind = 'bug' AND report IS NULL AND thread_id IS NOT NULL ORDER BY id LIMIT ?").all(limit) as BacklogRow[];
+}
+
+// Every bug ticket, for rebuilding staff log messages. Wider than the above on purpose: a CLOSED bug
+// report can still be handed over, and its message is as stale as an open one's.
+export function bugTicketIds(db: DatabaseSync, limit: number): number[] {
+    return (db.prepare("SELECT id FROM ticket WHERE kind = 'bug' ORDER BY id LIMIT ?").all(limit) as { id: number }[]).map(r => r.id);
+}
+
 const API = 'https://api.github.com';
 const TIMEOUT_MS = 10_000;
 const MAX_REPORT = 10_000;

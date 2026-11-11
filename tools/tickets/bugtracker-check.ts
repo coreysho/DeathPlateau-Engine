@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { addHandoverColumns, fileBugIssue, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
+import { addHandoverColumns, bugTicketIds, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 
 // WHAT A HAND-OVER DOES, CHECKED WITHOUT DISCORD OR GITHUB (custom, 2026-11-10).
 //
@@ -94,6 +94,28 @@ try {
     addHandoverColumns(db);
     addHandoverColumns(db);
     check('running it three times leaves 19 columns', columns().length, 19);
+
+    // ---- which tickets the backfill picks up
+    //
+    // The real backlog is 44 bug reports with no stored detail, filed before the columns existed.
+    // Both queries are quiet when wrong: too narrow and part of that backlog is skipped for good,
+    // too wide and a support ticket - or a report whose detail is already stored - is overwritten.
+    const add = db.prepare('INSERT INTO ticket (id, kind, source, subject, created, report, thread_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    add.run(10, 'bug', 'game', 'no detail, has a thread', 1, null, 't10');
+    add.run(11, 'bug', 'game', 'detail already stored', 1, 'the full report', 't11');
+    add.run(12, 'bug', 'game', 'no detail and no thread', 1, null, null);
+    add.run(13, 'support', 'discord', 'a support ticket with no detail', 1, null, 't13');
+    add.run(14, 'bug', 'discord', 'another one to recover', 1, null, 't14');
+    db.prepare("UPDATE ticket SET status = 'closed' WHERE id = 14").run();
+
+    const toRecover = reportsToRecover(db, 500);
+    check('only the bug reports missing detail that still have a thread', toRecover.map(r => r.id).join(','), '10,14');
+    check('and it brings the thread id along', toRecover[0]?.thread_id, 't10');
+    checkThat('a closed one is included - a closed report can still be handed over', toRecover.some(r => r.id === 14));
+
+    // The log-message rebuild is deliberately WIDER: every bug ticket, whatever its state.
+    check('the rebuild covers every bug ticket and no support ticket', bugTicketIds(db, 500).join(','), '1,10,11,12,14');
+    check('the limit is honoured', reportsToRecover(db, 1).length, 1);
     db.close();
 } finally {
     fs.rmSync(dir, { recursive: true, force: true });
