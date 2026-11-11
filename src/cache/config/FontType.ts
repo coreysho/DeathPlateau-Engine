@@ -116,7 +116,16 @@ export default class FontType {
     static readonly ICON_WIDTH = 16;
 
     static isIconTag(tag: string) {
-        return tag.length === 3 && tag.startsWith('cr') && tag.charAt(2) >= '1' && tag.charAt(2) <= '9';
+        if (tag.length !== 3 || !tag.startsWith('cr')) {
+            return false;
+        }
+        const n = tag.charAt(2);
+        // The tenth icon is "@cra@", not "@cr10@": a marker is five characters because that is the
+        // shape of a colour tag, which is what makes an older client skip one it does not know
+        // instead of printing it. So the numbering runs into letters once the digits are gone, and
+        // this has to agree with the client's ChatIcons.iconAt or the server wraps a line at a
+        // width the client does not draw.
+        return (n >= '1' && n <= '9') || n === 'a';
     }
 
     stringWidth(str: string) {
