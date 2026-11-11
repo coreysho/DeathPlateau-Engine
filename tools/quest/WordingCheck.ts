@@ -105,7 +105,14 @@ for (const rule of RULES) {
 // cannot get legitimately in a run (`give: 'knights_portrait'`), and the exporter used to drop that
 // as part of the shopping list, so the helper said "bring a Portrait" and never said where it comes
 // from. These are the quests known to have such a step; each must still tell the player to do it.
-const MUST_TELL: { quest: string; what: string; text: RegExp }[] = [{ quest: "THE KNIGHT'S SWORD", what: "the portrait comes out of Sir Vyvin's cupboard", text: /cupboard/i }];
+const MUST_TELL: { quest: string; what: string; text: RegExp }[] = [
+    { quest: "THE KNIGHT'S SWORD", what: "the portrait comes out of Sir Vyvin's cupboard", text: /cupboard/i },
+    // Found by sweeping every `give` in every manifest against the quest's own scripts: these two
+    // hand over something the player MAKES, so the helper listed the finished thing and never said
+    // what it is made from. The cats need a house, which no sim has, and the bowl is two gold bars.
+    { quest: 'THE GREAT BRAIN ROBBERY', what: 'the wooden cats are carved from planks and fur', text: /carve/i },
+    { quest: "LEGENDS' QUEST", what: 'the gold bowl is forged from gold bars', text: /forge/i }
+];
 for (const need of MUST_TELL) {
     const quest = table.quests.find(q => q.name === need.quest);
     const said = quest?.stages.some(stage => stage.steps.some(step => need.text.test(step.text)));
