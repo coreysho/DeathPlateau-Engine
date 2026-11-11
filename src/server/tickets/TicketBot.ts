@@ -30,7 +30,7 @@ import {
     ThreadChannel
 } from 'discord.js';
 
-import { addHandoverColumns, bugTicketIds, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
+import { addHandoverColumns, bugTicketIds, commentsSince, extractAskPlayer, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 import { INBOX_SCHEMA, TICKET_DB_PATH } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import { toDisplayName } from '#/util/JString.js';
@@ -75,6 +75,9 @@ import { toDisplayName } from '#/util/JString.js';
 
 const MAX_OPEN = 3;
 const INBOX_POLL_MS = 5_000;
+// Slower than the inbox on purpose: a question for a player is not urgent to the second, and this
+// is one GitHub request per tick whether the tracker is busy or empty.
+const RELAY_POLL_MS = 60_000;
 const INBOX_MAX_ATTEMPTS = 5;
 
 const COLOUR = { support: 0x5865f2, bug: 0xed4245, closed: 0x747f8d };
@@ -165,7 +168,21 @@ db.exec(`
 // The four columns a hand-over needs, added to a table that predates them - see BugTracker.ts.
 addHandoverColumns(db);
 
-function config(key: 'panel_channel' | 'log_channel' | 'staff_role'): string | null {
+// WHICH TRACKER COMMENTS HAVE ALREADY BEEN RELAYED into a player's thread. Keyed on the comment's
+// own GitHub id, so the same question is never posted twice however often the poll below runs or
+// however the watermark moves. A row is written even when the relay could not be delivered - the
+// thread was deleted, the ticket is unknown - because retrying those forever would mean a request
+// a minute for a thread that is never coming back.
+db.exec(`
+    CREATE TABLE IF NOT EXISTS relayed (
+        comment_id INTEGER PRIMARY KEY,
+        ticket     INTEGER,
+        at         INTEGER NOT NULL,
+        outcome    TEXT NOT NULL
+    );
+`);
+
+function config(key: 'panel_channel' | 'log_channel' | 'staff_role' | 'relay_watermark'): string | null {
     const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined;
     return row?.value ?? null;
 }
@@ -814,6 +831,92 @@ async function readOnlyThread(threadId: string): Promise<ThreadChannel | null> {
     }
 }
 
+// ---- relaying a tracker question back to the player ----
+//
+// A tracker comment can carry a block marked for the player (see BugTracker.ts). This posts those
+// blocks into the ticket's private thread, so a needs-repro question actually reaches the person who
+// can answer it. Nothing else from the issue is ever relayed.
+let relaying = false;
+
+function ticketByIssue(issueNumber: number): Ticket | undefined {
+    return db.prepare('SELECT * FROM ticket WHERE issue_number = ?').get(issueNumber) as Ticket | undefined;
+}
+
+async function relayQuestions() {
+    if (relaying || !client.isReady() || !trackerReady()) {
+        return;
+    }
+    relaying = true;
+    try {
+        // FIRST RUN STARTS FROM NOW, not from the beginning of the tracker. Otherwise switching this
+        // on would relay every question ever written, into threads whose reports are long closed.
+        let watermark = config('relay_watermark');
+        if (!watermark) {
+            setConfig('relay_watermark', new Date().toISOString());
+            return;
+        }
+
+        const comments = await commentsSince(watermark);
+        const seen = db.prepare('SELECT 1 FROM relayed WHERE comment_id = ?');
+        const record = db.prepare('INSERT OR IGNORE INTO relayed (comment_id, ticket, at, outcome) VALUES (?, ?, ?, ?)');
+
+        for (const comment of comments) {
+            if (comment.createdAt > watermark) {
+                watermark = comment.createdAt;
+            }
+            const ask = extractAskPlayer(comment.body);
+            if (!ask || seen.get(comment.id)) {
+                continue;
+            }
+            const t = ticketByIssue(comment.issueNumber);
+            if (!t) {
+                record.run(comment.id, null, Date.now(), 'no ticket for that issue');
+                continue;
+            }
+            if (!t.thread_id) {
+                record.run(comment.id, t.id, Date.now(), 'the ticket has no thread');
+                continue;
+            }
+            const thread = await readOnlyThread(t.thread_id);
+            if (!thread) {
+                record.run(comment.id, t.id, Date.now(), 'the thread is gone');
+                continue;
+            }
+            try {
+                // A thread archives itself after a week, and a closed ticket's is archived on
+                // purpose. Either way the player cannot read a question in an archived thread, so
+                // it is opened again - which is the honest thing: somebody is asking them something.
+                if (thread.archived) {
+                    await thread.setArchived(false);
+                }
+                // WHEN THEY ARE NOT ON DISCORD the thread still gets the question, because staff
+                // read it and can ask them in game. The wording has to say so, or it reads as a
+                // question to nobody.
+                const lead = t.opener_id
+                    ? `<@${t.opener_id}> - a question about your ${NOUN[t.kind]} ${number(t.id)}, from whoever is looking into it:`
+                    : `A question about ${number(t.id)}, from whoever is looking into it. This player has no Discord linked, so somebody will have to ask them in game:`;
+                await thread.send({
+                    content: `${lead}\n\n${clip(ask, 1600)}`,
+                    // Nothing in a relayed block can ping a role or everyone: the only mention that
+                    // fires is the reporter's own, added above.
+                    allowedMentions: { users: t.opener_id ? [t.opener_id] : [] }
+                });
+                record.run(comment.id, t.id, Date.now(), 'relayed');
+            } catch (err) {
+                // NOT recorded: a failure here is Discord being unavailable or a permission being
+                // missing, both of which can pass. This one is worth retrying on the next tick.
+                console.log(`Ticket bot: could not relay tracker comment ${comment.id} into ${number(t.id)}: ${(err as Error).message}`);
+            }
+        }
+
+        setConfig('relay_watermark', watermark);
+    } catch (err) {
+        console.log(`Ticket bot: could not read the tracker's comments: ${(err as Error).message}`);
+    } finally {
+        relaying = false;
+    }
+}
+
 async function backfillBugReports(i: RepliableInteraction) {
     const missing = reportsToRecover(db, BACKFILL_LIMIT);
     const store = db.prepare('UPDATE ticket SET report = ? WHERE id = ?');
@@ -1044,6 +1147,7 @@ client.once(Events.ClientReady, async ready => {
         console.error('  then restart the ticket bot.');
     }
     setInterval(() => void drainInbox(), INBOX_POLL_MS);
+    setInterval(() => void relayQuestions(), RELAY_POLL_MS);
 });
 
 client.on(Events.InteractionCreate, async i => {

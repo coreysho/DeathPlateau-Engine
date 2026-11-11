@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { addHandoverColumns, bugTicketIds, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
+import { ASK_CLOSE, ASK_OPEN, addHandoverColumns, bugTicketIds, commentsSince, extractAskPlayer, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 
 // WHAT A HAND-OVER DOES, CHECKED WITHOUT DISCORD OR GITHUB (custom, 2026-11-10).
 //
@@ -239,6 +239,44 @@ try {
         threw = (err as Error).message;
     }
     checkThat('a reply with no issue number throws rather than being recorded', threw.includes('no issue number'));
+
+    // ---- which part of a tracker comment reaches the player
+    //
+    // THIS IS THE SECURITY-RELEVANT ONE. A tracker comment is written for Corey and can describe an
+    // exploit; only a deliberately marked block is relayed into the reporter's Discord thread. Every
+    // way of getting that wrong leaks an internal note to a player, so each is checked.
+    const internal = 'The hole is in BuildArea.rebuildNormal and the fix is to clamp the zone.';
+    check('no markers at all relays nothing', extractAskPlayer(internal), null);
+    check('a marked block is relayed, and only the block', extractAskPlayer(`${internal}\n\n${ASK_OPEN}\nWhich ladder was it?\n${ASK_CLOSE}\n\n${internal}`), 'Which ladder was it?');
+    // An opening marker with no close must NOT relay everything after it - that is the leak.
+    check('an unclosed block relays nothing', extractAskPlayer(`${internal}\n${ASK_OPEN}\nWhich ladder?`), null);
+    check('a closing marker alone relays nothing', extractAskPlayer(`${internal}\n${ASK_CLOSE}\nWhich ladder?`), null);
+    check('an empty block relays nothing', extractAskPlayer(`${ASK_OPEN}\n   \n${ASK_CLOSE}`), null);
+    check('the first block wins when there are two', extractAskPlayer(`${ASK_OPEN}\nfirst\n${ASK_CLOSE}\n${ASK_OPEN}\nsecond\n${ASK_CLOSE}`), 'first');
+    checkThat('the markers are html comments, so they do not render on the issue', ASK_OPEN.startsWith('<!--') && ASK_CLOSE.startsWith('<!--'));
+
+    // ---- reading the tracker's comments, which must be ONE request however many issues there are
+    sent = null;
+    reply = {
+        status: 200,
+        json: [
+            { id: 11, body: `${ASK_OPEN}\nwhich quest?\n${ASK_CLOSE}`, created_at: '2026-11-11T03:16:15Z', issue_url: 'https://api.github.com/repos/coreysho/DeathPlateau-Bugs/issues/3' },
+            { id: 12, body: 'nothing for the player here', created_at: '2026-11-11T03:29:18Z', issue_url: 'https://api.github.com/repos/coreysho/DeathPlateau-Bugs/issues/6' },
+            // Malformed rows must be dropped rather than throwing: one bad row would otherwise stop
+            // every later comment from ever being relayed.
+            { id: 13, body: 'no issue url at all', created_at: '2026-11-11T03:30:00Z' },
+            { body: 'no id', created_at: '2026-11-11T03:31:00Z', issue_url: 'https://api.github.com/repos/x/y/issues/9' }
+        ]
+    };
+    const since = await commentsSince('2026-11-11T03:00:00Z');
+    const url = (sent as unknown as Sent).url;
+    checkThat('it asks the repository-wide comments endpoint, not one issue', url.includes('/issues/comments?'));
+    checkThat('passing the watermark through', url.includes('since=2026-11-11T03%3A00%3A00Z'));
+    checkThat('and a full page, oldest first', url.includes('per_page=100') && url.includes('direction=asc'));
+    check('two well-formed comments survive', since.length, 2);
+    check('the issue number is read out of the url', since[0]?.issueNumber, 3);
+    check('with its comment id', since[0]?.id, 11);
+    check('and the second maps to its own issue', since[1]?.issueNumber, 6);
 } finally {
     globalThis.fetch = real;
 }

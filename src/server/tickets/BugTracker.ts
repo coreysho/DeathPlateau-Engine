@@ -64,6 +64,78 @@ export function bugTicketIds(db: DatabaseSync, limit: number): number[] {
     return (db.prepare("SELECT id FROM ticket WHERE kind = 'bug' ORDER BY id LIMIT ?").all(limit) as { id: number }[]).map(r => r.id);
 }
 
+// RELAYING A QUESTION BACK TO THE PLAYER (custom, 2026-11-11). The worker that picks a tracker
+// issue up cannot reach Discord, and the player who reported the bug cannot see the tracker. So the
+// four reports handed over on 2026-11-11 all stalled in the same place: each got a careful
+// needs-repro comment asking two to four specific questions, and nobody ever asked the reporter.
+//
+// WHY A MARKED BLOCK AND NOT THE WHOLE COMMENT. Those comments are written for Corey, not for the
+// player - they name BuildArea.rebuildNormal, the sim harness and the size of maps-client.zip. A
+// player needs the questions and nothing else. So only text the author deliberately wraps in these
+// markers is relayed, and everything else in the issue stays between the tracker and whoever reads
+// it. That also means a private note about an exploit can never be posted into a player's thread by
+// accident: silence is the default and marking is the opt-in.
+//
+// The markers are HTML comments, so they are invisible when GitHub renders the issue.
+export const ASK_OPEN = '<!-- ask-player -->';
+export const ASK_CLOSE = '<!-- /ask-player -->';
+
+// The first marked block in a comment, or null. An opening marker with no closing one returns null
+// rather than everything after it: a half-written block is a mistake, and relaying the rest of an
+// internal comment is exactly the thing this is built to avoid.
+export function extractAskPlayer(body: string): string | null {
+    const start = body.indexOf(ASK_OPEN);
+    if (start === -1) {
+        return null;
+    }
+    const from = start + ASK_OPEN.length;
+    const end = body.indexOf(ASK_CLOSE, from);
+    if (end === -1) {
+        return null;
+    }
+    const text = body.slice(from, end).trim();
+    return text === '' ? null : text;
+}
+
+export type TrackerComment = { id: number; issueNumber: number; body: string; createdAt: string };
+
+// EVERY COMMENT IN THE TRACKER SINCE A TIMESTAMP, IN ONE CALL. The per-issue endpoint would be one
+// request per open issue per poll - forty-odd requests a minute against a 5000/hour token - where
+// this is one request however many issues there are.
+export async function commentsSince(iso: string): Promise<TrackerComment[]> {
+    if (!trackerReady()) {
+        return [];
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        const res = await fetch(`${API}/repos/${Environment.BUGS_GITHUB_REPO}/issues/comments?since=${encodeURIComponent(iso)}&per_page=100&sort=created&direction=asc`, {
+            headers: {
+                Authorization: `Bearer ${Environment.BUGS_GITHUB_TOKEN}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            },
+            signal: controller.signal
+        });
+        if (!res.ok) {
+            throw new Error(`GitHub answered ${res.status} ${res.statusText}`);
+        }
+        const rows = (await res.json()) as { id?: number; body?: string; created_at?: string; issue_url?: string }[];
+        const out: TrackerComment[] = [];
+        for (const row of rows) {
+            // The issue number is only in the url - the comment payload has no issue_number field.
+            const number = Number(String(row.issue_url ?? '').split('/').pop());
+            if (typeof row.id !== 'number' || !Number.isFinite(number) || number <= 0 || typeof row.body !== 'string' || typeof row.created_at !== 'string') {
+                continue;
+            }
+            out.push({ id: row.id, issueNumber: number, body: row.body, createdAt: row.created_at });
+        }
+        return out;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 const API = 'https://api.github.com';
 const TIMEOUT_MS = 10_000;
 const MAX_REPORT = 10_000;
