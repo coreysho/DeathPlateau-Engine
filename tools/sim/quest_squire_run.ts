@@ -24,7 +24,7 @@ const m: Manifest = {
         { note: 'wiki: a redberry pie, two iron bars and a pickaxe. 10 Mining for the blurite.' },
         { give: 'redberry_pie' },
         { give: 'iron_bar', n: 2 },
-        { give: 'rune_pickaxe' },
+        { give: 'bronze_pickaxe' },
 
         { note: "wiki step 1: the Squire, in the White Knights' Castle courtyard" },
         { talk: 'squire', picks: ['life as a squire', 'make a new sword', 'would these dwarves make another one', "I'll give it a go"], why: 'he has lost Sir Vyvin’s sword and you offer to replace it' },

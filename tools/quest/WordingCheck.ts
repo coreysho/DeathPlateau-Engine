@@ -26,7 +26,7 @@ const file = process.argv[2] ?? path.join(import.meta.dirname, '..', '..', 'data
 const table = JSON.parse(fs.readFileSync(file, 'utf8')) as {
     quests: {
         name: string;
-        stages: { steps: { text: string; kind: string; why?: string; id?: number; also?: number[] }[] }[];
+        stages: { steps: { text: string; kind: string; why?: string; id?: number; also?: number[] }[]; items: { name: string; bring: boolean }[] }[];
     }[];
 };
 
@@ -115,6 +115,22 @@ for (const need of MUST_TELL) {
     }
     failed++;
     console.log(`  FAIL ${need.quest} never tells the player ${need.what}`);
+}
+
+// A TIER THE QUEST DOES NOT ASK FOR IS NOT A REQUIREMENT. A sim hands itself whatever tool makes its run
+// reliable, and the helper reads that as "bring this", so a quest that needs any pickaxe came out as
+// "bring a Rune pickaxe". Each quest here asks for the lowest tier, so a higher one showing up in its
+// bring list is the sim's choice leaking into the table.
+const MUST_NOT_BRING: { quest: string; item: RegExp; why: string }[] = [{ quest: "THE KNIGHT'S SWORD", item: /^Rune pickaxe$/i, why: 'the blurite only needs a pickaxe and 10 Mining' }];
+for (const rule of MUST_NOT_BRING) {
+    const quest = table.quests.find(q => q.name === rule.quest);
+    const asked = quest?.stages.flatMap(stage => stage.items).filter(item => item.bring && rule.item.test(item.name)) ?? [];
+    if (!asked.length) {
+        console.log(`  ok   ${rule.quest} does not ask the player to bring ${rule.item.source}`);
+        continue;
+    }
+    failed += asked.length;
+    console.log(`  FAIL ${rule.quest} asks the player to bring ${asked[0].name} (${rule.why})`);
 }
 
 // The table is only worth reading if it has the quests in it: an empty file passes every rule
