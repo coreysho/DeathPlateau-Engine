@@ -85,6 +85,7 @@ export const CHEATS: Cheat[] = [
     // login is promoted to 4; this one only adds a chat icon, and a development world's accounts
     // are its own database anyway.
     { name: 'veteran', args: '<username> [off]', what: 'give a player the Veteran rank, or take it back', rank: 3 },
+    { name: 'helper', args: '<username> [off]', what: 'make a player a Helper, or take it back', rank: 3 },
     { name: 'broadcast', args: '<message>', what: 'a staff announcement to every player, with your crown', rank: 3, staffWorld: true },
     { name: 'reboot', what: 'shut the world down now, applying packed changes', rank: 3, staffWorld: true },
     { name: 'slowreboot', args: '<seconds>', what: 'the same, after a countdown every client can see', rank: 3, staffWorld: true },

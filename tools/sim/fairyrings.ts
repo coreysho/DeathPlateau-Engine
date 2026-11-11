@@ -134,7 +134,13 @@ function dialTo(p: Player, code: string) {
         let presses = 0;
         while (shown(p, n) !== code[n]) {
             H.ifButton(p, `fairy_rings:right${n + 1}`);
-            settle();
+            // TWO TICKS, NOT TWENTY. An arrow is an [if_button] that sets three text components and
+            // returns; it has nothing to walk or wait for. At settle()'s default this loop was
+            // twelve presses x 20 ticks x 29 codes of doing nothing, and the sim took 319 seconds
+            // against the nightly's 180 second cap - so it was killed, retried, killed again, and
+            // reported as "fails twice" while passing perfectly well alone. Same trap the shard
+            // runner's own comments describe for glassblowing, audit7, lunar and droprate.
+            settle(2);
             if (++presses > 4) throw new Error(`dial ${n + 1} will not reach ${code[n]} (stuck on ${shown(p, n)})`);
         }
     }

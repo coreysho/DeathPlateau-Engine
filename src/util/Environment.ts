@@ -259,5 +259,16 @@ export default {
     // tickets and bug reports. A separate Discord application from the relay above, with its own
     // token. The guild defaults to DISCORD_GUILD_ID. Keep the token in .env only.
     TICKET_BOT_TOKEN: tryParseString(process.env.TICKET_BOT_TOKEN, ''),
-    TICKET_GUILD_ID: tryParseString(process.env.TICKET_GUILD_ID, '')
+    TICKET_GUILD_ID: tryParseString(process.env.TICKET_GUILD_ID, ''),
+
+    // custom (2026-11-10) - handing a bug report over as a GitHub issue
+    // (server/tickets/BugTracker.ts). The repository is "owner/name" and must be PRIVATE: bug
+    // reports live in private threads so an exploit is never readable by players, and all four code
+    // repositories are public, so the issue cannot go in one of them.
+    //
+    // The token is a fine-grained token with Issues: read and write on that tracker and nothing
+    // else - no contents, no other repository. It cannot push code anywhere. Keep it in .env only.
+    // Both must be set or the Hand to Claude button does not appear.
+    BUGS_GITHUB_REPO: tryParseString(process.env.BUGS_GITHUB_REPO, ''),
+    BUGS_GITHUB_TOKEN: tryParseString(process.env.BUGS_GITHUB_TOKEN, '')
 };

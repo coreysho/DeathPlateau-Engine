@@ -3,6 +3,11 @@
   {
    "stageVarId": 1372,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 602,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "agrith",
    "name": "SHADOW OF THE STORM",
    "source": "oldschool.runescape.wiki/w/Shadow_of_the_Storm/Quick_guide",
@@ -355,6 +360,11 @@
   {
    "stageVarId": 217,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 408,
+    "lsb": 28,
+    "msb": 31
+   },
    "id": "ahoy",
    "name": "GHOSTS AHOY",
    "source": "oldschool.runescape.wiki/w/Ghosts_Ahoy/Quick_guide (2004 quest, unchanged in OSRS)",
@@ -4999,19 +5009,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She wants it back.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ],
        "picks": [
         "I'll try to retrieve it for you."
@@ -5511,19 +5533,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "The touch paper does not change colour.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -5845,19 +5879,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "This is bigger than both of us.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -12612,6 +12658,11 @@
   {
    "stageVarId": 1465,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 622,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "devious",
    "name": "DEVIOUS MINDS",
    "source": "oldschool.runescape.wiki/w/Devious_Minds",
@@ -16389,6 +16440,11 @@
   {
    "stageVarId": 358,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 440,
+    "lsb": 0,
+    "msb": 14
+   },
    "id": "dt",
    "name": "DESERT TREASURE",
    "source": "oldschool.runescape.wiki/w/Desert_Treasure/Quick_guide",
@@ -17875,6 +17931,11 @@
   {
    "stageVarId": 299,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 433,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "dwarfrock",
    "name": "BETWEEN A ROCK...",
    "source": "oldschool.runescape.wiki/w/Between_a_Rock...",
@@ -20145,6 +20206,11 @@
   {
    "stageVarId": 2067,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 299,
+    "lsb": 20,
+    "msb": 20
+   },
    "id": "elemental",
    "name": "ELEMENTAL WORKSHOP I",
    "source": "oldschool.runescape.wiki/w/Elemental_Workshop_I",
@@ -20748,6 +20814,11 @@
   {
    "stageVarId": 1444,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 616,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "elid",
    "name": "SPIRITS OF THE ELID",
    "source": "oldschool.runescape.wiki/w/Spirits_of_the_Elid",
@@ -21471,6 +21542,11 @@
   {
    "stageVarId": 1560,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 641,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "enakh",
    "name": "ENAKHRA'S LAMENT",
    "source": "oldschool.runescape.wiki/w/Enakhra's_Lament",
@@ -23277,6 +23353,11 @@
   {
    "stageVarId": 1803,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 671,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "fairy",
    "name": "A FAIRY TALE PART I",
    "source": "oldschool.runescape.wiki/w/Fairytale_I_-_Growing_Pains",
@@ -24629,6 +24710,11 @@
   {
    "stageVarId": 334,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 435,
+    "lsb": 0,
+    "msb": 5
+   },
    "id": "feud",
    "name": "THE FEUD",
    "source": "oldschool.runescape.wiki/w/The_Feud/Quick_guide (2005 quest, unchanged in OSRS)",
@@ -27512,6 +27598,11 @@
   {
    "stageVarId": 822,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 521,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "forget",
    "name": "FORGETTABLE TALE OF A DRUNKEN DWARF",
    "source": "oldschool.runescape.wiki/w/Forgettable_Tale...",
@@ -27969,6 +28060,11 @@
   {
    "stageVarId": 961,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 553,
+    "lsb": 0,
+    "msb": 5
+   },
    "id": "garden",
    "name": "GARDEN OF TRANQUILLITY",
    "source": "oldschool.runescape.wiki/w/Garden_of_Tranquillity",
@@ -29089,6 +29185,11 @@
   {
    "stageVarId": 571,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 482,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "giantdwarf",
    "name": "THE GIANT DWARF",
    "source": "oldschool.runescape.wiki/w/The_Giant_Dwarf",
@@ -29581,6 +29682,11 @@
   {
    "stageVarId": 346,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 437,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "golem",
    "name": "THE GOLEM",
    "source": "oldschool.runescape.wiki/w/The_Golem",
@@ -31663,6 +31769,11 @@
   {
    "stageVarId": 1527,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 635,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "handsand",
    "name": "THE HAND IN THE SAND",
    "source": "oldschool.runescape.wiki/w/The_Hand_in_the_Sand",
@@ -35197,6 +35308,11 @@
   {
    "stageVarId": 1850,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 678,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "hundred",
    "name": "RECIPE FOR DISASTER",
    "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
@@ -38358,6 +38474,11 @@
   {
    "stageVarId": 418,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 445,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "icslittle",
    "name": "ICTHLARIN'S LITTLE HELPER",
    "source": "oldschool.runescape.wiki/w/Icthlarin%27s_Little_Helper/Quick_guide",
@@ -42197,16 +42318,20 @@
        "text": "Two gold bars and a hammer make the golden bowl on any ordinary anvil."
       },
       {
-       "at": 0,
+       "at": 1,
        "text": "Gujuo blesses it - 42 Prayer, and he asks before he does it."
       },
       {
-       "at": 3,
+       "at": 4,
        "text": "A reed cut with the machete, and the reed used on the pool to syphon the water out - the gap in the rocks is too narrow for the bowl itself."
       }
      ],
      "marks": [],
      "steps": [
+      {
+       "kind": "note",
+       "text": "Forge a gold bowl on an anvil from 2 gold bars."
+      },
       {
        "kind": "obj",
        "text": "Swing Bull roarer.",
@@ -42277,13 +42402,13 @@
        "name": "Gold bowl",
        "id": 721,
        "n": 1,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Gold bowl",
        "id": 721,
        "n": 1,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Blessed gold bowl",
@@ -44420,6 +44545,11 @@
   {
    "stageVarId": 532,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 465,
+    "lsb": 0,
+    "msb": 10
+   },
    "id": "losttribe",
    "name": "THE LOST TRIBE",
    "source": "oldschool.runescape.wiki/w/The_Lost_Tribe",
@@ -47108,6 +47238,11 @@
   {
    "stageVarId": 1383,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 604,
+    "lsb": 0,
+    "msb": 2
+   },
    "id": "makinghistory",
    "name": "MAKING HISTORY",
    "source": "oldschool.runescape.wiki/w/Making_History",
@@ -48328,6 +48463,11 @@
   {
    "stageVarId": 260,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 423,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "mdaughter",
    "name": "MOUNTAIN DAUGHTER",
    "source": "oldschool.runescape.wiki/w/Mountain_Daughter",
@@ -52311,6 +52451,11 @@
   {
    "stageVarId": 1103,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 574,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "mourning2",
    "name": "MOURNING'S END PART II",
    "source": "oldschool.runescape.wiki/w/Mourning%27s_End_Part_II/Quick_guide",
@@ -53877,19 +54022,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She hands over her assay sieve.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -54580,19 +54737,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She examines the flocks.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -55117,6 +55286,11 @@
   {
    "stageVarId": 1990,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 705,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "myreque2",
    "name": "IN AID OF THE MYREQUE",
    "source": "oldschool.runescape.wiki/w/In_Aid_of_the_Myreque",
@@ -60105,6 +60279,11 @@
   {
    "stageVarId": 1404,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 607,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "ratcatch",
    "name": "RAT CATCHERS",
    "source": "oldschool.runescape.wiki/w/Ratcatchers",
@@ -61140,6 +61319,11 @@
   {
    "stageVarId": 657,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 496,
+    "lsb": 0,
+    "msb": 2
+   },
    "id": "rd",
    "name": "RECRUITMENT DRIVE",
    "source": "oldschool.runescape.wiki/w/Recruitment_Drive",
@@ -67484,6 +67668,11 @@
   {
    "stageVarId": 2011,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 709,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "soulbane",
    "name": "A SOUL'S BANE",
    "source": "oldschool.runescape.wiki/w/A_Soul%27s_Bane",
@@ -67936,8 +68125,8 @@
        "bring": true
       },
       {
-       "name": "Rune pickaxe",
-       "id": 1275,
+       "name": "Bronze pickaxe",
+       "id": 1265,
        "n": 1,
        "bring": true
       }
@@ -68072,12 +68261,16 @@
        "text": "Sir Vyvin's room, top floor of the castle, and his cupboard."
       },
       {
-       "at": 1,
+       "at": 2,
        "text": "The portrait to Thurgo, who then wants blurite ore."
       }
      ],
      "marks": [],
      "steps": [
+      {
+       "kind": "note",
+       "text": "Search the cupboard in Sir Vyvin’s room, top floor of Falador castle, for the portrait."
+      },
       {
        "text": "Go back to Mudskipper Point.",
        "kind": "walk",
@@ -68104,7 +68297,7 @@
        "name": "Portrait",
        "id": 666,
        "n": 1,
-       "bring": true
+       "bring": false
       }
      ],
      "worn": []
@@ -68213,6 +68406,11 @@
   {
    "stageVarId": 2098,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 723,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "swansong",
    "name": "SWAN SONG",
    "source": "oldschool.runescape.wiki/w/Swan_Song",
@@ -69774,7 +69972,7 @@
        "text": "Ten wooden cats."
       },
       {
-       "at": 4,
+       "at": 5,
        "text": "Build the crate beside him, floor it, fill it, whistle, post it."
       }
      ],
@@ -69786,19 +69984,19 @@
        "is": 1
       },
       {
-       "at": 5,
+       "at": 6,
        "var": 3115,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 6,
+       "at": 7,
        "var": 3115,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 7,
+       "at": 8,
        "var": 3115,
        "varbit": true,
        "is": 4
@@ -69840,6 +70038,10 @@
         11511,
         11509
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Carve wooden cats in your house, one plank and one fur each, with 16 Crafting."
       },
       {
        "text": "Go back to the cell.",
@@ -69932,7 +70134,7 @@
        "name": "Wooden cat",
        "id": 11505,
        "n": 10,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Shipping order",
@@ -72396,6 +72598,11 @@
   {
    "stageVarId": 1028,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 568,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "twocats",
    "name": "A TAIL OF TWO CATS",
    "source": "oldschool.runescape.wiki/w/A_Tail_of_Two_Cats",
@@ -79635,6 +79842,11 @@
   {
    "stageVarId": 487,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 455,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "zogre",
    "name": "ZOGRE FLESH EATERS",
    "source": "oldschool.runescape.wiki/w/Zogre_Flesh_Eaters",
