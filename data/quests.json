@@ -6236,17 +6236,21 @@
      "from": 2,
      "headings": [
       {
-       "at": 2,
+       "at": 0,
+       "text": "Back up out of the grill room and east through the sturdy door."
+      },
+      {
+       "at": 8,
        "text": "The wrong cabbage first - the Draynor Manor one would help the witch."
       },
       {
-       "at": 3,
+       "at": 9,
        "text": "Then a cabbage from anywhere else, which ruins the potion."
       }
      ],
      "marks": [
       {
-       "at": 3,
+       "at": 9,
        "var": 130,
        "varbit": false,
        "is": 2
@@ -6254,12 +6258,72 @@
      ],
      "steps": [
       {
-       "text": "Go to two tiles south of the second push-wall, where it puts you.",
+       "kind": "walk",
+       "text": "Go east of the ladder, which is the side it climbs from.",
+       "at": [
+        3022,
+        3510
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-up Ladder.",
+       "why": "Up to the first floor.",
+       "target": "ladder",
+       "id": 1747,
+       "label": "Ladder",
+       "at": [
+        3021,
+        3510
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the sturdy door.",
+       "at": [
+        3024,
+        3511
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Sturdy door.",
+       "why": "Through it again.",
+       "target": "bkfortressdoor3",
+       "id": 2339,
+       "label": "Sturdy door",
+       "at": [
+        3025,
+        3511
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go east along the corridor, as far as the map allows.",
+       "at": [
+        3029,
+        3511
+       ]
+      },
+      {
+       "text": "Go to the north face of the second push-wall.",
        "kind": "walk",
        "at": [
         3030,
-        3508,
+        3511,
         1
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Push Wall.",
+       "why": "Push it, which puts you on the far side.",
+       "target": "bksecretdoor",
+       "id": 2341,
+       "label": "Wall",
+       "at": [
+        3030,
+        3510
        ]
       },
       {
@@ -61337,64 +61401,95 @@
    "stages": [
     {
      "from": 0,
-     "headings": [],
+     "headings": [
+      {
+       "at": 3,
+       "text": "Sir Tiffy on the bench in Falador Park."
+      }
+     ],
      "marks": [
       {
        "at": 2,
+       "var": 657,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 4,
        "var": 670,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 16,
+       "at": 18,
        "var": 659,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 19,
+       "at": 21,
        "var": 660,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 22,
+       "at": 24,
        "var": 661,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 24,
+       "at": 26,
        "var": 662,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 26,
+       "at": 28,
        "var": 663,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 41,
+       "at": 43,
        "var": 686,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 53,
+       "at": 55,
        "var": 664,
        "varbit": true,
        "is": 1
       },
       {
-       "at": 55,
+       "at": 57,
        "var": 665,
        "varbit": true,
        "is": 1
       }
      ],
      "steps": [
+      {
+       "text": "Go up the western tower of the White Knights castle.",
+       "kind": "walk",
+       "at": [
+        2962,
+        3339,
+        2
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Amik Varze.",
+       "why": "He sends you to the park.",
+       "target": "sir_amik_varze",
+       "id": 608,
+       "label": "Sir Amik Varze",
+       "picks": [
+        "Go on."
+       ]
+      },
       {
        "text": "Go to Sir Tiffy.",
        "kind": "walk",
@@ -70610,6 +70705,131 @@
    ]
   },
   {
+   "stageVarId": 452,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 449,
+    "lsb": 2,
+    "msb": 5
+   },
+   "id": "tog",
+   "name": "TEARS OF GUTHIX",
+   "source": "oldschool.runescape.wiki/w/Tears_of_Guthix",
+   "stageVar": "tog_juna_stories",
+   "done": 1,
+   "start": [
+    3225,
+    9539,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Juna first - the light creatures carry nobody who has not met her."
+      },
+      {
+       "at": 2,
+       "text": "Back up, and across the chasm on a light creature."
+      },
+      {
+       "at": 4,
+       "text": "The blue stone out of the veined rocks, and a chisel to shape it."
+      },
+      {
+       "at": 6,
+       "text": "Back down to Juna with the bowl, which is the story."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Enter Tunnel.",
+       "why": "Into the cave of Guthix’s tears.",
+       "target": "tog_cave_down",
+       "id": 6659,
+       "label": "Tunnel",
+       "at": [
+        3225,
+        9539
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb Rocks.",
+       "why": "Down to her ledge, where she speaks.",
+       "target": "tog_climbing_rocks_up",
+       "id": 6673,
+       "label": "Rocks",
+       "at": [
+        3240,
+        9524
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb Rocks.",
+       "why": "Back to the cave floor.",
+       "target": "tog_climbing_rocks_up",
+       "id": 6673,
+       "label": "Rocks",
+       "at": [
+        3240,
+        9525
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Use Lit candle on Light creature.",
+       "why": "It carries you to the blue-stone side.",
+       "target": "tog_light_creature",
+       "id": 2021,
+       "label": "Light creature",
+       "item": 33
+      },
+      {
+       "kind": "loc",
+       "text": "Mine Rocks.",
+       "why": "A lump of blue stone.",
+       "target": "tog_blue_stone_rocks1",
+       "id": 6669,
+       "label": "Rocks",
+       "at": [
+        3217,
+        9492
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Chisel on Magic stone.",
+       "why": "Which makes a bowl of it.",
+       "target": "tog_stone",
+       "id": 4703,
+       "label": "Magic stone",
+       "item": 1755
+      },
+      {
+       "kind": "loc",
+       "text": "Climb Rocks.",
+       "why": "Down to her ledge, and the story is told.",
+       "target": "tog_climbing_rocks_down",
+       "id": 6672,
+       "label": "Rocks",
+       "at": [
+        3239,
+        9498
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    }
+   ]
+  },
+  {
    "stageVarId": 200,
    "stageIsVarbit": false,
    "id": "totem",
@@ -77023,6 +77243,274 @@
        "bring": false
       }
      ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1051,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 571,
+    "lsb": 0,
+    "msb": 10
+   },
+   "id": "wanted",
+   "name": "WANTED!",
+   "source": "oldschool.runescape.wiki/w/Wanted!",
+   "stageVar": "wanted_main",
+   "done": 50,
+   "start": [
+    2998,
+    3373,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Sir Tiffy Cashien, on the bench in Falador Park."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Tiffy Cashien.",
+       "why": "He hands over a commorb.",
+       "target": "rd_teleporter_guy",
+       "id": 2290,
+       "label": "Sir Tiffy Cashien",
+       "picks": [
+        "Go on."
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 10,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Contact Savant on the orb, and she briefs you."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "obj",
+       "text": "Contact Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 2
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 20,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Scan, go where it points, speak to him."
+      },
+      {
+       "at": 9,
+       "text": "The fifth time the teleport does not come."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "obj",
+       "text": "Playback Commorb.",
+       "why": "His file, if you want to read it.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 4
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "why": "Scan - one of twelve places.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "He is gone before you have finished.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "Again.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "Again.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "The fourth time.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "This time he is arrested.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 40,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Back to Sir Tiffy with the hat."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Tiffy Cashien.",
+       "why": "He takes it.",
+       "target": "rd_teleporter_guy",
+       "id": 2290,
+       "label": "Sir Tiffy Cashien"
+      }
+     ],
+     "items": [],
      "worn": []
     }
    ]

@@ -10,6 +10,53 @@
 import * as H from './harness.js';
 import { drive } from './a1lib.js';
 import { travel } from './questrun.js';
+import type { Manifest } from './questrun.js';
+
+/**
+ * THE QUEST AS A PLAYER DOES IT, for the helper's step table - declared, not driven.
+ *
+ * The run below is hand-rolled because the end of this quest is a TIMED minigame: how long you
+ * get at the weeping walls is bought with quest points, and what you come away with depends on
+ * how fast you click. None of that is a list of steps. It is still no reason for the quest to be
+ * missing from the helper, which it was.
+ *
+ * ONE LEG, because the quest has nowhere else to be: tog_juna_stories is the only thing that
+ * records it and it does not move until the story has been told. So a player sees the whole way
+ * in - the cave, Juna, the light creature, the stone, the chisel - and then it is done.
+ *
+ * Written from the wiki and from the run below, which checks these same beats in this order. It
+ * does not claim to have been walked as a manifest; everything else in the table does.
+ */
+export const helper: Manifest = {
+    quest: 'TEARS OF GUTHIX',
+    source: 'oldschool.runescape.wiki/w/Tears_of_Guthix',
+    stageVar: 'tog_juna_stories',
+    done: 1,
+    start: [3225, 9539, 0],
+    steps: [
+        { note: 'requirements: 43 quest points, and a chisel for the stone' },
+        { note: 'wiki step 1: down into the cave, from the Lumbridge swamp caves' },
+        { loc: 'tog_cave_down', at: [3225, 9539], why: 'into the cave of Guthix’s tears' },
+
+        // JUNA IS NOT CLICKED. She speaks when you climb down to her ledge, so the climb is the
+        // step and there is no "talk to Juna" to give.
+        { note: 'wiki step 2: Juna first - the light creatures carry nobody who has not met her' },
+        { loc: 'tog_climbing_rocks_up', at: [3240, 9524], why: 'down to her ledge, where she speaks' },
+
+        { note: 'wiki step 3: back up, and across the chasm on a light creature' },
+        { loc: 'tog_climbing_rocks_up', at: [3240, 9525], why: 'back to the cave floor' },
+        { useNpc: 'tog_light_creature', obj: 'lit_candle', why: 'it carries you to the blue-stone side' },
+
+        { note: 'wiki step 4: the blue stone out of the veined rocks, and a chisel to shape it' },
+        { loc: 'tog_blue_stone_rocks1', at: [3217, 9492], why: 'a lump of blue stone' },
+        { use: ['chisel', 'tog_stone'], why: 'which makes a bowl of it' },
+
+        { note: 'wiki step 5: back down to Juna with the bowl, which is the story' },
+        { loc: 'tog_climbing_rocks_down', at: [3239, 9498], why: 'down to her ledge, and the story is told' },
+        { note: 'the run itself is on a timer: click the walls that are weeping until it ends' },
+        { stage: 1 }
+    ]
+};
 
 await H.boot();
 

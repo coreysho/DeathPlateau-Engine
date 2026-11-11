@@ -9,6 +9,65 @@
 //   npx tsx tools/sim/quest_wanted_run.ts
 import * as H from './harness.js';
 import { drive } from './a1lib.js';
+import type { Manifest } from './questrun.js';
+
+/**
+ * THE QUEST AS A PLAYER DOES IT, for the helper's step table - and declared rather than driven.
+ *
+ * The run below is hand-rolled because the chase is random: the orb picks one of twelve places
+ * and will not say which until it is scanned, so there is no fixed list of tiles to walk. That is
+ * a reason this file cannot be a manifest; it is not a reason the quest should be MISSING from
+ * the helper, which is what it was - a player tracking Wanted! saw an empty page.
+ *
+ * So the steps are written out here and read by the exporter, which takes any declaration typed
+ * Manifest. What it does NOT claim is that these steps were walked: everything else in the table
+ * comes from a run that proved it, and this is the quest's own shape taken from the wiki and from
+ * the run below, which checks the same beats in the same order.
+ *
+ * The chase is five identical rounds on purpose. The orb says where he is; the player goes there
+ * and speaks to him; he teleports out of the first four. Naming one of the twelve Solus npcs is
+ * enough for the marker - they are one family, so the plugin highlights whichever of them is
+ * actually in front of you.
+ */
+export const helper: Manifest = {
+    quest: 'WANTED!',
+    source: 'oldschool.runescape.wiki/w/Wanted!',
+    stageVar: 'wanted_main',
+    done: 50,
+    start: [2998, 3373, 0],
+    steps: [
+        { note: 'wiki step 1: Sir Tiffy Cashien, on the bench in Falador Park' },
+        { talk: 'rd_teleporter_guy', picks: ['Go on.'], why: 'he hands over a commorb' },
+        { stage: 10 },
+
+        { note: 'wiki step 2: contact Savant on the orb, and she briefs you' },
+        { held: 'wanted_crystal_ball', op: 2, why: 'Contact' },
+        { stage: 20 },
+        { held: 'wanted_crystal_ball', op: 4, why: 'his file, if you want to read it' },
+
+        // WRITTEN OUT, NOT GENERATED. A spread here would be read as a built manifest and the
+        // exporter would RUN this file to see it - and running this file boots a world and plays
+        // the whole quest. Four rounds is shorter than that machinery.
+        { note: 'wiki steps 3-7: scan, go where it points, speak to him. Four times he teleports out' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan - one of twelve places' },
+        { talk: 'wanted_solus1', why: 'he is gone before you have finished' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
+        { talk: 'wanted_solus1', why: 'and again' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
+        { talk: 'wanted_solus1', why: 'and again' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
+        { talk: 'wanted_solus1', why: 'the fourth time' },
+
+        { note: 'wiki step 8: the fifth time the teleport does not come' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan' },
+        { talk: 'wanted_solus1', why: 'and this time he is arrested' },
+        { stage: 40 },
+
+        { note: 'wiki step 9: back to Sir Tiffy with the hat' },
+        { talk: 'rd_teleporter_guy', why: 'he takes it' },
+        { stage: 50 }
+    ]
+};
 
 await H.boot();
 
