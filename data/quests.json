@@ -42561,16 +42561,20 @@
        "text": "Two gold bars and a hammer make the golden bowl on any ordinary anvil."
       },
       {
-       "at": 0,
+       "at": 1,
        "text": "Gujuo blesses it - 42 Prayer, and he asks before he does it."
       },
       {
-       "at": 3,
+       "at": 4,
        "text": "A reed cut with the machete, and the reed used on the pool to syphon the water out - the gap in the rocks is too narrow for the bowl itself."
       }
      ],
      "marks": [],
      "steps": [
+      {
+       "kind": "note",
+       "text": "Forge a gold bowl on an anvil from 2 gold bars."
+      },
       {
        "kind": "obj",
        "text": "Swing Bull roarer.",
@@ -42641,13 +42645,13 @@
        "name": "Gold bowl",
        "id": 721,
        "n": 1,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Gold bowl",
        "id": 721,
        "n": 1,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Blessed gold bowl",
@@ -69761,7 +69765,7 @@
        "text": "Ten wooden cats."
       },
       {
-       "at": 4,
+       "at": 5,
        "text": "Build the crate beside him, floor it, fill it, whistle, post it."
       }
      ],
@@ -69773,19 +69777,19 @@
        "is": 1
       },
       {
-       "at": 5,
+       "at": 6,
        "var": 3115,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 6,
+       "at": 7,
        "var": 3115,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 7,
+       "at": 8,
        "var": 3115,
        "varbit": true,
        "is": 4
@@ -69827,6 +69831,10 @@
         11511,
         11509
        ]
+      },
+      {
+       "kind": "note",
+       "text": "Carve wooden cats in your house, one plank and one fur each, with 16 Crafting."
       },
       {
        "text": "Go back to the cell.",
@@ -69919,7 +69927,7 @@
        "name": "Wooden cat",
        "id": 11505,
        "n": 10,
-       "bring": true
+       "bring": false
       },
       {
        "name": "Shipping order",
