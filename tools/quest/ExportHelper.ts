@@ -182,6 +182,20 @@ type HelperQuest = {
     stageVarId?: number;
     /** True when stageVar is a varbit rather than a varp - the client reads them differently. */
     stageIsVarbit?: boolean;
+    /**
+     * WHERE A VARBIT'S BITS LIVE: its parent varp and the inclusive bit range inside it. The real
+     * client does not need this - getVarbit reads the same three numbers out of the cache's own
+     * varbit table - and it is here for the thing that has no cache.
+     *
+     * tools/clienttests/QuestHelperTest.java sweeps every quest at every leg by writing the leg's
+     * progress and drawing. It cannot write a varbit, because writing one means setting bits in a
+     * parent varp the harness has no table to look up, so 28 quests were swept at their first leg
+     * only and 225 legs were drawn by nothing. With these three numbers the harness builds the
+     * varbit entries it needs by hand and reaches all of them.
+     *
+     * Only for a varbit: a varp quest leaves it out.
+     */
+    stageBits?: { varp: number; lsb: number; msb: number };
     id: string;
     name: string;
     source: string;
@@ -1039,6 +1053,7 @@ for (const file of fs
     // is has to travel with the number.
     let stageVarId = -1;
     let stageIsVarbit = false;
+    let stageBits: { varp: number; lsb: number; msb: number } | undefined;
     const asVarp = VarPlayerType.getByName(m.stageVar);
     if (asVarp) {
         stageVarId = asVarp.id;
@@ -1047,12 +1062,22 @@ for (const file of fs
         if (asBit) {
             stageVarId = asBit.id;
             stageIsVarbit = true;
+            // The bits themselves, so a harness with no cache can still write this quest's
+            // progress. Emitted only when all three are real: a -1 here would have the harness
+            // writing into varp -1 and reading back a leg that never happened, which is worse
+            // than the first-leg-only sweep it replaces.
+            if (asBit.basevar >= 0 && asBit.startbit >= 0 && asBit.endbit >= asBit.startbit) {
+                stageBits = { varp: asBit.basevar, lsb: asBit.startbit, msb: asBit.endbit };
+            } else {
+                unresolved.set('stageBits:' + m.stageVar, 1);
+            }
         }
     }
     if (stageVarId < 0) unresolved.set('stageVar:' + m.stageVar, 1);
     out.push({
         stageVarId,
         stageIsVarbit,
+        ...(stageBits ? { stageBits } : {}),
         id: file.replace(/^quest_|_run\.ts$/g, ''),
         name: String(m.quest ?? file),
         source: String(m.source ?? ''),
@@ -1091,6 +1116,16 @@ if (unread.length) console.log(`  not manifest-driven, so no steps to export (${
 const withId = out.reduce((a, q) => a + q.stages.reduce((b, st) => b + st.steps.filter(x => typeof x.id === 'number').length, 0), 0);
 const varOk = out.filter(q => (q.stageVarId ?? -1) >= 0).length;
 console.log(`  ${withId} of ${targets} targets resolved to a cache id; ${varOk} of ${out.length} quests resolved their progress var`);
+// SAID OUT LOUD, because the harness's reach depends on it: a varbit quest with no bits is one
+// the client-side sweep can only draw at its first leg, which is the shortfall these numbers
+// exist to remove. Counted rather than assumed, so a cache that stops describing one is visible
+// here rather than as a sweep that quietly got smaller.
+const bitQuests = out.filter(q => q.stageIsVarbit);
+const withBits = bitQuests.filter(q => q.stageBits);
+console.log(`  ${withBits.length} of ${bitQuests.length} varbit quests carry their bit range, so the client harness can write ${withBits.reduce((a, q) => a + q.stages.length, 0)} of ${bitQuests.reduce((a, q) => a + q.stages.length, 0)} varbit legs`);
+for (const q of bitQuests.filter(q => !q.stageBits)) {
+    console.log(`    no bit range: ${q.name} (${q.stageVar}) - swept at its first leg only`);
+}
 if (unresolved.size) {
     const worst = [...unresolved].sort((a, b) => b[1] - a[1]).slice(0, 8);
     console.log(`  unresolved names (${unresolved.size}): ${worst.map(([k, n]) => k + (n > 1 ? ' x' + n : '')).join(', ')}`);
