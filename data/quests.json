@@ -52967,7 +52967,257 @@
     },
     {
      "from": 34,
-     "headings": [],
+     "headings": [
+      {
+       "at": 1,
+       "text": "B: the parts chest, for the two mirrors the route needs beyond the kit."
+      },
+      {
+       "at": 4,
+       "text": "C: the entry pillar on the top floor - flat, turning the beam south to west."
+      },
+      {
+       "at": 16,
+       "text": "D: the bottom of the shaft, tilted the other way - a falling beam goes west."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go to the chest on the bottom floor.",
+       "kind": "walk",
+       "at": [
+        1858,
+        4614,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Closed chest.",
+       "target": "mourning_temple_light_parts_4_closed",
+       "id": 9758,
+       "label": "Closed chest",
+       "at": [
+        1858,
+        4613
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Search Open chest.",
+       "why": "Two more mirrors and the blue crystal.",
+       "target": "mourning_temple_light_parts_4_open",
+       "id": 9757,
+       "label": "Open chest",
+       "at": [
+        1858,
+        4613
+       ],
+       "gives": [
+        6639
+       ]
+      },
+      {
+       "text": "Go to the top-floor entry pillar.",
+       "kind": "walk",
+       "at": [
+        1915,
+        4614,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 16.",
+       "why": "A mirror in it.",
+       "target": "mourning_temple_pillar_3_16",
+       "id": 9972,
+       "item": 6639,
+       "at": [
+        1915,
+        4613
+       ]
+      },
+      {
+       "text": "Go to the west end of the top floor.",
+       "kind": "walk",
+       "at": [
+        1860,
+        4614,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 13.",
+       "why": "A mirror in it.",
+       "target": "mourning_temple_pillar_3_13",
+       "id": 9970,
+       "item": 6639,
+       "at": [
+        1860,
+        4613
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 13.",
+       "why": "Turned a quarter.",
+       "target": "mourning_temple_pillar_3_13",
+       "id": 9970,
+       "item": 6639,
+       "at": [
+        1860,
+        4613
+       ]
+      },
+      {
+       "text": "Go to the north-west pillar.",
+       "kind": "walk",
+       "at": [
+        1860,
+        4640,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 8.",
+       "why": "A mirror in it.",
+       "target": "mourning_temple_pillar_3_8",
+       "id": 9966,
+       "item": 6639,
+       "at": [
+        1860,
+        4639
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 8.",
+       "why": "Turned a quarter.",
+       "target": "mourning_temple_pillar_3_8",
+       "id": 9966,
+       "item": 6639,
+       "at": [
+        1860,
+        4639
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 3 8.",
+       "why": "Another.",
+       "target": "mourning_temple_pillar_3_8",
+       "id": 9966,
+       "item": 6639,
+       "at": [
+        1860,
+        4639
+       ]
+      },
+      {
+       "text": "Go to the shaft pillar.",
+       "kind": "walk",
+       "at": [
+        1881,
+        4640,
+        2
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Pillar of Light.",
+       "why": "A mirror in it.",
+       "target": "mourning_temple_pillar_3_a",
+       "id": 9973,
+       "label": "Pillar of Light",
+       "item": 6639,
+       "at": [
+        1881,
+        4639
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Search Pillar of Light.",
+       "why": "Tilt it down.",
+       "target": "mourning_temple_pillar_3_a",
+       "id": 9973,
+       "label": "Pillar of Light",
+       "at": [
+        1881,
+        4639
+       ],
+       "op": 1,
+       "picks": [
+        "3",
+        "2"
+       ]
+      },
+      {
+       "text": "Go down to the bottom floor, under the shaft.",
+       "kind": "walk",
+       "at": [
+        1881,
+        4640,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Hand mirror on Mourning Temple Pillar 1 B.",
+       "why": "A mirror in it.",
+       "target": "mourning_temple_pillar_1_b",
+       "id": 9939,
+       "item": 6639,
+       "at": [
+        1881,
+        4639
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Mourning Temple Pillar 1 B.",
+       "why": "Tilt it up, and the light leaves the west wall.",
+       "target": "mourning_temple_pillar_1_b",
+       "id": 9939,
+       "at": [
+        1881,
+        4639
+       ],
+       "op": 1,
+       "picks": [
+        "2",
+        "2"
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Newly made crystal",
+       "id": 6651,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Hand mirror",
+       "id": 6639,
+       "n": 6,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 40,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Back in, and all the way down to the west end again - Thorgel the dwarf has been sitting by the Death Altar for eleven years with a list instead of a talisman."
+      }
+     ],
      "marks": [],
      "steps": [
       {
@@ -53125,14 +53375,7 @@
        "label": "Thorgel"
       }
      ],
-     "items": [
-      {
-       "name": "Newly made crystal",
-       "id": 6651,
-       "n": 1,
-       "bring": false
-      }
-     ],
+     "items": [],
      "worn": []
     },
     {
