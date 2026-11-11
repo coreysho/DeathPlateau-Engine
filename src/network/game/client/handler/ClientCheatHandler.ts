@@ -64,6 +64,35 @@ const PASSWORD_CHARS = /^[a-z0-9!"$%^&*()\-_=+[{\]};:'@#~,<.>/?\\|]+$/;
 const BUG_COOLDOWN_MS = 60_000;
 const lastBugReport: Map<string, number> = new Map();
 
+// custom (2026-11-11) - ::home and ::sz are the two free teleports, and a free teleport is a free
+// escape: out of a fight, out of the Wilderness, out of an instance that is counting on its own way
+// out being used. Both commands ask the same three questions, so they ask them here rather than
+// each keeping its own copy to drift from. The rule, the dates and the reasoning are ::home's own,
+// moved rather than rewritten; only the destination in the message is a parameter.
+//
+// (2026-09-27) Anything that stops a logout (combat, for 16 ticks after the last hit:
+// p_preventlogout) stops the teleport too, and so does the Wilderness. Administrators (3) and up
+// are not held to it - this is called under that check, not instead of it.
+//
+// (2026-10-19) Fight Cave, solo Pest Control, Zulrah, a house: each has its own way out, which is
+// what ends the instance and gives it back to the pool - ::home walked out of them and left the
+// slot taken, and the minigame's own state half-finished.
+function freeTeleportRefusal(player: Player, where: string): string | null {
+    if (World.currentTick < player.preventLogoutUntil) {
+        return `You can't teleport ${where} until 10 seconds after the end of combat.`;
+    }
+
+    if (player.isInWilderness()) {
+        return `You can't teleport ${where} from the Wilderness.`;
+    }
+
+    if (InstanceMap.at(player.x, player.z) !== null) {
+        return `You can't teleport ${where} from here. Use the way out.`;
+    }
+
+    return null;
+}
+
 export default class ClientCheatHandler extends ClientGameMessageHandler<ClientCheat> {
     handle(message: ClientCheat, player: Player): boolean {
         if (message.input.length > 80) {
@@ -88,25 +117,12 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 return false;
             }
 
-            // custom (2026-09-27) - not a free escape. Anything that stops a logout (combat, for 16
-            // ticks after the last hit: p_preventlogout) stops ::home too, and so does the wilderness.
-            // Administrators and up are not held to it.
+            // custom (2026-09-27) - not a free escape; freeTeleportRefusal above is the rule, and
+            // ::sz is held to the same one. Administrators and up are not held to it.
             if (player.staffModLevel < 3) {
-                if (World.currentTick < player.preventLogoutUntil) {
-                    player.messageGame("You can't teleport home until 10 seconds after the end of combat.");
-                    return false;
-                }
-
-                if (player.isInWilderness()) {
-                    player.messageGame("You can't teleport home from the Wilderness.");
-                    return false;
-                }
-
-                // (2026-10-19) Fight Cave, solo Pest Control, Zulrah, a house: each has its own way out,
-                // which is what ends the instance and gives it back to the pool - ::home walked out of
-                // them and left the slot taken, and the minigame's own state half-finished.
-                if (InstanceMap.at(player.x, player.z) !== null) {
-                    player.messageGame("You can't teleport home from here. Use the way out.");
+                const refusal: string | null = freeTeleportRefusal(player, 'home');
+                if (refusal !== null) {
+                    player.messageGame(refusal);
                     return false;
                 }
             }
@@ -986,7 +1002,46 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
         if (player.staffModLevel >= 2) {
             // "super-moderator" commands (similar to a jmod but we don't know their command capabilities on live)
 
-            if (cmd === 'getcoord') {
+            if (cmd === 'sz') {
+                // custom (2026-11-11) - the staff zone: map square 22_56, which nothing on the map
+                // borders and no path reaches. Content builds the square (content/tools/genstaffzone.py)
+                // and owns the teleport (content/scripts/staff_zone/scripts/staff_zone.rs2); what the
+                // engine owns is who may type this, which is the block it sits in - moderator and above.
+                // ::home is the way out, from in there like from anywhere else.
+                //
+                // The other half of "staff only" is content's [proc,staffzone_login]: ::teleother can put
+                // a player in there, and a rank can be taken away from an account logged out in there,
+                // and neither of those goes through this command.
+                player.closeModal();
+
+                if (!player.canAccess()) {
+                    player.messageGame('Please finish what you are doing first.');
+                    return false;
+                }
+
+                // A moderator is held to the same rule as on ::home - a staff zone two keystrokes away
+                // is a way out of a fight otherwise. An administrator is not.
+                if (player.staffModLevel < 3) {
+                    const refusal: string | null = freeTeleportRefusal(player, 'to the staff zone');
+                    if (refusal !== null) {
+                        player.messageGame(refusal);
+                        return false;
+                    }
+                }
+
+                player.clearInteraction();
+                player.unsetMapFlag();
+
+                const script = ScriptProvider.getByName('[proc,staffzone_teleport]');
+                if (!script) {
+                    // a content build from before staff_zone.rs2
+                    player.messageGame("You can't teleport to the staff zone right now.");
+                    return false;
+                }
+
+                player.executeScript(ScriptRunner.init(script, player), true);
+                return true;
+            } else if (cmd === 'getcoord') {
                 // authentic
 
                 // Displays current coordinate
