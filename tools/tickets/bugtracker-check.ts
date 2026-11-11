@@ -281,6 +281,35 @@ try {
     globalThis.fetch = real;
 }
 
+// ------------------------------------------------- every button the bot posts reaches a branch
+//
+// WHY THIS IS READ AS TEXT. A button is one string - `tk|close|41` - split on the bars by the
+// handler, so a button and the code that answers it are joined by nothing a compiler can see. A
+// label typed as `tk|closed|` builds, deploys, and does nothing at all when pressed. Importing
+// TicketBot.ts to ask it properly would open the live ticket database and build a Discord client,
+// which is a worse trade than reading the file, so the two sets are lifted out of the source and
+// compared.
+const bot = fs.readFileSync('src/server/tickets/TicketBot.ts', 'utf8');
+const posted = new Set([...bot.matchAll(/`tk\|(\w+)\|/g)].map((m) => m[1]));
+const answered = new Set([...bot.matchAll(/action === '(\w+)'/g)].map((m) => m[1]));
+for (const action of [...posted].sort()) {
+    checkThat(`the ${action} button has a branch to answer it`, answered.has(action));
+}
+check('and all four are posted somewhere', [...posted].sort().join(' '), 'claim close hand reopen');
+
+// THE CLOSE BUTTON ON THE LOG MESSAGE is this file's own subject only in that it sits in the same
+// row as Hand to Claude. Pinned here because the row is built in one place and read by nobody else:
+// deleting the button would otherwise be silent.
+const fromLog = bot.slice(bot.indexOf('function logMessage('), bot.indexOf('async function postLog('));
+checkThat('staff can close from the log message, not only the thread', fromLog.includes('`tk|close|${t.id}`'));
+checkThat('and claim from it, as before', fromLog.includes('`tk|claim|${t.id}`'));
+// DISCORD ALLOWS FIVE BUTTONS IN A ROW and the row now has five places that add one - but the
+// tracker link and Hand to Claude are the two arms of one `else if`, so at most four ever render.
+// Counted rather than asserted as a maximum, because what a row renders depends on the ticket;
+// a sixth place would turn this red and make whoever added it work out which four can coincide.
+check('five places add a button to the row', (fromLog.match(/addComponents\(/g) ?? []).length, 5);
+checkThat('two of them are the arms of one else-if, so four is the most that render', fromLog.includes("} else if (t.kind === 'bug' && trackerReady())"));
+
 console.log();
 for (const line of bad) {
     console.log(`  FAIL  ${line}`);
