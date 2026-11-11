@@ -76,7 +76,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isHelperResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
 import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
@@ -2373,7 +2373,7 @@ class World {
                 return;
             }
 
-            const { username, lowMemory, reconnecting, staffmodlevel, veteran, muted_until, members, messageCount } = msg;
+            const { username, lowMemory, reconnecting, staffmodlevel, veteran, helper, muted_until, members, messageCount } = msg;
             const save = msg.save ?? new Uint8Array();
 
             // if (reconnecting && !this.getPlayerByUsername(username)) {
@@ -2400,6 +2400,7 @@ class World {
                 player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
                 player.veteran = (veteran ?? 0) > 0;
+                player.helper = (helper ?? 0) > 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
                 player.members = members;
@@ -2507,6 +2508,39 @@ class World {
             } else {
                 who.messageGame(`veteran: ${name} no longer has the Veteran rank.`);
             }
+        } else if (isHelperResponse(msg)) {
+            const { staff, username, result, helper } = msg;
+            this.helperRequests.delete(username);
+
+            // Online players get it now rather than on their next login: the icon rides the
+            // appearance block, so rebuilding that is the whole of showing it. No cape and no
+            // powers to hand over - the icon IS the rank.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.helper = helper;
+                // Only once an appearance exists. buildAppearance(-1) reads no worn inventory, so
+                // rebuilding that early would send everyone a player wearing nothing.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                target.messageGame(helper ? 'You are now a Helper. Thanks for giving other players a hand.' : 'You are no longer a Helper.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`helper: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`helper: ${name} could not be changed right now. Please try again.`);
+            } else if (helper) {
+                who.messageGame(`helper: ${name} is now a Helper.`);
+            } else {
+                who.messageGame(`helper: ${name} is no longer a Helper.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2552,6 +2586,7 @@ class World {
     // way a password change is held. Keyed by the account being changed and not by the staff member
     // running it, so two administrators cannot race on the same name.
     veteranRequests: Set<string> = new Set();
+    helperRequests: Set<string> = new Set();
 
     // custom (2026-11-06) - looked up once; -2 means "not looked up yet", which is distinct from
     // the -1 ObjType.getId returns for a build that does not have the cape in it.
@@ -2577,8 +2612,7 @@ class World {
     /** veteran_max_cape, veteran_max_hood, max_cape, max_hood - or -1 each, looked up once. */
     private static veteranFused(): number[] {
         if (World.veteranFuseObjs === null) {
-            World.veteranFuseObjs = ['veteran_max_cape', 'veteran_max_hood', 'max_cape', 'max_hood']
-                .map((name: string): number => ObjType.getId(name));
+            World.veteranFuseObjs = ['veteran_max_cape', 'veteran_max_hood', 'max_cape', 'max_hood'].map((name: string): number => ObjType.getId(name));
         }
         return World.veteranFuseObjs;
     }
@@ -2607,8 +2641,7 @@ class World {
 
         const bank = InvType.getId('bank');
         const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
-        const count = (what: number): number =>
-            what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0);
+        const count = (what: number): number => (what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0));
         const [variant, variantHood, maxCape, maxHood] = World.veteranFused();
 
         // A FUSED CAPE STILL COUNTS AS HAVING ONE. See veteranFuseObjs.
@@ -2624,9 +2657,7 @@ class World {
             const split = this.veteranSplit(player, held, variant, variantHood, maxCape, maxHood);
             if (have > 0) {
                 player.buildAppearance(player.appearanceInv);
-                player.messageGame(split
-                    ? 'Your Veteran cape has been taken back; your Max cape and hood are whole again.'
-                    : 'Your Veteran cape has been taken back.');
+                player.messageGame(split ? 'Your Veteran cape has been taken back; your Max cape and hood are whole again.' : 'Your Veteran cape has been taken back.');
             }
             return;
         }
@@ -2659,13 +2690,11 @@ class World {
      *
      * @returns whether a variant was actually split.
      */
-    private veteranSplit(player: Player, held: number[], variant: number, variantHood: number,
-        maxCape: number, maxHood: number): boolean {
+    private veteranSplit(player: Player, held: number[], variant: number, variantHood: number, maxCape: number, maxHood: number): boolean {
         if (variant === -1 || maxCape === -1) {
             return false;
         }
-        const total = (what: number): number =>
-            what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0);
+        const total = (what: number): number => (what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0));
         const fused = total(variant);
         if (fused < 1) {
             return false;
@@ -2677,11 +2706,7 @@ class World {
         const bank = InvType.getId('bank');
         const hoods = variantHood === -1 ? 0 : Math.min(fused, total(variantHood));
         const need = fused + hoods;
-        const where = bank !== -1 && player.invFreeSpace(bank) >= need
-            ? bank
-            : player.invFreeSpace(InvType.INV) >= need
-                ? InvType.INV
-                : -1;
+        const where = bank !== -1 && player.invFreeSpace(bank) >= need ? bank : player.invFreeSpace(InvType.INV) >= need ? InvType.INV : -1;
         if (where === -1) {
             player.messageGame('Your Veteran max cape could not be split - your bank and inventory are both full.');
             return false;
@@ -2721,6 +2746,24 @@ class World {
             staff,
             username: safeName,
             veteran
+        });
+        return safeName;
+    }
+
+    requestHelper(staff: string, username: string, helper: boolean): string | null {
+        // Same base37 round trip as requestVeteran: "Bob Smith" and "bob_smith" are one account
+        // and ::helper is as likely to be typed either way.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.helperRequests.has(safeName)) {
+            return null;
+        }
+
+        this.helperRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_helper',
+            staff,
+            username: safeName,
+            helper
         });
         return safeName;
     }

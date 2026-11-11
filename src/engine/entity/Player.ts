@@ -413,6 +413,8 @@ export default class Player extends PathingEntity {
     // Not a staffModLevel, and deliberately a boolean so that no "at least" check can be written
     // against it by accident. It grants nothing.
     veteran: boolean = false;
+    // custom (2026-11-11) - the Helper rank. Appearance only, like veteran: see ChatCrown.
+    helper: boolean = false;
     visibility: Visibility = Visibility.DEFAULT;
     // custom (2026-09-27) - a server-side bot (engine/bot/BotPlayer.ts). Never saved, never counted as
     // online, never announced to the friend server or a clan channel; see the isBot checks in World.
@@ -2006,7 +2008,7 @@ export default class Player extends PathingEntity {
     chatIcons(): number {
         const rate = this.xpRate();
         const badge = rate >= 10 ? 3 : rate >= 5 ? 2 : 1;
-        return chatCrown(this.staffModLevel, this.veteran) | (badge << 4);
+        return chatCrown(this.staffModLevel, this.veteran, this.helper) | (badge << 4);
     }
 
     getVarBit(id: number) {

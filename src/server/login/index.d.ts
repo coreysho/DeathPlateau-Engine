@@ -9,6 +9,8 @@ interface LoginResponse {
     // custom (2026-11-06) - the Veteran rank. Optional like staffmodlevel, and read as 0 when
     // a login server older than the column does not send it.
     veteran?: number;
+    // custom (2026-11-11) - the Helper rank, read as 0 by a login server older than the column.
+    helper?: number;
     muted_until?: any | null;
     save: Uint8Array | null;
     account_id: number;
@@ -48,6 +50,17 @@ interface VeteranResponse {
     veteran: boolean;
 }
 
+// custom (2026-11-11) - the answer to ::helper, the same shape as VeteranResponse and for the
+// same reason: the account it changes is usually not logged in, so the reply goes to whoever ran
+// the command.
+interface HelperResponse {
+    type: string;
+    staff: string;
+    username: string;
+    result: 'ok' | 'unknown' | 'error';
+    helper: boolean;
+}
+
 // custom (2026-11-02) - the answer to ::forgetlogins. `count` is how many saved logins there were
 // to cancel, so the player is told whether anything happened.
 interface ForgetLoginsResponse {
@@ -57,7 +70,7 @@ interface ForgetLoginsResponse {
     ok: boolean;
 }
 
-export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse | ForgetLoginsResponse | VeteranResponse;
+export type GenericLoginThreadResponse = LoginResponse | LogoutResponse | ChangePasswordResponse | ForgetLoginsResponse | VeteranResponse | HelperResponse;
 
 export function isPlayerLoginResponse(response: GenericLoginThreadResponse): response is LoginResponse {
     return response.type === 'player_login';
@@ -77,4 +90,8 @@ export function isForgetLoginsResponse(response: GenericLoginThreadResponse): re
 
 export function isVeteranResponse(response: GenericLoginThreadResponse): response is VeteranResponse {
     return response.type === 'player_set_veteran';
+}
+
+export function isHelperResponse(response: GenericLoginThreadResponse): response is HelperResponse {
+    return response.type === 'player_set_helper';
 }

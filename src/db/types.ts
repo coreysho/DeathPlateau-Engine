@@ -12,6 +12,7 @@ export type account = {
     banned_until: string | null;
     staffmodlevel: Generated<number>;
     veteran: Generated<number>;
+    helper: Generated<number>;
     members: Generated<number>;
 };
 export type account_login = {

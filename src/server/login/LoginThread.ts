@@ -380,6 +380,30 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
             parentPort.postMessage({ type: 'player_set_veteran', staff, username, result, veteran });
             break;
         }
+        case 'player_set_helper': {
+            // custom (2026-11-11) - ::helper. The same path as player_set_veteran above, and for
+            // the same reasons: the account table is one database in both login modes, and the
+            // account usually is not logged in when the rank is handed out.
+            const { staff, username, helper } = msg;
+            let result: 'ok' | 'unknown' | 'error' = 'error';
+            try {
+                const account = await db.selectFrom('account').select(['id']).where('username', '=', username).executeTakeFirst();
+                if (!account) {
+                    result = 'unknown';
+                } else {
+                    await db
+                        .updateTable('account')
+                        .set({ helper: helper ? 1 : 0 })
+                        .where('id', '=', account.id)
+                        .execute();
+                    result = 'ok';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            parentPort.postMessage({ type: 'player_set_helper', staff, username, result, helper });
+            break;
+        }
         case 'player_forget_logins': {
             // custom (2026-11-02) - ::forgetlogins. Every saved login for this account, cancelled,
             // including the one on the computer it was typed from - which is the point: a player

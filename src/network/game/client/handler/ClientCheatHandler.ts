@@ -750,6 +750,34 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 } else {
                     player.messageGame(`veteran: ${grant ? 'granting' : 'removing'}...`);
                 }
+            } else if (cmd === 'helper') {
+                // custom (2026-11-11) - the Helper rank: a player who answers other players'
+                // questions. It grants nothing, which is the point - it can be given out freely
+                // and taken back without it being a demotion.
+                //
+                // ::helper <username>      make them one
+                // ::helper <username> off  take it back
+                //
+                // The name is everything except a trailing "off", for the reason ::veteran above
+                // gives: a display name with a space in it arrives here already split in two.
+                if (args.length < 1) {
+                    player.messageGame('Usage: ::helper <username> [off]');
+                    return false;
+                }
+
+                const grant = args[args.length - 1] !== 'off';
+                const name = (grant ? args : args.slice(0, -1)).join(' ');
+                if (name.length === 0) {
+                    player.messageGame('Usage: ::helper <username> [off]');
+                    return false;
+                }
+
+                const filed = World.requestHelper(player.username, name, grant);
+                if (filed === null) {
+                    player.messageGame(`helper: ${name} is already being changed, or is not a name.`);
+                } else {
+                    player.messageGame(`helper: ${grant ? 'granting' : 'removing'}...`);
+                }
             } else if (cmd === 'giveother' && STAFF_WORLD) {
                 // custom
                 if (args.length < 2) {

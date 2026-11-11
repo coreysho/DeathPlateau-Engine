@@ -37,6 +37,12 @@ model account {
     // wipe moves character saves away and keeps account rows, so a perm varp would have thrown
     // the rank away on the day it started to mean something.
     veteran       Int     @default(0)
+
+    // custom (2026-11-11) - the Helper rank: answers other players' questions, and carries no
+    // powers whatsoever. Shows a blue roundel beside the name in chat (ChatCrown, crown 8). A flag
+    // rather than a staffmodlevel for the same reason veteran is one, and more sharply: the whole
+    // value of this rank is that there is nothing attached to it to abuse.
+    helper        Int     @default(0)
     members       Boolean @default(false)
 }
 

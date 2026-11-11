@@ -5,6 +5,7 @@
  *   4  purple crown (developer)          5  red crown (owner)
  *   6  blue and gold crown (a second owner)
  *   7  bronze emblem (veteran - not staff, and the only one here that is not a crown)
+ *   8  blue roundel (helper - not staff either, and carries no powers at all)
  *
  * staffModLevel on the account: 1 player moderator, 2 moderator, 3 administrator, 4 developer,
  * 5 owner, 6 a second owner with a crown of their own. The client draws 2 and 3 alike as the gold crown, so 3 is folded into 2 here rather than
@@ -22,7 +23,7 @@
  * is no op for the veteran flag, so a veteran's rare drop broadcasts with their XP badge and no
  * emblem - the same as any other player's.
  *
- * WHO MAY BE SENT CROWN 7. Only the appearance block (Player.chatIcons), which every player's
+ * WHO MAY BE SENT CROWN 7 OR 8. Only the appearance block (Player.chatIcons), which every player's
  * icons come from and which carries no rights. The other two callers pass staffModLevel alone and
  * must keep doing so:
  *
@@ -36,7 +37,7 @@
  * crown on a private message is there so a player can tell a real moderator is writing to them,
  * and a veteran emblem would only dilute that.
  */
-export function chatCrown(staffModLevel: number, veteran: boolean = false): number {
+export function chatCrown(staffModLevel: number, veteran: boolean = false, helper: boolean = false): number {
     if (staffModLevel >= 6) {
         return 6;
     }
@@ -52,7 +53,13 @@ export function chatCrown(staffModLevel: number, veteran: boolean = false): numb
     if (staffModLevel > 0) {
         return 1;
     }
-    // Asked last, so a veteran who is also staff shows the staff crown: the rank that carries
-    // powers is the one worth seeing, and nobody needs two icons saying who they are.
+    // STAFF, THEN HELPER, THEN VETERAN, and the order is an argument rather than a convention.
+    // A staff crown is the one that carries powers, so it is the one worth seeing. A helper's
+    // roundel answers "who can I ask about this, now", which a player can act on. A veteran's
+    // emblem says how long somebody has been here, which is ornament. Nobody needs two icons
+    // saying who they are, so exactly one is returned.
+    if (helper) {
+        return 8;
+    }
     return veteran ? 7 : 0;
 }
