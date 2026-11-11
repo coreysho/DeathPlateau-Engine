@@ -3,6 +3,11 @@
   {
    "stageVarId": 1372,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 602,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "agrith",
    "name": "SHADOW OF THE STORM",
    "source": "oldschool.runescape.wiki/w/Shadow_of_the_Storm/Quick_guide",
@@ -355,6 +360,11 @@
   {
    "stageVarId": 217,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 408,
+    "lsb": 28,
+    "msb": 31
+   },
    "id": "ahoy",
    "name": "GHOSTS AHOY",
    "source": "oldschool.runescape.wiki/w/Ghosts_Ahoy/Quick_guide (2004 quest, unchanged in OSRS)",
@@ -12503,6 +12513,11 @@
   {
    "stageVarId": 1465,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 622,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "devious",
    "name": "DEVIOUS MINDS",
    "source": "oldschool.runescape.wiki/w/Devious_Minds",
@@ -16350,6 +16365,11 @@
   {
    "stageVarId": 358,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 440,
+    "lsb": 0,
+    "msb": 14
+   },
    "id": "dt",
    "name": "DESERT TREASURE",
    "source": "oldschool.runescape.wiki/w/Desert_Treasure/Quick_guide",
@@ -17877,6 +17897,11 @@
   {
    "stageVarId": 299,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 433,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "dwarfrock",
    "name": "BETWEEN A ROCK...",
    "source": "oldschool.runescape.wiki/w/Between_a_Rock...",
@@ -20147,6 +20172,11 @@
   {
    "stageVarId": 2067,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 299,
+    "lsb": 20,
+    "msb": 20
+   },
    "id": "elemental",
    "name": "ELEMENTAL WORKSHOP I",
    "source": "oldschool.runescape.wiki/w/Elemental_Workshop_I",
@@ -20750,6 +20780,11 @@
   {
    "stageVarId": 1444,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 616,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "elid",
    "name": "SPIRITS OF THE ELID",
    "source": "oldschool.runescape.wiki/w/Spirits_of_the_Elid",
@@ -21473,6 +21508,11 @@
   {
    "stageVarId": 1560,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 641,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "enakh",
    "name": "ENAKHRA'S LAMENT",
    "source": "oldschool.runescape.wiki/w/Enakhra's_Lament",
@@ -23309,6 +23349,11 @@
   {
    "stageVarId": 1803,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 671,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "fairy",
    "name": "A FAIRY TALE PART I",
    "source": "oldschool.runescape.wiki/w/Fairytale_I_-_Growing_Pains",
@@ -24678,6 +24723,11 @@
   {
    "stageVarId": 334,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 435,
+    "lsb": 0,
+    "msb": 5
+   },
    "id": "feud",
    "name": "THE FEUD",
    "source": "oldschool.runescape.wiki/w/The_Feud/Quick_guide (2005 quest, unchanged in OSRS)",
@@ -27660,6 +27710,11 @@
   {
    "stageVarId": 822,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 521,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "forget",
    "name": "FORGETTABLE TALE OF A DRUNKEN DWARF",
    "source": "oldschool.runescape.wiki/w/Forgettable_Tale...",
@@ -28132,6 +28187,11 @@
   {
    "stageVarId": 961,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 553,
+    "lsb": 0,
+    "msb": 5
+   },
    "id": "garden",
    "name": "GARDEN OF TRANQUILLITY",
    "source": "oldschool.runescape.wiki/w/Garden_of_Tranquillity",
@@ -29252,6 +29312,11 @@
   {
    "stageVarId": 571,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 482,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "giantdwarf",
    "name": "THE GIANT DWARF",
    "source": "oldschool.runescape.wiki/w/The_Giant_Dwarf",
@@ -29759,6 +29824,11 @@
   {
    "stageVarId": 346,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 437,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "golem",
    "name": "THE GOLEM",
    "source": "oldschool.runescape.wiki/w/The_Golem",
@@ -31841,6 +31911,11 @@
   {
    "stageVarId": 1527,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 635,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "handsand",
    "name": "THE HAND IN THE SAND",
    "source": "oldschool.runescape.wiki/w/The_Hand_in_the_Sand",
@@ -35480,6 +35555,11 @@
   {
    "stageVarId": 1850,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 678,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "hundred",
    "name": "RECIPE FOR DISASTER",
    "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
@@ -38677,6 +38757,11 @@
   {
    "stageVarId": 418,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 445,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "icslittle",
    "name": "ICTHLARIN'S LITTLE HELPER",
    "source": "oldschool.runescape.wiki/w/Icthlarin%27s_Little_Helper/Quick_guide",
@@ -44788,6 +44873,11 @@
   {
    "stageVarId": 532,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 465,
+    "lsb": 0,
+    "msb": 10
+   },
    "id": "losttribe",
    "name": "THE LOST TRIBE",
    "source": "oldschool.runescape.wiki/w/The_Lost_Tribe",
@@ -47509,6 +47599,11 @@
   {
    "stageVarId": 1383,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 604,
+    "lsb": 0,
+    "msb": 2
+   },
    "id": "makinghistory",
    "name": "MAKING HISTORY",
    "source": "oldschool.runescape.wiki/w/Making_History",
@@ -48801,6 +48896,11 @@
   {
    "stageVarId": 260,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 423,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "mdaughter",
    "name": "MOUNTAIN DAUGHTER",
    "source": "oldschool.runescape.wiki/w/Mountain_Daughter",
@@ -52791,6 +52891,11 @@
   {
    "stageVarId": 1103,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 574,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "mourning2",
    "name": "MOURNING'S END PART II",
    "source": "oldschool.runescape.wiki/w/Mourning%27s_End_Part_II/Quick_guide",
@@ -55666,6 +55771,11 @@
   {
    "stageVarId": 1990,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 705,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "myreque2",
    "name": "IN AID OF THE MYREQUE",
    "source": "oldschool.runescape.wiki/w/In_Aid_of_the_Myreque",
@@ -59974,6 +60084,11 @@
   {
    "stageVarId": 1404,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 607,
+    "lsb": 0,
+    "msb": 7
+   },
    "id": "ratcatch",
    "name": "RAT CATCHERS",
    "source": "oldschool.runescape.wiki/w/Ratcatchers",
@@ -61009,6 +61124,11 @@
   {
    "stageVarId": 657,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 496,
+    "lsb": 0,
+    "msb": 2
+   },
    "id": "rd",
    "name": "RECRUITMENT DRIVE",
    "source": "oldschool.runescape.wiki/w/Recruitment_Drive",
@@ -67441,6 +67561,11 @@
   {
    "stageVarId": 2011,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 709,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "soulbane",
    "name": "A SOUL'S BANE",
    "source": "oldschool.runescape.wiki/w/A_Soul%27s_Bane",
@@ -68189,6 +68314,11 @@
   {
    "stageVarId": 2098,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 723,
+    "lsb": 0,
+    "msb": 8
+   },
    "id": "swansong",
    "name": "SWAN SONG",
    "source": "oldschool.runescape.wiki/w/Swan_Song",
@@ -72295,6 +72425,11 @@
   {
    "stageVarId": 1028,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 568,
+    "lsb": 0,
+    "msb": 6
+   },
    "id": "twocats",
    "name": "A TAIL OF TWO CATS",
    "source": "oldschool.runescape.wiki/w/A_Tail_of_Two_Cats",
@@ -79289,6 +79424,11 @@
   {
    "stageVarId": 487,
    "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 455,
+    "lsb": 0,
+    "msb": 4
+   },
    "id": "zogre",
    "name": "ZOGRE FLESH EATERS",
    "source": "oldschool.runescape.wiki/w/Zogre_Flesh_Eaters",
