@@ -24,7 +24,7 @@ const m: Manifest = {
         { note: 'wiki: a redberry pie, two iron bars and a pickaxe. 10 Mining for the blurite.' },
         { give: 'redberry_pie' },
         { give: 'iron_bar', n: 2 },
-        { give: 'rune_pickaxe' },
+        { give: 'bronze_pickaxe' },
 
         { note: "wiki step 1: the Squire, in the White Knights' Castle courtyard" },
         { talk: 'squire', picks: ['life as a squire', 'make a new sword', 'would these dwarves make another one', "I'll give it a go"], why: 'he has lost Sir Vyvin’s sword and you offer to replace it' },
@@ -57,7 +57,7 @@ const m: Manifest = {
         { note: 'used to measure that distance from the PLAYER instead, which deadlocked outright: an' },
         { note: 'npc parks itself while somebody stands beside it, so Vyvin never moved and the' },
         { note: 'portrait could not be got at all. See the note on the proc.' },
-        { give: 'knights_portrait' },
+        { give: 'knights_portrait', how: 'Search the cupboard in Sir Vyvin’s room, top floor of Falador castle, for the portrait' },
 
         { note: 'wiki step 5: the portrait to Thurgo, who then wants blurite ore' },
         { setpos: [3001, 3145, 0], why: 'back to Mudskipper Point' },

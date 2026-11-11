@@ -26,7 +26,7 @@ const file = process.argv[2] ?? path.join(import.meta.dirname, '..', '..', 'data
 const table = JSON.parse(fs.readFileSync(file, 'utf8')) as {
     quests: {
         name: string;
-        stages: { steps: { text: string; kind: string; why?: string; id?: number; also?: number[] }[] }[];
+        stages: { steps: { text: string; kind: string; why?: string; id?: number; also?: number[] }[]; items: { name: string; bring: boolean }[] }[];
     }[];
 };
 
@@ -99,6 +99,38 @@ for (const rule of RULES) {
     console.log(`  FAIL ${hits.length} rows have ${rule.name}:`);
     for (const hit of hits.slice(0, 8)) console.log(`         ${hit.quest} | ${hit.text}`);
     if (hits.length > 8) console.log(`         ... and ${hits.length - 8} more`);
+}
+
+// A STEP THE SIM HANDS OVER IS STILL A STEP THE PLAYER HAS TO DO. A manifest gives itself an item it
+// cannot get legitimately in a run (`give: 'knights_portrait'`), and the exporter used to drop that
+// as part of the shopping list, so the helper said "bring a Portrait" and never said where it comes
+// from. These are the quests known to have such a step; each must still tell the player to do it.
+const MUST_TELL: { quest: string; what: string; text: RegExp }[] = [{ quest: "THE KNIGHT'S SWORD", what: "the portrait comes out of Sir Vyvin's cupboard", text: /cupboard/i }];
+for (const need of MUST_TELL) {
+    const quest = table.quests.find(q => q.name === need.quest);
+    const said = quest?.stages.some(stage => stage.steps.some(step => need.text.test(step.text)));
+    if (said) {
+        console.log(`  ok   ${need.quest} tells the player ${need.what}`);
+        continue;
+    }
+    failed++;
+    console.log(`  FAIL ${need.quest} never tells the player ${need.what}`);
+}
+
+// A TIER THE QUEST DOES NOT ASK FOR IS NOT A REQUIREMENT. A sim hands itself whatever tool makes its run
+// reliable, and the helper reads that as "bring this", so a quest that needs any pickaxe came out as
+// "bring a Rune pickaxe". Each quest here asks for the lowest tier, so a higher one showing up in its
+// bring list is the sim's choice leaking into the table.
+const MUST_NOT_BRING: { quest: string; item: RegExp; why: string }[] = [{ quest: "THE KNIGHT'S SWORD", item: /^Rune pickaxe$/i, why: 'the blurite only needs a pickaxe and 10 Mining' }];
+for (const rule of MUST_NOT_BRING) {
+    const quest = table.quests.find(q => q.name === rule.quest);
+    const asked = quest?.stages.flatMap(stage => stage.items).filter(item => item.bring && rule.item.test(item.name)) ?? [];
+    if (!asked.length) {
+        console.log(`  ok   ${rule.quest} does not ask the player to bring ${rule.item.source}`);
+        continue;
+    }
+    failed += asked.length;
+    console.log(`  FAIL ${rule.quest} asks the player to bring ${asked[0].name} (${rule.why})`);
 }
 
 // The table is only worth reading if it has the quests in it: an empty file passes every rule

@@ -4741,19 +4741,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She wants it back.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ],
        "picks": [
         "I'll try to retrieve it for you."
@@ -5253,19 +5265,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "The touch paper does not change colour.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -5587,19 +5611,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "This is bigger than both of us.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -25300,6 +25336,7 @@
        "label": "Villager",
        "op": 4,
        "also": [
+        1887,
         1891
        ]
       },
@@ -25310,7 +25347,11 @@
        "target": "feud_villager_multi_3",
        "id": 1895,
        "label": "Villager",
-       "op": 5
+       "op": 5,
+       "also": [
+        1887,
+        1891
+       ]
       },
       {
        "kind": "walk",
@@ -26038,8 +26079,56 @@
     {
      "from": 62,
      "headings": [],
-     "marks": [],
-     "steps": [],
+     "marks": [
+      {
+       "at": 0,
+       "var": 340,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 2,
+       "var": 340,
+       "varbit": true,
+       "is": 2
+      }
+     ],
+     "steps": [
+      {
+       "text": "Go back to Pollnivneach - the carpet left us in Al Kharid.",
+       "kind": "walk",
+       "at": [
+        3359,
+        2976,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Villager.",
+       "why": "Talking to one reconciles the licence.",
+       "target": "feud_villager_multi_1",
+       "id": 1887,
+       "label": "Villager",
+       "also": [
+        1891,
+        1895
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Knock-Out Villager.",
+       "why": "Knock-Out is on the menu again.",
+       "target": "feud_villager_multi_1",
+       "id": 1887,
+       "label": "Villager",
+       "op": 5,
+       "also": [
+        1891,
+        1895
+       ]
+      }
+     ],
      "items": [
       {
        "name": "Oak-blackjack",
@@ -54279,19 +54368,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She hands over her assay sieve.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -54982,19 +55083,31 @@
        "kind": "walk",
        "at": [
         2592,
-        3337,
+        3341,
         0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Opening her door is what spawns her.",
+       "target": "elenadoor2",
+       "id": 2054,
+       "label": "Door",
+       "at": [
+        2592,
+        3339
        ]
       },
       {
        "kind": "talk",
        "text": "Talk to Elena.",
        "why": "She examines the flocks.",
-       "target": "elena2",
-       "id": 335,
+       "target": "elena2_vis",
+       "id": 3209,
        "label": "Elena",
        "also": [
-        3209
+        335
        ]
       }
      ],
@@ -67791,8 +67904,8 @@
        "bring": true
       },
       {
-       "name": "Rune pickaxe",
-       "id": 1275,
+       "name": "Bronze pickaxe",
+       "id": 1265,
        "n": 1,
        "bring": true
       }
@@ -67927,12 +68040,16 @@
        "text": "Sir Vyvin's room, top floor of the castle, and his cupboard."
       },
       {
-       "at": 1,
+       "at": 2,
        "text": "The portrait to Thurgo, who then wants blurite ore."
       }
      ],
      "marks": [],
      "steps": [
+      {
+       "kind": "note",
+       "text": "Search the cupboard in Sir Vyvin’s room, top floor of Falador castle, for the portrait."
+      },
       {
        "text": "Go back to Mudskipper Point.",
        "kind": "walk",
@@ -67959,7 +68076,7 @@
        "name": "Portrait",
        "id": 666,
        "n": 1,
-       "bring": true
+       "bring": false
       }
      ],
      "worn": []

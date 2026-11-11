@@ -17,6 +17,9 @@
 //   loc     the same for a loc click, with the route a client would send.
 //   give    an item the player would have bought or banked. Declared, never assumed: the list of
 //           gives IS the quest's item requirement, and the run prints it at the end.
+//           `how` says where a player really gets it when that is a step of the quest (a cupboard to
+//           search, say) rather than something bought or banked, and the quest helper shows it as a
+//           step instead of an item to bring.
 //   stage   assert the quest's own progress variable. A step that does not move it is a step that
 //           did nothing, however much dialogue it produced.
 //
@@ -94,7 +97,7 @@ export type Step =
       }
     | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
-    | { give: string; n?: number }
+    | { give: string; n?: number; how?: string }
     | { setvar: string; to: number; why?: string }
     | { stage: number }
     | { level: number }
