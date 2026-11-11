@@ -898,6 +898,18 @@ async function relayQuestions() {
                 if (thread.archived) {
                     await thread.setArchived(false);
                 }
+                // AND UNLOCKED, for the same reason one line up. closeTicket locks as well as
+                // archives, so unarchiving alone left a closed ticket's thread in the one state
+                // that is worse than either: the question is delivered, the reporter reads it, and
+                // the thread will not let them answer. Asking somebody something and then holding
+                // the door shut is not a kindness to the ticket's tidiness.
+                //
+                // It does NOT reopen the ticket. The row stays closed and the log still says
+                // closed; only the thread can be typed in, and the Reopen button in it is still
+                // the only way to change that - which is staff's call, not this poll's.
+                if (thread.locked) {
+                    await thread.setLocked(false, 'a question was relayed to the reporter');
+                }
                 // WHEN THEY ARE NOT ON DISCORD the thread still gets the question, because staff
                 // read it and can ask them in game. The wording has to say so, or it reads as a
                 // question to nobody.
