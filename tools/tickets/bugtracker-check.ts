@@ -159,6 +159,30 @@ try {
     const afterFence = body.body.split('`````text\n')[1] ?? '';
     checkThat('and nothing of the report escapes it', afterFence.startsWith(nasty) && afterFence.trimEnd().endsWith('`````'));
 
+    // THE TIME IS READABLE OFF DISCORD. <t:...:f> is a local date in Discord and nine digits of
+    // nothing everywhere else, and the field it is in is the one that says WHEN the bug happened.
+    // Issue #2 in the real tracker is where this turned up.
+    sent = null;
+    await fileBugIssue({ ...filing, report: 'it broke\n\nWhen: <t:1794355081:f>\n\nWorld: 10' });
+    const timed = JSON.parse(String((sent as unknown as Sent).init.body)) as { body: string };
+    checkThat('a Discord timestamp is spelled out', timed.body.includes('When: 2026-11-10 23:58:01 UTC'));
+    checkThat('and the token itself is gone', !timed.body.includes('<t:'));
+    checkThat('the rest of the report is untouched', timed.body.includes('it broke') && timed.body.includes('World: 10'));
+
+    // EVERY STYLE DISCORD WRITES, because the bot uses :f today and a later field could use any of
+    // them - :R especially, which is the "2 hours ago" one.
+    sent = null;
+    await fileBugIssue({ ...filing, report: 'a <t:1794355081:R> b <t:1794355081> c <t:1794355081:D>' });
+    const styles = JSON.parse(String((sent as unknown as Sent).init.body)) as { body: string };
+    checkThat('relative, bare and date-only styles all convert', (styles.body.match(/2026-11-10 23:58:01 UTC/g) ?? []).length === 3);
+
+    // AND NOT A PLAYER'S OWN ANGLE BRACKETS. Only the bot's timestamps are translated; anything
+    // else a player typed stays exactly as typed, because it is quoted evidence.
+    sent = null;
+    await fileBugIssue({ ...filing, report: 'the shop says <t:abc> and <@12345> too' });
+    const left = JSON.parse(String((sent as unknown as Sent).init.body)) as { body: string };
+    checkThat("a player's own angle brackets are left alone", left.body.includes('<t:abc>') && left.body.includes('<@12345>'));
+
     // A LONG TITLE IS CLIPPED, because GitHub rejects one over 256 and a rejected call loses the
     // report. ::bug takes a whole sentence, so this is the normal case and not the odd one.
     sent = null;

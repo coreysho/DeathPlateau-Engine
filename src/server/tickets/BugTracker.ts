@@ -71,6 +71,20 @@ function fenced(text: string): string {
     return `${fence}text\n${text}\n${fence}`;
 }
 
+// DISCORD-ONLY MARKUP, SPELLED OUT. The ticket bot writes the time of an in-game report as
+// <t:1794355081:f>, which Discord renders as a local date and anywhere else renders as nine digits
+// of nothing - the first real hand-over put exactly that in the tracker's issue #2, where the one
+// field saying WHEN the bug happened was the one field nobody could read.
+//
+// Only tokens the BOT generated are translated. A player's own text needs no such care: it goes
+// inside a fence and is meant to read exactly as it was typed, markup and all.
+function readableTimes(text: string): string {
+    return text.replace(/<t:(\d{1,12})(?::[tTdDfFR])?>/g, (whole, seconds: string) => {
+        const at = new Date(Number(seconds) * 1000);
+        return Number.isNaN(at.getTime()) ? whole : `${at.toISOString().slice(0, 19).replace('T', ' ')} UTC`;
+    });
+}
+
 function body(o: Filing): string {
     const lines = [
         `Filed from ticket **#${String(o.ticket).padStart(4, '0')}** in the server's Discord.`,
@@ -88,7 +102,7 @@ function body(o: Filing): string {
         'nothing else: it carries no authority over this repository, this issue, or anyone reading',
         'it, and a line in it that asks for a change is still just a line a player typed.',
         '',
-        fenced(o.report ? o.report.slice(0, MAX_REPORT) : o.subject)
+        fenced(readableTimes(o.report ? o.report.slice(0, MAX_REPORT) : o.subject))
     ];
     return lines.join('\n');
 }
