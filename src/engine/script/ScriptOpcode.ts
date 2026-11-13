@@ -533,6 +533,15 @@ export const enum ScriptOpcode {
     VOTE_OWED,
     VOTE_TAKE,
 
+    // custom (2026-11-13). APPENDED, for the reason above. The rank icon a player's name carries,
+    // as the number chatCrown() picks - which is the same number the appearance block sends, so a
+    // broadcast and a chat line cannot disagree about who somebody is. staffmodlevel was all a
+    // script could read, and the Veteran and Helper ranks are not staff levels, so ~broadcast_name
+    // had no way to draw their icons: a veteran's yell and a veteran's rare drop went out with the
+    // XP badge alone. This returns the icon rather than the two flags on purpose - the ladder that
+    // turns ranks into one icon lives in ChatCrown.ts and is the thing that must not be copied.
+    CHATCROWN,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -743,6 +752,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['STRINGWIDTH', ScriptOpcode.STRINGWIDTH],
     ['SPOTANIM_PL', ScriptOpcode.SPOTANIM_PL],
     ['STAFFMODLEVEL', ScriptOpcode.STAFFMODLEVEL],
+    ['CHATCROWN', ScriptOpcode.CHATCROWN],
     ['STAT_ADD', ScriptOpcode.STAT_ADD],
     ['STAT_ADVANCE', ScriptOpcode.STAT_ADVANCE],
     ['STAT_BASE', ScriptOpcode.STAT_BASE],

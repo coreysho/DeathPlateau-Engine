@@ -19,7 +19,37 @@ import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
-import { toSafeName } from '#/util/JString.js';
+import { toBase37, toSafeName } from '#/util/JString.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ScriptRunner from '#/engine/script/ScriptRunner.js';
+
+/**
+ * What ~broadcast_name returns for this player: the icon markers and their display name, the
+ * string a yell or a rare drop is built from. runProc only hands back the int stack, and this proc
+ * returns a string, so the string stack is read directly.
+ */
+function broadcastName(p: Player): string {
+    const script = ScriptProvider.getByName('[proc,broadcast_name]');
+    if (!script) throw new Error('no [proc,broadcast_name] - is the content built?');
+    const state = ScriptRunner.init(script, p, null, []);
+    ScriptRunner.execute(state);
+    const st = state as unknown as { stringStack: (string | null)[]; ssp: number };
+    return st.stringStack[st.ssp - 1] ?? '';
+}
+
+/** The rank markers in a name, which is every icon marker except the three xp badges. */
+function rankMarkers(name: string): string[] {
+    return (ChatIcons.leading(name).match(/@cr[0-9a]@/g) ?? []).filter(m => m !== '@cr3@' && m !== '@cr4@' && m !== '@cr5@');
+}
+
+/** The client's own reader, so the test agrees with what will actually be drawn. */
+const ChatIcons = {
+    leading(text: string): string {
+        let i = 0;
+        while (/^@cr[1-9a]@/.test(text.slice(i))) i += 5;
+        return text.slice(0, i);
+    }
+};
 
 const TARGET = 'vetsim_tgt';
 const MISSING = 'vetsim_none';
@@ -77,6 +107,61 @@ try {
     check('  the badge is still in the high nibble', (solo.chatIcons() >> 4) & 0xf, 1);
     solo.veteran = false;
     check('  and nothing when the flag is off', solo.chatIcons() & 0xf, 0);
+
+    // ---------------------------------------------------------------- and the broadcast line
+    // THE ICON OVER THE HEAD WAS NEVER THE WHOLE OF IT. ~broadcast_name builds the name for a
+    // yell, an announcement, a rare drop and a pet, and it used to read staffmodlevel and rebuild
+    // the ladder itself - which cannot reach this rank at all, because Veteran is a flag on the
+    // account and not a staff level. So a veteran's icon showed over their head and on their
+    // public chat (both come from the appearance byte above) and vanished the moment they yelled.
+    // It reads the chatcrown op now, which is the same number as the byte, so the two cannot
+    // disagree. @cr9@ is the marker the client's ChatIcons.forPlayer draws crown 7 as.
+    console.log('\nAND THE NAME A YELL OR A RARE DROP GOES OUT WITH');
+    solo.veteran = true;
+    check('  a veteran yells with the bronze emblem', ChatIcons.leading(broadcastName(solo)).includes('@cr9@'), true);
+    check('    and only one rank marker', rankMarkers(broadcastName(solo)).length, 1);
+    solo.veteran = false;
+    check('  a plain player has no rank marker', rankMarkers(broadcastName(solo)).length, 0);
+    // The XP badge is a separate marker and must survive either way - it is the thing a veteran
+    // used to be left with on its own.
+    check('    but still their xp badge', ChatIcons.leading(broadcastName(solo)).includes('@cr3@'), true);
+    // Staff still wins here, exactly as it does in the byte.
+    solo.veteran = true;
+    solo.staffModLevel = 2;
+    check('  a moderator who is also a veteran yells as a moderator', ChatIcons.leading(broadcastName(solo)).includes('@cr2@'), true);
+    check('    and not as a veteran', ChatIcons.leading(broadcastName(solo)).includes('@cr9@'), false);
+    solo.staffModLevel = 0;
+    solo.veteran = false;
+
+    // ---------------------------------------------------------------- and a private message
+    // THE ICON AND THE STAFF LEVEL TRAVEL AS TWO FIELDS, which is the whole reason this works.
+    // A private message goes out through the friend server, and FriendServerRepository.register
+    // enrols anything above staffLvl 1 as staff - so putting crown 7 in staffLvl to get the emblem
+    // drawn would quietly make every veteran staff on the friend server. `crown` is a field of its
+    // own and `staffLvl` keeps meaning staff level.
+    console.log('\nAND A PRIVATE MESSAGE');
+    const sent: Record<string, unknown>[] = [];
+    const ft = (World as unknown as { friendThread: { postMessage: (m: Record<string, unknown>) => void } }).friendThread;
+    const realPost = ft.postMessage.bind(ft);
+    ft.postMessage = (m: Record<string, unknown>) => void sent.push(m);
+    try {
+        const pm = player('vetsim_pm', 3222, 3224);
+        pm.veteran = true;
+        World.sendPrivateMessage(pm, toBase37('vetsim_pm2'), 'hello');
+        check('  a veteran sends the bronze emblem', sent[sent.length - 1]?.crown, 7);
+        check('    and their staff level is still 0', sent[sent.length - 1]?.staffLvl, 0);
+        pm.veteran = false;
+        pm.staffModLevel = 2;
+        World.sendPrivateMessage(pm, toBase37('vetsim_pm2'), 'hello');
+        check('  a moderator still sends the gold crown', sent[sent.length - 1]?.crown, 2);
+        check('    with the staff level beside it', sent[sent.length - 1]?.staffLvl, 2);
+        pm.staffModLevel = 0;
+        World.sendPrivateMessage(pm, toBase37('vetsim_pm2'), 'hello');
+        check('  and a plain player sends no icon', sent[sent.length - 1]?.crown, 0);
+        H.despawn(pm);
+    } finally {
+        ft.postMessage = realPost;
+    }
     H.despawn(solo);
 
     // ---------------------------------------------------------------- the round trip

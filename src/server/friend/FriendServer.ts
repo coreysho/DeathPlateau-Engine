@@ -266,7 +266,7 @@ export class FriendServer {
 
                         const username37 = BigInt(message.username37);
                         const targetUsername37 = BigInt(message.targetUsername37);
-                        const { staffLvl, pmId, chat } = message;
+                        const { staffLvl, pmId, chat, crown } = message;
 
                         const from = await db.selectFrom('account').selectAll().where('username', '=', fromBase37(username37)).executeTakeFirstOrThrow();
                         const to = await db.selectFrom('account').selectAll().where('username', '=', fromBase37(targetUsername37)).executeTakeFirstOrThrow();
@@ -283,7 +283,7 @@ export class FriendServer {
                             })
                             .execute();
 
-                        await this.sendPrivateMessage(username37, staffLvl, pmId, targetUsername37, chat);
+                        await this.sendPrivateMessage(username37, staffLvl, pmId, targetUsername37, chat, crown);
                     } else if (type === FriendsClientOpcodes.PUBLIC_CHAT_LOG) {
                         const { nodeTime, session_uuid, coord, chat } = message;
 
@@ -478,7 +478,7 @@ export class FriendServer {
         );
     }
 
-    private sendPrivateMessage(username: bigint, staffLvl: number, pmId: number, target: bigint, chat: string) {
+    private sendPrivateMessage(username: bigint, staffLvl: number, pmId: number, target: bigint, chat: string, crown?: number) {
         const socket = this.getPlayerWorldSocket(target);
 
         if (!socket) {
@@ -491,6 +491,9 @@ export class FriendServer {
                 username37: username.toString(),
                 targetUsername37: target.toString(),
                 staffLvl,
+                // Carried straight through: the sending world worked out which icon this player's
+                // name gets, and nothing between here and the target world may second-guess it.
+                crown,
                 pmId,
                 chat
             })
@@ -644,7 +647,7 @@ export class FriendClient extends InternalClient {
         );
     }
 
-    public async privateMessage(username: string, staffLvl: number, pmId: number, target: bigint, chat: string, coord: number) {
+    public async privateMessage(username: string, staffLvl: number, pmId: number, target: bigint, chat: string, coord: number, crown?: number) {
         await this.connect();
 
         if (!this.ws || !this.wsr || !this.wsr.checkIfWsLive()) {
@@ -660,6 +663,7 @@ export class FriendClient extends InternalClient {
                 username37: toBase37(username).toString(),
                 targetUsername37: target.toString(),
                 staffLvl,
+                crown,
                 pmId,
                 chat,
                 coord
