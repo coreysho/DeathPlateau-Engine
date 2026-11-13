@@ -88,6 +88,7 @@ export type Step =
           picks?: (number | string)[];
           want?: string;
           why?: string;
+          tries?: number;
           soft?: boolean;
           hop?: boolean;
           near?: number;
@@ -2077,41 +2078,77 @@ export function play(m: Manifest, p: Player): Result[] {
                         }
                     }
             }
-            try {
-                const lt = LocType.get(LocType.getId(s.useLoc));
-                lw = lt.width;
-                ll = lt.length;
-                // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
-                // player walks, so a panel that opens on arrival - a make-x panel, for one - was
-                // met with an empty pick list and the step blew up on its own menu.
-                standOnIfWalkable(p, s.useLoc, atX, atZ);
-                lines = useOn(p, atX, atZ, s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
-            } catch (e) {
-                hard(what, false, String(e).replace('Error: ', ''));
-                continue;
-            }
-            // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
-            // player has already done it by the time this runs and adjacency can never come back.
-            if (!arrive(p, atX, atZ, lw, ll) && !('hop' in s && s.hop)) {
-                hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
-                continue;
-            }
-            lines = lines.concat(run([]));
-            // `want` WAS NEVER CHECKED HERE. Every useLoc step in every manifest reported ok on
-            // arrival alone, which is the silent false pass this runner's own comments are about:
-            // Rat Catchers' King rat passed its want three runs in a row while the handler was not
-            // running at all. The loc step has always done this; useLoc never did.
-            if ('want' in s && s.want) {
-                const saidUse = lines
+            // `tries` IS FOR A CLICK THAT CAN BE SWALLOWED WITHOUT SAYING SO. `held` and `useNpc`
+            // have had it for a while; useLoc had not, and the Lumbridge range is the case that
+            // wanted it. Roasting Recipe for Disaster's stuffed snake there does nothing at all
+            // on the first click in a long run - no message, no Cooking xp, the raw snake still in
+            // the pack - while the same obj on the same range cooks every time in isolation, and
+            // the cake and the fishcake cook on that range earlier in the same run. audit1.ts
+            // roasts the same snake and worked around the same thing with a loop of its own,
+            // noting only that "a leftover delay or an open box eats the click, silently"; waiting
+            // the delay out and closing the modal here was not enough on its own. Clicking again
+            // is what a player does when nothing happens, so the step can now do it too.
+            //
+            // It only ever retries a step that asked for it AND gave a `want`, because the `want`
+            // is the only evidence that the click landed - retrying on arrival alone would just
+            // click a working thing several times. Every existing useLoc step is untouched.
+            const triesUL = Math.max(1, ('tries' in s ? s.tries : undefined) ?? 1);
+            let saidUse = '';
+            let landedUL = false;
+            let stuckUL = false;
+            for (let a = 0; a < triesUL && !landedUL; a++) {
+                if (a > 0) {
+                    // the same clearing audit1 does before each go: a leftover delay or an open
+                    // box is the thing most likely to have eaten the last one
+                    for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                    (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                    p.clearPendingAction();
+                    H.tick(1);
+                }
+                try {
+                    const lt = LocType.get(LocType.getId(s.useLoc));
+                    lw = lt.width;
+                    ll = lt.length;
+                    // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
+                    // player walks, so a panel that opens on arrival - a make-x panel, for one - was
+                    // met with an empty pick list and the step blew up on its own menu.
+                    standOnIfWalkable(p, s.useLoc, atX, atZ);
+                    lines = useOn(p, atX, atZ, s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
+                } catch (e) {
+                    hard(what, false, String(e).replace('Error: ', ''));
+                    stuckUL = true;
+                    break;
+                }
+                // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
+                // player has already done it by the time this runs and adjacency can never come back.
+                if (!arrive(p, atX, atZ, lw, ll) && !('hop' in s && s.hop)) {
+                    hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
+                    stuckUL = true;
+                    break;
+                }
+                lines = lines.concat(run([]));
+                // `want` WAS NEVER CHECKED HERE. Every useLoc step in every manifest reported ok on
+                // arrival alone, which is the silent false pass this runner's own comments are about:
+                // Rat Catchers' King rat passed its want three runs in a row while the handler was not
+                // running at all. The loc step has always done this; useLoc never did.
+                if (!('want' in s) || !s.want) {
+                    landedUL = true;
+                    break;
+                }
+                saidUse = lines
                     .concat(
                         saidSince(),
                         H.mesgs.slice(mesMark).map(x => x.text)
                     )
                     .join(' | ');
-                if (!saidUse.includes(s.want)) {
-                    soft(what, false, 'nothing said "' + s.want + '"' + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
-                    continue;
-                }
+                if (saidUse.includes(s.want)) landedUL = true;
+            }
+            if (stuckUL) {
+                continue;
+            }
+            if (!landedUL) {
+                soft(what, false, 'nothing said "' + s.want + '" in ' + triesUL + (triesUL === 1 ? ' try' : ' tries') + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
+                continue;
             }
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');

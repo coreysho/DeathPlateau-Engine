@@ -770,7 +770,23 @@ if (rfd) {
 
     console.log('RECIPE FOR DISASTER - the Culinaromancer');
     const start = qp(p);
-    talk(p, 'hundred_aris', [1]);
+    // AND THE SAME SWALLOWED CLICK AS THE RANGE ABOVE, for the same reason. Asking Aris to send
+    // you in is one op and one pick, and after a hundred and fifty checks of this audit it does
+    // nothing at all often enough to matter: the player simply stays on level 0 and the arena
+    // check reads [0,true] - the tile is fine, the player never went. Nothing about Aris or the
+    // arena is wrong; quest_hundred_run drives the same dialogue with tries: 3 on its talk step
+    // and gets there. So clear whatever ate the last one and ask again, which is what a player
+    // does, and stop as soon as the floor changes.
+    for (let a = 0; a < 4 && p.level !== 2; a++) {
+        if (a > 0) {
+            for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+            (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+            p.clearPendingAction();
+            H.tick(1);
+        }
+        talk(p, 'hundred_aris', [1]);
+        H.tick(2);
+    }
     check('Aris puts you in the arena, a walkable tile', [p.level, walkable(2, p.x, p.z)], [2, true]);
     // THE SETUP, NAMED, not the consequence. Every fight below is a claim about the minions and
     // none of them means anything if the player walked in bare-fisted - which is exactly what
