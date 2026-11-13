@@ -4,8 +4,9 @@
  *   0  no icon      1  silver crown      2  gold crown
  *   4  purple crown (developer)          5  red crown (owner)
  *   6  blue and gold crown (a second owner)
- *   7  bronze emblem (veteran - not staff, and the only one here that is not a crown)
- *   8  blue roundel (helper - not staff either, and carries no powers at all)
+ *   7  grey emblem (veteran - gunmetal, recoloured with the capes 2026-11-11; the only one
+ *      here that is not a crown)
+ *   8  blue roundel (helper - a rank, but not a staffModLevel one, and carries no powers)
  *
  * staffModLevel on the account: 1 player moderator, 2 moderator, 3 administrator, 4 developer,
  * 5 owner, 6 a second owner with a crown of their own. The client draws 2 and 3 alike as the gold crown, so 3 is folded into 2 here rather than
