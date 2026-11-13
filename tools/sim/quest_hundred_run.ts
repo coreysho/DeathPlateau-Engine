@@ -174,6 +174,17 @@ const m: Manifest = {
         { note: 'come from the three people in Lumbridge who would have them - the Cook and the' },
         { note: 'two local farmers, Gee and Donie.' },
         ...OUT_OF_THE_ROOM,
+        // THE KITCHEN DOOR HAS SHUT ITSELF BY NOW. doors.rs2 opens every door_closed with
+        // ~open_door(500), and that duration is the loc_del/loc_add pair's - so the door the intro
+        // opened at step 5 reverts to hundred_lumbridge_door five hundred ticks later, and this is
+        // the first step that needs it again, five sub-quests downstream. Whether the run had got
+        // here inside five hundred ticks was the only thing deciding it, which is how an unrelated
+        // content commit could turn it red: nothing about the door or the castle changed, the run
+        // simply took a few ticks longer. A player walking back to the Cook opens the door again,
+        // so the run does too. soft, and named for the CLOSED stage, so it is a no-op on a run
+        // that did get here in time - the open door is a different loc and this simply does not
+        // find it, rather than helpfully closing it again.
+        { loc: 'hundred_lumbridge_door', at: KITCHEN_DOOR, soft: true, why: 'it has shut itself since the intro' },
         { go: [COOK[0], COOK[1]], r: 64, why: 'to the Cook' },
         { talk: 'cook', tries: 3, why: 'ask for flour' },
         { setpos: [GEE[0], GEE[1] - 1, 0], why: 'out to the farms east of the castle' },
@@ -504,7 +515,25 @@ const m: Manifest = {
         { use: ['hundred_ilm_sliced_red_banana', 'hundred_ilm_snake_corpse'], why: 'stuff the snake' },
         { has: 'hundred_ilm_correctly_stuffed_snake' },
         { setpos: [RANGE[0], RANGE[1] + 1, 0], why: 'back to the Lumbridge range' },
-        { useLoc: 'range', at: RANGE, obj: 'hundred_ilm_correctly_stuffed_snake', why: 'roast it' },
+        // AN OPEN BOX EATS THE CLICK, SILENTLY. This cook did nothing at all in a full run - no
+        // message, no Cooking xp, and the RAW snake still in the pack two steps later, where it
+        // surfaced as "not carrying hundred_ilm_cooked_stuffed_snake" and read like a missing item
+        // rather than a cook that never happened. It is not the burn roll and not the range: the
+        // same obj on the same range at the same coord cooks twenty times out of twenty in
+        // isolation through this very helper, and the cake (step 75) and the fishcake (step 170)
+        // both cook on that range earlier in this same run.
+        //
+        // What stops it is the state the run arrives in. audit1.ts roasts the same snake and found
+        // the same thing - "A LEFTOVER DELAY OR AN OPEN BOX EATS THE CLICK, silently" - and gets
+        // there with a loop of its own, up to eight goes, clearing the delay and the modal before
+        // each. Clearing them here without retrying was NOT enough on its own, so the retry is the
+        // part that matters; `tries` on useLoc exists for this and does the same clearing between
+        // attempts. Clicking again is what a player does when nothing happens.
+        //
+        // The `want` goes on at the same time, because without it this step reported ok on arrival
+        // alone - the silent false pass questrun's own useLoc comment is about - so a cook that
+        // never happened was recorded as a pass for as long as this manifest has existed.
+        { useLoc: 'range', at: RANGE, obj: 'hundred_ilm_correctly_stuffed_snake', want: 'You roast the stuffed snake', tries: 8, why: 'roast it' },
         { wait: 10, why: 'the range' },
         { has: 'hundred_ilm_cooked_stuffed_snake' },
         ...INTO_THE_ROOM,
