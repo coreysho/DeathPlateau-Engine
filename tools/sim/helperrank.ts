@@ -25,7 +25,26 @@ import ClientCheat from '#/network/game/client/model/ClientCheat.js';
 import World from '#/engine/World.js';
 import Player from '#/engine/entity/Player.js';
 import { chatCrown } from '#/engine/entity/ChatCrown.js';
-import { toSafeName } from '#/util/JString.js';
+import { toBase37, toSafeName } from '#/util/JString.js';
+import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ScriptRunner from '#/engine/script/ScriptRunner.js';
+
+/** What ~broadcast_name returns for this player - the string a yell or a rare drop is built from. */
+function broadcastName(p: Player): string {
+    const script = ScriptProvider.getByName('[proc,broadcast_name]');
+    if (!script) throw new Error('no [proc,broadcast_name] - is the content built?');
+    const state = ScriptRunner.init(script, p, null, []);
+    ScriptRunner.execute(state);
+    const st = state as unknown as { stringStack: (string | null)[]; ssp: number };
+    return st.stringStack[st.ssp - 1] ?? '';
+}
+
+/** The rank markers in a name: every icon marker except the three xp badges. */
+function rankMarkers(name: string): string[] {
+    let i = 0;
+    while (/^@cr[1-9a]@/.test(name.slice(i))) i += 5;
+    return (name.slice(0, i).match(/@cr[0-9a]@/g) ?? []).filter(m => m !== '@cr3@' && m !== '@cr4@' && m !== '@cr5@');
+}
 
 const TARGET = 'helpsim_tgt';
 const MISSING = 'helpsim_none';
@@ -86,6 +105,38 @@ try {
     check('  the badge is still in the high nibble', (solo.chatIcons() >> 4) & 0xf, 1);
     solo.helper = false;
     check('  and nothing when the flag is off', solo.chatIcons() & 0xf, 0);
+
+    // ---------------------------------------------------------------- and the lines it is drawn on
+    // THE SAME GAP THE VETERAN EMBLEM HAD. ~broadcast_name built its icons from staffmodlevel,
+    // which cannot reach this rank - Helper is a flag on the account, not a staff level - so the
+    // roundel showed over the head and on public chat (both come from the appearance byte above)
+    // and vanished the moment a helper yelled, which is the one line where "ask me" is the point.
+    // It reads the chatcrown op now. @cra@ is what the client's ChatIcons.forPlayer draws crown 8
+    // as, and it is the tenth marker - the one the engine's own tag rule used to stop short of.
+    console.log('\nAND THE LINES IT IS DRAWN ON');
+    solo.helper = true;
+    check('  a helper yells with the roundel', broadcastName(solo).includes('@cra@'), true);
+    check('    and carries exactly one rank marker', rankMarkers(broadcastName(solo)).length, 1);
+    // Staff still wins, exactly as in the byte.
+    solo.staffModLevel = 2;
+    check('  a moderator who helps out yells as a moderator', broadcastName(solo).includes('@cr2@'), true);
+    check('    and not as a helper', broadcastName(solo).includes('@cra@'), false);
+    solo.staffModLevel = 0;
+
+    // And a private message, which carries the icon in its own field so that staffLvl keeps
+    // meaning staff level on the friend server - see ChatCrown.ts.
+    const sent: Record<string, unknown>[] = [];
+    const ft = (World as unknown as { friendThread: { postMessage: (m: Record<string, unknown>) => void } }).friendThread;
+    const realPost = ft.postMessage.bind(ft);
+    ft.postMessage = (m: Record<string, unknown>) => void sent.push(m);
+    try {
+        World.sendPrivateMessage(solo, toBase37('helpsim_pm2'), 'hello');
+        check('  a helper sends crown 8 on a private message', sent[sent.length - 1]?.crown, 8);
+        check('    with their staff level still 0 beside it', sent[sent.length - 1]?.staffLvl, 0);
+    } finally {
+        ft.postMessage = realPost;
+    }
+    solo.helper = false;
     H.despawn(solo);
 
     // ---------------------------------------------------------------- the round trip

@@ -2058,6 +2058,9 @@ class World {
             type: 'private_message',
             username: player.username,
             staffLvl: player.staffModLevel,
+            // The icon to draw, which is NOT the staff level: Veteran and Helper are not staff
+            // levels, and the friend server's own staff bookkeeping reads staffLvl. Two fields.
+            crown: chatCrown(player.staffModLevel, player.veteran, player.helper),
             pmId: (Environment.NODE_ID << 24) + ((Math.random() * 0xff) << 16) + this.pmCount++,
             target: targetUsername37,
             message: message,
@@ -2826,7 +2829,9 @@ class World {
                 // chat
 
                 const fromPlayer = BigInt(data.username37);
-                const fromPlayerStaffLvl = data.staffLvl;
+                // A world still running the older build sends no crown, so fall back to the staff
+                // level the way this did before - a staff crown rather than no icon at all.
+                const fromPlayerCrown = typeof data.crown === 'number' ? data.crown : chatCrown(data.staffLvl);
                 const pmId = data.pmId;
                 const target = BigInt(data.targetUsername37);
 
@@ -2838,7 +2843,7 @@ class World {
 
                 const chat = data.chat;
 
-                player.write(new MessagePrivate(fromPlayer, pmId, fromPlayerStaffLvl, chat));
+                player.write(new MessagePrivate(fromPlayer, pmId, fromPlayerCrown, chat));
             } else if (opcode === FriendsServerOpcodes.RELAY_MUTE) {
                 const { username, muted_until } = data;
 
