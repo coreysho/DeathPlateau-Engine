@@ -406,7 +406,7 @@ export default class Player extends PathingEntity {
     lastCom: number = -1; // if_button
 
     staffModLevel: number = 0;
-    // custom (2026-11-06) - helped test before launch, and carries the bronze emblem for it. Set
+    // custom (2026-11-06) - helped test before launch, and carries the grey emblem for it. Set
     // from the account row at login (World.onLoginMessage), never from the save: the launch wipe
     // moves saves away and keeps accounts, so the account is the half that survives.
     //
