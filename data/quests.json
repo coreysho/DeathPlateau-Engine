@@ -35572,91 +35572,91 @@
        "is": 7
       },
       {
-       "at": 55,
+       "at": 56,
        "var": 1896,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 70,
+       "at": 71,
        "var": 1867,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 80,
+       "at": 81,
        "var": 1867,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 90,
+       "at": 91,
        "var": 1895,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 93,
+       "at": 94,
        "var": 1895,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 116,
+       "at": 117,
        "var": 1878,
        "varbit": true,
        "is": 2
       },
       {
-       "at": 121,
+       "at": 122,
        "var": 1878,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 121,
+       "at": 122,
        "var": 1883,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 124,
+       "at": 125,
        "var": 1879,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 125,
+       "at": 126,
        "var": 1878,
        "varbit": true,
        "is": 4
       },
       {
-       "at": 135,
+       "at": 136,
        "var": 1904,
        "varbit": true,
        "is": 3
       },
       {
-       "at": 138,
+       "at": 139,
        "var": 1904,
        "varbit": true,
        "is": 5
       },
       {
-       "at": 140,
+       "at": 141,
        "var": 1904,
        "varbit": true,
        "is": 6
       },
       {
-       "at": 144,
+       "at": 145,
        "var": 1904,
        "varbit": true,
        "is": 7
       },
       {
-       "at": 162,
+       "at": 163,
        "var": 1914,
        "varbit": true,
        "is": 2
@@ -35997,6 +35997,18 @@
        "at": [
         1861,
         5316
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "The kitchen door shuts itself, so it is closed again by now.",
+       "target": "hundred_lumbridge_door",
+       "id": 12348,
+       "label": "Door",
+       "at": [
+        3207,
+        3217
        ]
       },
       {

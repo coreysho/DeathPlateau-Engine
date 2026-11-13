@@ -184,7 +184,7 @@ const m: Manifest = {
         // so the run does too. soft, and named for the CLOSED stage, so it is a no-op on a run
         // that did get here in time - the open door is a different loc and this simply does not
         // find it, rather than helpfully closing it again.
-        { loc: 'hundred_lumbridge_door', at: KITCHEN_DOOR, soft: true, why: 'it has shut itself since the intro' },
+        { loc: 'hundred_lumbridge_door', at: KITCHEN_DOOR, soft: true, why: 'the kitchen door shuts itself, so it is closed again by now' },
         { go: [COOK[0], COOK[1]], r: 64, why: 'to the Cook' },
         { talk: 'cook', tries: 3, why: 'ask for flour' },
         { setpos: [GEE[0], GEE[1] - 1, 0], why: 'out to the farms east of the castle' },
