@@ -94,7 +94,15 @@ cfg.spawnIntervalTicks = 1;
 cfg.respawnTicks = [10, 12];
 cfg.mistakeChance = 0;
 BotManager.start(cfg);
-H.tick(20);
+// WAIT FOR THEM, DO NOT SAMPLE FOR THEM. BotManager.start sets nextSpawnTick to currentTick + 10
+// and then tops up one bot per spawnIntervalTicks, and each of those logs in on a later tick like
+// anyone else - so the third roamer is only in the world around tick thirteen of the twenty this
+// used to wait. Seven ticks of margin for three spawns, a login apiece and whatever each brain
+// does on arrival is thin enough that the dice decide it, and that is what went red in the nightly
+// on a content commit that touched nothing in src/engine/bot: the count was taken a little too
+// early, not wrong. Waiting for the population the config asks for is the question this check is
+// named after, and it still fails - at the cap, with the real count - if they never turn up.
+for (let t = 0; t < 200 && bots().length < 3; t++) H.tick(1);
 const roamers = bots();
 check('three roamers came in', roamers.length, 3);
 check(
