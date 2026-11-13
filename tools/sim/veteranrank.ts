@@ -115,10 +115,11 @@ try {
     // account and not a staff level. So a veteran's icon showed over their head and on their
     // public chat (both come from the appearance byte above) and vanished the moment they yelled.
     // It reads the chatcrown op now, which is the same number as the byte, so the two cannot
-    // disagree. @cr9@ is the marker the client's ChatIcons.forPlayer draws crown 7 as.
+    // disagree. @cr9@ is the marker the client's ChatIcons.forPlayer draws crown 7 as - the grey
+    // gunmetal emblem, recoloured with the Veteran capes on 2026-11-11.
     console.log('\nAND THE NAME A YELL OR A RARE DROP GOES OUT WITH');
     solo.veteran = true;
-    check('  a veteran yells with the bronze emblem', ChatIcons.leading(broadcastName(solo)).includes('@cr9@'), true);
+    check('  a veteran yells with the grey emblem', ChatIcons.leading(broadcastName(solo)).includes('@cr9@'), true);
     check('    and only one rank marker', rankMarkers(broadcastName(solo)).length, 1);
     solo.veteran = false;
     check('  a plain player has no rank marker', rankMarkers(broadcastName(solo)).length, 0);
@@ -148,7 +149,7 @@ try {
         const pm = player('vetsim_pm', 3222, 3224);
         pm.veteran = true;
         World.sendPrivateMessage(pm, toBase37('vetsim_pm2'), 'hello');
-        check('  a veteran sends the bronze emblem', sent[sent.length - 1]?.crown, 7);
+        check('  a veteran sends the grey emblem', sent[sent.length - 1]?.crown, 7);
         check('    and their staff level is still 0', sent[sent.length - 1]?.staffLvl, 0);
         pm.veteran = false;
         pm.staffModLevel = 2;
