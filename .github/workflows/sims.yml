@@ -261,8 +261,12 @@ jobs:
           # which is a coin toss decided by whichever runner you get. One night it lands under,
           # the next it times out twice and reads as "fails twice". That is the audit7 trap with
           # a different sim, and the fix is the same: give it its own cap.
+          # pickpocketloot is the next one walking into that line. It ran 152s against the 180s
+          # cap two nights ago and 162s last night: still passing, but the margin is now under
+          # ten per cent of the cap, and the thing that decides it is which runner the night
+          # gets rather than anything in the sim. Moved before it starts failing, not after.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;

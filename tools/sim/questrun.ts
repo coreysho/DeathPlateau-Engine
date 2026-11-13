@@ -854,26 +854,54 @@ export function play(m: Manifest, p: Player): Result[] {
             const wantHunt = 'wake the hunt on ' + s.wakehunt + (s.why ? ' - ' + s.why : '');
             const idHunt = NpcType.getId(s.wakehunt);
             const rWake = ('r' in s ? s.r : undefined) ?? 20;
-            let hunter: Npc | null = null;
+            // EVERY ONE OF THEM, NOT THE FIRST ONE FOUND. What gates the real hunt is an observer,
+            // and a watching client observes a whole zone rather than one npc, so every matching
+            // npc in range is driven. Taking the first match out of World.npcs - which is in spawn
+            // order, not distance order - also made the step's behaviour depend on how many static
+            // npcs happened to be created before this one.
+            const hunters: Npc[] = [];
             for (const npc of World.npcs) {
                 if (!npc || !npc.isActive || npc.type !== idHunt || npc.level !== p.level) continue;
                 if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > rWake) continue;
-                hunter = npc;
-                break;
+                hunters.push(npc);
             }
-            const doneWake = () => ('untilvar' in s && s.untilvar ? stageOf(p, s.untilvar) === s.to : !!hunter && !hunter.isValid());
-            if (!hunter) {
+            const doneWake = () => ('untilvar' in s && s.untilvar ? stageOf(p, s.untilvar) === s.to : hunters.some(h => !h.isValid()));
+            if (!hunters.length) {
                 soft(wantHunt, false, 'nothing of that type is within ' + rWake + ' tiles of ' + p.x + ',' + p.z);
                 continue;
             }
+            // THE THROTTLE HAS ALREADY RUN DOWN BY NOW. huntAll() returns without looking at
+            // anything while huntClock < rate - 1, and huntClock is incremented inside the same
+            // observer gate that stops the hunt running at all - so on a live server the clock has
+            // been ticking since the npc spawned, under the eye of the player who is standing
+            // there, and the throttle is long expired before the npc is worth hunting with. In a
+            // sim nothing ticks it, so it is still 0 when this step starts and the first rate - 1
+            // ticks of the step are dead. For the chompy bird, with rate=10, those are precisely
+            // the ticks it spends beside the bait it was called to: it lands within two tiles
+            // (map_findsquare(coord, 1, 2) in spawn_chompy_bird), stands there while the throttle
+            // runs down, and has wandered back out of its huntrange=2 by the time huntAll is
+            // allowed to look. The quest then stalls at the bait and the failure reads as a hunt
+            // that "never found anything", with nothing wrong in the content or the engine.
+            // Starting the clock where the engine would have left it is what makes this step a
+            // model of the live hunt rather than a race against the npc's own wander.
+            for (const hunter of hunters) {
+                const h: any = hunter;
+                if (h.huntMode === -1) continue;
+                const hunt = HuntType.get(h.huntMode);
+                if (hunt && h.huntClock < hunt.rate) {
+                    h.huntClock = hunt.rate;
+                }
+            }
             const ticksWake = ('tries' in s ? s.tries : undefined) ?? 60;
             for (let t = 0; t < ticksWake && !doneWake(); t++) {
-                const h: any = hunter;
-                if (h.huntMode !== -1 && h.isValid()) {
-                    const hunt = HuntType.get(h.huntMode);
-                    if (hunt) {
-                        h.huntAll(hunt);
-                        h.huntClock++;
+                for (const hunter of hunters) {
+                    const h: any = hunter;
+                    if (h.huntMode !== -1 && h.isValid()) {
+                        const hunt = HuntType.get(h.huntMode);
+                        if (hunt) {
+                            h.huntAll(hunt);
+                            h.huntClock++;
+                        }
                     }
                 }
                 H.tick(1);
