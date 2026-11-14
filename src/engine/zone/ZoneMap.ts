@@ -54,6 +54,17 @@ export default class ZoneMap {
         return this.zones.size;
     }
 
+    /**
+     * custom (2026-11-02) - the zones that EXIST, without making any. zone() and zoneByIndex()
+     * allocate on a miss, which is right for the game and wrong for anything that wants to walk the
+     * map: asking for all 16.7 million zone indices to see what is in them builds 16.7 million Zone
+     * objects and runs the process out of memory (tools/sim/opsweep.ts did exactly that). A whole-map
+     * audit wants the few hundred thousand that the map load actually created.
+     */
+    existingZones(): IterableIterator<Zone> {
+        return this.zones.values();
+    }
+
     locCount(): number {
         let total: number = 0;
         for (const zone of this.zones.values()) {

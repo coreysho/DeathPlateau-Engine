@@ -41,19 +41,71 @@ function pocket(level: number, x: number, z: number, cap = 6000) {
     return seen;
 }
 
-const standable = (level: number, x: number, z: number) =>
-    DIRS.some(([dx, dz]) => canTravel(level, x - dx, z - dz, dx, dz, 1, 0, CollisionType.NORMAL));
+const standable = (level: number, x: number, z: number) => DIRS.some(([dx, dz]) => canTravel(level, x - dx, z - dz, dx, dz, 1, 0, CollisionType.NORMAL));
 
 const open = (level: number, x: number, z: number) => !isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
 
 // THE OBSTACLES, read off m55_154 by id. Names and ops are the cache's own.
 const OBSTACLES: { id: number; label: string; at: [number, number][] }[] = [
-    { id: 5138, label: 'stepping stone  Jump-to', at: [[3538, 9875], [3538, 9877], [3540, 9877], [3540, 9879], [3540, 9881]] },
-    { id: 5135, label: 'hurdle lane W   Jump', at: [[3537, 9893], [3537, 9896], [3537, 9899]] },
-    { id: 5133, label: 'hurdle lane M   Jump', at: [[3539, 9893], [3539, 9896], [3539, 9899]] },
-    { id: 5134, label: 'hurdle lane E   Jump', at: [[3542, 9893], [3542, 9896], [3542, 9899]] },
-    { id: 5152, label: 'pipe            Squeeze-through', at: [[3538, 9905], [3538, 9908], [3541, 9905], [3541, 9908], [3544, 9905], [3544, 9908]] },
-    { id: 5136, label: 'skull slope     Climb-up', at: [[3532, 9909], [3532, 9910], [3532, 9911]] },
+    {
+        id: 5138,
+        label: 'stepping stone  Jump-to',
+        at: [
+            [3538, 9875],
+            [3538, 9877],
+            [3540, 9877],
+            [3540, 9879],
+            [3540, 9881]
+        ]
+    },
+    {
+        id: 5135,
+        label: 'hurdle lane W   Jump',
+        at: [
+            [3537, 9893],
+            [3537, 9896],
+            [3537, 9899]
+        ]
+    },
+    {
+        id: 5133,
+        label: 'hurdle lane M   Jump',
+        at: [
+            [3539, 9893],
+            [3539, 9896],
+            [3539, 9899]
+        ]
+    },
+    {
+        id: 5134,
+        label: 'hurdle lane E   Jump',
+        at: [
+            [3542, 9893],
+            [3542, 9896],
+            [3542, 9899]
+        ]
+    },
+    {
+        id: 5152,
+        label: 'pipe            Squeeze-through',
+        at: [
+            [3538, 9905],
+            [3538, 9908],
+            [3541, 9905],
+            [3541, 9908],
+            [3544, 9905],
+            [3544, 9908]
+        ]
+    },
+    {
+        id: 5136,
+        label: 'skull slope     Climb-up',
+        at: [
+            [3532, 9909],
+            [3532, 9910],
+            [3532, 9911]
+        ]
+    },
     { id: 5140, label: 'zip line W      Teeth-grip', at: [[3527, 9910]] },
     { id: 5139, label: 'zip line M      Teeth-grip', at: [[3528, 9911]] },
     { id: 5141, label: 'zip line E      Teeth-grip', at: [[3529, 9910]] },
@@ -62,7 +114,14 @@ const OBSTACLES: { id: number; label: string; at: [number, number][] }[] = [
 
 // Stand somewhere in the middle of it first, or every zone reads as blocked.
 const SEEDS: [number, number][] = [
-    [3540, 9870], [3540, 9880], [3540, 9895], [3540, 9906], [3532, 9910], [3528, 9910], [3549, 9864], [3550, 9880]
+    [3540, 9870],
+    [3540, 9880],
+    [3540, 9895],
+    [3540, 9906],
+    [3532, 9910],
+    [3528, 9910],
+    [3549, 9864],
+    [3550, 9880]
 ];
 for (const [x, z] of SEEDS) {
     const p = H.makePlayer(`ww_seed_${x}_${z}`, x, z);
@@ -116,8 +175,7 @@ for (const [label, x, z] of [
     ['top of the slope', 3531, 9910]
 ] as [string, number, number][]) {
     const ok = open(0, x, z) && standable(0, x, z);
-    console.log(`   ${label.padEnd(28)} ${x},${z}  ${ok ? 'stand, pocket ' + pocketSize(x, z) : 'CANNOT STAND'}` +
-        `  ${drawn(x, z, 0) ? 'floor' : onLoc(x, z, 0) ? 'on a loc' : 'NOTHING DRAWN'}`);
+    console.log(`   ${label.padEnd(28)} ${x},${z}  ${ok ? 'stand, pocket ' + pocketSize(x, z) : 'CANNOT STAND'}` + `  ${drawn(x, z, 0) ? 'floor' : onLoc(x, z, 0) ? 'on a loc' : 'NOTHING DRAWN'}`);
 }
 
 process.exit(0);

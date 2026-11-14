@@ -2,7 +2,7 @@ import InvType from '#/cache/config/InvType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import ObjType from '#/cache/config/ObjType.js';
 import { BotBrain, BotState, getVarp, resetBrainCaches, setVarp, surfaceWildernessLevel, wildernessLevel } from '#/engine/bot/BotBrain.js';
-import { FuzzBrain } from '#/engine/bot/BotFuzzer.js';
+import { contentSpots, FuzzBrain } from '#/engine/bot/BotFuzzer.js';
 import { findings } from '#/engine/bot/BotFuzzWatch.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -11,6 +11,7 @@ import ScriptFaults from '#/engine/script/ScriptFaults.js';
 import { BOT_BRACKETS, type BotBracket, type BotConfigData, type BotHotspot, areaFor, loadBotConfig } from '#/engine/bot/BotConfig.js';
 import type { BotHooks } from '#/engine/bot/BotHooks.js';
 import { type BotKind, type BotKit, BOT_KITS, kitById, kitsFor } from '#/engine/bot/BotKits.js';
+import { applyPersona, type PersonaKind } from '#/engine/bot/BotPersona.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { isMapBlocked } from '#/engine/GameMap.js';
 import Player from '#/engine/entity/Player.js';
@@ -470,72 +471,65 @@ class BotManager implements BotHooks {
         // .preferUncovered). Also the number the run is judged by afterwards.
         ScriptCoverage.enable();
 
+        // ONE TILE FOR ALL OF THEM WAS THE COVERAGE CEILING. Every bot started on the caller's
+        // coordinate - Lumbridge, in practice - and wandered out from there, so twelve bots
+        // explored one region twelve times over. A 3,000-tick run reached 2.4% of this build's
+        // triggers, and the measurement in stockFuzzer below records the same lesson from the
+        // other side: what holds coverage down is not a shortage of clicks.
+        //
+        // So with no coordinate asked for, they are spread over bankSpots() - a derived list of
+        // tiles beside real bank booths and tellers, every one checked against the collision map.
+        // Banks are in towns and towns are where content is, which makes it a better spread than
+        // coordinates I would otherwise be inventing. Seeded off fuzzSeed, so a run replays.
+        //
+        // An EXPLICIT `at` still puts them all on it, because a caller naming a coordinate means
+        // it - that is how you aim a run at one area.
+        const spread = at ? null : spreadStarts(count, this.fuzzSeed);
         const start = at ?? this.fuzzStart();
         let made = 0;
         for (let i = 0; i < count; i++) {
-            const result = this.spawn('roamer', { at: start, manual: true, fuzzSeed: this.fuzzSeed + i });
+            const result = this.spawn('roamer', { at: spread?.[i] ?? start, manual: true, fuzzSeed: this.fuzzSeed + i });
             if (typeof result === 'string') {
                 return `only ${made} of ${count} started: ${result}`;
             }
-            this.stockFuzzer(result);
+            const persona = this.stockFuzzer(result, this.fuzzSeed + i);
+            printInfo(`bots: fuzzer ${result.username} - ${persona}`);
             made++;
         }
-        printInfo(`bots: ${made} fuzzers at ${start.x},${start.z},${start.level}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
+        const where = spread ? `${new Set(spread.map(p => `${p.x},${p.z},${p.level}`)).size} places` : `${start.x},${start.z},${start.level}`;
+        printInfo(`bots: ${made} fuzzers at ${where}, seed ${this.fuzzSeed} - findings to ${Environment.NODE_BOTS_FUZZ_FILE}`);
         return '';
     }
 
     /**
-     * A fuzzer's toolbox. A combat kit alone gives it a weapon, some armour and food, and after ten
-     * minutes it has eaten the food and there is nothing left to right-click - the first run of this
-     * spent 4000 ticks on 113 inventory ops. These are the everyday tools and materials that most of
-     * the skilling, crafting and item-on-item content in the game asks for, plus a bank with a copy
-     * of each so deposit and withdraw have something to move. Anything the content has renamed is
-     * skipped rather than crashing the spawn, exactly as the kits do.
+     * A fuzzer's toolbox and its life story. See BotPersona.ts for the measurement that moved this
+     * from "a combat kit plus 24 tools" to a rolled persona: the old stocking left every one of the
+     * 106 quests at stage 0 and every fuzzer holding 24 of some 4,000 objs, and that - not a
+     * shortage of clicks - is what held eight bots to 1.5% trigger coverage over 3,545 ticks.
+     *
+     * One in four is left `fresh`, which is exactly the old behaviour, because a brand-new account
+     * is a real state and the one the content's requirement branches are written against.
      */
-    private stockFuzzer(bot: BotPlayer): void {
-        const inv = [
-            'coins',
-            'tinderbox',
-            'knife',
-            'bronze_axe',
-            'bronze_pickaxe',
-            'hammer',
-            'chisel',
-            'needle',
-            'thread',
-            'net',
-            'bucket_empty',
-            'jug_empty',
-            'pot_empty',
-            'vial_empty',
-            'spade',
-            'logs',
-            'bones',
-            'raw_shrimp',
-            'bread',
-            'bucket_water',
-            'airrune',
-            'mindrune',
-            'grain',
-            'clay'
-        ];
-        const counts: Record<string, number> = { coins: 100000, airrune: 500, mindrune: 500, lawrune: 100, naturerune: 100, logs: 10, bones: 5, clay: 5 };
-        for (const name of inv) {
-            const id = ObjType.getId(name);
-            if (id !== -1) {
-                bot.invAdd(InvType.INV, id, counts[name] ?? 1);
+    private stockFuzzer(bot: BotPlayer, seed: number): string {
+        // Its own generator, seeded off the bot's fuzz seed, so the persona replays with the run.
+        let state = seed >>> 0;
+        const rng = {
+            next(): number {
+                state = (state + 0x6d2b79f5) >>> 0;
+                let t = state;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            },
+            int(min: number, max: number): number {
+                return min + Math.floor(this.next() * (max - min + 1));
             }
-        }
-        const bank = InvType.getId('bank');
-        if (bank === -1) {
-            return;
-        }
-        for (const name of [...inv, 'iron_ore', 'copper_ore', 'tin_ore', 'raw_chicken', 'feather', 'leather', 'ball_of_wool', 'uncut_sapphire', 'lawrune', 'naturerune']) {
-            const id = ObjType.getId(name);
-            if (id !== -1) {
-                bot.invAdd(bank, id, counts[name] ?? 10);
-            }
-        }
+        };
+        // A quarter of the fleet each. 'weak' earns its quarter: it is the only one monsters will
+        // hunt outside the Wilderness, and about eleven hundred [ai_*] triggers are behind that.
+        const roll = rng.next();
+        const kind: PersonaKind = roll < 0.25 ? 'fresh' : roll < 0.5 ? 'weak' : roll < 0.75 ? 'mid' : 'done';
+        return applyPersona(bot, rng, kind);
     }
 
     /** NODE_BOTS_FUZZ_AT as "x,z,level", or Lumbridge - the most content per tile in the game. */
@@ -613,6 +607,42 @@ class BotManager implements BotHooks {
     pendingRespawns(): number {
         return this.respawns.length;
     }
+}
+
+/**
+ * `count` start tiles for a fuzz run, spread over bankSpots() and seeded so the run replays.
+ *
+ * Distinct while there are distinct spots to give, then it wraps - twelve bots and a hundred spots
+ * means twelve places, and more bots than spots means some share, which is better than all of them
+ * sharing one. It walks the shuffled list rather than picking at random so no two bots land on the
+ * same tile by coincidence; two bots on one tile is not an error, just a wasted bot.
+ */
+function spreadStarts(count: number, seed: number): { x: number; z: number; level: number }[] {
+    const spots = contentSpots();
+    if (!spots.length) {
+        return [];
+    }
+    // The same cheap generator the personas use, so the spread is part of what a seed reproduces.
+    let state = seed >>> 0 || 1;
+    const next = (): number => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 0x100000000;
+    };
+    // THE DENSEST `count` SQUARES, NOT A RANDOM `count`. contentSpots() is sorted by how much
+    // clickable content each map square holds, and shuffling the whole list before taking a slice
+    // threw that away - twelve bots would get twelve arbitrary squares, some of them empty moorland
+    // where a fuzzer walks a thousand ticks and clicks nothing. Take the head, then shuffle only
+    // the head so which bot gets which is still seed-dependent.
+    const chosen = spots.slice(0, Math.min(count, spots.length));
+    for (let i = chosen.length - 1; i > 0; i--) {
+        const j = Math.floor(next() * (i + 1));
+        [chosen[i], chosen[j]] = [chosen[j], chosen[i]];
+    }
+    const out: { x: number; z: number; level: number }[] = [];
+    for (let i = 0; i < count; i++) {
+        out.push(chosen[i % chosen.length]);
+    }
+    return out;
 }
 
 export default new BotManager();

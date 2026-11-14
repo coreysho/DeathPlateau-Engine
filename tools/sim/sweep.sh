@@ -50,13 +50,26 @@ touch "$RESULTS"
 #   ifunpack.ts <dir>                        reads an interface archive named in process.argv
 #   run.ts <name>                           a scenario dispatcher
 #   standable.ts <x>,<z>[,<level>]          a coordinate query
-#   NODE_PRODUCTION=true staffrules.ts      the owner rules are about a live world
+#
+# staffrules.ts WAS IN THAT LIST AND IS NOT ANY MORE, for the reason scrollbars.ts came out of it
+# below: it is a real sim with a real verdict, and skipping it meant nobody ran it. What it wanted
+# was NODE_PRODUCTION=true, because the owner rules are about a live world - so it gets it, along
+# with securityfixes.ts, which asks for the same plus NODE_IDLE_LOGOUT_TICKS=20 and was not skipped
+# at all, just run bare and filed as a failure. Given what they ask for they are 16 ok and 20 ok.
 #
 # scrollbars.ts WAS IN THIS LIST AND SHOULD NOT HAVE BEEN: it takes no argument and no env var, it
 # ends with `console.log(ok, FAIL); process.exit(R.bad ? 1 : 0)` like every other sim, and nothing
 # else runs it - not engine CI, not content CI, not a battery - so being skipped here meant it was
 # checked by nobody at all.
-SKIP='^(a1lib|harness|ifunpack|questrun|run|standable|staffrules)\.ts$'
+SKIP='^(a1lib|harness|ifunpack|questrun|run|standable)\.ts$'
+
+# The environment a sim asks for, by name. Everything else runs bare.
+sim_env() {
+    case "$1" in
+        securityfixes) echo 'NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20' ;;
+        staffrules) echo 'NODE_PRODUCTION=true' ;;
+    esac
+}
 
 ls tools/sim/*.ts | xargs -n1 basename | grep -vE "$SKIP" | sort > "$OUT/simlist.txt"
 echo "$(wc -l < "$OUT/simlist.txt") sims, cap ${LIMIT}s, into $OUT"
@@ -66,7 +79,7 @@ while read -r f; do
     if cut -f2 "$RESULTS" | grep -qxF "$name"; then continue; fi
     log="$LOGS/$name.log"
     start=$(date +%s)
-    timeout -k 10 "$LIMIT" npx tsx "tools/sim/$f" > "$log" 2>&1
+    env $(sim_env "$name") timeout -k 10 "$LIMIT" npx tsx "tools/sim/$f" > "$log" 2>&1
     rc=$?
     secs=$(( $(date +%s) - start ))
     # the summary each sim prints at the end, in any of the shapes used across the tree

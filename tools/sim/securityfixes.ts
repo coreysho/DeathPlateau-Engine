@@ -94,7 +94,13 @@ console.log('::home');
 console.log('equipment requirements');
 {
     const p = player('pure', false);
-    for (const whip of ['abyssal_whip_frozen', 'bandos_godsword_or', 'dragon_plateskirt_g', 'rune_helm_h3', 'toxic_blowpipe_empty']) {
+    // toxic_blowpipe_empty USED TO BE IN THIS LIST AND CANNOT BE. It declares no iop2 at all -
+    // its backpack menu is iop4=Dismantle and Drop - so there is no Wield click for a level check
+    // to refuse, and H.opheld now throws rather than pretending a client could send one. The
+    // entry only ever made sense alongside [opheld2,toxic_blowpipe_empty] in blowpipe.rs2, which
+    // never ran for the same reason and has been replaced by a note recording that whether the
+    // empty one SHOULD be wieldable is still open. If it is ever given an iop2, put it back here.
+    for (const whip of ['abyssal_whip_frozen', 'bandos_godsword_or', 'dragon_plateskirt_g', 'rune_helm_h3']) {
         H.give(p, whip);
         H.mesgs.length = 0;
         H.opheld(p, whip, 2);

@@ -1,0 +1,7 @@
+# Triggers written against an option the cache does not offer, as of the build this was
+# written on. Rewritten with: npx tsx tools/sim/orphans.ts --baseline
+# Checked with:                npx tsx tools/sim/orphans.ts --check   (fails on anything NEW)
+#
+# A ratchet, not an approval. Every line is content somebody wrote that nothing can run.
+# 0 lines at the time of writing.
+

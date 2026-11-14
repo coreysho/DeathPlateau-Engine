@@ -1,5 +1,8 @@
 // The fuzzing bots against the real engine - `npx tsx tools/sim/fuzz.ts [ticks] [bots] [seed] [x,z,level]`
 //
+//   npx tsx tools/sim/fuzz.ts                    a short run, reported, always exit 0
+//   npx tsx tools/sim/fuzz.ts 3000 99 --gate     what the nightly runs: red on a fault or a finding
+//
 // It boots the world, puts fuzzing bots (src/engine/bot/BotFuzzer.ts) into it and lets them click
 // everything in reach for however many ticks you ask for, then prints what the watchers
 // (BotFuzzWatch.ts) and the script fault reporter (ScriptFaults.ts) caught, and what the run
@@ -12,6 +15,56 @@
 // A run that finds nothing is a result and is printed as one. What is NOT a result is a run that
 // found nothing because the bots never did anything, so the action histogram is printed too - if it
 // is all `idle` and `walk`, the finding is about the fuzzer, not the content.
+//
+// WHAT THE BOTS ARE ACTUALLY FOR, measured rather than assumed, because it is easy to spend a day
+// reading the wrong section of this report. Every finding kind was checked against what the
+// cross-reference tools already know (tools/sim/opsweep.ts, orphans.ts, ifselect.ts):
+//
+//   notrigger   NOT unique. Every one of a run's notrigger findings was already in
+//               opsweep-baseline.txt - opsweep reads the whole cache in forty seconds, and the
+//               bots find the subset they happen to walk into. Useful as a reachability signal
+//               ("a player really does meet this one"), not as a discovery.
+//   combo       noise by construction, and the report says so where it prints them.
+//   filler      ZERO BUGS once attributed properly. All twenty rows of a 3,000-tick run were
+//               `case default : ~displaymessage(^dm_default)` at the end of a use-on switch -
+//               content correctly refusing a combination a fuzzer invented. They were 253 rows
+//               before the attribution was fixed, which is the only reason they looked like a
+//               seam.
+//   SCRIPT      UNIQUE, and the reason to run this at all. A handler that exists, dispatches
+//   FAULTS      correctly and then throws on the data is invisible to every cross-reference: the
+//               option is declared, the script is reachable, and all three tools say so. One run
+//               found [opheld5,_serpentine_helm] throwing on inv_setslot, which meant three helms
+//               could not be dropped at all. See tools/sim/serpentinedrop.ts.
+//   the other   softlock, corpse, coord, stat, varp, items - also unique, also only findable by
+//   watchers    running. A 3,000-tick run with eight bots found none of them, which is a result.
+//
+// AND MORE BOTS, NOT MORE TICKS AND NOT A BETTER SPREAD. Measured, because every part of that was
+// guessed wrong at least once:
+//
+//     8 bots x  3,000 ticks     166s    2.9%
+//    12 bots x 20,000 ticks   1,371s    7.8%
+//    14 bots x 25,000 ticks   1,862s    8.4%
+//    99 bots x  3,000 ticks     881s   10.4%   <- best coverage AND half the wall clock
+//
+// 99 bots at 3,000 ticks beats 14 at 25,000 on coverage and takes half the time, with FEWER
+// bot-ticks. Throughput nearly doubles - 337 bot-ticks/sec against 175 - because the fixed per-tick
+// world cost is amortised across bots instead of repeated across ticks. The nightly wants 99 x
+// 3,000: fifteen minutes.
+//
+// WHERE THEY START MAKES NO MEASURABLE DIFFERENCE, which was a surprise and is worth recording so
+// nobody re-runs it. 99 bots over bank spots (99 places in 31 map squares) and 99 over the densest
+// content squares (99 places in 99 squares) came out at 10.4% and 10.3% on the same seed. The
+// content list is kept because it can reach 878 squares rather than 31, so a fault it finds is a
+// fault somewhere a player can be - but it is not a coverage win and must not be sold as one.
+//
+// WHAT WAS TRIED AND FAILED: letting a bored bot walk instead of taking the cast catch-all. Cast is
+// 23% of all bot-ticks and appeared to be starving wander()'s long walk. It lost coverage at every
+// checkpoint past t4045 and finished 59 triggers behind on the same seed - casting reaches a large
+// population of spell triggers that walking does not replace. Reverted.
+//
+// The ceiling that is left is not bots and not placement: ~14,000 triggers are behind content no
+// bot can reach from the ground - quest states, instanced rooms, and the ai_* families that need
+// something in the world to act on the bot rather than the other way round.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -22,16 +75,56 @@ import Environment from '#/util/Environment.js';
 import BotManager from '#/engine/bot/BotManager.js';
 import BotPlayer from '#/engine/bot/BotPlayer.js';
 import { DEFAULT_BOT_CONFIG } from '#/engine/bot/BotConfig.js';
-import { findings } from '#/engine/bot/BotFuzzWatch.js';
+import { type FindingKind, findings } from '#/engine/bot/BotFuzzWatch.js';
+import DeadOps from '#/engine/script/DeadOps.js';
 import { fuzzTuning } from '#/engine/bot/BotFuzzer.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
 
-const argv = process.argv.slice(2);
+const rawArgv = process.argv.slice(2);
+// --gate ANYWHERE, and stripped before the positional arguments are read, so the nightly can say
+// `fuzz.ts 3000 99 --gate` without having to pass a seed and a coordinate it does not want to pin.
+//
+// WHAT THE GATE COVERS, and why it is not everything this prints. A SCRIPT FAULT is content
+// throwing inside the engine and has no innocent reading at all. Of the watcher findings, FIVE
+// kinds are the same sort of thing - a corpse that never cleared, a coordinate off the map, a stat
+// or a varp outside what a player can have, items appearing from nowhere - and every one of them is
+// zero at 99 bots x 3,000 ticks, measured, so "still zero" is a contract CI can hold with no
+// baseline file to maintain.
+//
+// SOFTLOCK IS NOT IN THE GATE, and that is a measurement and not an oversight. The first version of
+// this included it; the same run reports 18 of them, so the nightly would have been red on its
+// first night. They are not content bugs. Fourteen of the eighteen are a bot parked at a bank whose
+// activity BotFuzzWatch's fingerprint cannot see - no coord change, no inventory change outside the
+// audit window, no xp, full hitpoints - so "no effect from any input for 120 ticks" is literally
+// true and nothing has it cornered. Making softlock gateable means teaching the watcher to require
+// that the brain's inputs were ACCEPTED rather than merely sent; until then it is reported.
+//
+// ONE SOFTLOCK IN THAT RUN IS WORTH CHASING and is not of that shape:
+// `a queued script that never resumes: [oploc3,poh_house_portal]@7` - a queued script that never
+// comes back, in the unimplemented Construction system.
+//
+// THE OTHER TWO KINDS ARE NOT GATED, and the first version of this gated on findings.size() and
+// would have been red every night: a 99-bot run was at **254 findings by tick 545**, essentially
+// all of them `deadop` and `filler`. Those two, and the three OPTIONS NOTHING ANSWERED buckets they
+// feed, move for innocent reasons: `deadop` is a strict subset of what tools/sim/opsweep.ts reports
+// and that already has a committed baseline, so gating here would fail the same bug twice; `combo`
+// is noise by construction, since nothing advertises casting Water Blast at a banker; and `filler`
+// contained zero real bugs once its attribution was fixed to blame the entered trigger. Gating on a
+// number that moves for innocent reasons is how a nightly becomes a job nobody reads.
+//
+// The set below is written out POSITIVELY rather than as "everything except deadop and filler", so
+// a kind added to FindingKind later has to be classified on purpose instead of joining the gate by
+// accident.
+const GATE = rawArgv.includes('--gate');
+const argv = rawArgv.filter(a => a !== '--gate');
 const TICKS = parseInt(argv[0] ?? '') || 2000;
 const COUNT = parseInt(argv[1] ?? '') || 4;
 const SEED = parseInt(argv[2] ?? '') || 20260929;
-const AT = (argv[3] ?? '3222,3218,0').split(',').map(n => parseInt(n));
+// NO DEFAULT COORDINATE ANY MORE, and that is the whole point of the change: passing one meant
+// BotManager took the "caller named a place" path every time and all the bots stacked on Lumbridge.
+// Left undefined, they spread over bankSpots(). Name a coordinate to aim a run at one area.
+const AT = argv[3] ? argv[3].split(',').map(n => parseInt(n)) : null;
 // `noguide` as the fifth argument turns the coverage steering off, so the same seed can be run both
 // ways and the difference measured rather than asserted.
 fuzzTuning.coverageGuided = argv[4] !== 'noguide';
@@ -54,6 +147,10 @@ ScriptFaults.enableForTesting(faultsFile);
 // Coverage is what steers the run (BotFuzzer.preferUncovered) as well as what it is judged by, so
 // it goes on before the world boots - the login and startup scripts count too.
 ScriptCoverage.enable();
+// custom (2026-11-02) - and the dead-op collector. The fuzzer's new watcher feeds it, and the
+// engine's own defaultOp feeds it from every other direction, so this run leaves behind the list of
+// options nothing answered as well as the list of things that broke.
+DeadOps.enableForTesting(path.join(os.tmpdir(), `fuzz_deadops_${process.pid}.jsonl`));
 
 await H.boot();
 
@@ -81,7 +178,7 @@ H.tick(2);
 
 console.log('\nTHE RUN');
 (Environment as { NODE_BOTS_FUZZ_FILE: string }).NODE_BOTS_FUZZ_FILE = findingsFile;
-const why = BotManager.startFuzzers(COUNT, SEED, { x: AT[0], z: AT[1], level: AT[2] ?? 0 });
+const why = BotManager.startFuzzers(COUNT, SEED, AT ? { x: AT[0], z: AT[1], level: AT[2] ?? 0 } : undefined);
 check('started', why, '');
 H.tick(10);
 const bots = () => [...World.playerLoop.all()].filter(p => p.isBot) as BotPlayer[];
@@ -104,7 +201,7 @@ for (let t = 0; t < TICKS; t++) {
 }
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
-console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT.join(',')}, coverage-guided: ${fuzzTuning.coverageGuided})`);
+console.log(`\nWHAT ${COUNT} FUZZERS DID IN ${TICKS} TICKS (${seconds}s wall, seed ${SEED}, from ${AT ? AT.join(',') : 'the densest map squares'}, coverage-guided: ${fuzzTuning.coverageGuided})`);
 for (const [kind, n] of [...actions.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${String(n).padStart(6)}  ${kind}`);
 }
@@ -120,6 +217,54 @@ if (findings.size() === 0) {
             console.log(`       ${step}`);
         }
     }
+}
+
+console.log('\nOPTIONS NOTHING ANSWERED');
+// WHY THIS SECTION EXISTS. These are what the owner has been reporting by hand as "it says nothing
+// interesting happens". Every one of them was being printed to a bot, by the engine, and thrown
+// away - BotPlayer keeps a 16-entry message ring and nothing read it. See watchDeadInteraction.
+//
+// A fuzz run reaches whatever it happened to walk past, which is a fraction of the total. The whole
+// list, for the whole game, without a bot: npx tsx tools/sim/opsweep.ts
+if (DeadOps.size() === 0) {
+    console.log('  none - which for a 15,000-trigger build means the bots did not get far.');
+} else {
+    const rows = DeadOps.all();
+    const noTrigger = rows.filter(r => r.kind === 'notrigger');
+    const combo = rows.filter(r => r.kind === 'combo');
+    const filler = rows.filter(r => r.kind === 'filler');
+
+    // THE THREE BUCKETS ARE NOT EQUALLY INTERESTING and are printed worst-first so the list reads
+    // as a work queue. A labelled option with no script is always wrong. A use-on with no handler
+    // usually is not - nothing advertises "cast Water Blast at a banker".
+    console.log(`  ${noTrigger.length} LABELLED options with no script behind them - every one of these is a bug`);
+    for (const row of noTrigger.slice(0, 30)) {
+        console.log(`  x${String(row.count).padStart(4)} [${row.trigger},${row.target}]  first at ${row.where}`);
+    }
+    if (noTrigger.length > 30) {
+        console.log(`  ... and ${noTrigger.length - 30} more`);
+    }
+
+    console.log(`\n  ${combo.length} use-on / cast-on subjects with no handler at all - read these the other way round:`);
+    console.log('  no [opheldu,x] means x cannot be used on anything in the game; most of the rest is just');
+    console.log('  a spell meeting an npc that was never meant to answer it.');
+    for (const row of combo.slice(0, 12)) {
+        console.log(`  x${String(row.count).padStart(4)} [${row.trigger},${row.target}]`);
+    }
+    if (combo.length > 12) {
+        console.log(`  ... and ${combo.length - 12} more`);
+    }
+
+    console.log(`\n  ${filler.length} where a trigger DID run and still had nothing to say - a missing branch or recipe:`);
+    for (const row of filler.slice(0, 12)) {
+        console.log(`  x${String(row.count).padStart(4)} ${row.target}`);
+    }
+    if (filler.length > 12) {
+        console.log(`  ... and ${filler.length - 12} more`);
+    }
+    // Left on disk on purpose, unlike the findings and faults files below: this one is a work
+    // queue somebody reads afterwards, not a pass/fail.
+    console.log(`  full list: ${DeadOps.flush()}`);
 }
 
 console.log('\nSCRIPT FAULTS');
@@ -139,6 +284,21 @@ const cov = ScriptCoverage.summary();
 console.log(`  ${cov.executed}/${cov.total} of this build's triggers have run in this process (${((cov.executed / Math.max(1, cov.total)) * 100).toFixed(1)}%)`);
 console.log(`  ${cov.total - cov.executed} have never run - nothing in the world, no sim and no player has reached them`);
 console.log(`  full list: ${ScriptCoverage.write(path.join(os.tmpdir(), `fuzz_coverage_${process.pid}.txt`))}`);
+
+if (GATE) {
+    console.log('\nTHE GATE');
+    const GATED: FindingKind[] = ['corpse', 'coord', 'stat', 'varp', 'items'];
+    const gated = findings.all().filter(f => GATED.includes(f.kind));
+    check('no script faults - content throwing inside the engine', ScriptFaults.size(), 0);
+    check(
+        `no ${GATED.join('/')} findings`,
+        gated.map(f => `${f.kind}: ${f.detail}`),
+        []
+    );
+    const soft = findings.all().filter(f => f.kind === 'softlock').length;
+    console.log(`  reported and NOT gated: ${soft} softlock, ${findings.size() - gated.length - soft} deadop/filler, and the`);
+    console.log('  three OPTIONS NOTHING ANSWERED buckets above - see the note on --gate at the top of this file');
+}
 
 fs.rmSync(faultsFile, { force: true });
 fs.rmSync(findingsFile, { force: true });

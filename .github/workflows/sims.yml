@@ -40,6 +40,21 @@ on:
     - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
+      content_ref:
+        # WHY THIS IS AN INPUT. Both jobs below check the content out at a fixed 377-wip, which is
+        # right for the nightly and wrong for a branch: an engine change and the content change it
+        # goes with live on two branches in two repositories, and pinning one of them means the run
+        # measures a pair that will never ship together.
+        #
+        # It cost a cancelled run to find out. A branch here fixed Desert Treasure's obelisks in the
+        # CONTENT repository and the sims were still run against 377-wip, so audit3 would fail on
+        # exactly the bug that was fixed, and the ratchets - whose baselines had been rebuilt from
+        # the new content - would report seventy-eight orphans that no longer exist.
+        #
+        # Defaulted to 377-wip, so the scheduled run is unchanged.
+        description: 'Content branch to run against'
+        type: string
+        default: '377-wip'
       notify_test:
         # A WAY TO PROVE THE DISCORD SECRET WORKS without waiting for a bad night or faking a
         # broken sim. Testing the webhook URL by hand proves the URL works; it does NOT prove
@@ -68,7 +83,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         repository: coreysho/DeathPlateau-Content
-        ref: 377-wip
+        # `|| '377-wip'` and not the input alone: a scheduled run carries no inputs, so
+        # github.event.inputs.content_ref is empty there rather than defaulted.
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
         path: content
 
     # AND THE CLIENT, because two sims check that the client and the server still agree about the
@@ -97,6 +114,12 @@ jobs:
     - name: Install
       working-directory: engine
       run: npm ci
+
+    # IN THE LOG, because a red verdict is unreadable without it: the same engine commit passes or
+    # fails depending on which content it was built against.
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
 
     # Every shard packs its own cache. It is 45 seconds against the 25 minutes of sims behind
     # it, and sharing one through an artifact would make every shard wait on a job that packs.
@@ -140,6 +163,16 @@ jobs:
       run: |
         # NAMES ONLY: the list carries a comment per entry saying how it fails, which is the
         # point of it, so the names are cut out of it rather than matched against the line.
+        # THE PER-SIM CAP, 360 AND NOT 180. seedstall passes all nine of its checks and takes
+        # four minutes doing it: a hundred thefts, each with sixteen ticks of regrowth, which is
+        # the measurement it exists to make. At 180 it was killed mid-run and filed as a failure
+        # twice over, with a clean tally sitting in its log - sweep.sh already says the cap "is
+        # there to catch a sim that has hung, not to race the slowest one", and this is the same
+        # cap with the same job.
+        #
+        # It only costs wall clock on a sim that is ALREADY failing or slow, since a passing sim
+        # exits on its own; the 90-minute job timeout above is the real ceiling.
+        cap=360
         SKIP_IN_CI='pingwire'
         known=/tmp/known-failing-names.txt
         grep -oE '^[a-z0-9_]+' tools/sim/known-failing.txt > "$known" || : > "$known"
@@ -417,6 +450,208 @@ jobs:
         if-no-files-found: ignore
         retention-days: 7
 
+  # --------------------------------------------------------------------------- the three ratchets
+  # tools/sim/opsweep.ts and tools/sim/orphans.ts cross-reference the cache against the script
+  # table in both directions - an option with no script, and a script no option can fire - and
+  # tools/sim/ifselect.ts asks the question neither of those can, which is whether a radio button's
+  # handler stores the value its own highlight script says it should. Each is
+  # about forty seconds for the whole game and each has a committed baseline, so they are ratchets:
+  # a build that adds a dead option or an unreachable trigger fails here instead of waiting for a
+  # playtest report.
+  #
+  # A SEPARATE JOB, not a shard. The sharded job above runs every sim bare, and bare these two
+  # print a report and exit 0 - they only ratchet with --check, which no shard would pass. It also
+  # means a red ratchet is legible on its own rather than buried in one shard of eight.
+  #
+  # AND NOT ON known-failing.txt EITHER. That list is for sims already broken when the nightly was
+  # switched on; these two are green today by construction, because their baselines were written
+  # from today's build.
+  #
+  # WHERE THIS REALLY BELONGS is the content repository's own push CI: a dead option is almost
+  # always added by a content change, and its `pack` job already checks out both repositories and
+  # builds the cache, so the two steps would drop straight in. What stops it is that the baselines
+  # live HERE, so banking a deliberate new entry would need an engine pull request to go green -
+  # which is the right friction for a ratchet and the wrong friction for somebody editing a .loc.
+  # Nightly in this repository is the version that costs nobody anything.
+  ratchets:
+    name: no new dead options, unreachable triggers or mis-wired buttons
+    # Skipped on a notifier test, the same way the sims job is: that dispatch exists to prove the
+    # Discord secret, and packing a cache to prove it is two minutes of nothing. It also keeps
+    # needs.ratchets.result at 'skipped' there rather than 'success', so the notify condition reads
+    # the same for both jobs.
+    if: ${{ !inputs.notify_test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: engine
+
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Content
+        # `|| '377-wip'` and not the input alone: a scheduled run carries no inputs, so
+        # github.event.inputs.content_ref is empty there rather than defaulted.
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
+        path: content
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: engine/package-lock.json
+
+    - name: Install
+      working-directory: engine
+      run: npm ci
+
+    # IN THE LOG, because a red verdict is unreadable without it: the same engine commit passes or
+    # fails depending on which content it was built against.
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
+
+    - name: Pack the content
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+        BUILD_VERIFY: 'false'
+      run: npx tsx tools/pack/Build.ts
+
+    # Both tools boot a world, and World refuses to start without a login key - see the note on
+    # the same step in the sims job.
+    - name: A login key for this run
+      working-directory: engine
+      run: npx tsx tools/server/rsa.ts
+
+    # --check exits 1 on anything NEW and prints it. Fixed entries are reported and do not fail:
+    # banking them is a deliberate `--baseline` commit, not something CI should do by itself.
+    - name: Options the cache offers that no script answers
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/opsweep.ts --check
+
+    - name: Triggers no click can fire
+      if: always()
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/orphans.ts --check
+
+    # The third cross-reference, and the one that catches wiring that LOOKS right: a radio button
+    # whose [if_button] handler stores a value the cache does not highlight on. Thessalia's
+    # women's trousers window passed both tools above - every handler existed and every option it
+    # answered existed - and still handed out the wrong trousers for six of its seven styles.
+    - name: Radio buttons whose script disagrees with the cache
+      if: always()
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/ifselect.ts --check
+
+  # ------------------------------------------------------------------ and the bots, which run nowhere else
+  # WHY THIS JOB EXISTS. The ratchets above read the cache against the script table and find what was
+  # never WRITTEN. They cannot find what BREAKS, because that needs somebody to be standing in the
+  # right place holding the right thing - and the only thing in this project that does that is
+  # src/engine/bot/BotFuzzer.ts, which until now ran only when somebody remembered to run it. Of the
+  # two script faults it has ever found, one was real: an uncharged serpentine helm threw instead of
+  # dropping, which no cross-reference tool can see because every option involved is wired.
+  #
+  # 99 BOTS AND 3,000 TICKS, measured and not guessed. The four runs that settled it:
+  #
+  #       8 bots x  3,000 ticks     166s    2.9% of triggers reached
+  #      12 bots x 20,000 ticks   1,371s    7.8%
+  #      14 bots x 25,000 ticks   1,862s    8.4%
+  #      99 bots x  3,000 ticks     881s   10.4%   <- more coverage, half the wall clock
+  #
+  # 99 at 3,000 beats 14 at 25,000 on coverage AND time with fewer bot-ticks, because the fixed
+  # per-tick world cost amortises across bots instead of repeating across ticks: 337 bot-ticks a
+  # second against 175. Where they start makes no measurable difference (10.4% from bank spots,
+  # 10.3% from the densest content squares), so no coordinate is passed and they spread.
+  #
+  # NO SEED PASSED EITHER, so the run uses fuzz.ts's own default. A fixed seed is the point: a fault
+  # the nightly finds has to be reproducible by hand with the same command, and every finding prints
+  # its own replay line.
+  #
+  # --gate IS WHAT MAKES IT RED, and only for what was measured to be zero at this configuration: a
+  # script fault, and the corpse / coord / stat / varp / items watcher findings. Everything else the
+  # run prints is a work queue rather than a verdict - the three "options nothing answered" buckets,
+  # because notrigger is a strict subset of opsweep's and that is already ratcheted above so gating
+  # it would fail the same bug twice; and SOFTLOCK, because the same run reports 18 of those and
+  # they are bots parked at banks whose activity the watcher's fingerprint cannot see. fuzz.ts's own
+  # header has the evidence for both exclusions.
+  fuzz:
+    name: the fuzzing bots find nothing new
+    if: ${{ !inputs.notify_test }}
+    runs-on: ubuntu-latest
+    # 90 MINUTES FOR A 15 MINUTE RUN, and the generosity is deliberate. The 881s measurement is from
+    # a box faster than a GitHub standard runner, and a hosted runner is two cores: the same work
+    # could plausibly take three times as long here. A cap is a ceiling and not a cost - the job
+    # ends when the run ends - whereas a fuzz run killed at the cap looks exactly like a fuzz run
+    # that crashed, output that simply stops, which is the trap the sims job above documents for
+    # glassblowing. The first unattended run is what will say how long this actually takes.
+    timeout-minutes: 90
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: engine
+
+    - uses: actions/checkout@v4
+      with:
+        repository: coreysho/DeathPlateau-Content
+        ref: ${{ github.event.inputs.content_ref || '377-wip' }}
+        path: content
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: engine/package-lock.json
+
+    - name: Install
+      working-directory: engine
+      run: npm ci
+
+    - name: Which content this run used
+      working-directory: content
+      run: git log --oneline -1
+
+    - name: Pack the content
+      working-directory: engine
+      env:
+        BUILD_SRC_DIR: ../content
+        BUILD_VERIFY: 'false'
+      run: npx tsx tools/pack/Build.ts
+
+    - name: A login key for this run
+      working-directory: engine
+      run: npx tsx tools/server/rsa.ts
+
+    - name: 99 fuzzing bots for 3,000 ticks
+      working-directory: engine
+      # `shell: bash` AND NOT THE DEFAULT, which is the whole reason this line exists. A run step on
+      # Linux defaults to `bash -e`, with no pipefail - so `tsx ... | tee` would report TEE's exit
+      # status and a red fuzz run would pass silently. Naming bash explicitly gets
+      # `bash --noprofile --norc -eo pipefail`, which fails on the left-hand side.
+      shell: bash
+      env:
+        BUILD_SRC_DIR: ../content
+      run: npx tsx tools/sim/fuzz.ts 3000 99 --gate 2>&1 | tee /tmp/fuzz.log
+
+    # THE LOG IS THE DELIVERABLE EVEN ON A GREEN NIGHT. The run leaves a work queue behind - every
+    # option nothing answered, the action histogram, and the trigger coverage - and all of it is in
+    # temporary files that go with the runner. Kept for a fortnight, which is long enough to compare
+    # two nights and short enough not to accumulate.
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fuzz-log
+        path: /tmp/fuzz.log
+        retention-days: 14
+
   # ------------------------------------------------------------------ and say so in Discord
   # WHY A WEBHOOK AND NOT THE GAME'S BOT. The engine talks to Discord through a bot token
   # (Environment.DISCORD_TOKEN, src/server/discord), which belongs to a running server and has
@@ -437,10 +672,11 @@ jobs:
   # readable spelling; only the ${{ secrets.* }} reference has to match GitHub exactly.
   notify:
     name: tell Discord
-    needs: sims
-    # needs.sims.result rather than failure(), because on a notifier test the sims job is
+    needs: [sims, ratchets, fuzz]
+    # needs.*.result rather than failure(), because on a notifier test both of those jobs are
     # SKIPPED and failure() would not fire. !cancelled() keeps it from speaking after a cancel.
-    if: ${{ !cancelled() && (needs.sims.result == 'failure' || inputs.notify_test) }}
+    # Both jobs are named: a green sweep with a red ratchet is still a night worth hearing about.
+    if: ${{ !cancelled() && (needs.sims.result == 'failure' || needs.ratchets.result == 'failure' || needs.fuzz.result == 'failure' || inputs.notify_test) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -460,6 +696,8 @@ jobs:
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         TRIGGER: ${{ github.event_name }}
         SHA: ${{ github.sha }}
+        RATCHETS: ${{ needs.ratchets.result }}
+        FUZZ: ${{ needs.fuzz.result }}
         NOTIFY_TEST: ${{ inputs.notify_test }}
         # DIAGNOSTIC ONLY, and deliberately not used to send anything. 'Settings -> Secrets and
         # variables -> Actions' holds BOTH on one page, and "New repository variable" sits next to
@@ -477,6 +715,10 @@ jobs:
         # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
         # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
         # the message says it does not know rather than inventing a clean bill of health.
+        #
+        # AND THE RATCHETS CAN BE THE FAILURE. This job needs both, so a green sweep with a red
+        # opsweep/orphans arrives here with no verdict files at all - which used to read as "a
+        # shard died" and sent whoever got the message to look in the wrong place.
         if [ "$NOTIFY_TEST" = "true" ]; then
           # SAYS SO IN THE MESSAGE, loudly. A test that looks like a real failure is worse than
           # no test: somebody reads it at 3am and goes looking for a broken sim.
@@ -485,6 +727,13 @@ jobs:
           body="This is a test of the failure notification. The sims did not run and nothing is broken."
         elif [ -n "$red" ]; then
           body="Newly failing: **${red}**"
+        elif [ "$RATCHETS" != "success" ]; then
+          body="The sims are fine. The ratchets are not: **opsweep/orphans** found a dead option or an unreachable trigger that is not in its baseline. The run log names it."
+        elif [ "$FUZZ" != "success" ]; then
+          # THE ONE THAT NEEDS NO FOLLOW-UP TO REPRODUCE. Every fuzz finding prints its own replay
+          # line - seed, bot, tick and the last actions before it - and the command is fixed, so the
+          # message can tell whoever reads it exactly what to type.
+          body="The sims and the ratchets are fine. **The fuzzing bots are not**: a script fault or a watcher finding that is not meant to exist."$'\n'"Reproduce with \`npx tsx tools/sim/fuzz.ts 3000 99 --gate\` - the run log names it and prints its replay line. The full log is on the run as the **fuzz-log** artifact."
         elif [ -n "$timedout" ]; then
           # ITS OWN TITLE AND COLOUR, because "Nightly sims failed" in amber-red is the thing
           # that sent somebody looking for a broken quest six times over. Nothing failed a check

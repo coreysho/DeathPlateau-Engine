@@ -141,6 +141,11 @@ export default class GameMap {
         return this.zonemap.zoneByIndex(zoneIndex);
     }
 
+    /** Every zone that exists, allocating none - see ZoneMap.existingZones. For whole-map audits. */
+    existingZones(): IterableIterator<Zone> {
+        return this.zonemap.existingZones();
+    }
+
     getZoneGrid(level: number): ZoneGrid {
         return this.zonemap.grid(level);
     }

@@ -71,3 +71,13 @@ leg('cave: 3500,9811 -> hideout mouth 3505,9831', 0, 3500, 9811, 3505, 9831);
 leg('cave: 3500,9811 -> cellar ladder 3477,9845', 0, 3500, 9811, 3477, 9845);
 leg('cave: 3477,9845 -> false wall tile 3480,9838', 0, 3477, 9845, 3480, 9838);
 leg('canifis 3494,3465 -> tavern chair 3504,3478', 0, 3494, 3465, 3504, 3478);
+
+// EXITS, because the engine's own timers keep the event loop alive for ever otherwise. This file
+// prints a report rather than asserting anything, so it had no process.exit at all and simply hung
+// once it had finished printing: ten minutes of wall clock using 0.4 seconds of CPU, which is a
+// process waiting rather than working. tools/sim/sweep.sh runs every sim with a cap of 5400s, so
+// fourteen files in this shape could spend the better part of a day being killed one by one.
+//
+// The nightly never noticed because its filter only runs a sim that CAN report a verdict
+// (`grep -qE 'process\.exit\([^0-9)]'`), and a file with no exit at all does not match.
+process.exit(0);

@@ -1,4 +1,5 @@
 import ObjType from '#/cache/config/ObjType.js';
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -35,7 +36,7 @@ export default class OpObjHandler extends ClientGameMessageHandler<OpObj> {
         }
 
         const type = ObjType.get(obj.type);
-        if (type.op[message.op - 1] === null || type.op[message.op - 1] === 'hidden') {
+        if (isHiddenOp(type.op[message.op - 1])) {
             // bad client or lag: obj does not exist
             player.write(new UnsetMapFlag());
             return false;

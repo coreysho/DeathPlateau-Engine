@@ -32,6 +32,41 @@ const ObjConfigOps: CommandHandlers = {
         state.pushString(check(state.popInt(), ObjTypeValid).desc ?? 'null');
     },
 
+    /**
+     * The label on one of an obj's five BACKPACK options, or "null" when that slot is empty.
+     *
+     * Declared in ScriptOpcode.ts since the enum was written ("official, see cs2") and never
+     * implemented, which is why ~dropslot could not tell a Drop from a Destroy. ObjType seeds iop
+     * as [null, null, null, null, 'Drop'], so slot 5 answers "Drop" for every item that does not
+     * override it and the comparison a caller wants is against that literal.
+     *
+     * The slot is 1-based, the way it is written in a config (iop1..iop5) and the way opheldN
+     * numbers its triggers. Out of range is an error rather than a silent "null": a script asking
+     * for iop6 has a bug in it, and iop0 is the off-by-one that bug usually is.
+     */
+    [ScriptOpcode.OC_IOP]: state => {
+        const [objId, slot] = state.popInts(2);
+
+        const objType: ObjType = check(objId, ObjTypeValid);
+        if (slot < 1 || slot > objType.iop.length) {
+            throw new Error(`oc_iop: slot ${slot} is not one of 1..${objType.iop.length}`);
+        }
+
+        state.pushString(objType.iop[slot - 1] ?? 'null');
+    },
+
+    /** The same for the GROUND menu - what the option reads when the obj is lying on a tile. */
+    [ScriptOpcode.OC_OP]: state => {
+        const [objId, slot] = state.popInts(2);
+
+        const objType: ObjType = check(objId, ObjTypeValid);
+        if (slot < 1 || slot > objType.op.length) {
+            throw new Error(`oc_op: slot ${slot} is not one of 1..${objType.op.length}`);
+        }
+
+        state.pushString(objType.op[slot - 1] ?? 'null');
+    },
+
     [ScriptOpcode.OC_MEMBERS]: state => {
         state.pushInt(check(state.popInt(), ObjTypeValid).members ? 1 : 0);
     },

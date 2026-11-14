@@ -45,3 +45,13 @@ for (let t = 1; t <= 14; t++) {
             (n ? 'present at ' + n.x + ',' + n.z + ' L' + n.level + '  active=' + n.isActive + ' hp=' + (n.levels ? n.levels[3] : '?') + ' mode=' + n.mode + ' lifecycle=' + n.lifecycle + ' tele=' + n.lifecycleTick : 'GONE')
     );
 }
+
+// EXITS, because the engine's own timers keep the event loop alive for ever otherwise. This file
+// prints a report rather than asserting anything, so it had no process.exit at all and simply hung
+// once it had finished printing: ten minutes of wall clock using 0.4 seconds of CPU, which is a
+// process waiting rather than working. tools/sim/sweep.sh runs every sim with a cap of 5400s, so
+// fourteen files in this shape could spend the better part of a day being killed one by one.
+//
+// The nightly never noticed because its filter only runs a sim that CAN report a verdict
+// (`grep -qE 'process\.exit\([^0-9)]'`), and a file with no exit at all does not match.
+process.exit(0);

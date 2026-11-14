@@ -39,6 +39,7 @@ import { queueBugReport } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import handleBotCommand from '#/engine/bot/BotCommands.js';
 import handleCoverageCommand from '#/engine/script/ScriptCoverageCommands.js';
+import handleDeadOpsCommand from '#/engine/script/DeadOpsCommands.js';
 import handleCommandsCommand, { STAFF_WORLD } from '#/network/game/client/handler/ClientCheatCommands.js';
 import handleFaultsCommand from '#/engine/script/ScriptFaultCommands.js';
 import { printDebug } from '#/util/Logger.js';
@@ -521,6 +522,13 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // actually get to.
             if (cmd === 'coverage') {
                 return handleCoverageCommand(player, args);
+            }
+
+            // custom (2026-11-02) - the other half of coverage (engine/script/DeadOps.ts). Coverage
+            // says which triggers nothing reached; this says which CLICKS reached nothing, which is
+            // the list of options a player can right-click and be told nothing happens.
+            if (cmd === 'deadops') {
+                return handleDeadOpsCommand(player, args);
             }
 
             if (cmd === 'bank') {

@@ -37,6 +37,7 @@ import InputTracking from '#/engine/entity/tracking/InputTracking.js';
 import { WealthEventParams } from '#/engine/entity/tracking/WealthEvent.js';
 import { changeNpcCollision, changePlayerOccCollision, findPathToEntity, reachedEntity, reachedLoc, reachedObj } from '#/engine/GameMap.js';
 import { Inventory, InventoryListener } from '#/engine/Inventory.js';
+import DeadOps from '#/engine/script/DeadOps.js';
 import ScriptFile from '#/engine/script/ScriptFile.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
@@ -1282,6 +1283,12 @@ export default class Player extends PathingEntity {
             }
 
             this.messageGame(`No trigger for [${ServerTriggerType[this.targetOp + 7].toLowerCase()},${debugname}]`);
+            // custom (2026-11-02) - and keep it. This message is the only record anywhere of an
+            // option the cache offers that the content never answered, and until now it was printed
+            // to one player and forgotten. DeadOps collects every one, so a fuzz run, a sim or an
+            // afternoon on the dev world all leave the same to-do list behind. Inside the same
+            // !NODE_PRODUCTION guard: a live world collects nothing and pays nothing.
+            DeadOps.record(ServerTriggerType[this.targetOp + 7].toLowerCase(), debugname, this.username, this.x, this.z, this.level);
         }
 
         this.messageGame('Nothing interesting happens.');

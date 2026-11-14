@@ -1,3 +1,4 @@
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 import Component, { ComActionTarget } from '#/cache/config/Component.js';
 import InvType from '#/cache/config/InvType.js';
 import NpcType from '#/cache/config/NpcType.js';
@@ -10,6 +11,7 @@ import Obj from '#/engine/entity/Obj.js';
 import Player from '#/engine/entity/Player.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import World from '#/engine/World.js';
+import { toBase37 } from '#/util/JString.js';
 import IfButtonHandler from '#/network/game/client/handler/IfButtonHandler.js';
 import InvButtonHandler from '#/network/game/client/handler/InvButtonHandler.js';
 import MoveClickHandler from '#/network/game/client/handler/MoveClickHandler.js';
@@ -17,6 +19,14 @@ import OpHeldHandler from '#/network/game/client/handler/OpHeldHandler.js';
 import OpHeldUHandler from '#/network/game/client/handler/OpHeldUHandler.js';
 import OpLocHandler from '#/network/game/client/handler/OpLocHandler.js';
 import OpObjHandler from '#/network/game/client/handler/OpObjHandler.js';
+import InvButtonDHandler from '#/network/game/client/handler/InvButtonDHandler.js';
+import OpHeldTHandler from '#/network/game/client/handler/OpHeldTHandler.js';
+import OpLocTHandler from '#/network/game/client/handler/OpLocTHandler.js';
+import OpLocUHandler from '#/network/game/client/handler/OpLocUHandler.js';
+import OpObjTHandler from '#/network/game/client/handler/OpObjTHandler.js';
+import OpObjUHandler from '#/network/game/client/handler/OpObjUHandler.js';
+import ResumePCountDialogHandler from '#/network/game/client/handler/ResumePCountDialogHandler.js';
+import ResumePNameDialogHandler from '#/network/game/client/handler/ResumePNameDialogHandler.js';
 import ResumePauseButtonHandler from '#/network/game/client/handler/ResumePauseButtonHandler.js';
 import WearOpHandler from '#/network/game/client/handler/WearOpHandler.js';
 import IfButton from '#/network/game/client/model/IfButton.js';
@@ -26,11 +36,20 @@ import OpHeld from '#/network/game/client/model/OpHeld.js';
 import OpHeldU from '#/network/game/client/model/OpHeldU.js';
 import OpLoc from '#/network/game/client/model/OpLoc.js';
 import OpObj from '#/network/game/client/model/OpObj.js';
+import InvButtonD from '#/network/game/client/model/InvButtonD.js';
+import OpHeldT from '#/network/game/client/model/OpHeldT.js';
+import OpLocT from '#/network/game/client/model/OpLocT.js';
+import OpLocU from '#/network/game/client/model/OpLocU.js';
+import OpObjT from '#/network/game/client/model/OpObjT.js';
+import OpObjU from '#/network/game/client/model/OpObjU.js';
+import ResumePCountDialog from '#/network/game/client/model/ResumePCountDialog.js';
+import ResumePNameDialog from '#/network/game/client/model/ResumePNameDialog.js';
 import ResumePauseButton from '#/network/game/client/model/ResumePauseButton.js';
 import WearOp from '#/network/game/client/model/WearOp.js';
 import Loc from '#/engine/entity/Loc.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
+import Environment from '#/util/Environment.js';
 
 // A bot's hands. Every action goes through the handler a client's packet reaches - the same checks,
 // the same triggers - so every game rule applies to a bot exactly as to a player. Three of them
@@ -48,6 +67,14 @@ const ifButton = new IfButtonHandler();
 const invButton = new InvButtonHandler();
 const wearOp = new WearOpHandler();
 const resumePause = new ResumePauseButtonHandler();
+const resumeCount = new ResumePCountDialogHandler();
+const resumeName = new ResumePNameDialogHandler();
+const opLocU = new OpLocUHandler();
+const opObjU = new OpObjUHandler();
+const opLocT = new OpLocTHandler();
+const opObjT = new OpObjTHandler();
+const opHeldT = new OpHeldTHandler();
+const invButtonD = new InvButtonDHandler();
 
 const VIEW_DISTANCE = 15;
 
@@ -114,7 +141,7 @@ export function opNpc(p: BotPlayer, npc: Npc, op: number): boolean {
         return false;
     }
     const type = NpcType.get(npc.type);
-    if (!type.op || type.op[op - 1] === null || type.op[op - 1] === 'hidden') {
+    if (!type.op || isHiddenOp(type.op[op - 1])) {
         p.unsetMapFlag();
         return false;
     }
@@ -297,10 +324,225 @@ export function resumeDialogue(p: BotPlayer): boolean {
     return resumePause.handle(new ResumePauseButton(), p);
 }
 
+/**
+ * THE AMOUNT PROMPT, and the reason a bot has to be able to answer one. While a script sits on
+ * p_countdialog or p_namedialog, Player.awaitingChatboxInput is true and the engine swallows EVERY
+ * other input the bot sends - so a bot that cannot answer is not merely missing a surface, it is
+ * wedged for the rest of the run. One did exactly that: a 99-bot run reported
+ * `a queued script that never resumes: [oploc3,poh_house_portal]@7`, which is execution state
+ * NAMEDIALOG, from clicking Friend's house on a house portal and never typing a name.
+ *
+ * The decoder is g4s, so a real client can send any signed 32-bit value here and nothing bounds it.
+ * The fuzzer sends plausible amounts only, on purpose: the edge cases (0, negative, 2^31-1) are
+ * worth a run of their own and would want measuring before they are let near a nightly.
+ */
+export function typeCount(p: BotPlayer, amount: number): boolean {
+    return resumeCount.handle(new ResumePCountDialog(amount), p);
+}
+
+/**
+ * The answer to p_namedialog, base37-packed the way a real client packs it - a-z, 0-9 and
+ * underscore, twelve characters at most. Anything outside that cannot survive the round trip, so
+ * callers pass a username-shaped string.
+ */
+export function typeName(p: BotPlayer, name: string): boolean {
+    return resumeName.handle(new ResumePNameDialog(toBase37(name)), p);
+}
+
 /** Pick one of the options a p_choice put on screen. The com must be one the script is waiting on. */
 export function chooseDialogue(p: BotPlayer, comId: number): boolean {
     if (p.resumeButtons.indexOf(comId) === -1) {
         return false;
     }
     return ifButton.handle(new IfButton(comId), p);
+}
+
+// ------------------------------------------------------------------------------------------------
+// custom (2026-11-02) - USE ON, CAST ON, and DRAG. The hands the fuzzer was still missing.
+//
+// Counted against the build on 2 November 2026, these are the triggers no bot could reach at all,
+// because no bot could send the packet: [oplocu] 505, [opnpcu] 208, [apnpct] 51, [applayert] 54,
+// [opheldt] 12, [opnpct] 9, [oploct] 6, [apobju] 4, [aplocu] 4, [apnpcu] 6, [inv_buttond] 7,
+// [opobju] 4, [opobjt] 1, [apobjt] 1. Around 870 of them, and they are not an obscure tail: "use
+// the item on the thing" is how half of this era's quests are solved, and the fuzzer could only
+// ever use an item on another item in its own backpack.
+//
+// Every one goes through the handler a real packet reaches, as the rest of this file does. opNpcU
+// and opNpcT are mirrored rather than called, for the same reason opNpc above is: their visibility
+// check reads rsbuf.hasNpc, which the server fills only for a connected client.
+
+/** The component the bot's backpack is on, which is the `useCom` every "use" packet carries. */
+function usableBackpackCom(p: BotPlayer): number {
+    const com = backpackCom(p);
+    if (com === -1) {
+        return -1;
+    }
+    // OpLocU and friends refuse a component that is not `usable`, exactly as they would for a real
+    // client. If the backpack's own component is not marked usable, no use-on click is possible at
+    // all and the fuzzer should not pretend otherwise.
+    return Component.get(com)?.usable ? com : -1;
+}
+
+/** An inventory item used on a loc: OpLocUHandler. [oplocu,...] - 505 triggers in this build. */
+export function heldUseOnLoc(p: BotPlayer, loc: Loc, slot: number): boolean {
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const com = usableBackpackCom(p);
+    if (!item || com === -1) {
+        return false;
+    }
+    opClickRoute(p, loc.x, loc.z, loc.width, loc.length);
+    return opLocU.handle(new OpLocU(loc.x, loc.z, loc.type, item.id, slot, com), p as unknown as NetworkPlayer);
+}
+
+/** An inventory item used on a ground obj: OpObjUHandler. */
+export function heldUseOnObj(p: BotPlayer, obj: Obj, slot: number): boolean {
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const com = usableBackpackCom(p);
+    if (!item || com === -1) {
+        return false;
+    }
+    const path = clientPath(findPath(p.level, p.x, p.z, obj.x, obj.z));
+    if (path.length > 0) {
+        moveClick.handle(new MoveClick(path, 0, true), p as unknown as NetworkPlayer);
+    }
+    return opObjU.handle(new OpObjU(obj.x, obj.z, obj.type, item.id, slot, com), p as unknown as NetworkPlayer);
+}
+
+/**
+ * An inventory item used on an npc. OpNpcUHandler mirrored line for line, because its visibility
+ * check is rsbuf.hasNpc - see the note at the top of this file. [opnpcu,...] - 208 triggers.
+ */
+export function heldUseOnNpc(p: BotPlayer, npc: Npc, slot: number): boolean {
+    if (p.delayed) {
+        p.unsetMapFlag();
+        return false;
+    }
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const com = usableBackpackCom(p);
+    if (!item || com === -1) {
+        p.unsetMapFlag();
+        return false;
+    }
+    if (World.getNpc(npc.nid) !== npc || npc.delayed || !npc.isActive || !sees(p, npc.x, npc.z, npc.level)) {
+        p.unsetMapFlag();
+        return false;
+    }
+    // The handler's own members gate. A fuzzer that walked past it would report a dead op on an item
+    // the world does not offer at all.
+    if (ObjType.get(item.id).members && !Environment.NODE_MEMBERS) {
+        p.unsetMapFlag();
+        return false;
+    }
+    opClickRoute(p, npc.x, npc.z, npc.width, npc.length);
+    p.clearPendingAction();
+    p.lastUseItem = item.id;
+    p.lastUseSlot = slot;
+    p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPCU);
+    p.opcalled = true;
+    return true;
+}
+
+/** A spell (or any targeted interface component) cast on a loc: OpLocTHandler. */
+export function castOnLoc(p: BotPlayer, loc: Loc, spellComId: number): boolean {
+    opClickRoute(p, loc.x, loc.z, loc.width, loc.length);
+    return opLocT.handle(new OpLocT(loc.x, loc.z, loc.type, spellComId), p as unknown as NetworkPlayer);
+}
+
+/** A spell cast on a ground obj: OpObjTHandler. Telekinetic grab, and the quest ones. */
+export function castOnObj(p: BotPlayer, obj: Obj, spellComId: number): boolean {
+    return opObjT.handle(new OpObjT(obj.x, obj.z, obj.type, spellComId), p as unknown as NetworkPlayer);
+}
+
+/** A spell cast on an inventory item: OpHeldTHandler. Enchanting, superheat, the alchemies. */
+export function castOnHeld(p: BotPlayer, slot: number, spellComId: number): boolean {
+    const inv = p.getInventory(InvType.INV);
+    const item = inv?.get(slot);
+    const com = backpackCom(p);
+    if (!item || com === -1) {
+        return false;
+    }
+    return opHeldT.handle(new OpHeldT(item.id, slot, com, spellComId), p);
+}
+
+/**
+ * A spell cast on an npc. OpNpcTHandler mirrored, as heldUseOnNpc is: rsbuf.hasNpc again.
+ * [apnpct] is 51 triggers and [opnpct] 9, and every one of them was unreachable by any bot.
+ */
+export function castOnNpc(p: BotPlayer, npc: Npc, spellComId: number): boolean {
+    if (p.delayed) {
+        p.unsetMapFlag();
+        return false;
+    }
+    const spellCom = Component.get(spellComId);
+    if (typeof spellCom === 'undefined' || (spellCom.actionTarget & ComActionTarget.NPC) === 0 || !p.isComponentVisible(spellCom)) {
+        p.unsetMapFlag();
+        return false;
+    }
+    if (World.getNpc(npc.nid) !== npc || npc.delayed || !npc.isActive || !sees(p, npc.x, npc.z, npc.level)) {
+        p.unsetMapFlag();
+        return false;
+    }
+    opClickRoute(p, npc.x, npc.z, npc.width, npc.length);
+    p.clearPendingAction();
+    p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPCT, spellComId);
+    p.opcalled = true;
+    return true;
+}
+
+/**
+ * One inventory slot dragged onto another: InvButtonDHandler. [inv_buttond] is only 7 triggers, but
+ * one of them is the bank's own rearrange and another is the rune pouch - both places where two
+ * stacks meet, which is where a dupe lives.
+ */
+export function invDrag(p: BotPlayer, comId: number, slot: number, targetSlot: number, mode = 0): boolean {
+    const listener = p.invListeners.find(l => l.com === comId);
+    const inv = p.getInventoryFromListener(listener);
+    if (!inv || slot === targetSlot || !inv.validSlot(slot) || !inv.validSlot(targetSlot)) {
+        return false;
+    }
+    return invButtonD.handle(new InvButtonD(comId, slot, targetSlot, mode), p);
+}
+
+/**
+ * Every spell the bot could cast right now at a target of this kind.
+ *
+ * WHY THE INTERFACE NAME AND NOT JUST actionTarget. The obvious filter - "any component the cache
+ * marks as targeting an npc" - is wrong, and measured wrong: this build has 1,857 such components
+ * in `npc_browser`, 1,319 in `clan_setup`, 426 in `friends` and 420 in `music`. actionTarget is
+ * interface data from the 377 client and is set all over the cache on things that are not spells.
+ * A fuzzer using it unfiltered spends its run casting `music:suspicious` at skeletons, which both
+ * wastes the clicks and reports dead ops that are not ops at all.
+ *
+ * So the filter is the spellbooks, by name. `endsWith('_magic')` was tried first and is too loose:
+ * it also matched `levelup_magic`, which is the level-up popup. Three names, listed - and
+ * tools/sim/opsweep.ts prints any OTHER interface whose name contains `magic` and has targeted
+ * components, so a fourth book added to the content shows up as a line to read rather than as
+ * silently untested content.
+ */
+export const SPELLBOOKS: ReadonlySet<string> = new Set(['magic', 'lunar_magic', 'ancient_magic']);
+
+function isSpellbookCom(com: Component): boolean {
+    const name = com.comName;
+    if (!name) {
+        return false;
+    }
+    const colon = name.indexOf(':');
+    return SPELLBOOKS.has(colon === -1 ? name : name.slice(0, colon));
+}
+
+export function castableComs(p: BotPlayer, target: ComActionTarget): number[] {
+    const out: number[] = [];
+    for (let id = 0; id < Component.count; id++) {
+        const com = Component.get(id);
+        if (!com || !com.actionTarget || (com.actionTarget & target) === 0) {
+            continue;
+        }
+        if (isSpellbookCom(com) && p.isComponentVisible(com)) {
+            out.push(id);
+        }
+    }
+    return out;
 }

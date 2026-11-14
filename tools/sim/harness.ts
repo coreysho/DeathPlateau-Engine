@@ -8,6 +8,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
+import { isHiddenOp, locCanOp } from '#/cache/config/OpVisibility.js';
 import ParamType from '#/cache/config/ParamType.js';
 import LocType from '#/cache/config/LocType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
@@ -424,11 +425,62 @@ export function attackNpc(p: Player, target: Npc) {
     return true;
 }
 
+/**
+ * opheld WITHOUT the "could a client send this?" check, for a test whose whole point is that it
+ * could not.
+ *
+ * There is exactly one of these, and it is a fair use rather than a loophole. tools/sim/mutagens.ts
+ * sends iop4 to a plain serpentine_helm, which declares [null,"Wear","Check",null,"Uncharge"] and
+ * so has no iop4 at all - while tanzanite_helm and magma_helm declare iop4=Restore and share a
+ * CATEGORY trigger with it. The test is that the shared handler leaves the un-mutated helm untouched
+ * if it is ever reached with one, which is a defensive path by definition: no client can get there.
+ *
+ * Making opheld strict broke that test, and the two wrong ways out were obvious and worth naming.
+ * Returning false instead of throwing would have left the sim's own assertions passing against a
+ * click that never happened - a test that cannot fail. Relaxing opheld for everyone would reopen
+ * the door this closed, which is sims clicking options no player has.
+ *
+ * So: a separate function with an ugly name, so the exception is legible where it is used.
+ */
+export function opheldUnclickable(p: Player, objName: string, op: number) {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const inv = p.getInventory(InvType.INV)!;
+    let slot = -1;
+    for (let i = 0; i < inv.capacity; i++) {
+        if (inv.get(i)?.id === id) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot === -1) throw new Error('not carrying ' + objName);
+    const obj = ObjType.get(id);
+    p.lastItem = id;
+    p.lastSlot = slot;
+    p.closeModal();
+    p.moveClickRequest = false;
+    const script = ScriptProvider.getByTrigger(ServerTriggerType.OPHELD1 + (op - 1), obj.id, obj.category);
+    if (!script) throw new Error('no opheld' + op + ' trigger for ' + objName);
+    p.executeScript(ScriptRunner.init(script, p), true);
+    return true;
+}
+
 /** What the client's inventory right-click does: OpHeldHandler, minus the client validation. */
 export function opheld(p: Player, objName: string, op: number) {
     if (p.delayed) return false; // OpHeldHandler: "normal: cannot interact while delayed"
     const id = ObjType.getId(objName);
     if (id === -1) throw new Error('no such obj: ' + objName);
+    // The fourth of these, and the last: opLoc, opObj and opNpc all reached setInteraction without
+    // asking whether the option exists, and so did this. OpHeldHandler refuses an iop the obj does
+    // not declare, so a sim that clicks one is testing something no client can send.
+    //
+    // opheldUnclickable is the way past this, for the one case where clicking an impossible op is
+    // the point of the test rather than a mistake. See its own note.
+    const iops = ObjType.get(id).iop;
+    if (isHiddenOp(iops?.[op - 1])) {
+        throw new Error(`${objName} has no iop${op} (${JSON.stringify(iops)}), so no client could send this click. If that is deliberate, H.opheldUnclickable says so at the call site.`);
+    }
     const inv = p.getInventory(InvType.INV)!;
     let slot = -1;
     for (let i = 0; i < inv.capacity; i++) {
@@ -573,6 +625,30 @@ export function opLoc(p: Player, x: number, z: number, locName: string, op: numb
     if (id === -1) throw new Error('no such loc: ' + locName);
     const loc = World.getLoc(x, z, p.level, id);
     if (!loc) throw new Error(`no ${locName} at ${x},${z}`);
+    // custom (2026-11-03) - THE CHECK OpLocHandler MAKES, which this did not.
+    //
+    // This function reaches setInteraction directly rather than going through the handler, and the
+    // one thing the handler does that matters here is refuse an op the loc does not have:
+    //
+    //     if (!locType.op || isHiddenOp(locType.op[message.op - 1])) -> "bad client", refused
+    //
+    // Without it a sim can click an option no client would ever draw and no packet would ever be
+    // accepted, and the content behind it runs - so the sim passes and the game is unplayable. That
+    // is the exact failure this directory's quest runner was built to catch ("a player who blinks
+    // into Zanaris never finds out that the gate has no handler"), reintroduced by its own click.
+    //
+    // Found from the other end, by tools/sim/orphans.ts: Desert Treasure's four obelisks declare no
+    // ops at all, on the shell or on either multiloc variant, while [oploc1,desert_treasure_oblix1]
+    // places the diamond that finishes the quest. quest_dt_run.ts reported 114 of 114 checks passing.
+    //
+    // A `hidden` op is NOT refused, here or by the handler: p_oploc re-enters those from script and
+    // the content uses that deliberately. Only a slot the cache leaves empty is refused.
+    // locCanOp, not LocType.get(id).op: a multiloc shell's ops come from whichever variant the
+    // varbit is showing, and the client sends that variant's op. Checking the shell alone called 60
+    // working sim steps broken - see the note in OpVisibility.ts.
+    if (!locCanOp(id, op)) {
+        throw new Error(`${locName} has no op${op} on itself or any multiloc variant (${JSON.stringify(LocType.get(id).op)}), so no client could send this click`);
+    }
     p.clearPendingAction();
     // the route: a real client sends one with the click, and a player with none goes nowhere
     p.queueWaypoints(findPathToLoc(p.level, p.x, p.z, loc.x, loc.z, p.width, loc.width, loc.length, loc.angle, loc.shape, LocType.get(id).forceapproach));
@@ -645,6 +721,13 @@ export function opObj(p: Player, x: number, z: number, objName: string, op: numb
     if (id === -1) throw new Error('no such obj: ' + objName);
     const obj = World.getObj(x, z, p.level, id, p.hash64) ?? World.getObj(x, z, p.level, id, -1n);
     if (!obj) throw new Error(`no ${objName} at ${x},${z}`);
+    // The check OpObjHandler makes, for the same reason opLoc below has one. An obj's ground menu
+    // defaults to op3="Take" and nothing else, so a sim clicking op1 on a ground obj that declares
+    // no op1 is asking for something no client could send.
+    const groundOps = ObjType.get(id).op;
+    if (isHiddenOp(groundOps?.[op - 1])) {
+        throw new Error(`${objName} has no ground op${op} (${JSON.stringify(groundOps)}), so no client could send this click`);
+    }
     p.clearPendingAction();
     // THE ROUTE GOES TO A TILE NEXT TO IT, which is wrong for a ground obj: you pick one up from
     // its own tile. A caller already standing on it passes walk=false, because otherwise the route
@@ -693,6 +776,47 @@ export function opNpc(p: Player, npc: Npc, op: number) {
     p.clearPendingAction();
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));
     p.setInteraction(Interaction.ENGINE, npc, ServerTriggerType.APNPC1 + (op - 1));
+    (p as unknown as { opcalled: boolean }).opcalled = true;
+    return true;
+}
+
+/**
+ * ONE PLAYER USING AN ITEM ON ANOTHER: OpPlayerUHandler, mirrored rather than called.
+ *
+ * The one check that cannot be called is rsbuf.hasPlayer(player.slot, other.slot) - the server fills
+ * that list only for a CONNECTED client, and a harness player has no socket, so the real handler
+ * refuses every one of these before it reaches the content. That is the same reason
+ * src/engine/bot/BotInput.ts mirrors opPlayer, opNpc and castOnPlayer instead of calling them.
+ * Here it is mirrored as what it stands for: the other player is within a client's view distance on
+ * the same level.
+ *
+ * EVERY OTHER CHECK IS KEPT, including the one that looks like it is in the way:
+ *
+ *     if (other.isBot) { "... is a bot - it doesn't take items." }
+ *
+ * A bot does not take items, deliberately, so players cannot lose them into one. That is why
+ * [opplayeru] and [applayeru] - ten triggers in this build - are out of a fuzzer's reach and want a
+ * sim with two real players (tools/sim/jarshare.ts).
+ */
+export function useOnPlayer(p: Player, other: Player, objName: string): boolean {
+    if (p.delayed) return false;
+    const id = ObjType.getId(objName);
+    if (id === -1) throw new Error('no such obj: ' + objName);
+    const listener = p.invListeners.find(l => l.type === InvType.INV && l.source === p.uid);
+    const com = listener ? Component.get(listener.com) : undefined;
+    if (!listener || !com || !com.usable || !p.isComponentVisible(com)) return false;
+    const inv = p.getInventoryFromListener(listener);
+    if (!inv) return false;
+    const slot = inv.getItemIndex(id);
+    if (slot === -1 || !inv.validSlot(slot) || !inv.hasAt(slot, id)) return false;
+    if (!other.isActive || other.slot === -1 || World.getPlayer(other.slot) !== other) return false;
+    if (other.isBot) return false; // the handler's own rule, kept
+    if (other.level !== p.level || Math.abs(p.x - other.x) > 15 || Math.abs(p.z - other.z) > 15) return false;
+    p.clearPendingAction();
+    if (ObjType.get(id).members && !Environment.NODE_MEMBERS) return false;
+    (p as unknown as { lastUseItem: number; lastUseSlot: number }).lastUseItem = id;
+    (p as unknown as { lastUseItem: number; lastUseSlot: number }).lastUseSlot = slot;
+    p.setInteraction(Interaction.ENGINE, other, ServerTriggerType.APPLAYERU, id);
     (p as unknown as { opcalled: boolean }).opcalled = true;
     return true;
 }
