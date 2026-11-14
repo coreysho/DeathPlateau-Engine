@@ -25,13 +25,14 @@ import Player from '#/engine/entity/Player.js';
 
 const HANDLER = 'src/network/game/client/handler/ClientCheatHandler.ts';
 
-type Dispatched = { name: string; rank: number; devRank?: number; staffWorld: boolean };
+type Dispatched = { name: string; rank: number; devRank?: number; staffWorld: boolean; helper: boolean };
 
 /** Every command the handler dispatches, and the rank block it sits in, read off the source. */
 function dispatched(): Dispatched[] {
     const found: Dispatched[] = [];
     let rank = 0;
     let devRank: number | undefined;
+    let helper = false;
 
     for (const raw of fs.readFileSync(HANDLER, 'utf8').split('\n')) {
         const line = raw.replace(/\r$/, '');
@@ -43,15 +44,25 @@ function dispatched(): Dispatched[] {
             devRank = 4;
             continue;
         }
+        // "rank N, or a Helper of any rank" - the gate ::sz sits in. Matched before the plain one,
+        // which would read the rank off it and quietly lose the Helper half.
+        const helperGate = line.match(/^ {8}if \(player\.staffModLevel >= (\d) \|\| player\.helper\) \{$/);
+        if (helperGate) {
+            rank = parseInt(helperGate[1], 10);
+            devRank = undefined;
+            helper = true;
+            continue;
+        }
         const gate = line.match(/^ {8}if \(player\.staffModLevel >= (\d)\) \{$/);
         if (gate) {
             rank = parseInt(gate[1], 10);
             devRank = undefined;
+            helper = false;
             continue;
         }
 
         for (const m of line.matchAll(/cmd === '([a-z]+)'/g)) {
-            found.push({ name: m[1], rank, devRank, staffWorld: line.includes('&& STAFF_WORLD') });
+            found.push({ name: m[1], rank, devRank, staffWorld: line.includes('&& STAFF_WORLD'), helper });
         }
     }
     return found;
@@ -79,6 +90,7 @@ console.log('THE TABLE AGAINST THE DISPATCH');
     // line) has to agree with itself as well.
     const wrongRank: string[] = [];
     const wrongWorld: string[] = [];
+    const wrongHelper: string[] = [];
     for (const d of source) {
         const cheat = CHEATS.find(c => c.name === d.name);
         if (!cheat) continue;
@@ -88,9 +100,13 @@ console.log('THE TABLE AGAINST THE DISPATCH');
         if ((cheat.staffWorld === true) !== d.staffWorld) {
             wrongWorld.push(`${d.name} (table ${cheat.staffWorld === true}, handler ${d.staffWorld})`);
         }
+        if ((cheat.helper === true) !== d.helper) {
+            wrongHelper.push(`${d.name} (table ${cheat.helper === true}, handler ${d.helper})`);
+        }
     }
     check('  every command sits at the rank the table gives it', wrongRank, []);
     check('  every STAFF_WORLD command is flagged, and only those', wrongWorld, []);
+    check('  every command a Helper may run is flagged, and only those', wrongHelper, []);
 }
 
 await H.boot();
@@ -160,6 +176,31 @@ console.log('\nWHAT A PLAYER WITH NO RIGHTS IS TOLD');
         []
     );
     H.despawn(p);
+}
+
+console.log('\nA HELPER, WHO IS RANK 0 WITH A FLAG');
+{
+    // A Helper's staffModLevel is 0, so without the helper axis they are told exactly what a player
+    // with no rights is told - and ::sz, the one command they have, would be undiscoverable.
+    const p: any = at('helpersim', 0);
+    p.helper = true;
+    const said = run(p as Player, 'commands');
+    check(
+        '  ::sz is named for them',
+        said.some(l => l.includes('::sz')),
+        true
+    );
+    check(
+        '  and nothing else of the moderator block is',
+        said.some(l => l.includes('::tele ') || l.includes('::ban')),
+        false
+    );
+    const plain = run(at('plainsim2', 0), 'commands');
+    check(
+        '  a rank-0 player who is NOT one is not told about it',
+        plain.some(l => l.includes('::sz')),
+        false
+    );
 }
 
 console.log('\nAND A MODERATOR, WHICH IS WHERE THE WORLD STARTS TO MATTER');

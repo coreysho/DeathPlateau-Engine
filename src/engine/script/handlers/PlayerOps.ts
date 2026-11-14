@@ -544,6 +544,18 @@ const PlayerOps: CommandHandlers = {
         player.write(new SynthSound(synth, loops, delay));
     },
 
+    [ScriptOpcode.HELPER]: state => {
+        // custom (2026-11-14) - the Helper rank, for content to ask about.
+        //
+        // It is a flag on Player and not a staffModLevel (Player.helper, set from the login
+        // server), so staffmodlevel returns 0 for a Helper and every content check written against
+        // it treats one as an ordinary player. chatcrown knows about the rank but answers a
+        // different question - the icon a name draws, with staff level and veteran folded in. ::sz lets Helpers into the staff zone, and the guard
+        // in content that puts everybody else back out again has to make the same exception - which
+        // is this op, and the only reason it exists.
+        state.pushInt(state.activePlayer.helper ? 1 : 0);
+    },
+
     [ScriptOpcode.STAFFMODLEVEL]: state => {
         state.pushInt(state.activePlayer.staffModLevel);
     },
