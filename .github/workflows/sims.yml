@@ -265,8 +265,15 @@ jobs:
           # cap two nights ago and 162s last night: still passing, but the margin is now under
           # ten per cent of the cap, and the thing that decides it is which runner the night
           # gets rather than anything in the sim. Moved before it starts failing, not after.
+          #
+          # quest_legends_run goes with it, and for the same reason rather than because it is as
+          # close: 138s of its 180s is over the seven tenths the notice below warns at, so the
+          # night was already telling us about it. Legends' Quest is the longest quest in the game
+          # and this sim walks the whole of it, so it is not going to get faster; waiting for it to
+          # cross the line would only mean reading a timeout as a failure first, which is the
+          # audit7 trap this whole block exists to stop repeating.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
