@@ -467,6 +467,10 @@ const ScriptOpcodePointers: {
         require: ['active_player'],
         require2: ['active_player2']
     },
+    [ScriptOpcode.HELPER]: {
+        require: ['active_player'],
+        require2: ['active_player2']
+    },
     [ScriptOpcode.STAFFMODLEVEL]: {
         require: ['active_player'],
         require2: ['active_player2']

@@ -999,9 +999,17 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             }
         }
 
-        if (player.staffModLevel >= 2) {
-            // "super-moderator" commands (similar to a jmod but we don't know their command capabilities on live)
-
+        // custom (2026-11-14) - HELPERS GET THE STAFF ZONE, which is why this sits in a gate of
+        // its own rather than in the moderator block below. A Helper is not a staffModLevel: it is
+        // a flag on Player set from the login server, and their level is 0 - inside that block they
+        // would never be reached at all.
+        //
+        // WORTH KNOWING WHAT IT COSTS. ::helper's own comment says the rank "grants nothing, which
+        // is the point - it can be given out freely and taken back without it being a demotion".
+        // After this it grants one thing, so handing it out becomes a decision about who may stand
+        // in the staff zone. Asked for on 14 November; written here because the comment it
+        // contradicts is two files away.
+        if (player.staffModLevel >= 2 || player.helper) {
             if (cmd === 'sz') {
                 // custom (2026-11-11) - the staff zone: map square 22_56, which nothing on the map
                 // borders and no path reaches. Content builds the square (content/tools/genstaffzone.py)
@@ -1041,7 +1049,13 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
                 player.executeScript(ScriptRunner.init(script, player), true);
                 return true;
-            } else if (cmd === 'getcoord') {
+            }
+        }
+
+        if (player.staffModLevel >= 2) {
+            // "super-moderator" commands (similar to a jmod but we don't know their command capabilities on live)
+
+            if (cmd === 'getcoord') {
                 // authentic
 
                 // Displays current coordinate

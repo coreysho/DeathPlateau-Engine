@@ -32,6 +32,8 @@ type Cheat = {
     devRank?: number;
     /** True for the commands withheld on an open development world - the STAFF_WORLD rule above. */
     staffWorld?: boolean;
+    /** True where a Helper may run it too, whatever their staffModLevel - which for a Helper is 0. */
+    helper?: boolean;
 };
 
 // EVERY COMMAND ClientCheatHandler DISPATCHES, and nothing else. The handler is the authority on
@@ -50,7 +52,7 @@ export const CHEATS: Cheat[] = [
     { name: 'commands', args: '[name|debug]', what: 'this list, or what one command does', rank: 0 },
 
     // MODERATOR.
-    { name: 'sz', what: 'teleport to the staff zone - ::home is the way out of it', rank: 2 },
+    { name: 'sz', what: 'teleport to the staff zone - ::home is the way out of it', rank: 2, helper: true },
     { name: 'getcoord', what: 'print the coordinate you are standing on', rank: 2 },
     { name: 'tele', args: '<level,mx,mz[,lx,lz]>', what: 'teleport to a coordinate, as ::getcoord prints it', rank: 2 },
     { name: 'teleto', args: '<username>', what: 'teleport yourself to a player', rank: 2, staffWorld: true },
@@ -131,8 +133,8 @@ function withheld(cheat: Cheat): boolean {
     return cheat.staffWorld === true && !STAFF_WORLD;
 }
 
-export function cheatAllowed(cheat: Cheat, staffModLevel: number): boolean {
-    return staffModLevel >= bar(cheat) && !withheld(cheat);
+export function cheatAllowed(cheat: Cheat, staffModLevel: number, helper: boolean = false): boolean {
+    return (staffModLevel >= bar(cheat) || (cheat.helper === true && helper)) && !withheld(cheat);
 }
 
 /** ::~<name> for every [debugproc,] in the content build, in the order they would be typed. */
@@ -229,7 +231,7 @@ export default function handleCommandsCommand(player: Player, args: string[]): b
 
     // Grouped by the rank that unlocks them, which is how somebody reads their own list: the first
     // group is theirs as a player, and everything under it came with a promotion.
-    const mine = CHEATS.filter(c => cheatAllowed(c, level));
+    const mine = CHEATS.filter(c => cheatAllowed(c, level, player.helper));
     const bars = [...new Set(mine.map(bar))].sort((a, b) => a - b);
     for (const need of bars) {
         const group = mine

@@ -542,6 +542,16 @@ export const enum ScriptOpcode {
     // turns ranks into one icon lives in ChatCrown.ts and is the thing that must not be copied.
     CHATCROWN,
 
+    // custom (2026-11-14). APPENDED, for the reason above - it was first inserted next to
+    // staffmodlevel, where it belongs by subject, which shifted every opcode after it.
+    //
+    // Is the active player a Helper? CHATCROWN above answers a neighbouring question and is not
+    // this one: it returns the icon a name carries, which folds staff level, veteran and helper
+    // into a single number through ChatCrown's ladder. An access check wants the flag itself -
+    // ::sz lets Helpers into the staff zone, and the guard in content that puts everybody else
+    // back out again has to ask whether this player is one, not what badge they draw.
+    HELPER,
+
     // Debug ops (10000-11000)
     CONSOLE = 10000,
     ERROR,
@@ -648,6 +658,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['HEADICONS_GET', ScriptOpcode.HEADICONS_GET],
     ['HEADICONS_SET', ScriptOpcode.HEADICONS_SET],
     ['HEALENERGY', ScriptOpcode.HEALENERGY],
+    ['HELPER', ScriptOpcode.HELPER],
     ['HINT_COORD', ScriptOpcode.HINT_COORD],
     ['HINT_NPC', ScriptOpcode.HINT_NPC],
     ['HINT_PL', ScriptOpcode.HINT_PL],

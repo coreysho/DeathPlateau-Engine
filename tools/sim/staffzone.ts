@@ -144,6 +144,26 @@ const mod2 = rank(player('szmod2', 3200, 3200), 2);
 run(mod2, 'sz');
 check('a moderator lands on the arrival tile', at(mod2), [ARRIVE[0], ARRIVE[1], 0]);
 
+console.log('\nAND HELPERS, WHO ARE NOT A RANK');
+// A Helper is staffModLevel 0 with a flag set, so every check written against staffmodlevel reads
+// them as an ordinary player. Both halves of "staff only" have to make the same exception, and a
+// test that only drove the command would miss the one that puts them back out again at login.
+const help = player('szhelper', 3200, 3200);
+help.helper = true;
+run(help, 'sz');
+check('a Helper lands on the arrival tile', at(help), [ARRIVE[0], ARRIVE[1], 0]);
+check('and their staff level is still 0', help.staffModLevel, 0);
+
+const helpIn = player('szhelper2', 3200, 3200);
+helpIn.helper = true;
+helpIn.teleport(ARRIVE[0], ARRIVE[1], 0);
+H.tick(1);
+const hfrom = mark();
+H.runProc(helpIn, '[proc,staffzone_login]', [], undefined, true);
+H.tick(1);
+check('a Helper logging in there is left alone', at(helpIn), [ARRIVE[0], ARRIVE[1], 0]);
+check('and told nothing', mesSince(helpIn, hfrom), []);
+
 console.log('\n::sz IS NOT A WAY OUT OF A FIGHT');
 check('the test tile really is Wilderness', walkable(0, WILDERNESS[0], WILDERNESS[1]), true);
 const wild = rank(player('szwild', WILDERNESS[0], WILDERNESS[1]), 2);
