@@ -13,6 +13,22 @@ import { play, Manifest } from './questrun.js';
 await H.boot();
 
 const ELENA: [number, number, number] = [2592, 3337, 0];
+// ELENA AT HOME IS A DOOR, NOT AN NPC YOU CAN FIND. [opnpc1,elena2] is what this used to click
+// and 981a228's menu guard stopped it, correctly: elena2 is a multinpc on
+// plaguecity_elena_at_home, that varbit is written nowhere in the content, so at state 0 the shell
+// resolves to -1, keeps its own empty op list and is neither clickable nor rendered. Probed: the
+// shell standing in her house answers op1 with null, while elena2_vis answers "Talk-to".
+//
+// The Elena a player talks to is elena2_vis, which areas/area_ardougne_east/scripts/doors.rs2
+// npc_adds when her door is opened with Plague City finished - a workaround its own comment flags
+// for that varbit never being written. So the door is the step, and it is a step a player cannot
+// skip either.
+//
+// AND SHE IS TEMPORARY: npc_add gives her 200 ticks. Probed - she is gone 210 ticks later. So the
+// door is opened before EVERY conversation rather than once at the top, which is why this appears
+// three times instead of being hoisted.
+const ELENA_DOOR: [number, number] = [2592, 3339];
+const ELENA_OUTSIDE: [number, number, number] = [2592, 3341, 0]; // her side of the door is z < 3339
 const JERICO: [number, number, number] = [2612, 3325, 0];
 const JERICO_CUPBOARD: [number, number] = [2611, 3326];
 const HOUSE_DOOR: [number, number] = [2610, 3324];
@@ -50,10 +66,11 @@ const m: Manifest = {
         { note: 'requirements: Plague City. Items: a rotten apple for the mourners stew (one lies in' },
         { note: 'their own yard) and a priest gown and robe to get past Guidor wife.' },
         { setvar: 'elenaquest', to: 29, why: '^elena_complete - Plague City' },
-        { setpos: ELENA, why: 'to Elena in East Ardougne' },
+        { setpos: ELENA_OUTSIDE, why: 'to Elena in East Ardougne' },
 
         { note: 'wiki step 1: the mourners took her distillator' },
-        { talk: 'elena2', picks: ["I'll try to retrieve it for you."], want: 'distillator', why: 'she wants it back' },
+        { loc: 'elenadoor2', at: ELENA_DOOR, why: 'opening her door is what spawns her' },
+        { talk: 'elena2_vis', picks: ["I'll try to retrieve it for you."], want: 'distillator', why: 'she wants it back' },
         { stage: 1 },
 
         { note: 'wiki step 2: Jerico keeps pigeons, and the mourners watch the tower' },
@@ -133,8 +150,9 @@ const m: Manifest = {
         { has: 'distillator' },
 
         { note: 'wiki step 9: back to Elena, who hands over the three agents and a sample' },
-        { setpos: ELENA, why: 'to Elena' },
-        { talk: 'elena2', want: 'Guidor', why: 'the touch paper does not change colour' },
+        { setpos: ELENA_OUTSIDE, why: 'to Elena' },
+        { loc: 'elenadoor2', at: ELENA_DOOR, why: 'opening her door is what spawns her' },
+        { talk: 'elena2_vis', want: 'Guidor', why: 'the touch paper does not change colour' },
         { stage: 10 },
         { has: 'liquid_honey' },
         { has: 'ethenea' },
@@ -190,8 +208,9 @@ const m: Manifest = {
         { stage: 14 },
 
         { note: 'wiki step 14: Elena, then the king who built the wall' },
-        { setpos: ELENA, why: 'back to Elena' },
-        { talk: 'elena2', want: 'King of East Ardougne', why: 'this is bigger than both of us' },
+        { setpos: ELENA_OUTSIDE, why: 'back to Elena' },
+        { loc: 'elenadoor2', at: ELENA_DOOR, why: 'opening her door is what spawns her' },
+        { talk: 'elena2_vis', want: 'King of East Ardougne', why: 'this is bigger than both of us' },
         { stage: 15 },
         { setpos: LATHAS, why: 'to King Lathas on the castle first floor' },
         { talk: 'kinglathas', picks: ["I don't understand..."], want: 'brother', why: 'Tyras drank from the Chalice of Eternity' },

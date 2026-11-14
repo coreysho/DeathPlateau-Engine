@@ -64,9 +64,21 @@ const m: Manifest = {
         { note: 'requirements: Black Knights’ Fortress and Druidic Ritual. No items - Sir Tiffy' },
         { note: 'sends you in with nothing carried and nothing worn, which is why this run gives' },
         { note: 'the player nothing at all.' },
-        { note: 'Sir Amik’s half is one dialogue on his own menu (~rd_amik_recruitment); the stage' },
-        { note: 'it sets is written here so the walk can start at the bench.' },
-        { setvar: 'rd_main', to: 1, why: '^rd_started - Sir Amik has sent you to the park' },
+        { note: 'Black Knights’ Fortress is the hard prerequisite, and it is what gates the offer:' },
+        { note: 'sir_amik_varze.rs2 switches on %spy and only its case 4 - the post-quest branch -' },
+        { note: 'reaches @rd_amik_recruitment at all.' },
+        { setvar: 'spy', to: 4, why: 'Black Knights’ Fortress finished, which is what lets Sir Amik offer this' },
+
+        // WALKED, NOT WRITTEN. This was a setvar to ^rd_started with a note saying Sir Amik's
+        // half is one dialogue - which it is, and it is also the first thing a player clicks in
+        // this quest, so writing the stage instead left the helper with no opening step at all.
+        { note: 'wiki step 1: Sir Amik Varze, top of the western tower of the White Knights castle' },
+        // The tower rather than the park, and by setpos as quest_blackknight_run reaches him -
+        // that run STARTS on plane 2 beside him, and there is no walk from Falador park up three
+        // floors that the router will take.
+        { setpos: [2962, 3339, 2], why: 'up the western tower of the White Knights castle' },
+        { talk: 'sir_amik_varze', picks: ['Go on.'], want: 'Sir Tiffy Cashien', why: 'he sends you to the park' },
+        { varis: 'rd_main', to: 1 },
 
         { note: 'wiki step 2: Sir Tiffy on the bench in Falador Park' },
         { setpos: TIFFY, why: 'to Sir Tiffy' },

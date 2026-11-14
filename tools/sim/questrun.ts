@@ -17,6 +17,9 @@
 //   loc     the same for a loc click, with the route a client would send.
 //   give    an item the player would have bought or banked. Declared, never assumed: the list of
 //           gives IS the quest's item requirement, and the run prints it at the end.
+//           `how` says where a player really gets it when that is a step of the quest (a cupboard to
+//           search, say) rather than something bought or banked, and the quest helper shows it as a
+//           step instead of an item to bring.
 //   stage   assert the quest's own progress variable. A step that does not move it is a step that
 //           did nothing, however much dialogue it produced.
 //
@@ -27,7 +30,7 @@ import Player from '#/engine/entity/Player.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import World from '#/engine/World.js';
-import { canTravel } from '#/engine/GameMap.js';
+import { canTravel, isLineOfSight } from '#/engine/GameMap.js';
 import { CollisionFlag, CollisionType } from '#/engine/routefinder/index.js';
 import { BlockWalk } from '#/engine/entity/BlockWalk.js';
 import LocType from '#/cache/config/LocType.js';
@@ -85,6 +88,7 @@ export type Step =
           picks?: (number | string)[];
           want?: string;
           why?: string;
+          tries?: number;
           soft?: boolean;
           hop?: boolean;
           near?: number;
@@ -94,7 +98,7 @@ export type Step =
       }
     | { useObj: string; at: [number, number]; obj: string; picks?: (number | string)[]; want?: string; why?: string; soft?: boolean }
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
-    | { give: string; n?: number }
+    | { give: string; n?: number; how?: string }
     | { setvar: string; to: number; why?: string }
     | { stage: number }
     | { level: number }
@@ -851,26 +855,54 @@ export function play(m: Manifest, p: Player): Result[] {
             const wantHunt = 'wake the hunt on ' + s.wakehunt + (s.why ? ' - ' + s.why : '');
             const idHunt = NpcType.getId(s.wakehunt);
             const rWake = ('r' in s ? s.r : undefined) ?? 20;
-            let hunter: Npc | null = null;
+            // EVERY ONE OF THEM, NOT THE FIRST ONE FOUND. What gates the real hunt is an observer,
+            // and a watching client observes a whole zone rather than one npc, so every matching
+            // npc in range is driven. Taking the first match out of World.npcs - which is in spawn
+            // order, not distance order - also made the step's behaviour depend on how many static
+            // npcs happened to be created before this one.
+            const hunters: Npc[] = [];
             for (const npc of World.npcs) {
                 if (!npc || !npc.isActive || npc.type !== idHunt || npc.level !== p.level) continue;
                 if (Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z)) > rWake) continue;
-                hunter = npc;
-                break;
+                hunters.push(npc);
             }
-            const doneWake = () => ('untilvar' in s && s.untilvar ? stageOf(p, s.untilvar) === s.to : !!hunter && !hunter.isValid());
-            if (!hunter) {
+            const doneWake = () => ('untilvar' in s && s.untilvar ? stageOf(p, s.untilvar) === s.to : hunters.some(h => !h.isValid()));
+            if (!hunters.length) {
                 soft(wantHunt, false, 'nothing of that type is within ' + rWake + ' tiles of ' + p.x + ',' + p.z);
                 continue;
             }
+            // THE THROTTLE HAS ALREADY RUN DOWN BY NOW. huntAll() returns without looking at
+            // anything while huntClock < rate - 1, and huntClock is incremented inside the same
+            // observer gate that stops the hunt running at all - so on a live server the clock has
+            // been ticking since the npc spawned, under the eye of the player who is standing
+            // there, and the throttle is long expired before the npc is worth hunting with. In a
+            // sim nothing ticks it, so it is still 0 when this step starts and the first rate - 1
+            // ticks of the step are dead. For the chompy bird, with rate=10, those are precisely
+            // the ticks it spends beside the bait it was called to: it lands within two tiles
+            // (map_findsquare(coord, 1, 2) in spawn_chompy_bird), stands there while the throttle
+            // runs down, and has wandered back out of its huntrange=2 by the time huntAll is
+            // allowed to look. The quest then stalls at the bait and the failure reads as a hunt
+            // that "never found anything", with nothing wrong in the content or the engine.
+            // Starting the clock where the engine would have left it is what makes this step a
+            // model of the live hunt rather than a race against the npc's own wander.
+            for (const hunter of hunters) {
+                const h: any = hunter;
+                if (h.huntMode === -1) continue;
+                const hunt = HuntType.get(h.huntMode);
+                if (hunt && h.huntClock < hunt.rate) {
+                    h.huntClock = hunt.rate;
+                }
+            }
             const ticksWake = ('tries' in s ? s.tries : undefined) ?? 60;
             for (let t = 0; t < ticksWake && !doneWake(); t++) {
-                const h: any = hunter;
-                if (h.huntMode !== -1 && h.isValid()) {
-                    const hunt = HuntType.get(h.huntMode);
-                    if (hunt) {
-                        h.huntAll(hunt);
-                        h.huntClock++;
+                for (const hunter of hunters) {
+                    const h: any = hunter;
+                    if (h.huntMode !== -1 && h.isValid()) {
+                        const hunt = HuntType.get(h.huntMode);
+                        if (hunt) {
+                            h.huntAll(hunt);
+                            h.huntClock++;
+                        }
                     }
                 }
                 H.tick(1);
@@ -1268,7 +1300,7 @@ export function play(m: Manifest, p: Player): Result[] {
             const kill = () => {
                 let npc = null;
                 try {
-                    npc = findNpc(s.untilnpc, p);
+                    npc = findNpc(s.untilnpc, p, true);
                 } catch {
                     npc = null;
                 }
@@ -1398,21 +1430,50 @@ export function play(m: Manifest, p: Player): Result[] {
             // walk it again, further out of her way. Three goes, re-routing from wherever the
             // throw-out left the player.
             const sneakTo = (tx: number, tz: number): boolean => {
-                for (const [sx, sz] of route(p.level, p.x, p.z, tx, tz, 96, 0)) {
-                    // hold while the npc is within range of the tile being left OR the one being
-                    // stepped onto - checking only the next tile let her walk into the player
+                // AN EMPTY ROUTE IS NOT AN ARRIVAL. route() returns nothing when there is no way
+                // from here to there, and walking a zero-step path "succeeded" - so being thrown
+                // out of the garden mid-leg ended the attempt as a win, the retry never ran, and
+                // the step reported "ended up at 2907,3458" as though the player had strolled
+                // there. That is 13 tiles south of the fountain, outside the hedge, which is
+                // exactly where Nora T. Hagg puts people she catches.
+                const legs = route(p.level, p.x, p.z, tx, tz, 96, 0);
+                if (!legs.length && (p.x !== tx || p.z !== tz)) {
+                    blocked = 'no route from ' + p.x + ',' + p.z + ' to ' + tx + ',' + tz;
+                    return false;
+                }
+                // DISTANCE IS NOT WHAT CATCHES YOU, SIGHT IS, which is why the hold below used to
+                // time out every single time and walk anyway. [ai_timer,nora_t_hagg] is
+                // huntall(npc_coord, 3, 0) and then lineofsight(npc_coord, coord) - "move around
+                // the edge, using the hedges as cover" is the wiki telling you the hedges break
+                // the line, and a garden that size never has her more than eight tiles off, so a
+                // distance-only wait is a wait that can never end. Being caught is not recoverable
+                // either: the catch deletes the shed key AND the ball and puts %ballquest back to
+                // ^ball_started, so there is no retry that can win - the step has to not be seen.
+                const seen = (nx: number, nz: number, tx: number, tz: number) => Math.max(Math.abs(nx - tx), Math.abs(nz - tz)) <= keepOut && isLineOfSight(p.level, nx, nz, tx, tz);
+                for (const [sx, sz] of legs) {
+                    // hold while she can see the tile being left OR the one being stepped onto -
+                    // checking only the next tile let her walk into the player
                     for (let w = 0; w < 60; w++) {
                         const npc = H.npcNear(s.past, p.x, p.z, p.level);
                         if (!npc) break;
-                        const dNext = Math.max(Math.abs(npc.x - sx), Math.abs(npc.z - sz));
-                        const dHere = Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z));
-                        if (dNext > keepOut && dHere > keepOut) break;
+                        if (!seen(npc.x, npc.z, sx, sz) && !seen(npc.x, npc.z, p.x, p.z)) break;
                         H.tick(1);
                         waited++;
                     }
                     for (let t = 0; t < 12 && (p.x !== sx || p.z !== sz); t++) {
+                        const wasX = p.x;
+                        const wasZ = p.z;
                         H.walkTo(p, sx, sz);
                         H.tick(1);
+                        // A TELEPORT, NOT A STEP. A running player covers at most two tiles a tick,
+                        // so anything further is somebody else moving them - and walking on down a
+                        // route computed before that happened is how this step spent all three of
+                        // its attempts without noticing. Say so, rather than reporting the tile the
+                        // stale route gave up on.
+                        if (Math.max(Math.abs(p.x - wasX), Math.abs(p.z - wasZ)) > 2) {
+                            blocked = 'moved from ' + wasX + ',' + wasZ + ' to ' + p.x + ',' + p.z + ' in one tick - thrown out of the leg, not walked';
+                            return false;
+                        }
                     }
                     if (p.x !== sx || p.z !== sz) {
                         blocked = 'stopped at ' + p.x + ',' + p.z + ' on the way to ' + sx + ',' + sz;
@@ -1561,7 +1622,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (!npc) {
                     for (const name of types) {
                         try {
-                            npc = findNpc(name, p);
+                            npc = findNpc(name, p, true);
                         } catch {
                             npc = null;
                         }
@@ -1588,6 +1649,15 @@ export function play(m: Manifest, p: Player): Result[] {
                 // CHANGES TYPE - npc_changetype(delrith_weakened) - so he stays a valid npc and the
                 // loop would have run its 900 ticks on a demon that had already been beaten.
                 const type0 = npc.type;
+                // UNLESS THE NEW TYPE IS ALSO ONE THIS STEP NAMED. The rule above is for Delrith,
+                // who changes into something the step did not ask for; the Gelatinnoth Mother
+                // changes into another of HER OWN six forms every thirty ticks
+                // (npc_changetype_keepall, hundred_culinaromancer.rs2), and all six are named in
+                // quest_hundred_run's one fight step because they are one npc. Reading that as a
+                // death ended every round after at most thirty ticks and reported a kill: "killed
+                // 60 in 884 ticks and hundred_minionskilled_tally is 4" is sixty rounds of her
+                // turning over, not sixty corpses. Let her turn, and the round runs its 900 ticks.
+                const sameFight = new Set(types.map(nm => NpcType.getId(nm)));
                 // CAN THE PLAYER EVEN GET TO IT? A fight that lands no hit in 150 ticks is not a
                 // long fight, it is a wall: the first Rag and Bone Man run picked a goblin in a
                 // sealed part of the Goblin Cave and spent 27,000 ticks - thirty rounds of 900 -
@@ -1602,7 +1672,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 // is not a wall, however long it takes.
                 let everAdjacent = false;
                 for (let k = 0; k < 900 && !d; k++, t++) {
-                    if (!npc.isValid() || npc.type !== type0) {
+                    if (!npc.isValid() || (npc.type !== type0 && !sameFight.has(npc.type))) {
                         d = true;
                         break;
                     }
@@ -1721,7 +1791,7 @@ export function play(m: Manifest, p: Player): Result[] {
             what = 'talk to ' + s.talk + (s.why ? ' - ' + s.why : '');
             let npc: ReturnType<typeof findNpc> | null = null;
             try {
-                npc = findNpc(s.talk, p);
+                npc = findNpc(s.talk, p, true);
             } catch {
                 npc = null;
             }
@@ -1742,7 +1812,7 @@ export function play(m: Manifest, p: Player): Result[] {
                 if (a > 0) {
                     H.tick(20);
                     try {
-                        npc = findNpc(s.talk, p);
+                        npc = findNpc(s.talk, p, true);
                     } catch {
                         continue;
                     }
@@ -1778,7 +1848,7 @@ export function play(m: Manifest, p: Player): Result[] {
                     continue;
                 }
                 if (!arrive(p, npc.x, npc.z, npc.width, npc.length)) {
-                    dbg('never arrived; player ' + p.x + ',' + p.z + ' npc ' + npc.x + ',' + npc.z);
+                    dbg('never arrived; player ' + p.x + ',' + p.z + ' L' + p.level + ' npc ' + npc.x + ',' + npc.z + ' L' + npc.level);
                     continue;
                 }
                 reached = true;
@@ -1804,7 +1874,13 @@ export function play(m: Manifest, p: Player): Result[] {
                 continue;
             }
             if (!reached) {
-                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + '; player stuck at ' + p.x + ',' + p.z);
+                // THE LEVEL, because without it this message cannot tell the two reasons apart.
+                // "3 tiles off at 3503,9837; player stuck at 3505,9832" reads as a pathing
+                // problem inside one room; the same words describe an npc three tiles away on
+                // another plane, which no amount of walking will ever reach. far is a 2D
+                // distance, so it is the smaller number of the two and the more innocent-looking.
+                const planes = npc.level === p.level ? '' : ' - ON PLANE ' + npc.level + ' while the player is on ' + p.level + ', which no route can cross';
+                hard(what, false, far + ' tiles off at ' + npc.x + ',' + npc.z + ' L' + npc.level + '; player stuck at ' + p.x + ',' + p.z + ' L' + p.level + planes);
                 continue;
             }
         } else if ('loc' in s) {
@@ -2008,47 +2084,83 @@ export function play(m: Manifest, p: Player): Result[] {
                         }
                     }
             }
-            try {
-                const lt = LocType.get(LocType.getId(s.useLoc));
-                lw = lt.width;
-                ll = lt.length;
-                // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
-                // player walks, so a panel that opens on arrival - a make-x panel, for one - was
-                // met with an empty pick list and the step blew up on its own menu.
-                standOnIfWalkable(p, s.useLoc, atX, atZ);
-                lines = useOn(p, atX, atZ, s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
-            } catch (e) {
-                hard(what, false, String(e).replace('Error: ', ''));
-                continue;
-            }
-            // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
-            // player has already done it by the time this runs and adjacency can never come back.
-            if (!arrive(p, atX, atZ, lw, ll) && !('hop' in s && s.hop)) {
-                hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
-                continue;
-            }
-            lines = lines.concat(run([]));
-            // `want` WAS NEVER CHECKED HERE. Every useLoc step in every manifest reported ok on
-            // arrival alone, which is the silent false pass this runner's own comments are about:
-            // Rat Catchers' King rat passed its want three runs in a row while the handler was not
-            // running at all. The loc step has always done this; useLoc never did.
-            if ('want' in s && s.want) {
-                const saidUse = lines
+            // `tries` IS FOR A CLICK THAT CAN BE SWALLOWED WITHOUT SAYING SO. `held` and `useNpc`
+            // have had it for a while; useLoc had not, and the Lumbridge range is the case that
+            // wanted it. Roasting Recipe for Disaster's stuffed snake there does nothing at all
+            // on the first click in a long run - no message, no Cooking xp, the raw snake still in
+            // the pack - while the same obj on the same range cooks every time in isolation, and
+            // the cake and the fishcake cook on that range earlier in the same run. audit1.ts
+            // roasts the same snake and worked around the same thing with a loop of its own,
+            // noting only that "a leftover delay or an open box eats the click, silently"; waiting
+            // the delay out and closing the modal here was not enough on its own. Clicking again
+            // is what a player does when nothing happens, so the step can now do it too.
+            //
+            // It only ever retries a step that asked for it AND gave a `want`, because the `want`
+            // is the only evidence that the click landed - retrying on arrival alone would just
+            // click a working thing several times. Every existing useLoc step is untouched.
+            const triesUL = Math.max(1, ('tries' in s ? s.tries : undefined) ?? 1);
+            let saidUse = '';
+            let landedUL = false;
+            let stuckUL = false;
+            for (let a = 0; a < triesUL && !landedUL; a++) {
+                if (a > 0) {
+                    // the same clearing audit1 does before each go: a leftover delay or an open
+                    // box is the thing most likely to have eaten the last one
+                    for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+                    (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+                    p.clearPendingAction();
+                    H.tick(1);
+                }
+                try {
+                    const lt = LocType.get(LocType.getId(s.useLoc));
+                    lw = lt.width;
+                    ll = lt.length;
+                    // THE PICKS GO IN HERE, not into a second drive afterwards. useOn drives as the
+                    // player walks, so a panel that opens on arrival - a make-x panel, for one - was
+                    // met with an empty pick list and the step blew up on its own menu.
+                    standOnIfWalkable(p, s.useLoc, atX, atZ);
+                    lines = useOn(p, atX, atZ, s.useLoc, s.obj, ('picks' in s ? s.picks : undefined) ?? []);
+                } catch (e) {
+                    hard(what, false, String(e).replace('Error: ', ''));
+                    stuckUL = true;
+                    break;
+                }
+                // `hop` as on the loc step: useOn drives as it goes, so an op that teleports the
+                // player has already done it by the time this runs and adjacency can never come back.
+                if (!arrive(p, atX, atZ, lw, ll) && !('hop' in s && s.hop)) {
+                    hard(what, false, 'player stuck at ' + p.x + ',' + p.z);
+                    stuckUL = true;
+                    break;
+                }
+                lines = lines.concat(run([]));
+                // `want` WAS NEVER CHECKED HERE. Every useLoc step in every manifest reported ok on
+                // arrival alone, which is the silent false pass this runner's own comments are about:
+                // Rat Catchers' King rat passed its want three runs in a row while the handler was not
+                // running at all. The loc step has always done this; useLoc never did.
+                if (!('want' in s) || !s.want) {
+                    landedUL = true;
+                    break;
+                }
+                saidUse = lines
                     .concat(
                         saidSince(),
                         H.mesgs.slice(mesMark).map(x => x.text)
                     )
                     .join(' | ');
-                if (!saidUse.includes(s.want)) {
-                    soft(what, false, 'nothing said "' + s.want + '"' + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
-                    continue;
-                }
+                if (saidUse.includes(s.want)) landedUL = true;
+            }
+            if (stuckUL) {
+                continue;
+            }
+            if (!landedUL) {
+                soft(what, false, 'nothing said "' + s.want + '" in ' + triesUL + (triesUL === 1 ? ' try' : ' tries') + (saidUse ? '; got: ' + saidUse.slice(0, 160) : ''));
+                continue;
             }
         } else if ('useNpc' in s) {
             what = 'use ' + s.obj + ' on ' + s.useNpc + (s.why ? ' - ' + s.why : '');
             let npc = null;
             try {
-                npc = findNpc(s.useNpc, p);
+                npc = findNpc(s.useNpc, p, true);
             } catch {
                 npc = null;
             }

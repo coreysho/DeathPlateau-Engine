@@ -66,18 +66,35 @@ const m: Manifest = {
         { loc: 'witchgrill', at: [3025, 3507], why: 'listen at the grill' },
         { stage: 2 },
 
-        { note: 'THE SABOTAGE LEG IS NOT WALKED YET. Every piece of it answers correctly in isolation -' },
-        { note: 'the grill room ladder climbs, the sturdy door opens, and the second push-wall at' },
-        { note: '3030,3510 pushes a player through from its north face to 3030,3509, two tiles from the' },
-        { note: 'hole. What is not established is the walking route from the grill room to that north' },
-        { note: 'face: the first floor is cut up by wall locs that the tile flags do not show, and the' },
-        { note: 'engine finds no route east along z=3511 from the sturdy door. The wiki goes back out to' },
-        { note: 'the entrance, into the room east of it, and up the ladder on ITS north wall - which is' },
-        { note: 'the loc_1750 at 3022,3518 - so that is the leg to walk next.' },
-        { setvar: 'spy', to: 2, why: 'stage 2 is where the walked part of this run ends' },
+        // THE SABOTAGE LEG, WALKED AS FAR AS IT GOES - and the note that was here was wrong in
+        // both of its particulars, so it is replaced rather than kept.
+        //
+        // It said no route runs east of the sturdy door, and proposed going round by a ladder at
+        // 3022,3518. There is no ladder at 3022,3518: the map has exactly two ways up from the
+        // ground floor, 3021,3510 and 3017,3516. And the corridor east of the sturdy door walks
+        // perfectly well, from 3026,3511 to 3029,3511.
+        //
+        // What is true is narrower and worse. The column x=3029 is reachable at z=3511, 3512 and
+        // 3513; x=3030 is reachable at NONE of them. A wall runs between the corridor and the
+        // push-wall, and the four tiles the push answers from - 3030,3511, 3030,3512, 3031,3511
+        // and 3030,3509 - are all on its far side. So the last two tiles are still a teleport,
+        // and the way into that room is an open question for whoever has the map.
+        //
+        // TWO THINGS HERE FAIL SILENTLY, which is what hid all of this: the grill room's ladder
+        // climbs only from its EAST side (from the south the op does nothing and reports nothing),
+        // and the wall ignores a push from the wrong tile the same way. A walk that stops two
+        // tiles short is harmless almost everywhere and fatal at both of them, so the three tiles
+        // that have to be exact say so.
+        { note: 'wiki step 5: back up out of the grill room and east through the sturdy door' },
+        { go: [3022, 3510], exact: true, why: 'east of the ladder, which is the side it climbs from' },
+        { loc: 'ladder', at: [3021, 3510], why: 'up to the first floor' },
+        { go: [3024, 3511], why: 'to the sturdy door' },
+        { loc: 'bkfortressdoor3', at: [3025, 3511], why: 'through it again' },
+        { go: [3029, 3511], exact: true, why: 'east along the corridor, as far as the map allows' },
 
-        { note: 'the sabotage itself, driven where the player would be standing after the push' },
-        { setpos: [3030, 3508, 1], why: 'two tiles south of the second push-wall, where it puts you' },
+        { note: 'the last two tiles, which no route reaches - see above' },
+        { setpos: [3030, 3511, 1], why: 'the north face of the second push-wall' },
+        { loc: 'bksecretdoor', at: [3030, 3510], why: 'push it, which puts you on the far side' },
         { go: [3030, 3507], why: 'down to the hole above the cauldron' },
 
         { note: 'wiki step 5: the wrong cabbage first - the Draynor Manor one would help the witch' },

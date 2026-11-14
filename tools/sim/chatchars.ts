@@ -139,7 +139,13 @@ function send(text: string, colour = 0, effect = 0): Result {
 const all3 = (text: string): Result => ({ pub: text, pm: text, clan: text });
 
 console.log('PROTOCOL');
-check('ENGINE_REVISION is 381 (an older client is told the game has been updated)', Environment.ENGINE_REVISION, 381);
+// AT LEAST 381, not exactly 381. This round is what pushed the revision to 381, and the check was
+// written as an equality - so the next change to bump it broke this sim, which is what happened:
+// the engine is on 384 now and chatchars has been red ever since, saying nothing about chat. The
+// floor is what the round actually bought: a client older than this protocol is turned away. 381
+// stays written here because it is this change's own number, not something read back out of the
+// engine, which would make the check agree with whatever it found.
+check('ENGINE_REVISION is at least 381 (an older client is told the game has been updated)', Environment.ENGINE_REVISION >= 381, true);
 
 console.log('THE NEW CHARACTERS (public, private and clan)');
 check('"& _ - @ # $ < >"', send('& _ - @ # $ < >'), all3('& _ - @ # $ < >'));

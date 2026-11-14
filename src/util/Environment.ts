@@ -241,6 +241,25 @@ export default {
     // unanswered click gets there at all. The file is the to-do list.
     NODE_DEAD_OPS: tryParseBoolean(process.env.NODE_DEAD_OPS, false),
     NODE_DEAD_OPS_FILE: tryParseString(process.env.NODE_DEAD_OPS_FILE, 'data/dead-ops.jsonl'),
+    // custom (2026-11-09) - the PUBLIC market feed (server/market/MarketFeed.ts), which is the
+    // other half of the relay below: that one DMs a seller their own notices, this one tells
+    // everybody else a thing is for sale. Off unless MARKET_FEED_WEBHOOK is set, and off it
+    // costs one string comparison per listing.
+    //
+    // MARKET_FEED_WEBHOOK IS A SECRET - whoever holds it can post to that channel as the
+    // server - so it belongs in .env and never in a commit. It is never printed, only whether
+    // there is one.
+    //
+    // MARKET_FEED_MIN keeps the bronze daggers out: a listing worth less than this many coins
+    // is not posted. MARKET_FEED_EVERY is the gap between cards, which is what stops a busy
+    // evening becoming a channel nobody reads.
+    //
+    // MARKET_CARD_ICONS is where tools/models/ObjIconFiles.java wrote the item icons - on the
+    // live box, the website's public/icons. Unset, and cards still draw, with an empty slot.
+    MARKET_FEED_WEBHOOK: tryParseString(process.env.MARKET_FEED_WEBHOOK, ''),
+    MARKET_FEED_MIN: tryParseInt(process.env.MARKET_FEED_MIN, 50000),
+    MARKET_FEED_EVERY: tryParseInt(process.env.MARKET_FEED_EVERY, 15000),
+    MARKET_CARD_ICONS: tryParseString(process.env.MARKET_CARD_ICONS, ''),
 
     // custom (2026-09-21) - the Discord relay (server/discord/DiscordThread.ts): a bot that DMs players
     // their trading post notices. Both must be set or it does not start. Keep the token in .env only.
@@ -251,5 +270,16 @@ export default {
     // tickets and bug reports. A separate Discord application from the relay above, with its own
     // token. The guild defaults to DISCORD_GUILD_ID. Keep the token in .env only.
     TICKET_BOT_TOKEN: tryParseString(process.env.TICKET_BOT_TOKEN, ''),
-    TICKET_GUILD_ID: tryParseString(process.env.TICKET_GUILD_ID, '')
+    TICKET_GUILD_ID: tryParseString(process.env.TICKET_GUILD_ID, ''),
+
+    // custom (2026-11-10) - handing a bug report over as a GitHub issue
+    // (server/tickets/BugTracker.ts). The repository is "owner/name" and must be PRIVATE: bug
+    // reports live in private threads so an exploit is never readable by players, and all four code
+    // repositories are public, so the issue cannot go in one of them.
+    //
+    // The token is a fine-grained token with Issues: read and write on that tracker and nothing
+    // else - no contents, no other repository. It cannot push code anywhere. Keep it in .env only.
+    // Both must be set or the Hand to Claude button does not appear.
+    BUGS_GITHUB_REPO: tryParseString(process.env.BUGS_GITHUB_REPO, ''),
+    BUGS_GITHUB_TOKEN: tryParseString(process.env.BUGS_GITHUB_TOKEN, '')
 };

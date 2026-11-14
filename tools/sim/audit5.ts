@@ -300,38 +300,69 @@ console.log('THE HAND IN THE SAND');
     check("desk searched: Sandy's rota, Sandy back at his desk, no rota of Bert's so stage 30", [H.invCount(p, 'handsand_rota_sandy'), gv(p, 'handsand_sandy_multi'), gv(p, 'handsand_quest')], [1, 0, 30]);
     talk(p, 'handsand_bert');
     check("lost Bert's rota: he gives another copy", H.invCount(p, 'handsand_rota_bert'), 1);
-    // the sand pit
+    // THE PIT IS NOT WHERE THE REST OF HIM IS, which this pair of checks was written before.
+    // quest_handsand.rs2 was rebuilt on 2026-10-22 and says so in as many words: "the rest of
+    // Clarence is NOT down here. The hand came up in a sack, and every other sack that week went
+    // out of Yanille to the furnaces on Entrana - which is where Mazion is". Mazion hands the head
+    // over at ^handsand_pit_filled (75), forty-five stages past here, and the pit's spade branch
+    // at ^handsand_rarve now says that in a mesbox. What the pit is good for is a bucket of sand.
     H.give(p, 'spade');
+    H.give(p, 'bucket_empty');
     p.teleport(2543, 3102, 0);
     H.tick(1);
-    useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'spade');
-    check("spade in the sand pit: the wizard's head", H.invCount(p, 'handsand_wizhead'), 1);
-    // Rarve compares the rotas now, then takes the head
+    const dug = useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'spade');
+    check('a spade in the sand pit turns up nothing else, and says where the rest of him went', [H.invCount(p, 'handsand_wizhead'), dug.some(t => t.includes('went out of it in a sack'))], [0, true]);
+    useOn(p, 2542, 3103, 'handsand_sandpit_anim', 'bucket_empty');
+    check('  and a bucket in it gets a bucket of sand, which is what Rarve wants later', [H.invCount(p, 'bucket_sand'), H.invCount(p, 'bucket_empty')], [1, 0]);
+
+    // RARVE TAKES A SCROLL, NOT A HEAD. Two rotas that disagree are "a clerical error, and a
+    // magistrate will say so": what buys the scrying orb is the glowing scroll Bert was handed on
+    // the night he cannot remember, and Bert only parts with it once the rotas are side by side on
+    // his table - he takes both of them in exchange. The orb comes on its own; the truth serum is
+    // Betty's, below, which is why the old check wanting all three at once could never pass.
     p.teleport(2599, 3084, 0);
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
     p.teleport(2600, 3087, 0);
     talk(p, 'zogre_human_zavistic_rarve');
+    check('Rarve compares the rotas himself: stage 40, and he asks what else Bert had', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage')], [40, 0]);
+    talk(p, 'handsand_bert');
+    check("  Bert's drawer: the glowing scroll, and he keeps both rotas", [H.invCount(p, 'handsand_scroll_magic'), H.invCount(p, 'handsand_rota_bert') + H.invCount(p, 'handsand_rota_sandy')], [1, 0]);
+    p.teleport(2600, 3087, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    // AND THE SCROLL COMES BACK, which is not an oversight: "Rarve gives you a scrying orb, and
+    // keys the scroll to this room on the way past" - %handsand_tele goes on and the glowing
+    // scroll is the teleport to his room from then on. Measured rather than assumed, because "You
+    // hand Rarve the glowing scroll" reads like he keeps it.
     check(
-        'Rarve: rotas compared, head taken, kit given (stage 50)',
-        [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_wizhead'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_scroll_magic')],
-        [50, 0, 1, 1, 1]
+        'the scroll buys the scrying orb: stage 50, and comes back keyed to his room',
+        [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_storage'), H.invCount(p, 'handsand_scroll_magic'), gv(p, 'handsand_tele'), H.invCount(p, 'handsand_wizhead')],
+        [50, 1, 1, 1, 0]
     );
 
-    // Betty and the lens
-    p.teleport(3014, 3256, 0);
+    // BETTY DOES TWO SEPARATE THINGS and the old version of this block skipped the second one, which
+    // is the half the quest was rebuilt for. She sells the bottled water - for an EMPTY VIAL, and
+    // one talk, not two - and she does not sell the lens at all ("A plain one off a glassblower -
+    // you will not find one in here"). And the rose lens does NOT go into the orb: a scrying orb
+    // needs nothing. It goes between her propped-open doorway and the vial she stands out on the
+    // counter, which is what handsand_counter_multiloc's state 1 is, and that is what makes the
+    // serum. The counter bit therefore comes near the END of her chain rather than at the start of
+    // it, which is why the old first check read 0.
+    p.teleport(3011, 3258, 0);
     H.tick(1);
+    let said2 = talk(p, 'betty');
+    check('with no empty vial she will not give away glass as well', [H.invCount(p, 'handsand_bottle_water'), said2.some(t => t.includes('empty vial'))], [0, true]);
+    H.give(p, 'vial_empty');
     talk(p, 'betty');
-    check('Betty stands the bottle out: counter multi 1', gv(p, 'handsand_counter_multi'), 1);
-    talk(p, 'betty');
-    check('Betty again: bottled water and a lens', [H.invCount(p, 'handsand_bottle_water'), H.invCount(p, 'lens')], [1, 1]);
+    check('an empty vial buys the bottled water', [H.invCount(p, 'handsand_bottle_water'), H.invCount(p, 'vial_empty'), gv(p, 'handsand_serum')], [1, 0, 1]);
     H.give(p, 'redberries');
     H.give(p, 'white_berries');
     useHeld(p, 'handsand_bottle_water', 'redberries');
     check("bottle used ON the redberries (the pie handler's side) makes the juice", [H.invCount(p, 'handsand_redberry_juice'), H.invCount(p, 'redberries')], [1, 0]);
-    // lose the juice: Betty starts the chain again
+    // lose the juice: with an empty vial she starts the chain again
     p.invDel(InvType.INV, ObjType.getId('handsand_redberry_juice'), 1);
-    talk(p, 'betty');
+    H.give(p, 'vial_empty');
     talk(p, 'betty');
     check('juice lost: Betty hands out another bottle', H.invCount(p, 'handsand_bottle_water'), 1);
     H.give(p, 'redberries');
@@ -339,10 +370,30 @@ console.log('THE HAND IN THE SAND');
     check('redberries used on the bottle also works', H.invCount(p, 'handsand_redberry_juice'), 1);
     useHeld(p, 'handsand_redberry_juice', 'white_berries');
     check("juice used ON the white berries (the herblore handler's side) makes the dye", [H.invCount(p, 'handsand_pink_dye'), H.invCount(p, 'white_berries')], [1, 0]);
-    useHeld(p, 'lens', 'handsand_pink_dye');
-    check('lens in the dye: rose tinted lens', H.invCount(p, 'handsand_rose_lens'), 1);
-    useHeld(p, 'handsand_orb_storage', 'handsand_rose_lens');
-    check('lens into the orb: stage 60', [gv(p, 'handsand_quest'), gv(p, 'handsand_serum')], [60, 5]);
+    H.give(p, 'bullseye_lantern_lens');
+    useHeld(p, 'bullseye_lantern_lens', 'handsand_pink_dye');
+    check('a lantern lens in the dye: rose tinted lens', [H.invCount(p, 'handsand_rose_lens'), gv(p, 'handsand_serum')], [1, 4]);
+
+    // AND SOMETHING OUT OF HIS OWN POCKET: "a serum has to know whose mouth it is going into".
+    // The pocket is a stat_random roll, so it is tried until it lands rather than asserted on one
+    // throw - which is the one thing in this chain that is not deterministic.
+    p.teleport(2788, 3178, 0);
+    H.tick(1);
+    for (let i = 0; i < 40 && H.invCount(p, 'handsand_sand') < 1; i++) talk(p, 'handsand_sandy', [], 3);
+    check('a pocketful of the man himself, picked off Sandy (op3)', H.invCount(p, 'handsand_sand'), 1);
+    p.teleport(3011, 3258, 0);
+    H.tick(1);
+    said2 = talk(p, 'betty');
+    check('the lens and the pocketful: she stands a vial out and props the door', [gv(p, 'handsand_counter_multi'), said2.some(t => t.includes('daylight'))], [1, true]);
+    // forceapproach: the counter is reached from its WEST end, not from in front of it
+    p.teleport(3012, 3258, 0);
+    H.tick(1);
+    useOn(p, 3013, 3258, 'handsand_counter_multiloc', 'handsand_rose_lens');
+    check(
+        'the daylight through the lens into the vial: the serum, the lens gone, stage 60',
+        [H.invCount(p, 'handsand_truthserum'), H.invCount(p, 'handsand_rose_lens'), H.invCount(p, 'handsand_sand'), gv(p, 'handsand_quest'), gv(p, 'handsand_serum'), gv(p, 'handsand_counter_multi')],
+        [1, 0, 0, 60, 5, 0]
+    );
 
     // the coffee
     p.teleport(2788, 3178, 0);
@@ -380,8 +431,26 @@ console.log('THE HAND IN THE SAND');
     H.tick(1);
     op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
     p.teleport(2600, 3087, 0);
+    // AND THE QUEST DOES NOT END HERE ANY MORE. Rarve plays the recording and then asks for five
+    // earth runes and a bucket of Yanille sand to refill Bert's pit (^handsand_pit_filled, 75),
+    // and after that for the rest of Clarence, which is on Entrana with Mazion. 80 is three steps
+    // further on than this check thought. quest_handsand_run.ts walks all of it; what is handed
+    // over here is the two items, because the point of THIS check is that he takes the orb.
+    H.give(p, 'earthrune', 5);
+    H.give(p, 'bucket_sand', 1);
     talk(p, 'zogre_human_zavistic_rarve');
-    check('Rarve takes the orb: complete (80), +1 quest point', [gv(p, 'handsand_quest'), qp(p) - qp0], [80, 1]);
+    check('Rarve plays the recording and fills the pit: stage 75, the orb gone', [gv(p, 'handsand_quest'), H.invCount(p, 'handsand_orb_recording')], [75, 0]);
+    p.teleport(2817, 3345, 0);
+    H.tick(1);
+    talk(p, 'handsand_naziom');
+    check('Mazion has had the rest of Clarence behind the furnace for a year', H.invCount(p, 'handsand_wizhead'), 1);
+    p.teleport(2599, 3084, 0);
+    H.tick(1);
+    op(p, 2598, 3085, 'zogre_outdoor_bell', 1);
+    p.teleport(2600, 3087, 0);
+    H.tick(1);
+    talk(p, 'zogre_human_zavistic_rarve');
+    check('Rarve takes the head: complete (80), +1 quest point', [gv(p, 'handsand_quest'), qp(p) - qp0], [80, 1]);
     // the journal has text at the end
     H.ifButton(p, 'questlist:handsand');
     H.tick(1);
@@ -410,8 +479,12 @@ console.log('ONE SMALL FAVOUR');
     H.tick(1);
     op(p, 2699, 3476, 'loc_1750', 1);
     check('ground floor ladder: first floor', p.level, 1);
+    // THE LADDER'S OWN TILE IS 2700,3476 and you land BESIDE it: a climb cannot put you on the
+    // ladder. Measured off the map rather than assumed, which is also where the op below gets its
+    // coordinate - favour_seer_laddertop is at 2700,3476, not 2699,3476, and clicking the wrong
+    // tile threw "no favour_seer_laddertop at 2699,3476,3" and took the rest of the quest with it.
     op(p, 2699, 3476, 'laddermiddle', 2);
-    check('first floor ladder, Climb-up: the weathervane platform on level 3', at(p), [2700, 3476, 3]);
+    check('first floor ladder, Climb-up: beside the ladder on the weathervane platform', at(p), [2700, 3475, 3]);
     check('  and the vane is reachable from there', connected(3, p.x, p.z, 2702, 3475) || connected(3, p.x, p.z, 2701, 3476), true);
     op(p, 2702, 3476, 'osf_weathervane', 5);
     check('Search the vane: three broken parts, stage 10', [gv(p, 'onesmallfavour'), H.invCount(p, 'favour_directionals_broken'), H.invCount(p, 'favour_ornament_broken'), H.invCount(p, 'favour_pillar_broken')], [10, 1, 1, 1]);
@@ -423,16 +496,16 @@ console.log('ONE SMALL FAVOUR');
     // ~climb_ladder, so the player is still walking onto the tile when op() returns - it works from
     // any side, and from any of them it wants about a dozen ticks to finish. Checking straight after
     // the click reads the player a tile short and still on the platform.
-    p.teleport(2700, 3476, 3); // beside it: the two vane searches above leave the player across the platform
+    p.teleport(2700, 3475, 3); // beside it: the two vane searches above leave the player across the platform
     H.tick(1);
-    op(p, 2699, 3476, 'favour_seer_laddertop', 1);
+    op(p, 2700, 3476, 'favour_seer_laddertop', 1);
     H.tick(12);
     check('back down the roof ladder: first floor, inside the room', [at(p), connected(1, p.x, p.z, 2701, 3474)], [[2700, 3476, 1], true]);
     op(p, 2699, 3476, 'laddermiddle', 3);
     check('first floor ladder, Climb-down: ground floor', p.level, 0);
     op(p, 2699, 3476, 'loc_1750', 1);
     op(p, 2699, 3476, 'laddermiddle', 1, [1]);
-    check('first floor ladder, Climb (menu) -> up: the platform too', at(p), [2700, 3476, 3]);
+    check('first floor ladder, Climb (menu) -> up: beside the ladder on the platform too', at(p), [2700, 3475, 3]);
 
     // the three craftspeople
     // Jimmy is in the H.A.M. hideout's cell

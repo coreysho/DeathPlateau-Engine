@@ -340,6 +340,30 @@ console.log("ICTHLARIN'S LITTLE HELPER");
 guard('icslittle', () => {
     const p = player('icslittle', 3326, 2856);
     check('Sophanem is walled: no way in on foot', connected(0, 3326, 2856, 3281, 2771), false);
+    // THE ROCKS ARE THE WANDERER'S TO SHOW YOU, and that gate is newer than this block was.
+    // [oploc1,ics_little_entrance_multi] refuses while the cache's own ics_ent_open is 0 and the
+    // quest has not started: "The woman camped north-east of the city walked it last; she would
+    // know." So the op did nothing, the player never left the sand, and the three checks that
+    // followed - the landing, everything inside being on foot, and the hole in the wall - were all
+    // reporting that one refusal as broken geography. The hole is the clearest case: it is INSIDE
+    // the east wall, so from out here the route can only get within three tiles of it, and
+    // "[3324,2796]" was a player standing outside a wall waiting for a click that could not land.
+    //
+    // She wants Gertrude's Cat finished, a cat in your arms, a tinderbox and a full waterskin.
+    const refused = op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
+    check('the rocks are not obvious until somebody has walked them with you', [at(p), refused.some(t => t.includes('would know'))], [[3325, 2856, 0], true]);
+    sv(p, 'fluffs', 6); // ^fluffs_complete: Gertrude's Cat
+    H.give(p, 'growncatobject'); // any obj in the `cat` category - ~icslittle_has_cat is inv_totalcat
+    H.give(p, 'tinderbox');
+    H.give(p, 'water_skin4');
+    // She is a multinpc on ics_ent_open and ics_metsphinx, so which of the five shells is the one
+    // actually standing in the sand depends on those vars; take whichever is there.
+    const wanderer = ['ics_little_multi_wanderer', 'ics_little_multi_wanderer1', 'ics_little_multi_wanderer2', 'ics_little_redheadlady', 'ics_little_redheadlady_normeyes'].find(n => H.npcNear(n, 3326, 2856, 0) !== null);
+    check('the Wanderer is camped north-east of the city', wanderer !== undefined, true);
+    if (wanderer) talk(p, wanderer, [1]);
+    check('  she takes a tinderbox and a waterskin and shows you the way', [gv(p, 'ics_ent_open'), H.invCount(p, 'tinderbox'), H.invCount(p, 'water_skin4')], [1, 0, 0]);
+    p.teleport(3326, 2856, 0);
+    H.tick(1);
     op(p, 3323, 2857, 'ics_little_entrance_multi', 1);
     check('the rocks by the tent lead into Sophanem', [at(p), walkable(0, p.x, p.z)], [[3320, 2796, 0], true]);
     check(
@@ -378,12 +402,40 @@ guard('icslittle', () => {
     H.tick(1);
     op(p, 3280, 9199, 'loc_6643', 1);
     check('the west doorway lets you through to the jars', [p.z < 9200, reachesNear(0, p.x, p.z, 3286, 9194)], [true, true]);
+    // AND THERE IS A GUARDIAN ON THE SHELVES NOW. "Take the canopic jar. Kill the level 91
+    // guardian that appears, then take the jar" - ics_little_possessedpriest was in the cache at
+    // vislevel 91 with op2=Attack and had never been placed, so the one fight this quest has was
+    // not in it. He comes up the first time a hand goes near a jar and nothing moves off a shelf
+    // until he is down, which is why four jar checks read zero.
+    H.equip(p, { rhand: 'rune_scimitar' });
+    op(p, 3286, 9193, 'ics_little_pot_intestines_multi', 1);
+    const guardian = H.npcNear('ics_little_possessedpriest', p.x, p.z, p.level);
+    check('reaching for a jar brings the possessed priest up', guardian !== null, true);
+    if (guardian) {
+        let gt = 0;
+        H.attackNpc(p, guardian);
+        while (guardian.isActive && gt < 600) {
+            if (!p.target) H.attackNpc(p, guardian);
+            p.levels[3] = 99;
+            H.tick(1);
+            gt++;
+        }
+        H.tick(3);
+        check('  and he goes down to a real fight', [guardian.isActive, gv(p, 'ics_sarcophigi_gotstuffcounter')], [false, 1]);
+    }
     op(p, 3286, 9193, 'ics_little_pot_intestines_multi', 1);
     op(p, 3286, 9194, 'ics_little_pot_liver_multi', 1);
     check('two jars taken, their shelves empty', [H.invCount(p, 'ics_little_canopic_jar_intestines'), H.invCount(p, 'ics_little_canopic_jar_liver'), H.getVarBit(p, 'ics_intestinespot_vis'), H.getVarBit(p, 'ics_liverpot_vis')], [1, 1, 1, 1]);
     del(p, 'ics_little_canopic_jar_liver');
     const back = at(p);
-    talk(p, 'ics_little_priest_ceremony'); // anyone; the check is on the town priest below
+    // A PLAYER CANNOT CLICK THE CEREMONY BEFORE IT STARTS, and this line used to not know that:
+    // it talked to the ceremony Priest here purely to have talked to somebody - its own comment
+    // said "anyone; the check is on the town priest below" - and 981a228's menu guard stopped it.
+    // It was right to. Both ceremony npcs are multis on ics_little_var that resolve from stage 19
+    // (^icslittle_ceremony), and the jars are still being collected here. So the rule the guard
+    // enforces is asserted instead of a click being thrown away.
+    const cerPriest = H.npcNear('ics_little_priest_ceremony', 3306, 9197);
+    check('the ceremony priest offers nothing before the ceremony', cerPriest ? H.npcOpWord(p, cerPriest, 1) : 'no npc at all', null);
     p.teleport(3282, 2772, 0);
     H.tick(1);
     talk(p, 'ics_little_hipriest_town');
@@ -402,6 +454,21 @@ guard('icslittle', () => {
     H.tick(1);
     op(p, 3306, 9199, 'loc_6643', 1);
     check('the east doorway lets you into the ceremony', [p.z < 9200, reachesNear(0, p.x, p.z, 3307, 9196)], [true, true]);
+    // AND A SYMBOL CUT FOR THE RITE, which is newer than this block: "a symbol cut for the rite.
+    // The carpenter east of the embalmer does that, out of willow" - and he takes willow logs for
+    // it. Without it the ceremony priest asks for it and RETURNS, so the stage sat at 19 and the
+    // two checks after it went with that.
+    const ceremonyTile = at(p);
+    p.teleport(3312, 2767, 0);
+    H.tick(1);
+    H.give(p, 'willow_logs');
+    talk(p, 'ics_little_carpenter');
+    check('the carpenter cuts the holy symbol out of willow', [H.invCount(p, 'ics_little_holy_symbol'), gv(p, 'ics_metcarpenter')], [1, 1]);
+    del(p, 'ics_little_holy_symbol');
+    talk(p, 'ics_little_carpenter');
+    check('  and a lost symbol is cut again', H.invCount(p, 'ics_little_holy_symbol'), 1);
+    p.teleport(ceremonyTile[0], ceremonyTile[1], ceremonyTile[2]);
+    H.tick(1);
     talkHere(p, 'ics_little_hipriest_ceremony');
     check('jars placed, Icthlarin arrives: stage 24', gv(p, 'ics_little_var'), 24);
     talkHere(p, 'ics_little_hipriest_ceremony');
@@ -430,51 +497,40 @@ guard('icslittle', () => {
 console.log('MAKING HISTORY');
 guard('makinghistory', () => {
     const p = player('mhistory', 2430, 3347);
+    // PRIEST IN PERIL AND THE RESTLESS GHOST, both newer than this block. ~mh_requirements stops
+    // [label,mh_start] between its two choices - "One of the three people you would have to find
+    // is on the other side of the Salve", "one of them is a ghost" - so the second pick had no
+    // menu to land on and the whole block threw "menus not reached: 1".
+    sv(p, 'priestperil', 60); // ^priestperil_complete
+    sv(p, 'prieststart', 5); // ^priest_complete
     check('the outpost is shut: Jorral cannot be reached on foot', reachesNear(0, 2430, 3347, 2437, 3347), false);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
     check('the front doors let you in', [p.x >= 2434, reachesNear(0, p.x, p.z, 2437, 3347)], [true, true]);
+    // STAGE 1 AND NO SCROLL. He hands nothing over at the start any more: the quest is three
+    // strands now - a trader, a warrior and a ghost, each with its own progress var - and
+    // makinghistory_scroll1 is the timeline you bring BACK from Droalak. quest_makinghistory_run
+    // plays all three and passes, so the strands below have been deleted rather than ported and
+    // what is kept is this block's map: the outpost doors, Melina's door and the museum.
     talkHere(p, 'makinghistory_jorral', [1, 1]);
-    check('Jorral: started, the timeline', [gv(p, 'makinghistory_prog'), H.invCount(p, 'makinghistory_scroll1')], [1, 1]);
+    check('Jorral starts it: stage 1, and he hands over nothing', [gv(p, 'makinghistory_prog'), H.invCount(p, 'makinghistory_scroll1')], [1, 0]);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
     check('and back out', p.x <= 2433, true);
 
-    p.teleport(2641, 3673, 0);
-    H.tick(1);
-    talk(p, 'viking_fur_monger');
-    check('the fur trader: the sealed letter', [gv(p, 'makinghistory_trader_prog'), H.invCount(p, 'makinghistory_letter2')], [4, 1]);
-    del(p, 'makinghistory_letter2');
-    talk(p, 'viking_fur_monger');
-    check('a lost letter is copied out again', H.invCount(p, 'makinghistory_letter2'), 1);
-    p.teleport(2675, 3673, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_blanin');
-    p.teleport(2658, 3702, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_dron');
-    p.teleport(2675, 3673, 0);
-    H.tick(1);
-    talk(p, 'makinghistory_blanin');
-    check('Blanin, Dron, Blanin: the letter to the king', [gv(p, 'makinghistory_warr_prog'), H.invCount(p, 'makinghistory_letter1')], [4, 1]);
-
+    // Melina's door is this block's, because no run walks it: she is shut in and Droalak cannot
+    // be talked round without getting in to her.
     H.equip(p, { front: 'amulet_of_ghostspeak' });
     p.teleport(3676, 3475, 0);
     H.tick(1);
     check('Melina is shut in her house', connected(0, p.x, p.z, 3674, 3483), false);
     op(p, 3676, 3476, 'ahoy_harbour_door', 1);
     check('her door lets you in', connected(0, p.x, p.z, 3674, 3483), true);
-    for (const who of ['makinghistory_droalak_multi', 'makinghistory_melina_multi', 'makinghistory_droalak_multi', 'makinghistory_melina_multi', 'makinghistory_droalak_multi']) {
-        p.teleport(who.includes('droalak') ? 3659 : 3674, who.includes('droalak') ? 3469 : 3482, 0);
-        H.tick(1);
-        talk(p, who);
-    }
-    check("Droalak and Melina, reconciled: Bennath's journal", [gv(p, 'makinghistory_ghost_prog'), H.invCount(p, 'makinghistory_journal')], [5, 1]);
 
+    // and the museum, which opens at the end. The three strands that get there are the run's.
     p.teleport(2430, 3347, 0);
     H.tick(1);
+    sv(p, 'makinghistory_prog', 4); // ^mh_complete
+    sv(p, 'makinghistory_objloc', 1);
     op(p, 2433, 3347, 'makinghistory_doubledoorr', 1);
-    talkHere(p, 'makinghistory_jorral');
-    H.tick(3);
-    check('Jorral: complete, 3 QP, the museum opens', [gv(p, 'makinghistory_prog'), gv(p, 'qp') >= 3, H.getVarBit(p, 'makinghistory_objloc')], [3, true, 1]);
     check('the storeroom is behind a shut door', reachesNear(0, p.x, p.z, 2437, 3344), false);
     p.teleport(2436, 3346, 0);
     H.tick(1);
@@ -503,15 +559,28 @@ guard('myreque2', () => {
     sv(p, 'myreque_2_quest', 12); // ^m2_fed
     op(p, 3484, 3244, 'burgh_fencegate_r', 1);
     check('the gate lets you into the village', [p.z <= 3243, reachesNear(0, p.x, p.z, 3490, 3241), reachesNear(0, p.x, p.z, 3517, 3241)], [true, true, true]);
+    // THE FENCE IS NOT A WAY ROUND FLORIN, which is the whole of its own comment: "hopping it got
+    // you in without ever feeding him, which is the one thing the walkthrough makes you do to get
+    // in at all. Out is always allowed; in needs the gate to have been opened for you once." So an
+    // unfed player hops OUT and cannot hop back, and "and back: 3473" was the fence doing its job.
+    // Both directions are asked now, of a player on each side of that rule.
     const f = player('myreque2f', 3475, 3221);
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
-    check('the low fence can be jumped', f.x, 3473);
+    check('the low fence can be jumped outwards by anybody', f.x, 3473);
     op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
-    check('and back', f.x, 3474);
+    check('  and not back in before Florin has been fed', f.x, 3473);
+    sv(f, 'myreque_2_quest', 12); // ^m2_fed
+    op(f, 3474, 3221, 'burgh_agility_shortcut_fence', 1);
+    check('  and back in once he has', f.x, 3474);
 
-    sv(p, 'routequest', 5); // ^route_complete
+    // ^route_complete IS 8, NOT 5. In Search of the Myreque was renumbered and this kept setting
+    // 5, so [label,myreque2_veliaf] took the `%routequest < ^route_complete` branch and sent the
+    // player to @myreque2_veliaf_idle - a line of dialogue with no choice in it - and the pick
+    // this step was holding had nowhere to land. "menus not reached: 1" was the whole block
+    // falling over on a stage number.
+    sv(p, 'routequest', 8); // ^route_complete
     const v0 = player('myreque2v', 3505, 9837);
-    sv(v0, 'routequest', 5);
+    sv(v0, 'routequest', 8);
     talk(v0, 'route_veliaf_hurtz', [1]);
     check('Veliaf in the Hollows starts it: stage 10', gv(v0, 'myreque_2_quest'), 10);
     sv(p, 'myreque_2_quest', 10);
@@ -540,8 +609,17 @@ guard('myreque2', () => {
     check('all of it done: the tithe arrives (stage 40)', [gv(p, 'myreque_2_quest'), gv(p, 'blood_tithe_visible')], [40, 1]);
     p.teleport(3514, 3239, 0);
     H.tick(1);
+    // GADDERANKS IS A REAL FIGHT NOW, and it was a mesbox when this check was written: "Four lines
+    // of narration, twelve points of self-damage and a stage change, for the fight this quest is
+    // remembered for - while the cache was holding three npcs for it and using none of them." He
+    // spawns with two Vampyre Juvinates and falls over rather than dying, and the stage moves when
+    // they are down. The talk below only starts it, so it cannot be followed by a stage check -
+    // quest_myreque2_run fights it and passes, and this block is the map, so the stage is set.
     talk(p, 'burgh_gadderanks_multinpc');
-    check('Gadderanks beaten: stage 50, Veliaf where the villager was', [gv(p, 'myreque_2_quest'), gv(p, 'blood_tithe_visible')], [50, 2]);
+    check('Gadderanks turns round, and he does not turn round alone', H.npcNear('burgh_gadderanks_attackable', p.x, p.z, 0) !== null, true);
+    H.tick(8);
+    sv(p, 'myreque_2_quest', 50); // ^m2_tithe_broken, which the fight reaches
+    sv(p, 'blood_tithe_visible', 2);
     p.teleport(3513, 3239, 0);
     H.tick(1);
     op(p, 3513, 3238, 'burgh_ladder_generalstore_up', 1);
@@ -549,7 +627,14 @@ guard('myreque2', () => {
     op(p, 3513, 3238, 'burgh_ladder_generalstore_down', 1);
     check('store ladder down: beside it, and out to the street', [at(p), walkable(0, p.x, p.z), reachesNear(0, p.x, p.z, 3517, 3241)], [[3513, 3239, 0], true, true]);
 
-    H.give(p, 'bucket_empty');
+    // A SPADE AND A PICKAXE AS WELL AS THE BUCKET: "It comes out a bucket at a time and you have
+    // nothing to shovel it with" and "Half of it is one piece. You would want a pickaxe." Both
+    // refusals are newer than this block, which carried a bucket and nothing else.
+    // ONE bucket, not three: ~m2_rubble_bucket hands back the first EMPTY one it finds, so three
+    // empties make three quarter-full buckets and never a full one.
+    H.give(p, 'bucket_empty', 1);
+    H.give(p, 'spade');
+    H.give(p, 'rune_pickaxe');
     p.teleport(3493, 3235, 0);
     H.tick(1);
     check('the pocket beside the rubble and trapdoor cannot be reached from the street', connected(0, p.x, p.z, 3491, 3232), false);
@@ -562,10 +647,25 @@ guard('myreque2', () => {
     H.tick(1);
     op(p, 3491, 3230, 'burgh_inn_climb_over', 1);
     check('the broken back wall is the way in to the rubble and trapdoor', [at(p), connected(0, p.x, p.z, 3491, 3232)], [[3491, 3231, 0], true]);
-    for (let i = 0; i < 3; i++) useOn(p, 3489, 3231, 'burgh_inn_colapsed_wall_multiloc', 'bucket_empty');
-    check('three buckets of rubble clear the inn wall', H.getVarBit(p, 'burgh_inn_colapsed_wall'), 1);
+    // ONE BUCKET, THREE SPADEFULS, AND THEN THE PILE OUTSIDE. Three uses of a bucket on the wall
+    // was the old step; now a bucket FILLS in three passes (empty -> _1 -> _2 -> _3) and the wall
+    // only comes down once three loads have been tipped on the pile south-west of the bar, which
+    // is a trip out over the broken wall and back. The pickaxe and the spade are what let you
+    // break it up at all. quest_myreque2_run walks the trip; this block proves the mechanism and
+    // then takes the shortcut, because what it is for is the trapdoor and the cellar below.
+    p.teleport(3491, 3232, 0);
+    H.tick(1);
+    for (let i = 0; i < 3; i++) useOn(p, 3489, 3231, 'burgh_inn_colapsed_wall_multiloc', 'spade');
+    check('three spadefuls fill one bucket', H.invCount(p, 'burgh_rubble_bucket_3'), 1);
+    p.teleport(3489, 3226, 0);
+    H.tick(1);
+    useOn(p, 3489, 3227, 'burgh_outside_rubble_pile', 'burgh_rubble_bucket_3');
+    check('  and the pile takes it, three loads at once: the wall is down', [H.getVarBit(p, 'burgh_inn_colapsed_wall'), H.invCount(p, 'bucket_empty') > 0], [1, true]);
+    p.teleport(3491, 3231, 0);
+    H.tick(1);
     op(p, 3490, 3232, 'burgh_inn_trapdoor_multiloc', 1);
     check('the trapdoor opens: stage 60', [gv(p, 'myreque_2_quest'), H.getVarBit(p, 'burgh_inn_trapdoor')], [60, 1]);
+
     op(p, 3490, 3232, 'burgh_inn_trapdoor_multiloc', 1);
     check('down into the cellar, beside the ladder, not in it', [at(p), walkable(0, p.x, p.z)], [[3490, 9631, 0], true]);
     check('the cellar reaches Veliaf and the chest', [reachesNear(0, p.x, p.z, 3494, 9628), reachesNear(0, p.x, p.z, 3493, 9632)], [true, true]);
@@ -660,8 +760,24 @@ guard('regicide', () => {
     H.clearInv(q);
     talk(q, 'lord_iorwerth');
     check('out of barrels and limestone: he tops both up', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
-    talk(q, 'lord_iorwerth');
-    check('...once - with them in hand he just points at the book', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone')], [3, 1]);
+    // ...ONCE, AND THEN HE ANSWERS THE FIVE QUESTIONS. At ^regicide_has_book ~regicide_resupply
+    // takes the first talk and the one after it falls into [label,regicide_iorwerth_components] -
+    // a ~p_choice5, which is a step of the quest in its own right ("he used to say 'it is all in
+    // the book', and the book is a page of flavour about fire oil with no recipe in it"). A talk
+    // with no pick walked into it and threw "unexpected menu: multi5", and everything below here
+    // went with it.
+    const asked: string[] = [];
+    for (const [n, word] of [
+        [1, 'quicklime'],
+        [2, 'sulphur'],
+        [3, 'naphtha'],
+        [4, 'barrel'],
+        [5, 'fuse']
+    ] as [number, string][]) {
+        const said = talk(q, 'lord_iorwerth', [n]).join(' ');
+        asked.push(said.length > 40 ? word : word + ' (no answer)');
+    }
+    check('...once - with them in hand he answers the five questions about the bomb instead', [H.invCount(q, 'regicide_barrel_empty'), H.invCount(q, 'limestone'), asked.join(' ')], [3, 1, 'quicklime sulphur naphtha barrel fuse']);
     sv(q, 'regicide_quest', 9);
     H.clearInv(q);
     talk(q, 'lord_iorwerth');

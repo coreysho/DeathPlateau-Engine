@@ -31,6 +31,8 @@
     "sqlite:schema": "prisma migrate dev --schema prisma/singleworld/schema.prisma",
     "start": "npm install && tsx src/app.ts",
     "tickets": "tsx src/tickets.ts",
+        "tickets:check": "BUGS_GITHUB_REPO=coreysho/DeathPlateau-Bugs BUGS_GITHUB_TOKEN=ghp_thisisnotarealtokenatall0000000000 tsx tools/tickets/bugtracker-check.ts",
+        "tickets:doctor": "tsx tools/tickets/doctor.ts",
     "vote:doctor": "tsx tools/vote/doctor.ts"
   },
   "lint-staged": {

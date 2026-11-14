@@ -209,7 +209,25 @@ const m: Manifest = {
         { go: [3304, 3213], r: 64 },
         { talk: 'feud_ali_m', why: 'his goods will travel' },
         { stage: 62 },
-        { has: 'blackjack_oak' }
+        { has: 'blackjack_oak' },
+
+        // A CHARACTER WHO WAS ALREADY PAST THE CONVERSATION THAT GRANTS THE LICENCE.
+        //
+        // Reported after the first fix deployed: still no Knock-Out option. Granting the licence
+        // on the transition only helps somebody who crosses it afterwards; a character sitting at
+        // the blackjack stage from before is routed to feud_operator_blackjack, which returns on
+        // its reminder and never touches it. So the stuck state is built here by hand - the stage
+        // forward, the licence behind - and talking to a villager has to put it right.
+        { note: 'a character stuck at the blackjack stage with the licence left behind' },
+        { setvar: 'feud_var', to: 28 },
+        { setvar: 'feud_npc_multi', to: 1 },
+        { varis: 'feud_npc_multi', to: 1 },
+        { setpos: [3359, 2976, 0], why: 'back to Pollnivneach - the carpet left us in Al Kharid' },
+        { talk: 'feud_villager_multi_1', why: 'talking to one reconciles the licence' },
+        { varis: 'feud_npc_multi', to: 2 },
+        // AND THE PROOF IS THE MENU, not the varbit: opNpc refuses an op a player could not click,
+        // so this step is the question "is Knock-Out there now".
+        { talk: 'feud_villager_multi_1', op: 5, why: 'Knock-Out is on the menu again' }
     ]
 };
 

@@ -8,7 +8,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ObjType from '#/cache/config/ObjType.js';
-import { isHiddenOp, locCanOp, npcCanOp } from '#/cache/config/OpVisibility.js';
+import { isHiddenOp, locCanOp } from '#/cache/config/OpVisibility.js';
 import ParamType from '#/cache/config/ParamType.js';
 import LocType from '#/cache/config/LocType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
@@ -53,6 +53,11 @@ export type Iface = { tick: number; who: string; kind: 'open' | 'text' | 'invop'
 
 export const hits: Hit[] = [];
 export const anims: { tick: number; who: string; seq: number }[] = [];
+// Every spotanim the server puts on a player. Like an anim it is a per-tick mask, so two in one
+// tick means the client only ever sees the second - which is exactly the failure this exists to
+// catch. A spotanim is also the half of a teleport or a spell that a config reader cannot see:
+// the seq can be right and the effect missing, and the only earlier way to tell was to log in.
+export const spotanims: { tick: number; who: string; spotanim: number; height: number }[] = [];
 // ...and the same for npcs. Whether a monster PLAYED its attack, block or death animation was
 // unanswerable from a sim until this existed - the params can all be present and correct and still
 // never reach the client, and a config reader cannot tell the difference.
@@ -165,6 +170,11 @@ export async function boot() {
         if (seq !== -1) anims.push({ tick: World.currentTick, who: this.username, seq });
         return origAnim.call(this, seq, delay);
     };
+    const origSpotanim = (Player.prototype as any).spotanim;
+    (Player.prototype as any).spotanim = function (spotanim: number, height: number, delay: number) {
+        if (spotanim !== -1) spotanims.push({ tick: World.currentTick, who: this.username, spotanim, height });
+        return origSpotanim.call(this, spotanim, height, delay);
+    };
     const origNpcAnim = (Npc.prototype as any).playAnimation;
     (Npc.prototype as any).playAnimation = function (seq: number, delay: number) {
         if (seq !== -1) npcAnims.push({ tick: World.currentTick, who: NpcType.get(this.type).debugname ?? String(this.type), seq });
@@ -228,13 +238,22 @@ export function clearLogs() {
     npcHits.length = 0;
     says.length = 0;
     anims.length = 0;
+    spotanims.length = 0;
     npcAnims.length = 0;
     mesgs.length = 0;
 }
 
-/** Create a maxed player standing at (x, z). `ip` decides their bucket in World.playerLoop. */
+import { fitName } from './fitname.js';
+export { fitName };
+
+/**
+ * Create a maxed player standing at (x, z). `ip` decides their bucket in World.playerLoop.
+ *
+ * The name is put through fitName first, so two labels can never quietly become one account.
+ */
 export function makePlayer(name: string, x: number, z: number, ip: number = 2130706433): Player {
-    const p = new Player(name, toBase37(name), BigInt(Math.floor(Math.random() * 1e9)));
+    const username = fitName(name);
+    const p = new Player(username, toBase37(username), BigInt(Math.floor(Math.random() * 1e9)));
     p.teleport(x, z, 0);
     (p as any).__ip = ip;
     World.newPlayers.add(p);
@@ -321,6 +340,16 @@ export function clearInv(p: Player) {
     for (let i = 0; i < inv.capacity; i++) {
         if (inv.get(i)) p.invDelSlot(InvType.INV, i);
     }
+}
+
+/**
+ * The debugname of whatever is worn in a wearpos, or null for an empty slot. The equip side of
+ * invCount: a check about a fight can then name the weapon it was fought with instead of taking
+ * it on trust, which is how an unarmed player once got reported as an unkillable boss.
+ */
+export function wornName(p: Player, wearpos: number): string | null {
+    const obj = p.getInventory(InvType.WORN)?.get(wearpos);
+    return obj ? (ObjType.get(obj.id).debugname ?? null) : null;
 }
 
 export function give(p: Player, objName: string, count = 1) {
@@ -659,6 +688,13 @@ export function useHeldOnLoc(p: Player, useName: string, x: number, z: number, l
     return true;
 }
 
+/** Is a loc of this type standing on that square right now? For door stages and loc_change. */
+export function locAt(level: number, x: number, z: number, locName: string): boolean {
+    const id = LocType.getId(locName);
+    if (id === -1) throw new Error('no such loc: ' + locName);
+    return World.getLoc(x, z, level, id) !== null;
+}
+
 /** Where a loc of this type is placed, nearest first to (x, z) on that level. */
 export function locsNear(locName: string, x: number, z: number, level = 0): { x: number; z: number; level: number }[] {
     const id = LocType.getId(locName);
@@ -703,12 +739,39 @@ export function opObj(p: Player, x: number, z: number, objName: string, op: numb
 }
 
 /** What clicking an op on an npc does: OpNpcHandler, minus the visibility checks. */
+/**
+ * The op word a PLAYER would see on this npc right now, or null when the menu has not got one.
+ *
+ * A multinpc is one id whose ops live on a child the varbit picks, and OpNpcHandler resolves that
+ * child before it will accept a click - "bad client: not a valid npc option" otherwise. So an op
+ * the cache puts on a later state is one a player cannot reach yet, which is a quest that stops.
+ * Resolved the same way and in the same order as the handler, because the handler is the thing
+ * being stood in for.
+ */
+export function npcOpWord(p: Player, npc: Npc, op: number): string | null {
+    let type = NpcType.get(npc.type);
+    if (type.multivarp !== -1) {
+        const state = p.getVar(type.multivarp) as number;
+        if (state >= 0 && state < type.multinpc.length && type.multinpc[state] !== -1) {
+            type = NpcType.get(type.multinpc[state]);
+        }
+    } else if (type.multivarbit !== -1) {
+        const state = p.getVarBit(type.multivarbit);
+        if (state >= 0 && state < type.multinpc.length && type.multinpc[state] !== -1) {
+            type = NpcType.get(type.multinpc[state]);
+        }
+    }
+    const word = type.op?.[op - 1] ?? null;
+    return word === 'hidden' ? null : word;
+}
+
 export function opNpc(p: Player, npc: Npc, op: number) {
     if (p.delayed) return false;
-    // The check OpNpcHandler makes. npcCanOp resolves multinpc the way that handler does - an npc
-    // whose type depends on a varbit shows the variant's options, not the shell's.
-    if (!npcCanOp(npc.type, op)) {
-        throw new Error(`${NpcType.get(npc.type)?.debugname ?? npc.type} has no op${op} on itself or any multinpc variant (${JSON.stringify(NpcType.get(npc.type)?.op)}), so no client could send this click`);
+    // THE MENU DECIDES, as it does for a player. This used to go straight to setInteraction, so a
+    // sim could click an option nobody can see: The Feud granted the villagers' Knock-Out state
+    // only after a villager had been knocked out, and the sim walked through the quest anyway.
+    if (!npcOpWord(p, npc, op)) {
+        throw new Error(`op${op} is not on ${NpcType.get(npc.type).debugname ?? npc.type}'s menu - a player could not click it here`);
     }
     p.clearPendingAction();
     p.queueWaypoints(findPathToEntity(p.level, p.x, p.z, npc.x, npc.z, p.width, npc.width, npc.length));

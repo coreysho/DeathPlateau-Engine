@@ -133,6 +133,18 @@ say('THE CROSSING');
     tp(P, RELLEKKA_PIER);
     talk(P, 'lokar_searunner', ['Take me to Pirates']);
     check("Lokar lands you at Pirates' Cove", [P.x, P.z], COVE);
+    // THE JINX COMES BETWEEN THE SEAL AND THE VOYAGE, and this section used to sail straight
+    // past it. quest_lunar.rs2 says so where Bentley is wired: "Between the seal and the five
+    // marks being rubbed out, every word Bentley has belongs to scripts/lunar_ladyzay.rs2: the
+    // first attempt sails a circle, and the voyage only works once the ship is clean."
+    //
+    // So at stage 20 - seal in hand - Bentley does not offer the crossing at all, and this
+    // asked for an option that is not on the board until ^lunar_symbols_gone, which is 70.
+    //
+    // NOT COVERED, AND SAYING SO: the five marks and the circular first voyage have no checks
+    // anywhere in this file. The stage is set past them so that THE CROSSING can test the
+    // crossing, and cleaning the Lady Zay is a section somebody still owes.
+    H.setVar(P, 'lunar_quest', 70);
     talk(P, 'captain_bentley', ['Can we sail to Lunar Isle']);
     check('Captain Bentley lands you on Lunar Isle', [P.x, P.z], ISLE_PIER);
     check('  and the quest knows you arrived', stage(P), 80);

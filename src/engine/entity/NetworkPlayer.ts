@@ -162,6 +162,10 @@ export class NetworkPlayer extends Player {
                 // todo: move out of model
                 if (success && message.category === ClientGameProtCategory.USER_EVENT) {
                     this.userLimit++;
+                    // custom (2026-11-04) - and for the session, not just this tick. A high count
+                    // here against a near-zero mouse count is what says nobody was holding the
+                    // mouse; see InputTracking.userActions.
+                    this.input.userAction();
                 } else if (message.category === ClientGameProtCategory.RESTRICTED_EVENT) {
                     this.restrictedLimit++;
                 } else {

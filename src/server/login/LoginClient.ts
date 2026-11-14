@@ -60,12 +60,14 @@ export class LoginClient extends InternalClient {
             return { reply: -1, account_id: -1, save: null, muted_until: null, members: false };
         }
 
-        const { response, account_id, staffmodlevel, save, muted_until, members, messageCount, remaining, token: issued } = reply.result;
+        const { response, account_id, staffmodlevel, veteran, helper, save, muted_until, members, messageCount, remaining, token: issued } = reply.result;
         return {
             reply: response,
             account_id,
             token: issued,
             staffmodlevel,
+            veteran,
+            helper,
             save: save ? Buffer.from(save, 'base64') : null,
             muted_until,
             members,

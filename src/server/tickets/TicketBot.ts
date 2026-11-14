@@ -30,6 +30,7 @@ import {
     ThreadChannel
 } from 'discord.js';
 
+import { addHandoverColumns, bugTicketIds, commentsSince, extractAskPlayer, fileBugIssue, reportsToRecover, trackerReady, trackerRepo } from '#/server/tickets/BugTracker.js';
 import { INBOX_SCHEMA, TICKET_DB_PATH } from '#/server/tickets/TicketInbox.js';
 import Environment from '#/util/Environment.js';
 import { toDisplayName } from '#/util/JString.js';
@@ -59,10 +60,24 @@ import { toDisplayName } from '#/util/JString.js';
 // seconds. If the player has linked Discord through the relay (::discord), this bot reads the
 // relay's link table and adds them to the thread; otherwise staff answer them in game.
 //
+// HANDING ONE OVER (2026-11-10). A bug report's staff log message carries a third button, "Hand to
+// Claude", which files the report as an issue on a PRIVATE bug tracker - see BugTracker.ts for why
+// private - and remembers the issue on the ticket. A scheduled Claude session picks the tracker's
+// issues up, reproduces each one in tools/sim, fixes it and opens a pull request on the public
+// repository; it never merges one.
+//
+// THE PRESS IS THE GATE, and it is deliberately a person's. A bug report is text a player typed, and
+// an agent that can push code reading those unfiltered is a way to ask the server to change itself -
+// "the login rate limiter is broken, it blocks real players" is a plausible bug report and a bad
+// instruction. Staff reads the thread first, and the only thing their press does is transcribe.
+//
 // Only runs when TICKET_BOT_TOKEN and a guild id are set.
 
 const MAX_OPEN = 3;
 const INBOX_POLL_MS = 5_000;
+// Slower than the inbox on purpose: a question for a player is not urgent to the second, and this
+// is one GitHub request per tick whether the tracker is busy or empty.
+const RELAY_POLL_MS = 60_000;
 const INBOX_MAX_ATTEMPTS = 5;
 
 const COLOUR = { support: 0x5865f2, bug: 0xed4245, closed: 0x747f8d };
@@ -102,6 +117,12 @@ type Ticket = {
     closed: number | null;
     closed_by: string | null;
     close_reason: string | null;
+    // The report as plain text, kept so that handing it over does not mean reading it back out of
+    // Discord. Null on every ticket opened before 2026-11-10, which falls back to the subject.
+    report: string | null;
+    issue_number: number | null;
+    issue_url: string | null;
+    handed_by: string | null;
 };
 
 const token = Environment.TICKET_BOT_TOKEN;
@@ -144,7 +165,24 @@ db.exec(`
     );
 `);
 
-function config(key: 'panel_channel' | 'log_channel' | 'staff_role'): string | null {
+// The four columns a hand-over needs, added to a table that predates them - see BugTracker.ts.
+addHandoverColumns(db);
+
+// WHICH TRACKER COMMENTS HAVE ALREADY BEEN RELAYED into a player's thread. Keyed on the comment's
+// own GitHub id, so the same question is never posted twice however often the poll below runs or
+// however the watermark moves. A row is written even when the relay could not be delivered - the
+// thread was deleted, the ticket is unknown - because retrying those forever would mean a request
+// a minute for a thread that is never coming back.
+db.exec(`
+    CREATE TABLE IF NOT EXISTS relayed (
+        comment_id INTEGER PRIMARY KEY,
+        ticket     INTEGER,
+        at         INTEGER NOT NULL,
+        outcome    TEXT NOT NULL
+    );
+`);
+
+function config(key: 'panel_channel' | 'log_channel' | 'staff_role' | 'relay_watermark'): string | null {
     const row = db.prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined;
     return row?.value ?? null;
 }
@@ -274,6 +312,26 @@ function missing(channel: TextChannel, wanted: Record<string, bigint>): string[]
         .map(([name]) => name);
 }
 
+// THE REPORT AS PLAIN TEXT, taken from the embed rather than from the form or the inbox row,
+// because the embed is what staff actually read in the thread - and for an in-game report it is also
+// where the `::tele` line to the exact tile lives, which is the first thing a reproduction needs.
+// One place to build it, so both sources are covered and neither can drift from what was shown.
+// Both an EmbedBuilder we are about to send and an Embed Discord handed back expose .data, so the
+// backfill below can flatten a message that was posted weeks ago exactly as openTicket flattens a
+// fresh one. Readonly fields, because that is how a received embed types its own.
+type EmbedLike = { data: { description?: string; fields?: readonly { name: string; value: string }[] } };
+
+function embedToText(embed: EmbedLike): string {
+    const parts: string[] = [];
+    if (embed.data.description) {
+        parts.push(embed.data.description);
+    }
+    for (const field of embed.data.fields ?? []) {
+        parts.push(`${field.name}: ${field.value}`);
+    }
+    return parts.join('\n\n');
+}
+
 // ---- the staff log ----
 //
 // One message per ticket in the log channel, rebuilt from the row whenever the ticket changes.
@@ -296,6 +354,9 @@ function logMessage(t: Ticket) {
             { name: 'Status', value: status }
         )
         .setTimestamp(t.created);
+    if (t.issue_url) {
+        embed.addFields({ name: 'Bug tracker', value: `[#${t.issue_number}](${t.issue_url})${t.handed_by ? ` - handed over by <@${t.handed_by}>` : ''}` });
+    }
     if (t.thread_id) {
         embed.setURL(threadUrl(t.thread_id));
     }
@@ -311,6 +372,24 @@ function logMessage(t: Ticket) {
     }
     if (t.thread_id) {
         row.addComponents(new ButtonBuilder().setLabel('Open thread').setStyle(ButtonStyle.Link).setURL(threadUrl(t.thread_id)));
+    }
+    // A CLOSED BUG REPORT CAN STILL BE HANDED OVER. Staff close a thread when they are done talking
+    // to the player, which is not the same as the bug being fixed - so this is not limited to open
+    // tickets the way Claim is. Support tickets are not offered: a tracker issue is for a code
+    // change, and nobody's password reset is one.
+    if (t.issue_url) {
+        row.addComponents(new ButtonBuilder().setLabel(`Issue #${t.issue_number}`).setStyle(ButtonStyle.Link).setURL(t.issue_url));
+    } else if (t.kind === 'bug' && trackerReady()) {
+        row.addComponents(new ButtonBuilder().setCustomId(`tk|hand|${t.id}`).setLabel('Hand to Claude').setStyle(ButtonStyle.Secondary));
+    }
+    // CLOSING WITHOUT OPENING THE THREAD. Claim has always been here, so staff pick a ticket up from
+    // the log and then have to go and find the thread to put it down again. This is the same
+    // customId the thread's own Close button carries, so the handler above is reached unchanged -
+    // opener-or-staff, and the reason form as the "are you sure". Last in the row deliberately:
+    // nothing already on the message moves, so no finger that has learned where Hand to Claude sits
+    // lands on something else.
+    if (t.status === 'open') {
+        row.addComponents(new ButtonBuilder().setCustomId(`tk|close|${t.id}`).setLabel('Close').setStyle(ButtonStyle.Secondary));
     }
     return {
         content: `${t.status === 'open' && !t.claimed_by && staffRole ? `<@&${staffRole}> ` : ''}New ${NOUN[t.kind]} ${number(t.id)}`,
@@ -363,7 +442,7 @@ async function openTicket(o: Opening): Promise<{ id: number; thread: ThreadChann
         throw new NotSetUp();
     }
 
-    const id = Number(db.prepare('INSERT INTO ticket (kind, source, opener_id, username, subject, created) VALUES (?, ?, ?, ?, ?, ?)').run(o.kind, o.source, o.openerId, o.username, o.subject, Date.now()).lastInsertRowid);
+    const id = Number(db.prepare('INSERT INTO ticket (kind, source, opener_id, username, subject, report, created) VALUES (?, ?, ?, ?, ?, ?, ?)').run(o.kind, o.source, o.openerId, o.username, o.subject, embedToText(o.embed), Date.now()).lastInsertRowid);
 
     let thread: ThreadChannel;
     try {
@@ -651,6 +730,46 @@ async function button(i: ButtonInteraction) {
         await thread.send({ content: `<@${i.user.id}> from the staff is looking at this now.`, allowedMentions: { parse: [] } });
         await i.editReply(`Claimed: ${thread.url}`);
         await updateLog(t.id);
+    } else if (action === 'hand') {
+        if (!isStaff(i)) {
+            await say(i, 'Only staff can hand a report over.');
+            return;
+        }
+        if (t.kind !== 'bug') {
+            await say(i, 'Only bug reports go to the tracker.');
+            return;
+        }
+        if (t.issue_url) {
+            await say(i, `${number(t.id)} is already filed: ${t.issue_url}`);
+            return;
+        }
+        if (!trackerReady()) {
+            await say(i, 'There is no bug tracker set up - BUGS_GITHUB_REPO and BUGS_GITHUB_TOKEN are not both in .env.');
+            return;
+        }
+        await i.deferReply({ flags: MessageFlags.Ephemeral });
+        let filed;
+        try {
+            filed = await fileBugIssue({
+                ticket: t.id,
+                source: t.source,
+                subject: t.subject,
+                // Tickets opened before this column existed have no stored report; the subject is
+                // the first 80 characters of it, which is enough to find the thread and read it.
+                report: t.report,
+                username: t.username ? toDisplayName(t.username) : null,
+                threadUrl: t.thread_id ? threadUrl(t.thread_id) : null,
+                handedBy: i.user.username
+            });
+        } catch (err) {
+            // NOT a thrown error: the staff member pressed a button and is owed an answer, and the
+            // ticket is untouched, so pressing it again is the whole retry.
+            await i.editReply(`Could not file it: ${(err as Error).message}`);
+            return;
+        }
+        db.prepare('UPDATE ticket SET issue_number = ?, issue_url = ?, handed_by = ? WHERE id = ?').run(filed.number, filed.url, i.user.id, t.id);
+        await i.editReply(`Filed as ${trackerRepo()}#${filed.number}: ${filed.url}`);
+        await updateLog(t.id);
     } else if (action === 'close') {
         if (i.user.id !== t.opener_id && !isStaff(i)) {
             await say(i, 'Only the person who opened this ticket, or staff, can close it.');
@@ -695,6 +814,184 @@ async function modal(i: ModalSubmitInteraction) {
     }
 }
 
+// ---- the backlog ----
+//
+// WHAT THIS IS FOR. The hand-over columns were added on 2026-11-10 to a table that had been filing
+// tickets since September, so every bug report before that has report = NULL: handing one over would
+// file an issue carrying only its subject, which for a ::bug report is the first 80 characters and
+// nothing else - no world, no coordinates, no ::tele line. The detail is not lost, though. The bot
+// posted all of it as an embed in the thread's first message, so it can be read back and stored.
+//
+// AND THE BUTTON DOES NOT SHOW ON THEM EITHER, for an unrelated reason: a staff log message is only
+// rebuilt when the ticket changes (claim, close, reopen), so an older message still carries the two
+// buttons it was posted with. Rebuilding every bug ticket's message is the other half of this.
+//
+// NOT threadOf(). That helper marks a ticket closed when Discord says the thread is gone, which is
+// right when somebody is trying to use the thread and quite wrong here: a backfill that closed forty
+// tickets as a side effect of reading them would be a disaster, and a silent one.
+const BACKFILL_LIMIT = 500;
+
+async function readOnlyThread(threadId: string): Promise<ThreadChannel | null> {
+    try {
+        const channel = await client.channels.fetch(threadId);
+        return channel?.isThread() ? channel : null;
+    } catch {
+        return null;
+    }
+}
+
+// ---- relaying a tracker question back to the player ----
+//
+// A tracker comment can carry a block marked for the player (see BugTracker.ts). This posts those
+// blocks into the ticket's private thread, so a needs-repro question actually reaches the person who
+// can answer it. Nothing else from the issue is ever relayed.
+let relaying = false;
+
+function ticketByIssue(issueNumber: number): Ticket | undefined {
+    return db.prepare('SELECT * FROM ticket WHERE issue_number = ?').get(issueNumber) as Ticket | undefined;
+}
+
+async function relayQuestions() {
+    if (relaying || !client.isReady() || !trackerReady()) {
+        return;
+    }
+    relaying = true;
+    try {
+        // FIRST RUN STARTS FROM NOW, not from the beginning of the tracker. Otherwise switching this
+        // on would relay every question ever written, into threads whose reports are long closed.
+        let watermark = config('relay_watermark');
+        if (!watermark) {
+            setConfig('relay_watermark', new Date().toISOString());
+            return;
+        }
+
+        const comments = await commentsSince(watermark);
+        const seen = db.prepare('SELECT 1 FROM relayed WHERE comment_id = ?');
+        const record = db.prepare('INSERT OR IGNORE INTO relayed (comment_id, ticket, at, outcome) VALUES (?, ?, ?, ?)');
+
+        for (const comment of comments) {
+            if (comment.createdAt > watermark) {
+                watermark = comment.createdAt;
+            }
+            const ask = extractAskPlayer(comment.body);
+            if (!ask || seen.get(comment.id)) {
+                continue;
+            }
+            const t = ticketByIssue(comment.issueNumber);
+            if (!t) {
+                record.run(comment.id, null, Date.now(), 'no ticket for that issue');
+                continue;
+            }
+            if (!t.thread_id) {
+                record.run(comment.id, t.id, Date.now(), 'the ticket has no thread');
+                continue;
+            }
+            const thread = await readOnlyThread(t.thread_id);
+            if (!thread) {
+                record.run(comment.id, t.id, Date.now(), 'the thread is gone');
+                continue;
+            }
+            try {
+                // A thread archives itself after a week, and a closed ticket's is archived on
+                // purpose. Either way the player cannot read a question in an archived thread, so
+                // it is opened again - which is the honest thing: somebody is asking them something.
+                if (thread.archived) {
+                    await thread.setArchived(false);
+                }
+                // AND UNLOCKED, for the same reason one line up. closeTicket locks as well as
+                // archives, so unarchiving alone left a closed ticket's thread in the one state
+                // that is worse than either: the question is delivered, the reporter reads it, and
+                // the thread will not let them answer. Asking somebody something and then holding
+                // the door shut is not a kindness to the ticket's tidiness.
+                //
+                // It does NOT reopen the ticket. The row stays closed and the log still says
+                // closed; only the thread can be typed in, and the Reopen button in it is still
+                // the only way to change that - which is staff's call, not this poll's.
+                if (thread.locked) {
+                    await thread.setLocked(false, 'a question was relayed to the reporter');
+                }
+                // WHEN THEY ARE NOT ON DISCORD the thread still gets the question, because staff
+                // read it and can ask them in game. The wording has to say so, or it reads as a
+                // question to nobody.
+                const lead = t.opener_id
+                    ? `<@${t.opener_id}> - a question about your ${NOUN[t.kind]} ${number(t.id)}, from whoever is looking into it:`
+                    : `A question about ${number(t.id)}, from whoever is looking into it. This player has no Discord linked, so somebody will have to ask them in game:`;
+                await thread.send({
+                    content: `${lead}\n\n${clip(ask, 1600)}`,
+                    // Nothing in a relayed block can ping a role or everyone: the only mention that
+                    // fires is the reporter's own, added above.
+                    allowedMentions: { users: t.opener_id ? [t.opener_id] : [] }
+                });
+                record.run(comment.id, t.id, Date.now(), 'relayed');
+            } catch (err) {
+                // NOT recorded: a failure here is Discord being unavailable or a permission being
+                // missing, both of which can pass. This one is worth retrying on the next tick.
+                console.log(`Ticket bot: could not relay tracker comment ${comment.id} into ${number(t.id)}: ${(err as Error).message}`);
+            }
+        }
+
+        setConfig('relay_watermark', watermark);
+    } catch (err) {
+        console.log(`Ticket bot: could not read the tracker's comments: ${(err as Error).message}`);
+    } finally {
+        relaying = false;
+    }
+}
+
+async function backfillBugReports(i: RepliableInteraction) {
+    const missing = reportsToRecover(db, BACKFILL_LIMIT);
+    const store = db.prepare('UPDATE ticket SET report = ? WHERE id = ?');
+
+    let filled = 0;
+    const unreadable: number[] = [];
+    for (const t of missing) {
+        const thread = await readOnlyThread(t.thread_id);
+        if (!thread) {
+            unreadable.push(t.id);
+            continue;
+        }
+        try {
+            // The oldest message the BOT posted that carries an embed: that is the detail message
+            // openTicket sent. Picking it by author and embed rather than by position, because a
+            // player can have posted a screenshot before it in a thread that was reopened.
+            const messages = await thread.messages.fetch({ limit: 100 });
+            const detail = [...messages.values()]
+                .filter(m => m.author.id === client.user?.id && m.embeds.length > 0)
+                .sort((a, b) => a.createdTimestamp - b.createdTimestamp)[0];
+            if (!detail) {
+                unreadable.push(t.id);
+                continue;
+            }
+            const text = embedToText(detail.embeds[0]);
+            if (!text) {
+                unreadable.push(t.id);
+                continue;
+            }
+            store.run(text, t.id);
+            filled++;
+        } catch (err) {
+            console.log(`Ticket bot: could not read ${number(t.id)} back for the backfill: ${(err as Error).message}`);
+            unreadable.push(t.id);
+        }
+    }
+
+    // EVERY bug ticket, not only the ones just filled: a closed bug report can still be handed over,
+    // and its log message is as stale as an open one's. An edit never pings, so forty of them do not
+    // wake the staff role forty times.
+    const all = bugTicketIds(db, BACKFILL_LIMIT);
+    for (const id of all) {
+        await updateLog(id);
+    }
+
+    const lines = [
+        `Looked at **${missing.length}** bug report${missing.length === 1 ? '' : 's'} with no stored detail.`,
+        `Recovered **${filled}** from their threads.`,
+        unreadable.length ? `Could not read **${unreadable.length}**: ${unreadable.map(id => number(id)).join(', ')} - the thread is gone, or its first message is not there any more. They can still be handed over; the issue will carry the subject only.` : null,
+        `Rebuilt **${all.length}** staff log message${all.length === 1 ? '' : 's'}, so the hand-over button shows on them${trackerReady() ? '' : ' - except it will not, because no bug tracker is configured yet'}.`
+    ].filter(Boolean);
+    await i.editReply(lines.join('\n'));
+}
+
 async function command(i: ChatInputCommandInteraction) {
     if (i.commandName === 'ticketsetup') {
         await setup(i);
@@ -713,6 +1010,16 @@ async function command(i: ChatInputCommandInteraction) {
         const open = db.prepare("SELECT * FROM ticket WHERE status = 'open' ORDER BY id LIMIT 25").all() as Ticket[];
         const lines = open.map(t => `**${number(t.id)}** ${t.kind} · ${clip(t.subject, 60)} · ${t.thread_id ? threadUrl(t.thread_id) : 'no thread'} · ${t.claimed_by ? `<@${t.claimed_by}>` : 'unclaimed'}`);
         await i.reply({ content: lines.length ? `**Open tickets**\n${lines.join('\n')}` : 'No open tickets.', flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
+        return;
+    }
+
+    if (sub === 'backfill') {
+        if (!isStaff(i)) {
+            await say(i, 'Only staff can run the backfill.');
+            return;
+        }
+        await i.deferReply({ flags: MessageFlags.Ephemeral });
+        await backfillBugReports(i);
         return;
     }
 
@@ -844,7 +1151,8 @@ client.once(Events.ClientReady, async ready => {
                         type: ApplicationCommandOptionType.Subcommand,
                         options: [{ name: 'user', description: 'Who to add', type: ApplicationCommandOptionType.User, required: true }]
                     },
-                    { name: 'list', description: 'Staff: every open ticket', type: ApplicationCommandOptionType.Subcommand }
+                    { name: 'list', description: 'Staff: every open ticket', type: ApplicationCommandOptionType.Subcommand },
+                    { name: 'backfill', description: 'Staff: recover older bug reports and show the hand-over button on them', type: ApplicationCommandOptionType.Subcommand }
                 ]
             }
         ]);
@@ -860,6 +1168,7 @@ client.once(Events.ClientReady, async ready => {
         console.error('  then restart the ticket bot.');
     }
     setInterval(() => void drainInbox(), INBOX_POLL_MS);
+    setInterval(() => void relayQuestions(), RELAY_POLL_MS);
 });
 
 client.on(Events.InteractionCreate, async i => {

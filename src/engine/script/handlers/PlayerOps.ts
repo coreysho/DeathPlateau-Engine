@@ -5,6 +5,7 @@ import ObjType from '#/cache/config/ObjType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import CameraInfo from '#/engine/entity/CameraInfo.js';
+import { chatCrown } from '#/engine/entity/ChatCrown.js';
 import { PlayerTimerType } from '#/engine/entity/EntityTimer.js';
 import type { HuntVis } from '#/engine/entity/hunt/HuntVis.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
@@ -556,6 +557,15 @@ const PlayerOps: CommandHandlers = {
 
     [ScriptOpcode.STAFFMODLEVEL]: state => {
         state.pushInt(state.activePlayer.staffModLevel);
+    },
+
+    // custom (2026-11-13) - the one icon this player's name carries, as chatCrown's number. Read
+    // it rather than rebuilding the ladder from staffmodlevel: Veteran and Helper are not staff
+    // levels, so no amount of staffmodlevel arithmetic can reach them, and the order the ranks
+    // fall in is ChatCrown.ts's business.
+    [ScriptOpcode.CHATCROWN]: state => {
+        const p = state.activePlayer;
+        state.pushInt(chatCrown(p.staffModLevel, p.veteran, p.helper));
     },
 
     [ScriptOpcode.STAT]: state => {

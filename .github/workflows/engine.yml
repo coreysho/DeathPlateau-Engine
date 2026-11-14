@@ -9,6 +9,9 @@ on:
     - 'package-lock.json'
     - 'src/**'
     - 'tools/**'
+    # The quest helper's table is checked here and is generated, not hand-edited, so a change to
+    # it arrives on its own with nothing else to trigger this run.
+    - 'data/quests.json'
   workflow_dispatch:
 
 jobs:
@@ -42,3 +45,10 @@ jobs:
     # coin and item before and after, so a dupe or a void fails it whatever the code path.
     - name: Trading post
       run: npx tsx tools/tradingpostcheck.ts
+
+    # Every row of the quest helper's table is a sentence a player reads in the game, and the
+    # sentences are generated out of sim prose and server debugnames. This asserts the shapes that
+    # cannot be right - a handle showing through, a step with no verb, "Use an item on Cauldron" -
+    # over the whole shipped table rather than over a few examples.
+    - name: Quest helper wording
+      run: npx tsx tools/quest/WordingCheck.ts

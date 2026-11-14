@@ -28,6 +28,21 @@ model account {
     banned_until DateTime?
 
     staffmodlevel Int     @default(0)
+    // custom (2026-11-06) - helped test the server before launch. Shows a bronze emblem beside
+    // the name in chat (ChatCrown, crown 7) and nothing else: it grants no powers and is not a
+    // staffmodlevel, because every rank check in the engine reads "at least" and a veteran must
+    // not pass any of them.
+    //
+    // ON THE ACCOUNT RATHER THAN IN THE SAVE, which is the whole reason it is here: the launch
+    // wipe moves character saves away and keeps account rows, so a perm varp would have thrown
+    // the rank away on the day it started to mean something.
+    veteran       Int     @default(0)
+
+    // custom (2026-11-11) - the Helper rank: answers other players' questions, and carries no
+    // powers whatsoever. Shows a blue roundel beside the name in chat (ChatCrown, crown 8). A flag
+    // rather than a staffmodlevel for the same reason veteran is one, and more sharply: the whole
+    // value of this rank is that there is nothing attached to it to abuse.
+    helper        Int     @default(0)
     members       Boolean @default(false)
 }
 

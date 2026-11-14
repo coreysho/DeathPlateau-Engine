@@ -137,7 +137,7 @@ const m: Manifest = {
 
         { note: 'wiki step 4: ten wooden cats. A sim player has no house, so they are given here;' },
         { note: 'tools/sim/tgbrcats.ts checks the carving itself.' },
-        { give: 'wooden_cat', n: 10 },
+        { give: 'wooden_cat', n: 10, how: 'Carve wooden cats in your house, one plank and one fur each, with 16 Crafting' },
 
         { note: 'wiki steps 5-8: build the crate beside him, floor it, fill it, whistle, post it' },
         { setpos: CRATE, why: 'back to the cell' },

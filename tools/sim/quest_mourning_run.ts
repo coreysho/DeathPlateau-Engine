@@ -30,7 +30,22 @@ const LADDER: [number, number] = [2044, 4650];
 const STEW: [number, number] = [2543, 3332];
 const SHELVES: [number, number] = [2547, 3321];
 const CRATE: [number, number] = [2554, 3327];
-const ELENA: [number, number, number] = [2592, 3337, 0];
+// ELENA AT HOME IS A DOOR, NOT AN NPC YOU CAN FIND. [opnpc1,elena2] is what this used to click
+// and 981a228's menu guard stopped it, correctly: elena2 is a multinpc on
+// plaguecity_elena_at_home, that varbit is written nowhere in the content, so at state 0 the shell
+// resolves to -1, keeps its own empty op list and is neither clickable nor rendered. Probed: the
+// shell standing in her house answers op1 with null, while elena2_vis answers "Talk-to".
+//
+// The Elena a player talks to is elena2_vis, which areas/area_ardougne_east/scripts/doors.rs2
+// npc_adds when her door is opened with Plague City finished - a workaround its own comment flags
+// for that varbit never being written. So the door is the step, and it is a step a player cannot
+// skip either.
+//
+// AND SHE IS TEMPORARY: npc_add gives her 200 ticks. Probed - she is gone 210 ticks later. So the
+// door is opened before EVERY conversation rather than once at the top, which is why this appears
+// twice instead of being hoisted.
+const ELENA_DOOR: [number, number] = [2592, 3339];
+const ELENA_OUTSIDE: [number, number, number] = [2592, 3341, 0]; // her side of the door is z < 3339
 const APPLES: [number, number] = [2489, 3373];
 const PRESS: [number, number] = [2484, 3374];
 
@@ -43,6 +58,7 @@ const m: Manifest = {
     steps: [
         { note: 'requirements: Roving Elves (and so Regicide), 60 Ranged and 50 Thieving.' },
         { setvar: 'roving_elves_quest', to: 10, why: '^roving_elves_complete' },
+        { setvar: 'elenaquest', to: 29, why: "^elena_complete - Plague City, or Elena's door is locked" },
         { setvar: 'regicide_quest', to: 15, why: '^regicide_complete' },
         { setvar: 'biohazard', to: 16, why: '^biohazard_complete - the HQ is the Biohazard stew house' },
 
@@ -111,8 +127,9 @@ const m: Manifest = {
         { note: 'the gnome names the poison, and a physician has the sieve. Elena is in East' },
         { note: 'Ardougne in this cache - see the deviation note in the quest constants.' },
         { loc: 'mourner_hideout_ladder1', at: LADDER, hop: true, soft: true, why: 'back up the ladder' },
-        { setpos: ELENA, why: "to Elena's house in East Ardougne" },
-        { talk: 'elena2', want: 'Take the sieve', why: 'she hands over her assay sieve' },
+        { setpos: ELENA_OUTSIDE, why: "to Elena's house in East Ardougne" },
+        { loc: 'elenadoor2', at: ELENA_DOOR, why: 'opening her door is what spawns her' },
+        { talk: 'elena2_vis', want: 'Take the sieve', why: 'she hands over her assay sieve' },
         { stage: 6 },
         { has: 'mourning_sieve' },
 
@@ -215,8 +232,9 @@ const m: Manifest = {
 
         { note: 'and the physician who has been over the wall is the one who has to be standing' },
         { note: 'next to them' },
-        { setpos: ELENA, why: 'back to Elena' },
-        { talk: 'elena2', want: 'nothing wrong with those animals', why: 'she examines the flocks' },
+        { setpos: ELENA_OUTSIDE, why: 'back to Elena' },
+        { loc: 'elenadoor2', at: ELENA_DOOR, why: 'opening her door is what spawns her' },
+        { talk: 'elena2_vis', want: 'nothing wrong with those animals', why: 'she examines the flocks' },
         { stage: 13 },
 
         { note: 'wiki step 36: back to Arianwyn in Lletya' },

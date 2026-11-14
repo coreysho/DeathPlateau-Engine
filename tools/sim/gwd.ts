@@ -698,7 +698,7 @@ console.log('\nWHO COMES AFTER YOU');
     }
     // one god's item: that god alone leaves you alone
     for (const [god] of FACES) {
-        const p = player('gwdagg_' + god, 2880, 5310, 2);
+        const p = player('gwdag' + god.slice(0, 6), 2880, 5310, 2);
         H.maxOut(p);
         H.equip(p, { [god === 'zamorak' || god === 'saradomin' ? 'back' : 'torso']: WEAR[god] });
         const after = FACES.filter(([, n]) => hunts(n, p)).map(([g]) => g);
@@ -960,6 +960,12 @@ console.log('\nTHE ARMIES DROP SOMETHING');
     // and the five items this cache lacks add their weights to it: 33 of its 128 rolls drop
     // nothing at all, and the mage has 7. So one kill proving nothing is not a failure - it is the
     // table. Up to three of each are killed, and the check is that SOME kill drops.
+    // AND A NAME SHORT ENOUGH TO BE ITS OWN ACCOUNT. These were named `loot_${kind}_${attempt}`,
+    // and toBase37 reads the first twelve CHARACTERS of the name - so every one of the twelve
+    // players in this loop was "loot_gwd_spi" and eleven of their logins were refused. The kills
+    // still happened and the drops still landed, so the section passed while measuring one
+    // account's worth of them.
+    let lootWho = 0;
     for (const kind of ['gwd_spiritual_mage_bandos', 'gwd_spiritual_warrior_bandos', 'gwd_spiritual_ranger_bandos', 'gwd_aviansie_1']) {
         let dropped = 0,
             kills = 0;
@@ -968,7 +974,7 @@ console.log('\nTHE ARMIES DROP SOMETHING');
             if (!npc) break;
             npc.huntMode = -1;
             const spot = nearestOpen(npc.x, npc.z, npc.level, 4)!;
-            const p = player(`loot_${kind}_${attempt}`, spot[0], spot[1], npc.level);
+            const p = player(`loot${++lootWho}`, spot[0], spot[1], npc.level);
             const near = nearestOpen(spot[0] + 1, spot[1], npc.level, 3)!;
             npc.teleport(near[0], near[1], npc.level);
             H.tick(1);

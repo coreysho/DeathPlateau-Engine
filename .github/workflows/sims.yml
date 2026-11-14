@@ -1,4 +1,4 @@
-# The 298 pass/fail simulations in tools/sim, which nothing ran automatically.
+# The three hundred-odd pass/fail simulations in tools/sim, which nothing ran automatically.
 #
 # WHY NOT ON EVERY PUSH. They are about two and a half hours end to end - each boots a world,
 # and the audit sweeps are minutes each - against four minutes for the whole of the client's
@@ -13,6 +13,21 @@
 # broken when this was switched on, and a shard goes red only for a sim that is NOT on it. A
 # sim that starts passing is reported too: it should come off the list, or the list rots into
 # an excuse.
+#
+# WHY A TIMEOUT IS ITS OWN VERDICT. A sim has four ways to end here and only two of them mean
+# the game is broken: it can fail a check, it can fail and then pass (flaky, which the seeded
+# dice say should be impossible), it can be killed at its per-sim cap, or it can pass. The third
+# one was reported as the first for as long as this job existed, and it was wrong six times -
+# glassblowing, audit7, lunar, droprate, fairyrings, seedstall - each one a sim that passes when
+# you give it long enough, each one read as a regression first and diagnosed by hand after. The
+# shell knew the difference every time: `timeout` exits 124. So a killed sim is now reported as
+# killed, with the cap it was given, and it is not retried, because running it again under the
+# same cap only spends another cap to print the same thing. It still turns the shard red - a sim
+# that did not finish was not verified, and a real infinite loop looks like this from outside -
+# but it is red as SLOW and not as BROKEN, which is the whole of the triage.
+#
+# AND ONE STEP EARLIER: a sim that passes while using more than seven tenths of its cap says so,
+# because every one of those six was found by waiting for it to go red, and none of them had to be.
 #
 # CONTENT IS CHECKED OUT AS 'content' AND NOT UNDER ITS REPOSITORY NAME, because thirty of the
 # sims open '../content/scripts/...' directly. That is their convention and this matches it.
@@ -123,6 +138,26 @@ jobs:
       working-directory: engine
       run: npx tsx tools/server/rsa.ts
 
+    # AND A DATABASE, for the one sim that needs one - and this is the whole of why
+    # changepassword "fails on a runner and passes on a laptop", which this file has carried as a
+    # mystery and known-failing.txt as its last entry.
+    #
+    # changepassword drives ::changepassword through the REAL account table: it deletes its two
+    # accounts, reads the stored bcrypt hash back to prove an unchanged password really is
+    # unchanged, and checks ::ban and ::mute persist. DB_BACKEND defaults to sqlite, which is
+    # db.sqlite in the working directory, and db.sqlite is gitignored - same as the login key
+    # above, for the same reason and with the same consequence. A laptop has one from running the
+    # server; a fresh checkout has none, so Kysely throws on the first query and dumps the query
+    # object, which is what the shard log shows: a WhereNode with value 'pwtest'.
+    #
+    # Reproduced by moving db.sqlite aside here: the same failure. Migrated from nothing with
+    # this step: 14 ok, 0 failed. It was never the timing problem it had been treated as.
+    #
+    # prisma migrate deploy needs no server for sqlite and creates the file if it is missing.
+    - name: A database for this run
+      working-directory: engine
+      run: npm run sqlite:migrate
+
     - name: Run this shard
       working-directory: engine
       run: |
@@ -145,7 +180,38 @@ jobs:
         newly_red=""
         newly_green=""
         flaky=""
-        i=0
+        # A SIM KILLED AT ITS CAP IS NOT A SIM THAT FAILED A CHECK, and this job has now
+        # reported one as the other six times - glassblowing, audit7, lunar, droprate, fairyrings
+        # and seedstall, each written up in the comments below, each diagnosed by hand, each the
+        # same diagnosis. The shell already knows which it is: `timeout` exits 124 and no sim in
+        # tools/sim does (they exit 0, 1, 2 or 3 - checked), so 124 is unambiguously the cap
+        # talking. Keeping the two apart costs one variable and makes the triage automatic.
+        timed_out=""
+        # AND THE WARNING BEFORE IT BITES. Every one of those six was found by waiting for the
+        # sim to go red, which is the slowest possible way to learn that a sim has outgrown its
+        # cap. A sim that PASSES while using most of its cap is the next one, so it says so now.
+        #
+        # WHERE IT SHOWS UP: an annotation on the run, a line at the end of the shard's log, and
+        # the shard's verdict artifact. NOT a Discord post of its own - the notify job only
+        # speaks when something is wrong, and a sim that passed is not wrong yet. It rides along
+        # on a night that posts for another reason.
+        near_cap=""
+        # ---- THE WORK LIST, built before anything is sharded, because one file is not always one
+        # piece of work. audit1 is thirteen quests in one file and it takes 2551 SECONDS measured
+        # here, on a machine faster than a runner - so the cap that would cover it (three times
+        # its own measurement, which is this job's rule) is over two hours for one sim, and a cap
+        # that big stops being a timeout at all. It takes section arguments, so it is three pieces
+        # of work instead, grouped off its own per-section timings:
+        #
+        #   watchtower 422s  arrav 370s  hero 343s  mourning 289s  rfd 236s  monk 224s
+        #   demon 205s  waterfall 181s  gobdip 119s  totem 99s  rag 35s  fenk 17s
+        #   scorp 4s  marim 1s
+        #
+        # which groups into 797s, 783s and 965s. Each one gets its own cap AND its own place in
+        # the shard rotation, so they run on three runners at once instead of one runner for
+        # three quarters of an hour.
+        work=/tmp/sim-work.tsv
+        : > "$work"
         for f in $(ls tools/sim/*.ts | sort); do
           # Only the ones that can actually report a verdict; the rest are hand-run tools.
           grep -qE 'process\.exit\([^0-9)]' "$f" || continue
@@ -153,7 +219,22 @@ jobs:
           # broken here, the job simply cannot give these sims what they ask for, and recording
           # them as "failing" would be a lie that also hides a real failure if one ever appears.
           #   pingwire  opens a socket to a live server and fetches /crc0 off its web port
-          case " $SKIP_IN_CI " in *" $(basename "$f" .ts) "*) continue ;; esac
+          b=$(basename "$f" .ts)
+          case " $SKIP_IN_CI " in *" $b "*) continue ;; esac
+          case "$b" in
+            audit1)
+              printf '%s\t%s\t%s\n' "$f" "audit1-watchtower" "watchtower arrav scorp marim" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-hero" "hero mourning totem rag fenk" >> "$work"
+              printf '%s\t%s\t%s\n' "$f" "audit1-rfd" "rfd monk demon waterfall gobdip" >> "$work"
+              ;;
+            *) printf '%s\t%s\t%s\n' "$f" "$b" "" >> "$work" ;;
+          esac
+        done
+        echo "work items: $(wc -l < "$work")"
+        i=0
+        # `label` is what the output calls this piece of work and what its log is named after;
+        # `n` stays the sim's own name, because known-failing.txt lists sims and not pieces.
+        while IFS="$(printf '\t')" read -r f label args; do
           if [ $((i % 8)) -ne ${{ matrix.shard }} ]; then i=$((i + 1)); continue; fi
           i=$((i + 1))
           n=$(basename "$f" .ts)
@@ -169,42 +250,127 @@ jobs:
           # measurement, which is headroom for a slower box and still a timeout rather than a
           # blank cheque. The cap is a ceiling, not a cost: a sim that finishes early costs what
           # it costs.
-          case "$n" in
-            glassblowing) cap=600 ;;
-            gwdguards|audit1|dpick|gwdanims) cap=1200 ;;
+          #
+          # AND audit7 GREW. It used to stop at its first step and take fourteen seconds; now that
+          # Rum Deal, Miscellania, the Garden and the whole of Haunted Mine actually run it takes
+          # 161s on this machine, which is inside the 180s cap by nineteen seconds - and a cap a
+          # sim only just fits inside is a cap that will kill it on a slower box and look exactly
+          # like a failure. Same reason glassblowing has its own.
+          # AND FIVE MORE HAD OUTGROWN IT, found by timing every sim on this machine rather than
+          # waiting for each one to go red in turn. Measured here: lunar 374s, quest_hundred_run
+          # 268s (255 of 255 checks, so it is green and slow, not broken), roofall 152s, animmag
+          # 142s, audit3 135s, diaryrewards 124s. Two are already OVER 180s and the rest are
+          # inside it by less than a minute, which is the audit7 trap again - a cap a sim only
+          # just fits inside kills it on a slower box and looks exactly like a failure.
+          #
+          # That two of them are over the cap here and neither has ever been reported red says
+          # the same thing lunar does from the other direction: a runner is a good deal faster
+          # than this container, so these caps are generous there and honest here.
+          #
+          # AND fairyrings GREW, the same way audit7 did. It was six rings and about ninety
+          # checks; it is twenty-nine rings and 326 checks, every one of them dialled by pressing
+          # arrows. It took 319s here against the 180s cap, so it was killed, retried, killed
+          # again, and reported as "fails twice" on a night it passes alone - which is this
+          # comment's whole subject appearing for the sixth time. Its arrow loop was settling 20
+          # ticks per press for an [if_button] that sets three text labels and returns; at 2 it
+          # is 175s. That is still a cap it only just fits inside, which is the audit7 trap
+          # exactly, so it gets its own.
+          #
+          # seedstall was the same night's other cap victim and is nobody's regression: 189s and
+          # 9 of 9 checks here, nine seconds past the cap. It was reported red beside a sim that
+          # really had broken, which is the cost of a cap a sim sits on top of - two failures
+          # that look identical and are not.
+          #
+          # lunar is the one that proved it, and it is worth writing down how it looked, because
+          # it looked exactly like a regression and was not one. It timed out TWICE on a runner
+          # on one night having passed the night before, so the first guess was that something
+          # between the two commits had slowed it. Measured instead: 374s at the new commit, 402s
+          # at the old one - very slightly FASTER after the change. The engine's tick loop was
+          # unchanged too (4000 ticks: 7225ms against 7119ms).
+          #
+          # What it actually is: lunar sits right at the line. These numbers are from a cloud
+          # container that is much slower than the machine the caps above were measured on -
+          # audit1 is 357s up there and 2551s here - so lunar is somewhere near 180s on a runner,
+          # which is a coin toss decided by whichever runner you get. One night it lands under,
+          # the next it times out twice and reads as "fails twice". That is the audit7 trap with
+          # a different sim, and the fix is the same: give it its own cap.
+          # pickpocketloot is the next one walking into that line. It ran 152s against the 180s
+          # cap two nights ago and 162s last night: still passing, but the margin is now under
+          # ten per cent of the cap, and the thing that decides it is which runner the night
+          # gets rather than anything in the sim. Moved before it starts failing, not after.
+          #
+          # quest_legends_run goes with it, and for the same reason rather than because it is as
+          # close: 138s of its 180s is over the seven tenths the notice below warns at, so the
+          # night was already telling us about it. Legends' Quest is the longest quest in the game
+          # and this sim walks the whole of it, so it is not going to get faster; waiting for it to
+          # cross the line would only mean reading a timeout as a failure first, which is the
+          # audit7 trap this whole block exists to stop repeating.
+          case "$label" in
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run) cap=600 ;;
+            gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
+            audit1-*) cap=2400 ;;
             *) cap=180 ;;
           esac
-          # TWO SIMS ASK FOR AN ENVIRONMENT AND SAY SO, and running them without it is how they
-          # ended up on known-failing.txt under the heading "FAIL WITH NOTHING TO SAY". Neither is
-          # broken: each prints its usage line and exits 1, which is correct of them and reads
-          # here as a failure. Given what they ask for, securityfixes is 20 ok and staffrules is
-          # 16 ok - thirty-six assertions that went unrun every night for want of two variables.
-          #
-          # NODE_PRODUCTION is what makes a world behave like a live one: staffrules is about the
-          # owner rules on a real server, and securityfixes checks the save reaches disk before
-          # the world exits. NODE_IDLE_LOGOUT_TICKS=20 is securityfixes's own - it tests the idle
-          # logout and will not wait out the real one.
-          env_for=""
+          # AND TWO OF THEM ASK FOR A SETTING AND REFUSE TO RUN WITHOUT IT. Both say so in one
+          # line and exit non-zero - "Run with NODE_PRODUCTION=true - the owner rules are about a
+          # live world" - which the job counted as a failure for as long as it has existed. They
+          # were never broken: given what they ask for, securityfixes is 21 ok and staffrules 16.
           case "$n" in
-            securityfixes) env_for="NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20" ;;
-            staffrules) env_for="NODE_PRODUCTION=true" ;;
+            securityfixes) extra='NODE_PRODUCTION=true NODE_IDLE_LOGOUT_TICKS=20' ;;
+            staffrules) extra='NODE_PRODUCTION=true' ;;
+            *) extra='' ;;
           esac
           rc=0
-          env $env_for timeout "$cap" npx tsx "$f" > "/tmp/$n.log" 2>&1 || rc=$?
+          started=$SECONDS
+          # shellcheck disable=SC2086 - $extra is a deliberate list of VAR=value for env, and
+          # $args a deliberate list of section names for the sim
+          timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.log" 2>&1 || rc=$?
+          elapsed=$((SECONDS - started))
+          # SEVEN TENTHS, because the gap between this container and a runner is not subtle -
+          # audit1 is 357s on the machine the caps were measured on and 2551s here - so a sim
+          # sitting anywhere near its ceiling on the box it passes on is a sim that will be
+          # killed on the box it does not. audit7 fit inside 180s by nineteen seconds and that
+          # was enough to make it look broken.
+          if [ "$rc" = "0" ] && [ "$elapsed" -gt $((cap * 7 / 10)) ]; then
+            echo "::notice title=$label::$label passed, but in ${elapsed}s of its ${cap}s cap - over seven tenths, so give it a bigger cap before a slower runner kills it"
+            near_cap="$near_cap $label(${elapsed}s/${cap}s)"
+          fi
           if grep -qx "$n" "$known"; then
             if [ "$rc" = "0" ]; then
-              echo "::notice title=$n::$n passes now and is still on known-failing.txt"
-              newly_green="$newly_green $n"
+              echo "::notice title=$label::$label passes now and $n is still on known-failing.txt"
+              newly_green="$newly_green $label"
             else
               # SHOW THE DEBT ITS OWN FAILURE. A listed sim used to fail in total silence, which
               # makes every entry on that list undiagnosable from CI: the only way to see why
               # changepassword fails on a runner and passes on a laptop was to take it OFF the
               # list and make the job red on purpose. The group is collapsed, so a quiet night
               # stays quiet and the reason is one click away when somebody wants it.
-              echo "::group::$n (exit $rc, on known-failing.txt)"
-              tail -20 "/tmp/$n.log"
+              if [ "$rc" = "124" ]; then
+                echo "::group::$label (KILLED at its ${cap}s cap, $n is on known-failing.txt)"
+              else
+                echo "::group::$label (exit $rc, $n is on known-failing.txt)"
+              fi
+              tail -20 "/tmp/$label.log"
               echo "::endgroup::"
             fi
+            continue
+          fi
+          # NO RETRY FOR A TIMEOUT, which droprate's note below already says in so many words:
+          # "the retry was timing it out a second time and 'fails twice' was the cap talking".
+          # Running the same sim under the same cap a second time cannot tell you anything the
+          # first run did not, and it spends another whole cap of runner time saying it - up to
+          # forty minutes of it on a night audit1 is the one that hangs. So this is reported
+          # straight, with the number that makes the fix mechanical: how long it was given.
+          #
+          # STILL RED, though. A sim that did not finish was not verified, and an engine change
+          # that puts a real infinite loop in a script looks exactly like this from outside. The
+          # category is the point, not an excuse: red, and named as slow rather than broken.
+          if [ "$rc" = "124" ]; then
+            echo "::group::$label (killed at its ${cap}s cap)"
+            tail -40 "/tmp/$label.log"
+            echo "::endgroup::"
+            echo "::error title=$label::$label was killed at its ${cap}s cap, not failed - raise its cap in this file, or find what hangs"
+            timed_out="$timed_out $label(${cap}s)"
             continue
           fi
           if [ "$rc" != "0" ]; then
@@ -219,33 +385,56 @@ jobs:
             # as an INSTRUMENT: with the dice fixed, a FLAKY line means something still
             # varies between two runs of the same commit - a real bug worth chasing, not
             # noise to absorb. Only failures are retried, so a green run costs nothing.
+            #
+            # AND ONE OF THOSE THREE WAS NOT SAMPLING ANYTHING. droprate failed twice in a
+            # row again, and this time the retry said how: exit 124 both times. It is 288s
+            # on this machine against the 180s cap, so the retry was timing it out a second
+            # time and "fails twice" was the cap talking, not the game being sampled. It has
+            # its own cap below now.
+            #
+            # THE OTHER TWO WERE THE ROLL, and that is settled rather than guessed: the first
+            # seeded run (run 5, written up in run 6's commit) found "CI AND THIS MACHINE AGREE,
+            # SIX FOR SIX - droprate, gwdskirmish, rdreach and fremtrials2 pass in both. It was
+            # never a machine difference, it was the roll." Measured again here since:
+            # gwdskirmish 7s and 18 ok, rdreach 77s and 21 ok.
+            #
+            # So the example above had TWO causes wearing one description. gwdskirmish and
+            # rdreach were sampling the game and the seeding fixed them, exactly as this comment
+            # says. droprate was ALSO fixed by the seeding - and then came back for an unrelated
+            # reason, the cap, which is why its second appearance looked like its first and was
+            # not. A sim that fails twice is worth an exit code before it is worth a diagnosis.
             rc2=0
-            timeout "$cap" npx tsx "$f" > "/tmp/$n.retry.log" 2>&1 || rc2=$?
+            # shellcheck disable=SC2086
+            timeout "$cap" env $extra npx tsx "$f" $args > "/tmp/$label.retry.log" 2>&1 || rc2=$?
             if [ "$rc2" = "0" ]; then
-              echo "::notice title=$n::$n failed then passed on a retry - flaky, not counted"
-              flaky="$flaky $n"
+              echo "::notice title=$label::$label failed then passed on a retry - flaky, not counted"
+              flaky="$flaky $label"
               continue
             fi
-            echo "::group::$n (exit $rc, then $rc2 on retry)"
-            tail -40 "/tmp/$n.retry.log"
+            echo "::group::$label (exit $rc, then $rc2 on retry)"
+            tail -40 "/tmp/$label.retry.log"
             echo "::endgroup::"
-            echo "::error title=$n::$n fails twice and is not on known-failing.txt"
-            newly_red="$newly_red $n"
+            echo "::error title=$label::$label fails twice and is not on known-failing.txt"
+            newly_red="$newly_red $label"
           fi
-        done
+        done < "$work"
         [ -n "$flaky" ] && echo "FLAKY, failed then passed:$flaky"
         [ -n "$newly_green" ] && echo "NOW PASSING, take them off the list:$newly_green"
+        [ -n "$near_cap" ] && echo "NEAR THE CAP, raise it before it bites:$near_cap"
         # WRITTEN DOWN BEFORE THE EXIT, so the notify job can name the sims rather than say
         # "a shard went red, go and read eight logs". The step dies on the next line when
         # anything is newly red, so anything this file is to carry has to be in it by now.
         mkdir -p /tmp/verdict
         {
           [ -n "$newly_red" ] && echo "red:${newly_red}"
+          [ -n "$timed_out" ] && echo "timeout:${timed_out}"
           [ -n "$flaky" ] && echo "flaky:${flaky}"
           [ -n "$newly_green" ] && echo "green:${newly_green}"
+          [ -n "$near_cap" ] && echo "near:${near_cap}"
         } > "/tmp/verdict/shard-${{ matrix.shard }}.txt" || :
-        if [ -n "$newly_red" ]; then
-          echo "NEWLY FAILING:$newly_red"
+        if [ -n "$newly_red" ] || [ -n "$timed_out" ]; then
+          [ -n "$newly_red" ] && echo "NEWLY FAILING:$newly_red"
+          [ -n "$timed_out" ] && echo "TIMED OUT, give them a bigger cap or find the hang:$timed_out"
           exit 1
         fi
         echo "shard ${{ matrix.shard }}: nothing newly broken"
@@ -518,6 +707,10 @@ jobs:
       run: |
         red=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^red://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
         flaky=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^flaky://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+        # SEPARATELY, so the 3am reader knows whether to look for a bug or for a bigger number.
+        # The six that have happened so far all read as "Newly failing" and none of them was.
+        timedout=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^timeout://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
+        near=$(cat verdict/*.txt 2>/dev/null | sed -n 's/^near://p' | tr ' ' '\n' | sed '/^$/d' | sort -u | paste -sd' ' -)
 
         # A shard can also die without ever writing a verdict - the 90 minute timeout, a runner
         # going away, npm ci failing. Saying "no sims newly failing" there would be a lie, so
@@ -541,10 +734,19 @@ jobs:
           # line - seed, bot, tick and the last actions before it - and the command is fixed, so the
           # message can tell whoever reads it exactly what to type.
           body="The sims and the ratchets are fine. **The fuzzing bots are not**: a script fault or a watcher finding that is not meant to exist."$'\n'"Reproduce with \`npx tsx tools/sim/fuzz.ts 3000 99 --gate\` - the run log names it and prints its replay line. The full log is on the run as the **fuzz-log** artifact."
+        elif [ -n "$timedout" ]; then
+          # ITS OWN TITLE AND COLOUR, because "Nightly sims failed" in amber-red is the thing
+          # that sent somebody looking for a broken quest six times over. Nothing failed a check
+          # on a night like this; a number in this file is too small.
+          title="Nightly sims: out of time"
+          colour=15105570
+          body="No sim failed a check. One or more ran out of time instead, which is usually a cap to raise and not a bug."
         else
           body="No shard reported a failing sim, so a shard died before it could - a timeout, the install, or the content checkout."
         fi
+        [ -n "$timedout" ] && body="${body}"$'\n'"Killed at its cap (not a failing check): **${timedout}** - each is the cap it was given. Time it, then put it in a bigger bucket in sims.yml - or find what hangs, if it is not simply slow."
         [ -n "$flaky" ] && body="${body}"$'\n'"Flaky (failed, then passed on a retry): **${flaky}** - the dice are seeded, so this should never happen and means something still varies between two runs of one commit."
+        [ -n "$near" ] && body="${body}"$'\n'"Passed, but close to the cap: **${near}** - these are the next ones to be killed on a slow runner."
 
         # jq builds the JSON so a sim name or a message can never break the payload.
         jq -n --arg body "$body" --arg url "$RUN_URL" --arg trigger "$TRIGGER" --arg sha "${SHA:0:7}" \

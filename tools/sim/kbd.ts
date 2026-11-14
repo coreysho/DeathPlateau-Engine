@@ -54,7 +54,16 @@ console.log("\n== and in a real fight it uses its own bite, not the 377 dragon's
         H.tick(1);
         H.clearLogs();
         H.attackNpc(p, npc);
-        for (let t = 0; t < 40; t++) {
+        // LONG ENOUGH THAT THE DICE DO NOT DECIDE IT. ~kbd_random_attack rolls random(3) and only
+        // one of its three faces is the bite, and the dragon acts once every five ticks
+        // (%npc_action_delay = add(map_clock, 5) on every branch), so a forty-tick fight was about
+        // seven attacks - a one-in-seventeen chance of never rolling a melee at all and failing a
+        // check about an animation the dragon simply never got round to playing. That is what went
+        // red in the nightly on a content commit that touched nothing in this file: the dice moved,
+        // the dragon did not. At fifty attacks a false failure is (2/3)^50, and the extra samples
+        // make the "never the 377 dragon's" check below stronger rather than weaker. Ticks are
+        // cheap - this is the same fight, watched for long enough to mean something.
+        for (let t = 0; t < 250; t++) {
             H.tick(1);
             p.levels[3] = 99;
             if (npc.levels[3] < 150) npc.levels[3] = 240;

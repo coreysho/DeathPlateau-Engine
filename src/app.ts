@@ -15,6 +15,7 @@ import BotManager from '#/engine/bot/BotManager.js';
 import DeadOps from '#/engine/script/DeadOps.js';
 import ScriptCoverage from '#/engine/script/ScriptCoverage.js';
 import ScriptFaults from '#/engine/script/ScriptFaults.js';
+import { MarketFeed } from '#/server/market/MarketFeed.js';
 import VoteService from '#/engine/vote/VoteService.js';
 import VoteSites from '#/engine/vote/VoteSites.js';
 
@@ -54,6 +55,9 @@ if (Environment.NODE_MIN_STAFF_LEVEL > 0) {
 // World.start, because the login and startup scripts run inside it and a fault there is exactly the
 // kind nobody is watching for. Does nothing at all unless NODE_SCRIPT_FAULTS is set.
 ScriptFaults.init();
+// custom (2026-11-09) - the public market feed. Reads its webhook once and is off without
+// one, so this costs nothing on a world that has not configured it.
+MarketFeed.init();
 
 // custom (2026-10-27) - read the voting sites now rather than the first time somebody talks to the
 // Vote clerk, so a mistyped sites.json is a line in the boot log and not a surprise in front of a

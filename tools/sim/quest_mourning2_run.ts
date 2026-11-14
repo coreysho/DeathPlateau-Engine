@@ -249,15 +249,50 @@ const m: Manifest = {
         { has: 'mourning_crystal_new_sample' },
         { hasnt: 'mourning_crystal_sample' },
 
-        { note: 'THE LIGHT ITSELF IS DELEGATED, and it is the only thing that is. Five mirrors, two' },
-        { note: 'of them tilted, send the beam from the top-floor entry pillar out of the hole in the' },
-        { note: 'west wall: templesolve.ts finds the route, templelight.ts drives the colours along' },
-        { note: 'it, audit2.ts mourning2 places the real mirrors and takes the stage to lit, and' },
-        { note: 'templeverticals.ts proves the beam can be routed to each of the twelve doors in the' },
-        { note: 'colour that door asks for - mourning_door_1_b included, which was missing from that' },
-        { note: 'list until today and is the only way to the Death Altar. Setting the door varbits is' },
-        { note: 'what ~m2_doors does once the beams are drawn.' },
-        { setvar: 'mourning_quest_main', to: 40, why: '^mt_lit - light out of the west wall' },
+        // THE LIGHT, WALKED. This was a setvar to ^mt_lit under a note saying the whole thing was
+        // delegated - templesolve.ts finds the route, audit2.ts places the mirrors - which left
+        // the helper with no steps at all for the puzzle this quest is REMEMBERED for.
+        //
+        // The arrangement is audit2's, which proves it: five mirrors, two of them tilted, sending
+        // the beam from the top-floor entry pillar out of the hole in the west wall. 3_15 is left
+        // empty on purpose - the beam goes straight through it.
+        //
+        // The teleports between pillars stay. They are four corners of a building the size of a
+        // town and the walk between them is not this quest's subject; the helper drops them and
+        // keeps the notes above each one, which is what a player reads.
+        { note: 'wiki step 7b: the parts chest, for the two mirrors the route needs beyond the kit' },
+        { setpos: [1858, 4614, 0], why: 'to the chest on the bottom floor' },
+        { loc: 'mourning_temple_light_parts_4_closed', at: [1858, 4613], why: 'open it' },
+        { loc: 'mourning_temple_light_parts_4_open', at: [1858, 4613], why: 'two more mirrors and the blue crystal' },
+        { has: 'mourning_mirror', n: 6 },
+
+        { note: 'wiki step 7c: the entry pillar on the top floor - flat, turning the beam south to west' },
+        { setpos: [1915, 4614, 2], why: 'to the top-floor entry pillar' },
+        { useLoc: 'mourning_temple_pillar_3_16', at: [1915, 4613], obj: 'mourning_mirror', why: 'a mirror in it' },
+
+        { note: 'the next pillar west is left EMPTY - the beam goes straight through it' },
+
+        { note: 'west again: flat, a quarter turn, west to north' },
+        { setpos: [1860, 4614, 2], why: 'to the west end of the top floor' },
+        { useLoc: 'mourning_temple_pillar_3_13', at: [1860, 4613], obj: 'mourning_mirror', why: 'a mirror in it' },
+        { useLoc: 'mourning_temple_pillar_3_13', at: [1860, 4613], obj: 'mourning_mirror', why: 'turned a quarter' },
+
+        { note: 'north: flat, two quarters, north to east' },
+        { setpos: [1860, 4640, 2], why: 'to the north-west pillar' },
+        { useLoc: 'mourning_temple_pillar_3_8', at: [1860, 4639], obj: 'mourning_mirror', why: 'a mirror in it' },
+        { useLoc: 'mourning_temple_pillar_3_8', at: [1860, 4639], obj: 'mourning_mirror', why: 'turned a quarter' },
+        { useLoc: 'mourning_temple_pillar_3_8', at: [1860, 4639], obj: 'mourning_mirror', why: 'and another' },
+
+        { note: 'and the first tilt: east into the shaft, which is the only way down a floor' },
+        { setpos: [1881, 4640, 2], why: 'to the shaft pillar' },
+        { useLoc: 'mourning_temple_pillar_3_a', at: [1881, 4639], obj: 'mourning_mirror', why: 'a mirror in it' },
+        { loc: 'mourning_temple_pillar_3_a', at: [1881, 4639], op: 1, picks: [3, 2], why: 'tilt it down' },
+
+        { note: 'wiki step 7d: the bottom of the shaft, tilted the other way - a falling beam goes west' },
+        { setpos: [1881, 4640, 0], why: 'down to the bottom floor, under the shaft' },
+        { useLoc: 'mourning_temple_pillar_1_b', at: [1881, 4639], obj: 'mourning_mirror', why: 'a mirror in it' },
+        { loc: 'mourning_temple_pillar_1_b', at: [1881, 4639], op: 1, picks: [2, 2], why: 'tilt it up, and the light leaves the west wall' },
+        { stage: 40 },
 
         { note: 'wiki step 8: back in, and all the way down to the west end again - Thorgel the dwarf' },
         { note: 'has been sitting by the Death Altar for eleven years with a list instead of a' },

@@ -62,3 +62,6 @@ public/
 # tools/sim/opsweep-baseline.txt, which is a ratchet and IS tracked.
 data/fuzz-findings.jsonl
 data/dead-ops.jsonl
+# python leaves these beside any script you import or compile; tools/server has one now
+__pycache__/
+*.pyc

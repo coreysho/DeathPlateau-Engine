@@ -11,7 +11,36 @@ await H.boot();
 H.loginOrder();
 
 const want = process.argv.slice(2);
-const run = (name: string) => want.length === 0 || want.includes(name);
+// AND SAY HOW LONG EACH SECTION TOOK. This sim is thirteen quests and the slowest thing in the
+// suite; "audit1 timed out" says nothing about which of them to look at, and the cap in
+// .github/workflows/sims.yml has to be set from a measurement rather than a guess. One line per
+// section at the end, worst first.
+const sectionTimes: [string, number][] = [];
+let sectionStart = Date.now();
+let sectionName = '';
+const run = (name: string) => {
+    if (sectionName) {
+        const ms = Date.now() - sectionStart;
+        sectionTimes.push([sectionName, ms]);
+        // PRINTED AS IT GOES, not only in the summary: a run killed at its cap never reaches the
+        // summary, and the run that gets killed is the one whose timings are wanted.
+        console.log(`  (${sectionName} took ${Math.round(ms / 1000)}s)`);
+    }
+    sectionName = '';
+    if (want.length !== 0 && !want.includes(name)) return false;
+    sectionName = name;
+    sectionStart = Date.now();
+    return true;
+};
+function reportSectionTimes() {
+    if (sectionName) sectionTimes.push([sectionName, Date.now() - sectionStart]);
+    sectionName = '';
+    console.log('');
+    console.log('SECONDS PER SECTION, worst first');
+    for (const [name, ms] of [...sectionTimes].sort((a, b) => b[1] - a[1])) {
+        console.log(`  ${String(Math.round(ms / 1000)).padStart(5)}s  ${name}`);
+    }
+}
 
 /** The quest list row's journal, as text. */
 function journal(p: Player, com: string): string {
@@ -120,6 +149,10 @@ if (run('mourning')) {
     const p = player('mourn1', 2292, 3147);
     H.setVar(p, 'roving_elves_quest', 10);
     H.setVar(p, 'biohazard', 16); // Roving Elves -> Regicide -> Underground Pass -> Biohazard
+    // AND PLAGUE CITY, which the chain above already implies and this did not set. It is not
+    // decoration: Elena's door is [oploc1,elenadoor2] gated on ^elena_complete, and her door is
+    // the only thing that spawns the elena2_vis this section talks to twice.
+    H.setVar(p, 'elenaquest', 29); // ^elena_complete
     const start = qp(p);
     talk(p, 'roving_islwyn');
     check('Islwyn starts it', H.getVar(p, 'mourning_quest'), 1);
@@ -159,7 +192,13 @@ if (run('mourning')) {
     op(p, 2035, 4629, 'mourning_gnome_rack', 1);
     check('the gnome on the rack: stage 5', H.getVar(p, 'mourning_quest'), 5);
 
-    talk(p, 'elena2');
+    // HER DOOR IS THE STEP, see the note in quest_mourning_run.ts: elena2 is an unresolved
+    // multinpc with no op, and doors.rs2 npc_adds the elena2_vis a player actually talks to.
+    p.teleport(2592, 3341, 0);
+    H.tick(2);
+    op(p, 2592, 3339, 'elenadoor2', 1);
+    H.tick(12);
+    talk(p, 'elena2_vis');
     check('Elena gives the sieve: stage 6', [H.getVar(p, 'mourning_quest'), H.invCount(p, 'mourning_sieve')], [6, 1]);
     p.teleport(2474, 3362, 0);
     H.tick(2);
@@ -242,7 +281,12 @@ if (run('mourning')) {
         [H.getVarBit(p, 'mourning_sheep_red'), H.getVarBit(p, 'mourning_sheep_green'), H.getVarBit(p, 'mourning_sheep_blue'), H.getVarBit(p, 'mourning_sheep_yellow'), H.getVar(p, 'mourning_quest')],
         [1, 1, 1, 1, 12]
     );
-    talk(p, 'elena2');
+    // And again, because npc_add gives her 200 ticks and this is long past them.
+    p.teleport(2592, 3341, 0);
+    H.tick(2);
+    op(p, 2592, 3339, 'elenadoor2', 1);
+    H.tick(12);
+    talk(p, 'elena2_vis');
     check('Elena has seen them: stage 13', H.getVar(p, 'mourning_quest'), 13);
     H.give(p, 'mourning_teleport_crystal_4'); // (the sim emptied the pack before the HQ)
     held(p, 'mourning_teleport_crystal_4', 1);
@@ -625,16 +669,33 @@ if (rfd) {
     check('the three wise monkeys give the recipe: stage 2', V(p, 'hundred_ilm_quest'), 2);
     p.teleport(2697, 2784, 0);
     H.tick(2);
-    // A GORILLA AND A ROPE, which this used to do with neither. hundred_monkey.rs2 added both after
-    // a play report - "it auto used rope didnt have in inv, and didnt need to be a gorilla" - so the
-    // haul now asks ~mm_greegree_form for the worn greegree's own param and wants a rope in the bag.
-    // Two clicks with empty hands get the refusal message and no banana, which is what put this sim
-    // on known-failing.txt.
-    H.equip(p, { rhand: 'mm_monkey_greegree_for_normal_gorilla' });
+    // A ROPE AND A GORILLA, because the content asks for both and this did not. hundred_monkey.rs2
+    // was changed after a player reported "it auto used rope didnt have in inv, and didnt need to
+    // be a gorilla": [oploc1,loc_12610] now reads ~mm_greegree_form and refuses anything that is
+    // not a gorilla, then refuses again without a rope. Both refusals are a mesbox and a return,
+    // so the tree simply never bent and the banana was never there to pick - which is what this
+    // check, and quest_hundred_run's step 254, have been reporting ever since.
     H.give(p, 'rope');
+    H.equip(p, { rhand: 'mm_monkey_greegree_for_normal_gorilla' });
     op(p, 2696, 2785, 'loc_12610', 1);
     op(p, 2696, 2785, 'loc_12610', 1);
     check('the crown hauled down: a red banana', H.invCount(p, 'hundred_ilm_red_banana'), 1);
+    // AND PUT THE GREEGREE DOWN AGAIN. Wearing it transmogrifies the player into a gorilla
+    // (p_transmogrify, which is just player.npcId), and a gorilla gets no answer out of a range:
+    // the roast below produced no message at all until this went in. Taking it off in game runs
+    // ~on_unequip -> ~mm_greegree_removed -> ~mm_become_human, and the two halves of that are
+    // the worn slot and npcId, so both are cleared here.
+    //
+    // AND THE SCIMITAR BACK IN THAT HAND. Equipping the greegree displaced it, and clearing the
+    // slot left the player bare-fisted for the rest of the quest - including the Culinaromancer's
+    // five minions and the Gelatinnoth Mother. That is the whole of why her fight was lost: she
+    // ended 1400 ticks on 115 and then 67 of her 190 hitpoints (two runs), which is a fist's
+    // damage, not a rune scimitar's.
+    p.invSet(InvType.WORN, -1, 0, 3 /* righthand */);
+    (p as unknown as { npcId: number }).npcId = -1;
+    H.tick(1);
+    H.equip(p, { rhand: 'rune_scimitar' });
+    H.tick(1);
     // On foot, the 2006 way: from inside Marim's gate to the temple, down its trapdoor into the crypt,
     // through the crypt to the nut cave's crack (loc_12617), and back up the rope. Monkey Madness wires
     // the trapdoor and the rope (quest_mm/scripts/mm_ladders.rs2).
@@ -676,14 +737,61 @@ if (rfd) {
     check('the snake stuffed', H.invCount(p, 'hundred_ilm_correctly_stuffed_snake'), 1);
     p.teleport(3230, 3197, 0);
     H.tick(2);
-    useOn(p, 3230, 3196, 'range', 'hundred_ilm_correctly_stuffed_snake');
+    // THE ROAST IS A COIN FLIP AND THE RANGE NEEDS TICKS, which is two reasons this step gave
+    // the plinth below it nothing to hand over. cooking_generic_stuffed_snake is
+    // successchance 500,500 - half of them burn, at any Cooking level - and a1lib's useOn
+    // returns as soon as it has set the interaction, where questrun's useLoc ticks the world
+    // again afterwards. One snake, one click, no ticks: the plinth then threw "not carrying
+    // hundred_ilm_cooked_stuffed_snake" and named the plinth for the range's miss.
+    //
+    // Spare snakes and cook until one survives, which is what a player does with a fifty-fifty.
+    // ONE AT A TIME, because more than one opens the make-x panel and this has no pick for it.
+    // questrun's useLoc passes its picks into useOn for exactly that reason; quest_hundred_run
+    // roasts the same snake with no picks at all and works, because it is carrying one.
+    for (let a = 0; a < 8 && H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') < 1; a++) {
+        // A LEFTOVER DELAY OR AN OPEN BOX EATS THE CLICK, silently. Cooked on its own this works
+        // first time - one snake in, one roasted out - so what stops it here is the state this
+        // audit arrives in after eighty steps, not the range.
+        for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+        (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+        p.clearPendingAction();
+        H.tick(1);
+        if (H.invCount(p, 'hundred_ilm_correctly_stuffed_snake') < 1) H.give(p, 'hundred_ilm_correctly_stuffed_snake', 1);
+        H.mesgs.length = 0;
+        useOn(p, 3230, 3196, 'range', 'hundred_ilm_correctly_stuffed_snake');
+        H.tick(8);
+        if (a === 0 && H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') < 1) {
+            console.log(`    the range said nothing useful: at ${p.x},${p.z} lvl${p.level}, [${H.mesgs.map(m => m.text).join(' | ')}]`);
+        }
+    }
+    check('the stuffed snake roasts on a range', H.invCount(p, 'hundred_ilm_cooked_stuffed_snake') >= 1, true);
     plinth('hundred_monkey_base', 1865, 5319, 'hundred_ilm_cooked_stuffed_snake');
     check('King Awowogei is freed', tally(p), 9);
 
     console.log('RECIPE FOR DISASTER - the Culinaromancer');
     const start = qp(p);
-    talk(p, 'hundred_aris', [1]);
+    // AND THE SAME SWALLOWED CLICK AS THE RANGE ABOVE, for the same reason. Asking Aris to send
+    // you in is one op and one pick, and after a hundred and fifty checks of this audit it does
+    // nothing at all often enough to matter: the player simply stays on level 0 and the arena
+    // check reads [0,true] - the tile is fine, the player never went. Nothing about Aris or the
+    // arena is wrong; quest_hundred_run drives the same dialogue with tries: 3 on its talk step
+    // and gets there. So clear whatever ate the last one and ask again, which is what a player
+    // does, and stop as soon as the floor changes.
+    for (let a = 0; a < 4 && p.level !== 2; a++) {
+        if (a > 0) {
+            for (let w = 0; w < 12 && (p as unknown as { delayed: boolean }).delayed; w++) H.tick(1);
+            (p as unknown as { closeModal: (c?: boolean) => void }).closeModal(false);
+            p.clearPendingAction();
+            H.tick(1);
+        }
+        talk(p, 'hundred_aris', [1]);
+        H.tick(2);
+    }
     check('Aris puts you in the arena, a walkable tile', [p.level, walkable(2, p.x, p.z)], [2, true]);
+    // THE SETUP, NAMED, not the consequence. Every fight below is a claim about the minions and
+    // none of them means anything if the player walked in bare-fisted - which is exactly what
+    // happened once already, and what it reported was "the Gelatinnoth Mother does not die".
+    check('  the player is holding the rune scimitar for all of this', H.wornName(p, 3), 'rune_scimitar');
     const order = ['hundred_minion1', 'hundred_minion2', 'hundred_minion3', 'hundred_minion4', 'hundred_minion5_air', 'hundred_culinaromancer_final'];
     for (const [i, name] of order.entries()) {
         let npc = H.npcNear(name, p.x, p.z, 2);
@@ -1364,17 +1472,34 @@ if (run('marim')) {
     console.log("MARIM'S GATE - the way to the three wise monkeys");
     const p = player('marim1', 2802, 2705);
     check('the village is walled off from the Ape Atoll landing', connected(0, 2802, 2705, 2788, 2794, 200), false);
+    // AND THE GATE DOES NOT LET A HUMAN THROUGH ANY MORE, which this block's own comment used to
+    // say it did. The jail has been built since (^mm_jail_cell, 2771,2794): [label,mm_marim_gate]
+    // reads ~mm_is_monkey and sends anybody else to @mm_jail_arrest, which is the quest's own way
+    // of getting you inside the walls. The old pair of checks here walked a human into it and then
+    // asked whether the three wise monkeys were reachable FROM THE CELL - a twenty-one tile pocket
+    // behind a door that wants a lockpick - and reported Marim's geography as broken. Worse, the
+    // check above them passed on the way in: the cell is north of the gate too, so "p.z > 2766"
+    // is true of a player who has just been arrested. The cell's own three checks are audit0's.
     p.teleport(2720, 2764, 0);
     H.tick(2);
-    // Monkey Madness's gate (mm_stage3.rs2) lets anyone through - you arrive a human and have to reach
-    // Garkor before you have a greegree; the elder guards at the palace are what stop a human.
+    let said = H.mesgs.length;
     op(p, 2719, 2766, 'mm_bamboo_largedoor', 1);
-    check('through the gate', [p.z > 2766, walkable(0, p.x, p.z)], [true, true]);
-    check('  and on to the three wise monkeys and the banana tree', [connected(0, p.x, p.z, 2788, 2794, 200), connected(0, p.x, p.z, 2697, 2784, 200)], [true, true]);
-    op(p, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
-    check('  and back out', p.z < 2766, true);
+    check('a human at the gate is arrested, not let through', [at(p), H.mesgs.slice(said).some(m => m.who === p.username)], [[2771, 2794, 0], true]);
+    // and a monkey walks in, which is what the greegree is for
+    const q = player('marim2', 2720, 2764);
+    // ~mm_is_monkey reads ~mm_greegree_form, which is the mm_transmog_npc param off whatever is
+    // in the right hand - so wearing one is the whole of being a monkey to this gate.
+    H.equip(q, { rhand: 'mm_monkey_greegree_for_normal_monkey' });
+    H.tick(2);
+    said = H.mesgs.length;
+    op(q, 2719, 2766, 'mm_bamboo_largedoor', 1);
+    check('a monkey slips through the gate', [q.z > 2766, walkable(0, q.x, q.z), H.mesgs.slice(said).some(m => m.text.includes('slip through'))], [true, true, true]);
+    check('  and on to the three wise monkeys and the banana tree', [connected(0, q.x, q.z, 2788, 2794, 200), connected(0, q.x, q.z, 2697, 2784, 200)], [true, true]);
+    op(q, 2721, 2766, 'mm_bamboo_largedoor_left', 1);
+    check('  and back out', q.z < 2766, true);
 }
 
 // ==== END
+reportSectionTimes();
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

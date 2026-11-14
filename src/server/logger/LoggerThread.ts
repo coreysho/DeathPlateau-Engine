@@ -56,6 +56,12 @@ async function handleRequests(_parentPort: ParentPort, msg: any) {
             }
             break;
         }
+        case 'input_counts': {
+            if (Environment.LOGGER_SERVER) {
+                await client.inputCounts(msg);
+            }
+            break;
+        }
         // todo: store session's packet traffic for analysis
         default:
             console.error('Unknown message type: ' + msg.type);

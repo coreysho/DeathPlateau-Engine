@@ -1,3 +1,5 @@
+import CategoryType from '#/cache/config/CategoryType.js';
+import { opHeldUAlternate } from '#/engine/script/OpHeldUTrigger.js';
 // Shared helpers for the quest audit sim (audit1.ts): chat driving, loc/npc clicks with real routes,
 // item-on-loc/npc, walkability floods and a dead-op scan over an area.
 import * as H from './harness.js';
@@ -30,9 +32,26 @@ export const check = (what: string, got: unknown, want: unknown) => {
 };
 
 let bucket = 1;
+/**
+ * A logged-in player at a tile, or a throw saying why not.
+ *
+ * THE LOGIN IS CHECKED, because a login that quietly does not happen is indistinguishable from
+ * the game being broken. mmaggro named its players 'human_' + npcName.slice(3, 14), which made
+ * 'human_zombie_monk' out of BOTH mm_zombie_monkey_small and mm_zombie_monkey_large - seventeen
+ * characters of a twelve-character username, and the same seventeen twice. The second login was
+ * refused, and the sim reported it as an Ape Atoll monkey that would not attack a human standing
+ * beside it. Nothing in its output mentioned the player at all.
+ *
+ * Every sim in this directory builds usernames out of whatever it is iterating over, so the check
+ * belongs here rather than in any one of them.
+ */
 export function player(name: string, x: number, z: number, level = 0) {
+    // the colliding-name half of this lives in H.fitName, which makePlayer calls for every sim
     const p = H.makePlayer(name, x, z, bucket++);
     H.tick(1);
+    if (!p.isActive || !p.isValid()) {
+        throw new Error(`"${name}" did not log in at ${x},${z} - isActive ${p.isActive}, isValid ${p.isValid()}` + ' (a duplicate username, or a tile in an unallocated zone)');
+    }
     if (level) p.teleport(x, z, level);
     H.maxOut(p);
     H.clearInv(p);
@@ -124,10 +143,48 @@ export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3
 }
 export const saw = (lines: string[], s: string) => lines.some(l => l.includes(s));
 
-export function findNpc(npcName: string, p: Player): Npc {
-    const npc = [p.level, 0, 1, 2, 3].map(l => H.npcNear(npcName, p.x, p.z, l)).find(n => n);
-    if (!npc) throw new Error('no npc ' + npcName);
-    return npc;
+/**
+ * The nearest npc of a type - and `walking` decides what "nearest" is allowed to mean, because
+ * the two callers of this want opposite things and there is no geometry that serves both.
+ *
+ * THE TELEPORTING CALLER WANTS THE NEAREST ACROSS FLOORS. Captain Bentley is the case: there is
+ * one on each dock, "both this config" - Pirates' Cove up on the ship's deck at 2224,3800 on
+ * LEVEL 2, and Lunar Isle at 2114,3893 on level 0. A player standing on the Cove at 2202,3806 is
+ * 22 tiles from one and 88 from the other, and taking the first FLOOR that had one - p.level,
+ * then 0, 1, 2, 3 - handed back the one 88 tiles away. `talk` teleports to whatever it is given,
+ * so the sim sailed the player across the sea and got the conversation for somebody already on
+ * Lunar Isle, which is exactly what Bentley should say to somebody standing on Lunar Isle.
+ *
+ * THE WALKING CALLER CANNOT CROSS A PLANE AT ALL, so for it the nearest across floors is worse
+ * than useless. The Myreque hideout is the case, and it is the same shape turned inside out:
+ * there is a Veliaf Hurtz in the chamber on plane 3 and another in the same chamber on plane 0,
+ * three tiles away in two dimensions. A player standing on plane 3 was handed the plane-0 one and
+ * walked at it for twenty ticks, and the step reported "3 tiles off" - the smaller, more innocent
+ * of the two numbers - about an npc no route could ever reach. Two quest runs lost themselves
+ * there, one at step 23 and one at step 1.
+ *
+ * So `walking` prefers the player's own plane and only leaves it when that plane has none.
+ */
+export function findNpc(npcName: string, p: Player, walking = false): Npc {
+    const nearestOn = (level: number) => {
+        const npc = H.npcNear(npcName, p.x, p.z, level);
+        return npc ? ([npc, Math.max(Math.abs(npc.x - p.x), Math.abs(npc.z - p.z))] as const) : null;
+    };
+    if (walking) {
+        const here = nearestOn(p.level);
+        if (here) return here[0];
+    }
+    let best: Npc | null = null;
+    let bestD = Infinity;
+    for (const level of [p.level, 0, 1, 2, 3]) {
+        const got = nearestOn(level);
+        if (got && got[1] < bestD) {
+            bestD = got[1];
+            best = got[0];
+        }
+    }
+    if (!best) throw new Error('no npc ' + npcName);
+    return best;
 }
 /** Talk to the nearest npc of a type (any floor), standing next to it first. */
 export function talk(p: Player, npcName: string, picks: (number | string)[] = [], op = 1, teleport = true): string[] {
@@ -226,21 +283,53 @@ export function useHeld(p: Player, useName: string, onName: string, picks: (numb
         [p.lastItem, p.lastUseItem] = [p.lastUseItem, p.lastItem];
         [p.lastSlot, p.lastUseSlot] = [p.lastUseSlot, p.lastSlot];
     };
+    // THE SAME LOOKUP THE ENGINE DOES, which this was three things short of.
+    // (OpHeldUHandler.ts is the original; this used to be a paraphrase of it.)
+    //
+    //   1. It swapped WHETHER OR NOT the lookup found anything, so a miss left last_item and
+    //      last_useitem the wrong way round for everything after it.
+    //   2. It passed objType.category straight in, where the engine resolves it through
+    //      CategoryType.get(...).id first.
+    //   3. And it had no HANDOVER, which is the one that matters. Both halves of a use can
+    //      declare [opheldu,...], only the one clicked second runs, and if that script does not
+    //      know the pair it declines - which ~displaymessage does at all 787 of its "Nothing
+    //      interesting happens." call sites - and the engine then gives the OTHER half a go.
+    //      The engine's own note puts a number on it: a sweep found 963 pairs of items that
+    //      worked one way round only without this.
+    //
+    //      Saradomin's light on a staff of the dead is one of them. Both declare a trigger, the
+    //      staff's is reached first, it declines, and this file stopped there and reported
+    //      "Nothing interesting happens" - so the combine's confirmation box never opened and
+    //      gwdstaves read it as "menus not reached".
     let script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, objType.id, -1);
     if (!script) {
         script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, useObjType.id, -1);
-        swap();
+        if (script) swap();
     }
-    if (!script && objType.category !== -1) script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, objType.category);
-    if (!script && useObjType.category !== -1) {
-        script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, useObjType.category);
-        swap();
+    const objCategory = objType.category !== -1 ? CategoryType.get(objType.category) : null;
+    if (!script && objCategory) script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, objCategory.id);
+    const useObjCategory = useObjType.category !== -1 ? CategoryType.get(useObjType.category) : null;
+    if (!script && useObjCategory) {
+        script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.OPHELDU, -1, useObjCategory.id);
+        if (script) swap();
     }
     if (!script) {
         p.messageGame('Nothing interesting happens.');
         return [];
     }
+    const anyP = p as unknown as { opheldUHandoverAvailable: boolean; opheldUHandoverAsked: boolean; activeScript: unknown };
+    anyP.opheldUHandoverAvailable = opHeldUAlternate(p) !== null;
+    anyP.opheldUHandoverAsked = false;
     p.executeScript(ScriptRunner.init(script, p), true);
+    anyP.opheldUHandoverAvailable = false;
+    if (anyP.opheldUHandoverAsked) {
+        anyP.opheldUHandoverAsked = false;
+        const other = opHeldUAlternate(p);
+        if (other && !anyP.activeScript) {
+            swap();
+            p.executeScript(ScriptRunner.init(other, p), true);
+        }
+    }
     return drive(p, picks);
 }
 export function op(p: Player, x: number, z: number, locName: string, n = 1, picks: (number | string)[] = []) {

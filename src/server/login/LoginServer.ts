@@ -116,12 +116,21 @@ async function updateHiscores(account: { id: number; staffmodlevel: number; bann
     // so 3 and above is exactly the set of people who can award themselves an item or a level, and
     // exactly the set that must not appear on a board. (Owner, 2 November.)
     //
-    // 2 and below stay on. A super-moderator has getcoord, tele, teleto and setvis; a moderator has
-    // ban, mute and kick. None of those fabricates experience, a kill or an item. Teleporting
-    // everywhere is a convenience and worth knowing about, but it is not the same kind of thing as
-    // typing yourself a level, and excluding somebody for holding the ban hammer would be punishing
-    // them for helping.
-    if (account.staffmodlevel >= 3) {
+    // ALL STAFF, NOT JUST THE ONES WHO COULD CHEAT (changed 2026-11-05, for the launch wipe).
+    //
+    // This used to stop at 3 and the reasoning was sound on its own terms: a moderator has ban,
+    // mute and kick and a super-moderator has tele and setvis, none of which fabricates a level,
+    // and excluding somebody for holding the ban hammer punishes them for helping.
+    //
+    // The wipe is what changes it. Staff keep their characters when everybody else starts again,
+    // so a moderator on the boards is not ranked against the players - they are ranked on months
+    // of progress from before the server launched, which nobody else was allowed to keep. The
+    // first logout after a wipe would put them straight back on top, because these rows are
+    // DERIVED from the save and rebuilt every time it is written.
+    //
+    // So: no staff on the boards at all. If a staff member wants to be ranked, the way to do it is
+    // the way everybody else does - a character that started when theirs did.
+    if (account.staffmodlevel > 0) {
         return;
     }
 
@@ -525,6 +534,8 @@ export default class LoginServer {
                                             response: 2,
                                             account_id: account.id,
                                             staffmodlevel: account.staffmodlevel,
+                                            veteran: account.veteran,
+                                            helper: account.helper,
                                             muted_until: account.muted_until,
                                             save: save.toString('base64'),
                                             members: account.members,
@@ -539,6 +550,8 @@ export default class LoginServer {
                                             response: 2,
                                             account_id: account.id,
                                             staffmodlevel: account.staffmodlevel,
+                                            veteran: account.veteran,
+                                            helper: account.helper,
                                             muted_until: account.muted_until,
                                             members: account.members,
                                             messageCount: 0,
@@ -598,6 +611,8 @@ export default class LoginServer {
                                             response: 4,
                                             account_id: account.id,
                                             staffmodlevel: account.staffmodlevel,
+                                            veteran: account.veteran,
+                                            helper: account.helper,
                                             muted_until: account.muted_until,
                                             messageCount: 0,
                                             token: await savedLogin()
@@ -618,6 +633,8 @@ export default class LoginServer {
                                         response: 0,
                                         account_id: account.id,
                                         staffmodlevel: account.staffmodlevel,
+                                        veteran: account.veteran,
+                                        helper: account.helper,
                                         save: save.toString('base64'),
                                         muted_until: account.muted_until,
                                         members: account.members,

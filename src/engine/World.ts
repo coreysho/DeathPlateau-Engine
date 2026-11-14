@@ -76,7 +76,7 @@ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
 import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
 import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
 import { filteredEventTypes, groupedEventTypes } from '#/server/logger/WealthEventType.js';
-import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isPlayerLoginResponse, isPlayerLogoutResponse } from '#/server/login/index.d.js';
+import { type GenericLoginThreadResponse, isChangePasswordResponse, isForgetLoginsResponse, isHelperResponse, isPlayerLoginResponse, isPlayerLogoutResponse, isVeteranResponse } from '#/server/login/index.d.js';
 import LoginToken from '#/server/login/LoginToken.js';
 import {
     trackCycleBandwidthInBytes,
@@ -96,7 +96,7 @@ import {
     trackSessionEventsPublished
 } from '#/server/Metrics.js';
 import Environment from '#/util/Environment.js';
-import { fromBase37, toBase37, toSafeName } from '#/util/JString.js';
+import { fromBase37, toBase37, toDisplayName, toSafeName } from '#/util/JString.js';
 import LinkList from '#/datastruct/LinkList.js';
 import Ping from '#/network/game/server/model/Ping.js';
 import { printDebug, printError, printInfo, printWarning } from '#/util/Logger.js';
@@ -472,6 +472,16 @@ class World {
             if (Environment.BUILD_STARTUP) {
                 this.rebuild();
             }
+        }
+
+        // custom (2026-11-04) - SAY SO WHEN NOTHING IS BEING RECORDED. LoggerThread drops every
+        // message it is handed unless LOGGER_SERVER is set, and that flag defaults to false, so a
+        // world can run for months writing no session_log, no wealth events, no player reports and
+        // no input tracking while the logger's own listener prints "Logger server listening" on
+        // every boot and means nothing by it. There is no way to tell from the outside except by
+        // querying a table and finding it empty.
+        if (!Environment.LOGGER_SERVER) {
+            printWarning('LOGGER_SERVER is not set, so NOTHING is being recorded: no session_log, no wealth events, no player reports, no input tracking or counts. Set LOGGER_SERVER=true in .env to keep an audit trail.');
         }
 
         printInfo(kleur.green().bold('World ready'));
@@ -1180,6 +1190,19 @@ class World {
                     Uint8Array.from([
                         2,
                         // the rank the client echoes its own lines with - see ChatCrown
+                        //
+                        // NO VETERAN HERE, and it is not an oversight. The client keeps this byte
+                        // as Client.staffmodlevel and gates three moderator things on it: the
+                        // "Report abuse" option on a chat line and the mute option on the report
+                        // interface (>= 1), and ::clientdrop / ::lag / ::prefetchmusic (>= 2).
+                        // Crown 7 would pass all of them, so a veteran would be offered a
+                        // moderator's menu. The server would refuse whatever they clicked, but
+                        // being shown it is wrong on its own.
+                        //
+                        // The veteran emblem reaches the client in the appearance instead
+                        // (Player.chatIcons), which is where every other player's icons come from
+                        // and which carries no rights with it. This byte is only a fallback for
+                        // the local player's own lines before an appearance has been read.
                         chatCrown(player.staffModLevel),
                         1 // mouse tracking can only be enabled on login
                     ])
@@ -1241,6 +1264,7 @@ class World {
                 continue;
             }
             ClanChat.onLogin(player);
+            this.veteranCape(player, player.veteran);
 
             if (this.shutdownTick != -1) {
                 player.write(new UpdateRebootTimer(this.shutdownTick - this.currentTick));
@@ -2034,6 +2058,9 @@ class World {
             type: 'private_message',
             username: player.username,
             staffLvl: player.staffModLevel,
+            // The icon to draw, which is NOT the staff level: Veteran and Helper are not staff
+            // levels, and the friend server's own staff bookkeeping reads staffLvl. Two fields.
+            crown: chatCrown(player.staffModLevel, player.veteran, player.helper),
             pmId: (Environment.NODE_ID << 24) + ((Math.random() * 0xff) << 16) + this.pmCount++,
             target: targetUsername37,
             message: message,
@@ -2349,7 +2376,7 @@ class World {
                 return;
             }
 
-            const { username, lowMemory, reconnecting, staffmodlevel, muted_until, members, messageCount } = msg;
+            const { username, lowMemory, reconnecting, staffmodlevel, veteran, helper, muted_until, members, messageCount } = msg;
             const save = msg.save ?? new Uint8Array();
 
             // if (reconnecting && !this.getPlayerByUsername(username)) {
@@ -2375,6 +2402,8 @@ class World {
                 // the player has no outbound stream yet.
                 player.loginToken = msg.token ?? null;
                 player.staffModLevel = staffmodlevel ?? 0;
+                player.veteran = (veteran ?? 0) > 0;
+                player.helper = (helper ?? 0) > 0;
                 player.lowMemory = lowMemory;
                 player.muted_until = muted_until ? new Date(muted_until) : null;
                 player.members = members;
@@ -2446,6 +2475,75 @@ class World {
             } else {
                 player.messageGame(`Cancelled ${count} saved logins. You will have to type your password next time.`);
             }
+        } else if (isVeteranResponse(msg)) {
+            const { staff, username, result, veteran } = msg;
+            this.veteranRequests.delete(username);
+
+            // A player who is online gets it now rather than on their next login. The icon rides
+            // the appearance block, so rebuilding that is the whole of showing it - without this
+            // the account row is right and nobody can see it until they relog.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.veteran = veteran;
+                // Only when an appearance has been built already. buildAppearance(-1) reads no
+                // worn inventory at all, so rebuilding one that early would send everyone a
+                // player with no equipment on; a player who has not got that far yet picks the
+                // flag up from the first build instead, which is as soon as anyone could see it.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                this.veteranCape(target, veteran);
+                target.messageGame(veteran ? 'You have been given the Veteran rank, for helping test the server.' : 'Your Veteran rank has been removed.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`veteran: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`veteran: ${name} could not be changed right now. Please try again.`);
+            } else if (veteran) {
+                who.messageGame(`veteran: ${name} now has the Veteran rank.`);
+            } else {
+                who.messageGame(`veteran: ${name} no longer has the Veteran rank.`);
+            }
+        } else if (isHelperResponse(msg)) {
+            const { staff, username, result, helper } = msg;
+            this.helperRequests.delete(username);
+
+            // Online players get it now rather than on their next login: the icon rides the
+            // appearance block, so rebuilding that is the whole of showing it. No cape and no
+            // powers to hand over - the icon IS the rank.
+            const target = this.getPlayerByUsername(username);
+            if (result === 'ok' && target) {
+                target.helper = helper;
+                // Only once an appearance exists. buildAppearance(-1) reads no worn inventory, so
+                // rebuilding that early would send everyone a player wearing nothing.
+                if (target.appearanceInv !== -1) {
+                    target.buildAppearance(target.appearanceInv);
+                }
+                target.messageGame(helper ? 'You are now a Helper. Thanks for giving other players a hand.' : 'You are no longer a Helper.');
+            }
+
+            const who = this.getPlayerByUsername(staff);
+            if (!who) {
+                return;
+            }
+
+            const name = toDisplayName(username);
+            if (result === 'unknown') {
+                who.messageGame(`helper: there is no account called ${name}.`);
+            } else if (result !== 'ok') {
+                who.messageGame(`helper: ${name} could not be changed right now. Please try again.`);
+            } else if (helper) {
+                who.messageGame(`helper: ${name} is now a Helper.`);
+            } else {
+                who.messageGame(`helper: ${name} is no longer a Helper.`);
+            }
         } else if (isChangePasswordResponse(msg)) {
             const { username, result } = msg;
             this.passwordChanges.delete(username);
@@ -2485,6 +2583,192 @@ class World {
             username: player.username
         });
         return true;
+    }
+
+    // custom (2026-11-06) - ::veteran (ClientCheatHandler). One change at a time per account, the
+    // way a password change is held. Keyed by the account being changed and not by the staff member
+    // running it, so two administrators cannot race on the same name.
+    veteranRequests: Set<string> = new Set();
+    helperRequests: Set<string> = new Set();
+
+    // custom (2026-11-06) - looked up once; -2 means "not looked up yet", which is distinct from
+    // the -1 ObjType.getId returns for a build that does not have the cape in it.
+    private static veteranCapeObj: number = -2;
+
+    /**
+     * custom (2026-11-08) - THE VETERAN CAPE CAN BE FUSED INTO A MAX CAPE, and that is what these
+     * four ids are for. A veteran who fuses theirs owns no veteran_cape afterwards, so the "have
+     * you got one" count below had to learn to see the variant: without it the server read the
+     * fusion as a loss and handed out a free Veteran cape every single login.
+     *
+     * Taking the rank away has to see it too, and cannot simply delete it. The Max cape inside a
+     * variant was earned with a level 99 in every skill that has a cape, and that is not this
+     * rank's to take - so the variant is SPLIT, exactly as a knife splits it in game, and the
+     * player keeps the Max cape and hood they earned.
+     *
+     * The lookups are lazy for the same reason veteranCapeObj's is: ObjType is not loaded when
+     * this class is constructed, and a build without these records answers -1, which every use
+     * below checks for.
+     */
+    private static veteranFuseObjs: number[] | null = null;
+
+    /** veteran_max_cape, veteran_max_hood, max_cape, max_hood - or -1 each, looked up once. */
+    private static veteranFused(): number[] {
+        if (World.veteranFuseObjs === null) {
+            World.veteranFuseObjs = ['veteran_max_cape', 'veteran_max_hood', 'max_cape', 'max_hood'].map((name: string): number => ObjType.getId(name));
+        }
+        return World.veteranFuseObjs;
+    }
+
+    /**
+     * Give a veteran their cape, or take it back from somebody who is no longer one.
+     *
+     * Called at login as well as on the grant, so a cape that was dropped, destroyed or lost on
+     * death costs a relog and nothing else. That is the whole reclaim mechanism: an untradeable
+     * cosmetic that the server hands back is simpler than an npc to collect it from, and there is
+     * nothing to exploit in being given a second copy of something nobody can trade.
+     *
+     * INTO THE BANK BY PREFERENCE. A cape added to a full inventory would fall on the floor -
+     * which is how quest items have been lost here before - and a player logging in has no idea
+     * it is coming. The bank cannot drop it, and the first login after a grant is not a moment to
+     * be rummaging in somebody's backpack.
+     */
+    veteranCape(player: Player, give: boolean): void {
+        if (World.veteranCapeObj === -2) {
+            World.veteranCapeObj = ObjType.getId('veteran_cape');
+        }
+        const obj = World.veteranCapeObj;
+        if (obj === -1) {
+            return;
+        }
+
+        const bank = InvType.getId('bank');
+        const held = [InvType.INV, InvType.WORN, bank].filter(inv => inv !== -1);
+        const count = (what: number): number => (what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0));
+        const [variant, variantHood, maxCape, maxHood] = World.veteranFused();
+
+        // A FUSED CAPE STILL COUNTS AS HAVING ONE. See veteranFuseObjs.
+        const have = count(obj) + count(variant);
+
+        if (!give) {
+            for (const inv of held) {
+                const n = player.invTotal(inv, obj);
+                if (n > 0) {
+                    player.invDel(inv, obj, n);
+                }
+            }
+            const split = this.veteranSplit(player, held, variant, variantHood, maxCape, maxHood);
+            if (have > 0) {
+                player.buildAppearance(player.appearanceInv);
+                player.messageGame(split ? 'Your Veteran cape has been taken back; your Max cape and hood are whole again.' : 'Your Veteran cape has been taken back.');
+            }
+            return;
+        }
+
+        if (have > 0) {
+            return;
+        }
+
+        if (bank !== -1 && player.invFreeSpace(bank) > 0) {
+            player.invAdd(bank, obj, 1);
+            player.messageGame('Your Veteran cape is in your bank.');
+        } else if (player.invFreeSpace(InvType.INV) > 0) {
+            player.invAdd(InvType.INV, obj, 1);
+            player.messageGame('Your Veteran cape has been added to your inventory.');
+        } else {
+            // Nowhere safe to put it. Say so rather than dropping it, and try again next login.
+            player.messageGame('Your Veteran cape could not be given to you - your bank and inventory are both full.');
+        }
+    }
+
+    /**
+     * custom (2026-11-08) - Turn a Veteran max cape back into a Max cape and hood, because the
+     * player is no longer a veteran. This is the knife path in max_cape_variants.rs2, done by the
+     * server: the variant and its hood go, the plain Max cape and hood come back.
+     *
+     * NOTHING IS DESTROYED IF THERE IS NOWHERE TO PUT THE REPLACEMENTS. The variant is left alone
+     * and false is returned, and the next login tries again - veteranCape is called at login with
+     * whatever the account's flag now says - so a player whose bank and inventory are both full
+     * keeps the variant until there is room rather than losing a Max cape to a full bank.
+     *
+     * @returns whether a variant was actually split.
+     */
+    private veteranSplit(player: Player, held: number[], variant: number, variantHood: number, maxCape: number, maxHood: number): boolean {
+        if (variant === -1 || maxCape === -1) {
+            return false;
+        }
+        const total = (what: number): number => (what === -1 ? 0 : held.reduce((n, inv) => n + player.invTotal(inv, what), 0));
+        const fused = total(variant);
+        if (fused < 1) {
+            return false;
+        }
+
+        // Where the replacements go. The bank first, for the same reason the cape itself prefers
+        // it: a full inventory drops things on the floor, and this is not the player's doing. Two
+        // slots per variant, because a cape and a hood both come back.
+        const bank = InvType.getId('bank');
+        const hoods = variantHood === -1 ? 0 : Math.min(fused, total(variantHood));
+        const need = fused + hoods;
+        const where = bank !== -1 && player.invFreeSpace(bank) >= need ? bank : player.invFreeSpace(InvType.INV) >= need ? InvType.INV : -1;
+        if (where === -1) {
+            player.messageGame('Your Veteran max cape could not be split - your bank and inventory are both full.');
+            return false;
+        }
+
+        for (const inv of held) {
+            const n = player.invTotal(inv, variant);
+            if (n > 0) {
+                player.invDel(inv, variant, n);
+            }
+            if (variantHood !== -1) {
+                const h = player.invTotal(inv, variantHood);
+                if (h > 0) {
+                    player.invDel(inv, variantHood, h);
+                }
+            }
+        }
+        player.invAdd(where, maxCape, fused);
+        if (hoods > 0 && maxHood !== -1) {
+            player.invAdd(where, maxHood, hoods);
+        }
+        return true;
+    }
+
+    /** Returns the safe name the request was filed under, or null if one is already in flight. */
+    requestVeteran(staff: string, username: string, veteran: boolean): string | null {
+        // The account table stores the base37 round trip, which is also what ::veteran is likely to
+        // be typed as - "Bob Smith" and "bob_smith" are the same account and both have to find it.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.veteranRequests.has(safeName)) {
+            return null;
+        }
+
+        this.veteranRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_veteran',
+            staff,
+            username: safeName,
+            veteran
+        });
+        return safeName;
+    }
+
+    requestHelper(staff: string, username: string, helper: boolean): string | null {
+        // Same base37 round trip as requestVeteran: "Bob Smith" and "bob_smith" are one account
+        // and ::helper is as likely to be typed either way.
+        const safeName = toSafeName(username);
+        if (safeName.length === 0 || this.helperRequests.has(safeName)) {
+            return null;
+        }
+
+        this.helperRequests.add(safeName);
+        this.loginThread.postMessage({
+            type: 'player_set_helper',
+            staff,
+            username: safeName,
+            helper
+        });
+        return safeName;
     }
 
     requestPasswordChange(player: Player, oldPassword: string, newPassword: string): boolean {
@@ -2545,7 +2829,9 @@ class World {
                 // chat
 
                 const fromPlayer = BigInt(data.username37);
-                const fromPlayerStaffLvl = data.staffLvl;
+                // A world still running the older build sends no crown, so fall back to the staff
+                // level the way this did before - a staff crown rather than no icon at all.
+                const fromPlayerCrown = typeof data.crown === 'number' ? data.crown : chatCrown(data.staffLvl);
                 const pmId = data.pmId;
                 const target = BigInt(data.targetUsername37);
 
@@ -2557,7 +2843,7 @@ class World {
 
                 const chat = data.chat;
 
-                player.write(new MessagePrivate(fromPlayer, pmId, fromPlayerStaffLvl, chat));
+                player.write(new MessagePrivate(fromPlayer, pmId, fromPlayerCrown, chat));
             } else if (opcode === FriendsServerOpcodes.RELAY_MUTE) {
                 const { username, muted_until } = data;
 
@@ -2949,6 +3235,29 @@ class World {
             coord: player.coord,
             offender,
             reason
+        });
+    }
+
+    // custom (2026-11-04) - the session's input counts, once, as it ends. Five integers saying how
+    // much the player did and how much the client reported a person doing it. See
+    // InputTracking.mouseMoves for why that pair is the useful one, and tools/server/botcheck.ts
+    // for what reads them.
+    submitInputCounts(player: Player) {
+        const input = player.input;
+        if (input.userActions === 0 && input.telemetry === 0) {
+            // nothing happened in this session - a connection that logged in and straight back out
+            return;
+        }
+
+        this.loggerThread.postMessage({
+            type: 'input_counts',
+            session_uuid: player.session,
+            timestamp: Date.now(),
+            user_actions: input.userActions,
+            mouse_moves: input.mouseMoves,
+            mouse_clicks: input.mouseClicks,
+            camera_moves: input.cameraMoves,
+            focus_changes: input.focusChanges
         });
     }
 

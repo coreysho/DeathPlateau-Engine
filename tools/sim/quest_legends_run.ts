@@ -250,7 +250,7 @@ const m: Manifest = {
         { note: 'wiki step 12: two gold bars and a hammer make the golden bowl on any ordinary' },
         { note: 'anvil. That is the generic Smithing panel rather than quest logic, so the bowl is' },
         { note: 'handed over here the way the papyrus and the axe were.' },
-        { give: 'goldbowl_empty' },
+        { give: 'goldbowl_empty', how: 'Forge a gold bowl on an anvil from 2 gold bars' },
 
         { note: 'wiki step 13: and Gujuo blesses it - 42 Prayer, and he asks before he does it.' },
         { note: 'He is npc_add-ed with a 500-tick life and wanders off, so every conversation with' },

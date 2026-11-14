@@ -221,7 +221,22 @@ console.log('');
 console.log('THE GATE, WHICH IS WHERE THEY ARE WAITING');
 check('nothing is waiting before you get there', npcsOf(juveTypes).length, 0);
 p.teleport(GATE[0], GATE[1], 0);
-H.tick(20);
+// FROM THE MOMENT HE ARRIVES, because the ambush does not last. Ivan swings a silver sickle at
+// ^m2_ivan_swing_odds (one tick in two) for up to ^m2_ivan_hit, on a three-tick timer, against two
+// juvinates holding 75 and 55 hitpoints - so an armoured, fed Ivan clears both of them inside a
+// couple of hundred ticks, which is the content working as written. Anything that samples him
+// LATER is therefore racing his own sickle: the window in which there is anybody left to bite him
+// is the start of the ambush, not the end. His low-water mark is taken across the whole of it.
+const ivanHpGate = ivan()!.levels[3];
+let ivanLow = ivanHpGate;
+const sample = (n: number) => {
+    for (let i = 0; i < n; i++) {
+        H.tick(1);
+        const iv = ivan();
+        if (iv) ivanLow = Math.min(ivanLow, iv.levels[3]);
+    }
+};
+sample(20);
 const juves = npcsOf(juveTypes);
 check('two juvinates, on the Paterdomus side of Ulizius gate', juves.length, 2);
 // opplayer2 is where they start; [ai_opplayer2,_] turns that into applayer2 as soon as they are in
@@ -234,11 +249,29 @@ check(
 check('  Ivan is still on his feet', ivan() !== null, true);
 said = talkTo(ivan()!);
 check('  and the journal catches up when you ask him about it - an ai_timer cannot write a transmitted varbit', [said.includes('seen two of them die'), v(p, 'myreque_2_quest')], [true, 74]);
-const ivanHp = ivan()!.levels[3];
-const juveHp = juves.map(n => n.levels[3]);
-H.tick(60);
-check('they bite him, which is what they came for', ivan() === null || ivan()!.levels[3] < ivanHp, true);
-check('and the sickle is not for show: he takes some of it back', npcsOf(juveTypes).some((n, i) => n.levels[3] < juveHp[i]) || npcsOf(juveTypes).length < 2, true);
+// BY WHO THEY ARE, NOT BY WHERE THEY SIT IN THE LIST. This recorded the two juvinates' hitpoints
+// into an array and then re-read npcsOf() afterwards and compared BY INDEX - so the moment one of
+// them died, or the world handed the pair back in the other order, it was measuring one juvinate's
+// hitpoints against the other one's starting figure. That reads false both ways round.
+const juveHp = new Map(juves.map(n => [n.nid, n.levels[3]]));
+// AND HE NEEDS LONG ENOUGH TO LAND ONE. Ivan swings on an ordinary weapon speed and has to roll
+// against two vislevel-75 juvinates, so "did he hurt either of them" over sixty ticks is a
+// question about his accuracy, not about his sickle - miss them all and a working escort reads as
+// a broken one. This is what the nightly went red on, with nothing in the quest changed. So it
+// waits for the evidence instead of sampling for it: up to another four hundred ticks, stopping
+// the moment one of them is hurt, and stopping too if Ivan goes down, because a dead escort is a
+// different failure and should not be quietly waited out.
+const hurt = () => {
+    const now = npcsOf(juveTypes);
+    return now.length < 2 || now.some(n => { const was = juveHp.get(n.nid); return was !== undefined && n.levels[3] < was; });
+};
+// AND THE LOW-WATER MARK, NOT WHAT HE ENDS ON: m2_ivan_step feeds him the bread you gave him as
+// soon as he reaches ^m2_ivan_low, so a net hitpoint comparison asks whether the juvinates
+// out-damaged his sandwiches rather than whether they bit him.
+sample(60);
+check('they bite him, which is what they came for', ivanLow < ivanHpGate, true);
+for (let t = 0; t < 400 && !hurt() && ivan() !== null; t++) H.tick(1);
+check('and the sickle is not for show: he takes some of it back', hurt(), true);
 if (ivan()) {
     check('  he eats what you gave him rather than dying on the road', v(p, 'burgh_ivan_food_give'), 3); // the count he eats from lives on him, not here
 }

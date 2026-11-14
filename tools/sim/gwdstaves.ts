@@ -1,3 +1,4 @@
+import CategoryType from '#/cache/config/CategoryType.js';
 // The two God Wars staves and Saradomin's light.
 // Usage: npx tsx tools/sim/gwdstaves.ts   (exit code is the verdict)
 //
@@ -38,10 +39,18 @@ for (const staff of ['staff_of_the_dead', 'staff_of_light']) {
     check(`${staff} strength`, param(staff, 'strengthbonus'), 72);
     check(`${staff} four ticks`, param(staff, 'attackrate'), 4);
     const o = ObjType.get(ObjType.getId(staff));
-    check(`${staff} is a staff, so it autocasts`, o.category, ObjType.get(ObjType.getId('battlestaff')).category);
+    // A BLADED staff, which is its own category and deliberately not a battlestaff's. This
+    // asserted the two matched, which would make the staff of the dead a plain staff - and the
+    // check only ever ran now that the combine above it works, so nobody had seen it fail.
+    // combat.rs2 gives weapon_bladed_staff its own table and player_attackstyles.rs2 handles
+    // `case weapon_staff, weapon_bladed_staff` together, so it is a staff where it counts.
+    check(`${staff} is a bladed staff, which combat handles as a staff`, o.category, CategoryType.getId('weapon_bladed_staff'));
     check(`${staff} one-handed`, [o.wearpos, o.wearpos2], [3 /* righthand */, -1]);
-    // Power of Death is not built, so the bar must not claim it.
-    check(`${staff} claims no special attack`, param(staff, 'specwep'), undefined);
+    // AND IT DOES HAVE ONE NOW. This said "Power of Death is not built, so the bar must not
+    // claim it" and gwd_staves.rs2 builds it: Power of Death and Power of Light, 100% of the
+    // special energy for a minute of halved incoming melee, reached from
+    // [if_button,combat_staff_2:specbar]. The comment outlived the thing it described.
+    check(`${staff} carries its special attack`, param(staff, 'specwep'), 1);
 }
 
 // ---------------------------------------------------------------------------------------------

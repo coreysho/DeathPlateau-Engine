@@ -8,6 +8,7 @@ import { CommandHandlers } from '#/engine/script/ScriptRunner.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import { check, InvTypeValid, ObjTypeValid } from '#/engine/script/ScriptValidators.js';
 import World from '#/engine/World.js';
+import { MarketFeed } from '#/server/market/MarketFeed.js';
 import Environment from '#/util/Environment.js';
 import { toDisplayName } from '#/util/JString.js';
 import { printInfo } from '#/util/Logger.js';
@@ -59,6 +60,25 @@ export function tradingPost(): TradingPost {
             },
             // every notice, online or not, also goes to the player's Discord if they have linked one
             notice: (username, text, offer, items) => World.discordNotify(username, text, offer, items),
+            // custom (2026-11-09) - and the public feed, which is where the NAME and the VALUE
+            // of the lot are worked out: the market deals in obj ids and does not hold ObjType,
+            // and the threshold needs something to compare when a listing has no buyout at all.
+            // A lot's shop value stands in for a price nobody has set.
+            listed: listing => {
+                if (!MarketFeed.enabled) {
+                    return;
+                }
+                const type = ObjType.get(listing.obj);
+                MarketFeed.post({
+                    id: listing.id,
+                    obj: listing.obj,
+                    name: type?.name ?? 'Something',
+                    count: listing.count,
+                    seller: toDisplayName(listing.seller),
+                    buyout: listing.buyout,
+                    value: listing.buyout > 0 ? listing.buyout : (type?.cost ?? 0) * listing.count
+                });
+            },
             now: () => Date.now()
         });
         printInfo(`Trading post open: ${file}`);
