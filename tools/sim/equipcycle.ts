@@ -57,13 +57,26 @@
 // under test may not be the scripts on disk. A full pack is ~20s against ~3s for an incremental one,
 // so the timing says which one happened.
 //
-// WHAT THE FIRST FULL RUN SAID: 1,406 ok, 0 FAIL, 21 untested of 1,427. There is no second
-// duplication among the items a player can wear, and that is now a swept result rather than four
-// hand searches that happened to come back clean. The 21 untested are items that would not go on at
-// all for a maxed player with an empty inventory - bandos_platebody, gilded_dhide_body,
-// dragon_sq_shield_g, dragon_scimitar_or, the two dragonfire shields and the like - which is its own
-// small question (a wear option that refuses a player with every stat and no requirement left to
-// fail) and is left as a question rather than answered here.
+// WHAT THE RUNS HAVE SAID, and the population moved between them, so both numbers are given rather
+// than one stale one:
+//
+//   1,427 objs (label-matched only)   1,406 ok, 0 FAIL, 21 untested
+//   1,431 objs (label + probed)       in progress when this was committed
+//
+// There is no second duplication among the items a player can wear, and that is a swept result
+// rather than four hand searches that happened to come back clean. The 21 untested are items that
+// would not go on at all for a maxed player with an empty inventory - bandos_platebody,
+// gilded_dhide_body, dragon_sq_shield_g, dragon_scimitar_or, the two dragonfire shields and the like
+// - which is its own small question (a wear option that refuses a player with every stat and no
+// requirement left to fail) and is left as a question rather than answered here.
+//
+// WHAT "NO OPTION THAT EQUIPS THEM" MEANS, because it is weaker than it sounds and the first version
+// of this file already overclaimed once. The probe clicks as THIS player: max stats, empty
+// inventory, no quest progress. An option gated behind quest state will not equip for them and is
+// reported as not equipping - which is why only 4 of the 93 were recovered by probing, not the
+// dozen the greegrees and the sled suggest. [opheld2,_mm_greegree] and ~can_ride_sled both want
+// state this player does not have. So the list means "nothing equipped it for a fresh maxed player",
+// and an obj on it may still be perfectly equippable mid-quest.
 //
 // UNTESTED IS REPORTED, NOT HIDDEN. An item that will not go on - a requirement maxOut cannot meet,
 // a handler that wants a quest varp or a place - is counted as untested and the denominator is
@@ -72,6 +85,7 @@
 // of 5 passing with 83 checks unrun.
 import InvType from '#/cache/config/InvType.js';
 import ObjType from '#/cache/config/ObjType.js';
+import { isHiddenOp } from '#/cache/config/OpVisibility.js';
 
 import * as H from './harness.js';
 
@@ -148,6 +162,8 @@ function firstWornSlot(): number {
 type Candidate = { id: number; name: string; op: number };
 const candidates: Candidate[] = [];
 const unwearable: string[] = [];
+const noWearLabel: { id: number; name: string; iop: (string | null)[]; wearpos: number }[] = [];
+let probed = 0;
 
 for (let id = 0; id < ObjType.count; id++) {
     const o = ObjType.get(id);
@@ -163,16 +179,76 @@ for (let id = 0; id < ObjType.count; id++) {
         }
     }
     if (op === -1) {
-        unwearable.push(`${o.debugname} wearpos=${o.wearpos} iop=${JSON.stringify(o.iop)}`);
+        // NOT "unwearable" - "no option SPELLED Wear, Wield or Equip", which is a different thing
+        // and the first version of this file got it wrong. These are probed below by clicking, not
+        // judged by their label.
+        noWearLabel.push({ id, name: o.debugname, iop: [...o.iop], wearpos: o.wearpos });
         continue;
     }
     if (FILTER && !o.debugname.includes(FILTER)) continue;
     candidates.push({ id, name: o.debugname, op });
 }
 
+// ------------------------------------------------------------------ the ones with no wear-ish label
+//
+// MATCHING THREE WORDS WAS THE WRONG TEST, and it took a quest to show it. The first version of this
+// file reported 93 objs as having "a wearpos and no way to get there", on the strength of no iop
+// being spelled Wear, Wield or Equip. That claim is false, and two of the counterexamples are
+// emphatic:
+//
+//   trollromance_toboggon_waxed  iop2=Ride, with [opheld2,...] ~can_ride_sled. Troll Romance's
+//                                slope REQUIRES the sled worn - "You need to have a waxed sled
+//                                equipped!" - so if it truly could not be equipped the quest would
+//                                be unfinishable. It equips fine.
+//   the Monkey Madness greegrees iop2=Hold, answered by a CATEGORY trigger,
+//                                [opheld2,_mm_greegree] @mm_greegree_hold. A per-obj grep does not
+//                                see it either.
+//
+// So the label is not the route and never was. Each of these is now PROBED: click each of its
+// options in turn and see which one puts something in the worn tab. Whatever does is the equip
+// route, whatever it happens to be called, and that obj then goes through the same cycle as the
+// rest. Only the ones where nothing equips are reported, and reported as what they are - an obj
+// with somewhere to go and no option that gets it there.
+//
+// Destructive labels are skipped rather than clicked. Destroy, Drop, Release and the rest would
+// delete the item, the count would come back zero, and the conservation check would call a correct
+// handler a duplication bug. Hidden options are skipped too: no client can send them.
+const DESTRUCTIVE = /^(destroy|drop|release|dismantle|discard|bury|eat|drink|empty|break|smash|dispose)$/i;
+
+/** Click each option in turn; the first that gets something into the worn tab is the equip route. */
+function probeEquipOp(name: string, iops: (string | null)[]): number {
+    for (let i = 0; i < 5; i++) {
+        const label = iops[i];
+        if (!label || isHiddenOp(label) || DESTRUCTIVE.test(label)) continue;
+        stripBare();
+        H.tick(1);
+        H.give(p as never, name, 1);
+        H.tick(1);
+        try {
+            H.opheld(p as never, name, i + 1);
+        } catch {
+            continue; // no trigger for it, or the obj refuses the click: not an equip route
+        }
+        H.tick(2);
+        if (firstWornSlot() !== -1) return i + 1;
+    }
+    return -1;
+}
+
+for (const c of noWearLabel) {
+    if (FILTER && !c.name.includes(FILTER)) continue;
+    const op = probeEquipOp(c.name, c.iop);
+    if (op === -1) {
+        unwearable.push(`${c.name} wearpos=${c.wearpos} iop=${JSON.stringify(c.iop)}`);
+    } else {
+        probed++;
+        candidates.push({ id: c.id, name: c.name, op });
+    }
+}
+
 if (LIST_UNWEARABLE) {
-    console.log(`-- ${unwearable.length} objs have a wearpos and no Wear, Wield or Equip option`);
-    console.log('   (a content question, not a verdict: this section asserts nothing)');
+    console.log(`-- ${unwearable.length} objs have a wearpos and NO option that equips them`);
+    console.log('   (probed by clicking, not judged by label: a content question, asserting nothing)');
     for (const u of unwearable) console.log('   ' + u);
     console.log('');
 }
@@ -185,6 +261,7 @@ const untested: string[] = [];
 const failures: string[] = [];
 
 console.log(`-- ${work.length} wearable objs, ${CYCLES} wear-and-remove cycles each, counting after every step`);
+if (probed) console.log(`   ${probed} of them were found by probing, having no option spelled Wear, Wield or Equip`);
 console.log('');
 
 for (const c of work) {
