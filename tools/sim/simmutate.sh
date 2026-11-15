@@ -64,6 +64,8 @@ rebuild() {
 MUTATIONS=(
 "junglechop|scripts/quests/quest_mm/configs/mm.loc|1050|category=tree|Ape Atoll's jungle tree loses the category that dispatches its Chop-down|mm_bush_kharazi_jungle_tree1"
 "woodcutents|scripts/macro events/configs/antimacro.npc|3446|moverestrict=nomove|an Ent is allowed to walk off its tree's tile|macro_ent_tree1"
+"brewing|scripts/_unpack/377/all.npc|52530|param=shop_sell_multiplier,1000|Blandebir falls back to the stale per-cent default, selling 25gp yeast for 2gp|blandebir"
+"brewing|scripts/_unpack/377/all.npc|52567|param=shop_sell_multiplier,200|Metarialus falls back to two ectotokens where his comment says five|metarialus"
 )
 
 caught=0
