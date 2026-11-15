@@ -249,19 +249,43 @@ assertion was true *because* the obj carried no `iop`, so restoring it means tak
 
 ---
 
-## Two new questions from the equip sweep, smaller
+## Two questions from the equip sweep — BOTH RESOLVED, and they had one cause
 
-`npx tsx tools/sim/equipcycle.ts`. 1,406 ok, 0 FAIL, 21 untested of 1,427 — no second duplication
-exists among wearable items.
+`npx tsx tools/sim/equipcycle.ts`. No second duplication exists among wearable items.
 
-- **93 objs have a `wearpos` and no Wear, Wield or Equip option** (`--unwearable`). Most look
-  vestigial — `readbook_dummy`, `wearable_stool_white`, the strung lyres whose only option is Play —
-  but `ikov_staffofarmardyl`, `rockpick` and `throwingrope` are quest items, and whether any of them
-  is meant to be wearable is a content question.
-- **21 would not go on at all** for a maxed player with an empty inventory: `bandos_platebody`,
-  `gilded_dhide_body`, `dragon_sq_shield_g`, `dragon_scimitar_or`, both dragonfire shields and
-  others. A wear option that refuses a player with every stat and no requirement left to fail is its
-  own small question.
+Neither was a content question in the end. **Both were the probe player: max stats, empty inventory,
+and no quest progress at all.**
+
+- ~~**93 objs have a `wearpos` and no Wear, Wield or Equip option**~~ — the tool was wrong to call
+  these unreachable. It matched three label words, and the route need not be spelled any of them:
+  `trollromance_toboggon_waxed` is `iop2=Ride` with `~can_ride_sled`, and the Monkey Madness
+  greegrees are `iop2=Hold` answered by a **category** trigger, `[opheld2,_mm_greegree]`, which a
+  per-obj grep misses too. Troll Romance *requires* that sled worn, so if it were truly unequippable
+  the quest could not be finished. `equipcycle.ts` now finds the route by clicking each option and
+  seeing which one lands something in the worn tab, so these go through the same conservation cycle
+  as everything else. Only 4 of the 93 were recovered, because the greegree and sled handlers want
+  quest state this player does not have — so the remaining list means "nothing equipped it for a
+  fresh maxed player", not "unequippable".
+- ~~**21 would not go on at all**~~ — **every one is quest-gated**, read straight off the triggers
+  rather than guessed:
+
+  | obj | gate |
+  |---|---|
+  | `rune_platebody_h1..h5`, `saradomin`/`ancient`/`armadyl`/`bandos_platebody`, `dragonfire_shield`(+uncharged) | `@levelrequire_dragon_slayer_quest_defence` |
+  | `gilded_dhide_body` | `@levelrequire_dragon_slayer_quest_ranged_and_defence` |
+  | `dragon_scimitar_or` | `@levelrequire_mm_quest_attack` |
+  | `dragon_sq_shield_g` | `@levelrequire_legends_quest_defence` |
+  | `viking_helmet`/`_sword`/`_shield` | `@levelrequire_viking_quest_defence` |
+  | `avas_attractor`, `avas_accumulator` | `@avas_wear` |
+  | `quest_point_cape`, `toxic_blowpipe` | own trigger |
+
+  A wear option that refuses a player with every stat is exactly right when the gate is a quest and
+  the player has done none. Nothing to fix.
+
+**The lesson worth keeping** is that both of these looked like content bugs and were artefacts of the
+test's own player. Any future sweep that reports "cannot be done" should say *by whom* — a maxed
+character with no quest progress is a narrow lens, and twice now it has made correct content look
+broken.
 
 ## Not a decision, just the measurement
 
