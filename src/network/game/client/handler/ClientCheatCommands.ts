@@ -75,6 +75,7 @@ export const CHEATS: Cheat[] = [
     { name: 'coverage', args: '[never|write|clear]', what: "which of the build's triggers have ever run", rank: 3 },
     { name: 'deadops', args: '[list|write|clear]', what: 'options that answered "Nothing interesting happens." - the to-do list', rank: 3 },
     { name: 'bank', what: 'open your bank from anywhere (your bank PIN still applies)', rank: 3 },
+    { name: 'wipebank', args: '[confirm]', what: 'delete everything in your own bank - asks first, unless you type confirm', rank: 3 },
     { name: 'setvar', args: '<variable> <value>', what: 'write one of your own varps or varbits', rank: 3 },
     { name: 'getvar', args: '<variable>', what: 'read one of your own varps or varbits', rank: 3 },
     { name: 'setvarother', args: '<username> <variable> <value>', what: "write a varp on somebody else's account", rank: 3, staffWorld: true },
@@ -109,7 +110,9 @@ export const CHEATS: Cheat[] = [
     { name: 'godmode', what: 'stop taking damage and keep every stat up, for testing a boss', rank: 4 },
 
     // OWNER on a live world; a DEVELOPER has them on a development world. Any of these can stop or
-    // wreck the world it is run on.
+    // wreck the world it is run on - and the first one destroys another player's property, which
+    // nothing else at any rank does.
+    { name: 'wipebankother', args: '<username> [confirm]', what: "delete everything in another player's bank - they must be online, and it cannot be undone", rank: 5, devRank: 4, staffWorld: true },
     { name: 'reload', what: 'reload the packed content build without a reboot', rank: 5, devRank: 4 },
     { name: 'rebuild', what: 'rebuild the scripts from source, then reload them', rank: 5, devRank: 4 },
     { name: 'speed', args: '<ms>', what: "the world's tick rate in milliseconds (600 is normal)", rank: 5, devRank: 4 },
