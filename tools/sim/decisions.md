@@ -100,8 +100,15 @@ and a yes to that is 155 instances.
 
 Three clusters have no colour to go on:
 
-- **`dwarf_gold_mine` / `_l` / `_r`** — 155 instances, "Mineral vein", no recolour. The description
-  names gold, which is the only evidence there is.
+- ~~**`dwarf_gold_mine` / `_l` / `_r`** — 155 instances, "Mineral vein", no recolour. The description
+  names gold, which is the only evidence there is.~~ **DONE.** The owner confirmed gold, and
+  confirmed it depletes. Wired on `rimmington_rocks.loc`'s shape — `category=mining_rock_normal`,
+  `param=next_loc_stage_mining,dwarf_gold_depleted`, and three rows in `mine.dbrow`'s
+  `gold_rock_table`. The spent partner was already in the cache with a model named for the job, and
+  it is a *different* model from the live veins, so `rockspent.ts`'s same-model rule does not reach
+  it; these have no seam at all, so the model name is the evidence instead. `tools/sim/dwarfgold.ts`
+  mines one of each: 12 ok, 0 FAIL. deadrocks drops from 452 reachable instances to **297**, and the
+  opsweep baseline is rebanked 2,809 → 2,803 for the six options that came alive.
 - **`loc_4976..4996` / `loc_12941..3`** — 110 instances, "A distinctive layer in the rock strata".
   No vein mechanic exists in this build.
 - **`loc_14850/51/52`** — 72 instances, the awkward one. Their seam is recoloured to 0, which by

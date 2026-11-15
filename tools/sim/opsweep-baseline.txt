@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2801 lines at the time of writing.
+# 2795 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -196,12 +196,6 @@ dead loc  dwarf_firewall_centre_straight op1="Jump-through"
 dead loc  dwarf_firewall_centre_straight op2="Talk-to"
 dead loc  dwarf_firewall_diagonal op1="Jump-through"
 dead loc  dwarf_firewall_straight op1="Jump-through"
-dead loc  dwarf_gold_mine op1="Mine"
-dead loc  dwarf_gold_mine op2="Prospect"
-dead loc  dwarf_gold_mine_l op1="Mine"
-dead loc  dwarf_gold_mine_l op2="Prospect"
-dead loc  dwarf_gold_mine_r op1="Mine"
-dead loc  dwarf_gold_mine_r op2="Prospect"
 dead loc  dwarf_keldagrim_bookcase op1="Search"
 dead loc  dwarf_keldagrim_bookcase_ladder op1="Climb"
 dead loc  dwarf_keldagrim_metal_bookcase op1="Search"
