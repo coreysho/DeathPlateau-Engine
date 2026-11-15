@@ -41,7 +41,7 @@ Two fixes, not equivalent:
 
 I did not pick, because both change a price.
 
-## 2. Fareed respawns after you kill him
+## 2. Fareed respawns after you kill him — RESOLVED, it was not a decision at all
 
 `python3 tools/varpstates.py` in the content repo, its only finding.
 
@@ -55,10 +55,22 @@ with neither the protected active player nor a player pointer at all, so `%fd_ki
 be set from a death hook"* (`quest_deserttreasure.rs2:564`). Fareed's kill is handled by exactly
 such a hook, `[ai_queue3,firediamond_firewarrior]`.
 
-**The question is an engine one:** that hook does call `npc_findhero`, which establishes a hero
-pointer. Whether a player varp can be written after that, or whether it needs the protected active
-player, decides whether this is a one-line content fix or needs the state moving somewhere else. I
-did not guess at engine semantics.
+**That engine question has an answer, and it made this a bug fix rather than a judgement call.**
+`npc_findhero` does set `state.activePlayer` and add the `ActivePlayer` pointer, which is enough to
+*read* a varp and not enough to write one. `POP_VARBIT` additionally demands `ProtectedActivePlayer`
+whenever the basevar is protected — and `VarPlayerType.protect` **defaults to `true`**
+(`VarPlayerType.ts:84`; the 216 `protect=no` lines in the content are explicit opt-outs), which
+`deserttreasurevarbit2` takes by declaring nothing. Only `P_FINDUID` sets that pointer.
+
+So the fix is a `p_finduid` guard and one assignment — and that is **Kamil's own pattern one file
+over**: `[ai_queue3,icediamond_icewarrior]` in `dt_ice.rs2` already does exactly this, and its
+comment records the same reasoning, naming `[ai_queue3,san_tojalon]` in Legends' Quest as where the
+shape came from. Fareed's hook simply never got it.
+
+Done, with `tools/sim/fareedrespawn.ts` asserting the kill is recorded. `varpstates.py` now reports
+**0** findings where it reported this one. No belt-and-braces fallback as Kamil has, because
+protected access is only refused while a modal is open and the cost of that is Fareed being
+fightable again — the behaviour up to now, so a safe failure rather than a stuck quest.
 
 ## 3. The three mining clusters
 

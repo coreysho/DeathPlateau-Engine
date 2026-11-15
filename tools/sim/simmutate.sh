@@ -71,6 +71,7 @@ MUTATIONS=(
 "woodcutents|scripts/macro events/configs/antimacro.npc|3446|moverestrict=nomove|an Ent is allowed to walk off its tree's tile|macro_ent_tree1"
 "brewing|scripts/_unpack/377/all.npc|52530|param=shop_sell_multiplier,1000|Blandebir falls back to the stale per-cent default, selling 25gp yeast for 2gp|blandebir"
 "brewing|scripts/_unpack/377/all.npc|52567|param=shop_sell_multiplier,200|Metarialus falls back to two ectotokens where his comment says five|metarialus"
+"fareedrespawn|scripts/quests/quest_deserttreasure/scripts/dt_smoke.rs2|274|%fd_killed_firewarrior = 1;|Fareed's death goes unrecorded again, so the respawn guard cannot fire|firediamond_firewarrior"
 )
 
 caught=0
