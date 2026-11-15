@@ -23,6 +23,11 @@
 # question left is whether the assertions are MEANINGFUL - and the only way to answer that is to
 # break the thing they are about.
 #
+# ALL FOUR MUTATIONS ARE CAUGHT as of the last run: junglechop notices a jungle tree losing the
+# category that dispatches its Chop-down, woodcutents notices an Ent allowed to walk off its tile
+# and names it, and brewing notices either brewer falling back to the stale per-cent shop
+# multiplier - 25gp yeast for 2gp, two ectotokens instead of five.
+#
 # ONE MUTATION PER LINE: sim, the content file, the line number, and the text to comment out. The
 # line number is checked against the text before anything is edited, so a file that has shifted
 # fails loudly instead of mutating the wrong line.
