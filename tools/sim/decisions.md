@@ -74,9 +74,31 @@ fightable again — the behaviour up to now, so a safe failure rather than a stu
 
 ## 3. The three mining clusters
 
-`npx tsx tools/sim/deadrocks.ts`, and the long section in `opsweep-backlog.md`. The tool settles the
-ore for 99 of 175 rocks from seam colour, so most of this bucket needs no decision. Three clusters
-have no colour to go on:
+`npx tsx tools/sim/deadrocks.ts`, and the long section in `opsweep-backlog.md`.
+
+**Correcting what this section used to say.** It read "the tool settles the ore for 99 of 175 rocks
+from seam colour, so most of this bucket needs no decision". That is true of the loc *list* and
+badly misleading about the game, because **93 of those 99 are not placed on the map at all**. Of the
+452 instances a player can walk up to, the split is:
+
+| bucket | locs | placed locs | placed instances |
+|---|---|---|---|
+| ore settled by seam colour | 99 | 6 | **12** |
+| spent rocks, want `param=mining_rock_empty,1` | 22 | 3 | **72** |
+| seam colour matches no wired rock — needs a decision | 19 | 12 | **101** |
+| no recolour at all — description is the only evidence | 35 | 26 | **267** |
+
+So **under 3% of reachable instances have their ore settled**, and those twelve are the Lunar Isle
+run, which also needs `op3=hidden` and a depletion call before it would work. The three placed
+"spent" rocks are `loc_14850/51/52`, which is the contested cluster below rather than a free win.
+
+There is no decision-free remainder here. Anyone coming to this bucket expecting mechanical work
+will find a judgement in front of every rock a player can reach.
+
+The single question that unblocks the most is the first cluster below: its description names gold,
+and a yes to that is 155 instances.
+
+Three clusters have no colour to go on:
 
 - **`dwarf_gold_mine` / `_l` / `_r`** — 155 instances, "Mineral vein", no recolour. The description
   names gold, which is the only evidence there is.
