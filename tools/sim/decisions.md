@@ -110,11 +110,35 @@ Three clusters have no colour to go on:
   mines one of each: 12 ok, 0 FAIL. deadrocks drops from 452 reachable instances to **297**, and the
   opsweep baseline is rebanked 2,809 → 2,803 for the six options that came alive.
 - **`loc_4976..4996` / `loc_12941..3`** — 110 instances, "A distinctive layer in the rock strata".
-  No vein mechanic exists in this build.
-- **`loc_14850/51/52`** — 72 instances, the awkward one. Their seam is recoloured to 0, which by
+  No vein mechanic exists in this build. **Located:** they are all inside the **Haunted Mine**
+  (x 2712–2804, z 4426–4493), which the npcs placed around them settle —
+  `possessed_pickaxe_stationary`, `skeletal_miner_sitting`, `hauntedmine_boss_cart`,
+  `crane_posessed_mine`, `hauntedmine_boss_key`. And `rockore.ts` already states the rule that
+  classifies them: *"A rock with no 6342 slot at all is mine-wall scenery, not an ore rock."* These
+  have no recolour slot at all. So they are a quest dungeon's walls with a vestigial Mine option,
+  not an ore source.
+- **`loc_14850/51/52`** — 72 instances. Their seam is recoloured to 0, which by
   `regional_rocks.loc`'s own rule ("a rock with no ore colour is a rock with no ore in it") makes
   them spent — but they carry `mapscene=12`, so the map draws a mine icon there, and the live rocks
-  of their family sit 300 tiles away in the Lava Maze. Spent, or never assigned.
+  of their family sit 300 tiles away in the Lava Maze. **Located:** the **Wilderness** by the Dark
+  Warriors' Fortress (3011–3013, 3593–3596), from `dark_warrior`, `young_dark_wizard`,
+  `bearded_dark_wizard`, `green_dragon`, `skeleton_unagressive` and `wilderness_capeseller_10`
+  around them.
+
+**Neither of these needs an ore or a depletion decision, which is the useful part.** Both are rock
+with no ore in it by the project's own two rules, so there is nothing to choose about what they
+give. What is left is a smaller question about 182 instances of a dead option, and it has exactly
+two sensible answers:
+
+1. `category=mining_rock_normal` + `param=mining_rock_empty,1`. The click then says *"There is no
+   ore currently available in this rock."* (`mining.rs2`'s own line for an empty rock) instead of
+   *"Nothing interesting happens."* Truthful, creates no ore, changes no economy, and is what
+   `deadrocks.ts` already recommends for its spent bucket.
+2. Hide `op1`/`op2` so the client never offers Mine or Prospect on a wall at all, which is what
+   "mine-wall scenery" argues for and what the original game does with decorative rock faces.
+
+(1) is more informative, (2) is more faithful. Neither needs any further research; it wants one
+answer covering both clusters, or one each.
 
 Each also needs a yes/no on **whether the rock depletes**, which is not cosmetic: a depleting rock
 needs `param=next_loc_stage_mining` pointing at a spent partner and `loc_change` **throws** on a
