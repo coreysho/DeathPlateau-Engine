@@ -61,7 +61,16 @@
 // than one stale one:
 //
 //   1,427 objs (label-matched only)   1,406 ok, 0 FAIL, 21 untested
-//   1,431 objs (label + probed)       in progress when this was committed
+//   1,431 objs (label + probed)       1,409 ok, 0 FAIL, 22 untested
+//
+// ONE OBJ MOVED BETWEEN THOSE RUNS WITH NO CONTENT CHANGE, and it is worth naming rather than
+// smoothing over. slayer_helm_gravedigger was ok in the first and untested in the second. It carries
+// iop2=Wear, so it was label-matched in both and never went near the probe - what changed is that
+// the probe pass now runs several hundred ticks BEFORE the main cycle starts, and the dice moved.
+// This is choptrees.ts's lesson arriving here: "a sim whose verdict depends on where a tree sits in
+// a list is not measuring the content." One obj in 1,431 is a small wobble and it is still a wobble,
+// so treat a single obj appearing or leaving the untested list between runs as this, not as a
+// finding, until someone pins it down.
 //
 // There is no second duplication among the items a player can wear, and that is a swept result
 // rather than four hand searches that happened to come back clean. The 21 untested are items that
