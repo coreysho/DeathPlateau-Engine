@@ -140,6 +140,19 @@ two sensible answers:
 (1) is more informative, (2) is more faithful. Neither needs any further research; it wants one
 answer covering both clusters, or one each.
 
+**DONE — the owner chose one each**, which is the split the evidence argues for. The Haunted Mine's
+110 wall instances have `op1`/`op2` hidden, so no client draws Mine or Prospect on a decorative rock
+face. The Wilderness 72 are marked `param=mining_rock_empty,1`, because `mapscene=12` draws a mine
+icon and a player who has been told to come and look should be answered rather than left hunting:
+`mining.rs2` says *"There is no ore currently available in this rock."*
+
+`tools/sim/rockempty.ts` holds both halves — 54 ok, 0 FAIL — asserting the walls through the
+engine's own `isHiddenOp` and the Wilderness rocks by making the click and reading the reply.
+**`deadrocks.ts` now reports 115 reachable instances against the 452 it started at**, and the
+opsweep baseline is rebanked for the 54 options that stopped being dead.
+
+So the whole mining bucket is closed bar the rocks nobody can reach.
+
 Each also needs a yes/no on **whether the rock depletes**, which is not cosmetic: a depleting rock
 needs `param=next_loc_stage_mining` pointing at a spent partner and `loc_change` **throws** on a
 null type, so wiring one without a partner fails loudly. A non-depleting rock needs its own

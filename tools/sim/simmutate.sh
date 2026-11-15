@@ -73,6 +73,15 @@ MUTATIONS=(
 "brewing|scripts/_unpack/377/all.npc|52567|param=shop_sell_multiplier,200|Metarialus falls back to two ectotokens where his comment says five|metarialus"
 "fareedrespawn|scripts/quests/quest_deserttreasure/scripts/dt_smoke.rs2|274|%fd_killed_firewarrior = 1;|Fareed's death goes unrecorded again, so the respawn guard cannot fire|firediamond_firewarrior"
 "dwarfgold|scripts/_unpack/377/all.loc|42483|category=mining_rock_normal|the dwarven gold veins lose the category that dispatches their Mine|dwarf_gold_mine"
+# rockempty's WILDERNESS half only. Commenting the param out leaves the rock with a dispatching
+# category, no empty flag and no dbrow row, so mining.rs2 falls through db_find to
+# ~displaymessage(^dm_default) - "Nothing interesting happens." - and the check fails.
+#
+# NO ROW FOR ITS HAUNTED MINE HALF, deliberately: that assertion is "no client may offer Mine", and
+# commenting out `op1=hidden` leaves op1 ABSENT, which isHiddenOp also reports as hidden. The
+# mutation would pass and prove nothing. What that check guards against is somebody restoring
+# op1=Mine, which is an edit this harness cannot express by removing a line.
+"rockempty|scripts/_unpack/377/all.loc|92987|param=mining_rock_empty,1|the Wilderness rocks stop admitting they are empty, so the click goes back to saying nothing interesting happens|loc_14850"
 )
 
 caught=0
