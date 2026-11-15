@@ -175,11 +175,54 @@ once, and `lunar_isle.loc` says so. 28 were wired on tool evidence and all 28 re
 rule survived: a ladder solid from *every* interaction tile cannot be a vertical link, which rules
 out 10 and leaves the rest to judgement.
 
+**A fourth tool was considered and deliberately not written.** The technique that cracked the two
+mining clusters was not a rule but identifying the *place* from the npcs standing in it — and here
+that adds nothing, because the names already say it: `elf_village_ladder` is Lletya,
+`prison_ladder_up` is the Port Sarim jail, `wild_ladder` the Wilderness, `burgh_floorboard_hatch`
+Burgh de Rott, `boardgames_ladderdown` the board games. `deadladders.ts` already prints each one's
+placement and names its partner.
+
+What is missing is not context, it is whether each *landing* is safe, and `loc_11739` is the proof
+that cannot be computed: `deadladders` finds it a same-tile partner at 3050,3355,2 on 7 of 7
+instances — about as strong as the evidence gets — and climbing it still puts the player at
+3050,3356,2, which is a wall. The generic handler telejumps from the tile the PLAYER stands on, not
+the ladder's own tile, so the landing depends on the side they approached from, and nothing in the
+map says which side that is.
+
+So this stays as the backlog has it: 24 one-line `category=` additions, each wanting someone who
+knows where its ladder goes. A hint by area ("the Lletya ones go up to the tree walkways") is worth
+more here than any amount of further analysis.
+
 ## 5. `Release` and `Play-With` intent
 
-Six items drop silently and three fishbowl fish equip into the **weapon slot**. Whether `Release`
-should delete the item, place a creature, or do nothing is a design call, and the fishbowl fish
-going to the weapon slot is either a bug or the only slot available. One decision covers all nine.
+Two separate decisions, both now researched down to a one-word answer. Nothing here needs more
+digging; it needs a choice.
+
+**`iop2="Play-With"` on the 3 fishbowl fish** (`fishbowl_greenfish`, `fishbowl_spinefish`,
+`fishbowl_bluefish`) falls through to the global `[opheld2,_]` equip and silently wears the bowl.
+The facts that decide it:
+
+- all three are `wearpos=righthand`, and **none has a Wear or Wield option**, so that mislabelled
+  click is the *only* route to holding the bowl;
+- their other options are already written out, per item, in
+  `general_use/scripts/item_ops_generated.rs2` — `iop3` Feed says *"You sprinkle some food into the
+  bowl."* and `iop1` deliberately answers *"Nothing interesting happens."*;
+- so `iop2` is the one option of three with no handler of its own, and the pattern for giving it one
+  already exists in that file.
+
+Four ways to go. **Message and still equip** keeps the original cache label, explains the click, and
+keeps the bowl holdable. **Message only** matches the sibling pattern most exactly and makes the
+action match the label, at the cost of making `wearpos=righthand` unreachable. **Relabel `iop2` to
+Wield** is one line per obj and no new script, but diverges from the dump's own label in a
+preservation repo. Or leave it.
+
+**`iop5="Release"` on 6 items** — `poh_toy_cat`, the three wound-up POH toys and the two
+`100_jubbly_balloon_toad_*` — drops the item on the floor with no message at all. All six are
+`tradeable=true`, so it is recoverable, and "Release" arguably means "put it down", which is roughly
+what already happens. So the defect is the silence rather than the behaviour: a per-item line in
+`item_ops_generated.rs2`'s style is the small fix, deleting the item is the literal one (and would
+want a confirmation, since it turns a recoverable item into a loss), and spawning a creature is the
+fullest and much the largest, needing a decision per item about what appears.
 
 ## 6. Twelve script-spawned npcs with a dead `Talk-to`
 
