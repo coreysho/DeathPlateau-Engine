@@ -9,7 +9,12 @@ place instead of scattered through commit messages.
 
 ---
 
-## 1. Two shops that print money
+## 1. Two shops that print money — RESOLVED, all four loops closed
+
+Fixed: Blandebir and Metarialus given explicit multipliers (their prices were on the pre-migration
+per-cent scale), Irksol raised to 750 above Grum's 700 buy, and the karambwan stall to 650 above
+taxfree's 600. `shoparbitrage.py` now reports no profitable loop across 854 pairs and 6 currencies.
+`brewing.ts` asserts the two multipliers so a future scale change cannot repeat it.
 
 `python3 tools/shoparbitrage.py` in the content repo. Both verified by hand.
 
@@ -72,7 +77,12 @@ Done, with `tools/sim/fareedrespawn.ts` asserting the kill is recorded. `varpsta
 protected access is only refused while a modal is open and the cost of that is Fareed being
 fightable again — the behaviour up to now, so a safe failure rather than a stuck quest.
 
-## 3. The three mining clusters
+## 3. The three mining clusters — RESOLVED, all three
+
+The dwarven gold veins are wired and mineable (155 instances). The Haunted Mine's walls have Mine
+and Prospect hidden (110) and the Wilderness rocks are marked deliberately empty (72).
+`deadrocks.ts` went from 452 reachable dead instances to 115 — the rest are rocks no player can
+walk up to. Details in each subsection below.
 
 `npx tsx tools/sim/deadrocks.ts`, and the long section in `opsweep-backlog.md`.
 
@@ -163,7 +173,7 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The 24 remaining dead ladders
+## 4. The 24 remaining dead ladders — OPEN, needs an area hint
 
 `npx tsx tools/sim/deadladders.ts`. These need somebody who knows the areas; three approaches have
 already failed and are written up in `opsweep-backlog.md`. The specific trap, found the hard way:
@@ -193,7 +203,7 @@ So this stays as the backlog has it: 24 one-line `category=` additions, each wan
 knows where its ladder goes. A hint by area ("the Lletya ones go up to the tree walkways") is worth
 more here than any amount of further analysis.
 
-## 5. `Release` and `Play-With` intent
+## 5. `Release` and `Play-With` intent — OPEN, researched, needs a choice
 
 Two separate decisions, both now researched down to a one-word answer. Nothing here needs more
 digging; it needs a choice.
@@ -224,7 +234,7 @@ what already happens. So the defect is the silence rather than the behaviour: a 
 want a confirmation, since it turns a recoverable item into a loss), and spawning a creature is the
 fullest and much the largest, needing a decision per item about what appears.
 
-## 6. Twelve script-spawned npcs with a dead `Talk-to`
+## 6. Twelve script-spawned npcs with a dead `Talk-to` — OPEN, needs dialogue written
 
 Dialogue nobody has written, for npcs a script spawns rather than the map placing. Writing words in
 somebody's characters' mouths is not mine to do. The larger bucket is 501 npc `Talk-to` options in
