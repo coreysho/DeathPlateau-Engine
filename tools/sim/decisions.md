@@ -143,3 +143,26 @@ both failed.
 
 One night is not variance, so the cap is worth leaving alone until there are a few more; if it is
 ever tightened, 512s is the number to start from and not the 881s in `fuzz.ts`'s header.
+
+## Tried and not viable: a world connectivity flood fill
+
+The idea was to flood walkable tiles from Lumbridge and find content placed where no player can
+walk. `isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED)` from `GameMap` is the right primitive and
+a breadth-first fill over level 0 runs fine, so the attempt failed on its meaning rather than its
+mechanics.
+
+It reached **3,000,000 tiles and stopped there because that was the cap**, inside a bounding box of
+about 4.35M. That makes the run inconclusive as it stands - "Varrock square not reached" came out of
+it, and Varrock is plainly walkable from Lumbridge, so that is the truncation and not a finding.
+
+The reason it got that far is the thing to fix before trying again: `WALK_BLOCKED` is set where
+something blocks, so a tile with **no map data at all** is not flagged and reads as open. The fill
+leaks through void instead of stopping at the edge of the world, which is why the number is
+implausibly large for the walkable surface of a 377 map. A usable version needs a "does this tile
+have map data" test - a loaded-zone check - and not just the collision flag.
+
+Worth knowing even then: the honest signal is small. Entrana and Ape Atoll correctly came back
+unreachable, and so would every island, dungeon and instance that a player reaches by boat, ladder
+or teleport. Those are correct answers and useless ones, which is the shape `climbladders.ts` is
+already in. Any second attempt should decide up front how it tells "unreachable on foot, as
+designed" from "unreachable, which is a bug", because the first flood fill cannot.
