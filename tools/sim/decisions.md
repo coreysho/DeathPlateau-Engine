@@ -231,12 +231,21 @@ somebody's characters' mouths is not mine to do. The larger bucket is 501 npc `T
 the same state (`opsweep-backlog.md`); these twelve are separated only because a script spawns them,
 so a player meets them in a specific moment that suggests what they would say.
 
-## 7. Three test assertions I rewrote
+## 7. Three test assertions I rewrote — RESOLVED, the owner reviewed the diffs and kept all three
 
 Each asserted an option was **absent** and now asserts the guarantee instead: the two barrows
-broken-piece checks (`~barrows_broken_refuse` claims the Wear) and the `maxcape` `iop3`. One revert
-each if you disagree. Named here rather than left in a diff because a test that changed meaning is
-easy to lose.
+broken-piece checks (`~barrows_broken_refuse` claims the Wear) and the `maxcape` `iop3`.
+
+**The pattern is the part worth keeping.** In all three cases the absence being asserted was what
+silently disabled a handler someone had already written — `~barrows_broken_refuse` never ran for any
+of the 24 broken pieces, so a player holding a broken helm was told nothing, and
+`~avas_attract_toggle` sat in `avas_device.rs2` with nothing able to fire it. `orphans.ts` found both
+sets. An "option absent" assertion can lock in a dead handler and look like passing coverage, which
+is a shape to watch for rather than a one-off.
+
+Note for anyone reverting these later: putting an assertion back is only half the job. The
+assertion was true *because* the obj carried no `iop`, so restoring it means taking the
+`iop2`/`iop3` off the objs again — which re-breaks the three handlers.
 
 ---
 
