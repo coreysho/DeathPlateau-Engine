@@ -33,7 +33,16 @@ const tests: [string, number, number, number][] = [
     ['ahoy_ghostship_laddertop', 3615, 3541, 2],
     ['ahoy_ghostship_laddertop', 3615, 3545, 2],
     ['ahoy_ghostship_laddertop', 3696, 3511, 1],
-    ['ahoy_ghostship_laddertop', 3696, 3516, 1]
+    ['ahoy_ghostship_laddertop', 3696, 3516, 1],
+    // The angled pair, deck to quarterdeck. WEAKER EVIDENCE THAN EVERY ROW ABOVE, deliberately
+    // listed anyway: decks 1 and 2 of this ship carry no collision data, so walkable() is true
+    // everywhere up there and the "landed in scenery" check below cannot fail for these four. What
+    // they do prove is that the locs answer at all, that the table covers them, and that the climb
+    // moves the player to the intended floor - which is what was missing when they were dead.
+    ['ahoy_ghostshipladder_angled', 3698, 3510, 1],
+    ['ahoy_ghostshipladder_angled', 3694, 3510, 1],
+    ['ahoy_ghostshipladder_top_angled', 3698, 3510, 2],
+    ['ahoy_ghostshipladder_top_angled', 3694, 3510, 2]
 ];
 for (const [name, lx, lz, lvl] of tests) {
     const sides: [number, number, string][] = [
