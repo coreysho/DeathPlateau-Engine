@@ -44,7 +44,9 @@ const check = (what: string, good: boolean, detail = ''): void => {
 };
 
 const p = H.makePlayer('elf', 3222, 3218) as unknown as {
-    x: number; z: number; level: number;
+    x: number;
+    z: number;
+    level: number;
     teleport(x: number, z: number, level: number): void;
 };
 H.tick(2);
@@ -56,7 +58,11 @@ const standable = (level: number, x: number, z: number): boolean => !isFlagged(x
 // dz is for the ladders that are not vertical links at all: this build keeps the underground
 // 6400 south of the surface, so a dungeon ladder changes z and not level. loc_1755 going up is
 // movecoord(coord(), 0, 0, -6400), and the Wilderness one down is that mirrored.
-const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number }[] = [
+// op defaults to 1. The two three-op MIDDLE ladders need 2 and 3: their op1 is Climb, which opens a
+// "Climb up or down?" box and leaves the player standing there until somebody answers it, so op1 is
+// not what a headless climb can drive. Climb-up and Climb-down go straight through, and they are
+// the two destinations worth checking - the dialogue only chooses between them.
+const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number; op?: number }[] = [
     // Lletya - up into the walkways between the trees.
     { name: 'elf_village_ladder', x: 2328, z: 3168, dlevel: +1, dz: 0 },
     { name: 'elf_village_ladder_top', x: 2335, z: 3160, dlevel: -1, dz: 0 },
@@ -79,7 +85,14 @@ const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number 
     { name: 'fairy_ladder_wind_up', x: 2403, z: 4458, dlevel: +1, dz: 0 },
     { name: 'prison_trapdoor', x: 3013, z: 3179, dlevel: -1, dz: 0 },
     // Wilderness - down to the dungeon, which is 6400 south rather than a level below.
-    { name: 'wild_laddertop_dungeon', x: 3005, z: 3963, dlevel: 0, dz: +6400 }
+    { name: 'wild_laddertop_dungeon', x: 3005, z: 3963, dlevel: 0, dz: +6400 },
+    // The three-op middles, both directions each. Plain vertical stacks on one tile: the Wilderness
+    // towers run wild_ladder (L0) / wild_ladder_middle (L1, L2) / wild_laddertop (L3) on the same
+    // two numbers, and Lletya runs elf_village_ladder / _mid / _top the same way.
+    { name: 'wild_ladder_middle', x: 3022, z: 3625, dlevel: +1, dz: 0, op: 2 },
+    { name: 'wild_ladder_middle', x: 3022, z: 3625, dlevel: -1, dz: 0, op: 3 },
+    { name: 'elf_village_ladder_mid', x: 2328, z: 3168, dlevel: +1, dz: 0, op: 2 },
+    { name: 'elf_village_ladder_mid', x: 2328, z: 3168, dlevel: -1, dz: 0, op: 3 }
 ];
 
 // odx/odz below, NOT dx/dz: the inner loop used to destructure [dx, dz] and shadow the
@@ -92,7 +105,7 @@ for (let r = 0; r < 3; r++) {
     offsets.push([r + 1, 0], [-r, 0], [0, r + 1], [0, -r], [r + 1, r + 1], [-r, -r], [r + 1, -r], [-r, r + 1]);
 }
 
-for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
+for (const { name, x: sx, z: sz, dlevel: dir, dz, op = 1 } of LADDERS) {
     console.log('');
     const id = LocType.getId(name);
     const lt = id === -1 ? null : LocType.get(id);
@@ -101,7 +114,7 @@ for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
     // trigger instead. -1 is the no-category value.
     const how = (lt?.category ?? -1) !== -1 ? 'category' : 'own trigger';
     const expect = dz !== 0 ? `z +${dz} (the dungeon)` : `level ${dir > 0 ? 'up' : 'down'}`;
-    console.log(`-- ${name} (${how}), expecting ${expect}`);
+    console.log(`-- ${name} (${how}) op${op}, expecting ${expect}`);
 
     // Every instance, not a sample: a ladder that works in four places and drops you into a tree in
     // the fifth is still a ladder that needs fixing, and the sample would hide it.
@@ -128,7 +141,7 @@ for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
             p.teleport(fx, fz, level);
             H.tick(1);
             const mark = H.mesgs.length;
-            H.opLoc(p as never, x, z, name, 1);
+            H.opLoc(p as never, x, z, name, op);
             for (let t = 0; t < 12; t++) H.tick(1);
             const said = H.mesgs.slice(mark).map(m => m.text);
             if (said.some(s => /can't reach/i.test(s))) continue;
