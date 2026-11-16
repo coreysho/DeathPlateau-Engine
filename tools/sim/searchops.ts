@@ -1,6 +1,6 @@
-// SEARCHING THE CRATES AND BOXES THAT ANSWERED NOTHING - every placed instance of each.
+// SEARCHING THE THINGS WHOSE SEARCH ANSWERED NOTHING - every placed instance of each.
 //
-//   npx tsx tools/sim/emptycrates.ts
+//   npx tsx tools/sim/searchops.ts
 //
 // Five storage locs carried op1="Search" and no handler: Rellekka's two crate types, the Rum Deal
 // boxes and crates, and the pile ahoy_boxes_1. 83 placed instances between them, every one of which
@@ -17,6 +17,26 @@
 // would pass if all five were pointed at the same handler, and a loc named "Boxes" answering "You
 // search the crate..." is the mistake this bucket invites. So each one is checked for the noun its
 // own category prints, and separately for not falling through to the global default.
+//
+// THE OTHER THREE ARE NOT CATEGORY WORK, and each is here because the obvious fix was wrong:
+//
+//   loc_6630            33 sarcophagi in the Sophanem tomb. They carry the model AND the
+//                       description of deserttreasure_sarcophigi_door_2, which is wired - to a
+//                       handler that rolls against Desert Treasure and spawns a mummy out of the
+//                       lid. All six of those are in the pyramid at 2765,4945 L1; these are at
+//                       3276,9191 among Icthlarin's own mummies and canopic jars. Same model,
+//                       different quest, so they get the empty answer and none of the machinery.
+//   banana tree         23 of them, and a TRIGGER rather than category=banana_tree, because the
+//                       shared handler changes the loc to its next_loc_stage and an empty tree has
+//                       none - quest_mm.rs2 records that mistake turning the sixth click into a
+//                       script error.
+//   Keldagrim bookcase  22, and deliberately not category=bookcase: that default prints "none of
+//                       them look very interesting" and the loc's own description says the books
+//                       are full of Red Axe data.
+//
+// A ~mesbox IS NOT A mes, which is why both channels are read below: the first sets text on an
+// interface and lands in H.ifaces, only the second reaches H.mesgs. Three of these eight answer
+// through a mesbox, and reading only the chatbox would call them dead.
 import * as H from './harness.js';
 
 await H.boot();
@@ -34,13 +54,17 @@ const check = (what: string, good: boolean, detail = ''): void => {
     }
 };
 
-// loc, a seed to find instances from, and the noun its category's handler prints.
+// loc, a seed to find instances from, the wording it should answer with, and how it is wired.
 const SEARCHABLES: { name: string; x: number; z: number; noun: RegExp; cat: string }[] = [
-    { name: 'viking_crate', x: 2637, z: 3666, noun: /crate\b/i, cat: 'empty_crate' },
-    { name: 'viking_crate_2', x: 2638, z: 3666, noun: /crate\b/i, cat: 'empty_crate' },
-    { name: 'ahoy_boxes_1', x: 3573, z: 3310, noun: /boxes/i, cat: 'empty_boxes' },
-    { name: 'loc_11744', x: 3009, z: 3336, noun: /boxes/i, cat: 'empty_boxes' },
-    { name: 'loc_11745', x: 3012, z: 3342, noun: /crates/i, cat: 'empty_crates' }
+    { name: 'viking_crate', x: 2637, z: 3666, noun: /crate\b/i, cat: 'category=empty_crate' },
+    { name: 'viking_crate_2', x: 2638, z: 3666, noun: /crate\b/i, cat: 'category=empty_crate' },
+    { name: 'ahoy_boxes_1', x: 3573, z: 3310, noun: /boxes/i, cat: 'category=empty_boxes' },
+    { name: 'loc_11744', x: 3009, z: 3336, noun: /boxes/i, cat: 'category=empty_boxes' },
+    { name: 'loc_11745', x: 3012, z: 3342, noun: /crates/i, cat: 'category=empty_crates' },
+    // Their own triggers, for the reasons in the header.
+    { name: 'loc_6630', x: 3278, z: 9191, noun: /sarcophagus/i, cat: 'own trigger, NOT the Desert Treasure one' },
+    { name: 'icthalarins_bananatreeempty', x: 3300, z: 2790, noun: /bananas left/i, cat: 'own trigger, NOT the banana_tree category' },
+    { name: 'dwarf_keldagrim_metal_bookcase', x: 1903, z: 4960, noun: /Red Axe/i, cat: 'own trigger, NOT the bookcase category' }
 ];
 
 const p = H.makePlayer('searcher', 3222, 3218) as unknown as { x: number; z: number; level: number; teleport: (x: number, z: number, l: number) => void };
@@ -49,7 +73,7 @@ H.maxOut(p as never);
 
 for (const { name, x: sx, z: sz, noun, cat } of SEARCHABLES) {
     console.log('');
-    console.log(`-- ${name} (category=${cat}), expecting ${noun}`);
+    console.log(`-- ${name} (${cat}), expecting ${noun}`);
     const spots = [...H.locsNear(name, sx, sz, 0), ...H.locsNear(name, sx, sz, 1), ...H.locsNear(name, sx, sz, 2)];
     if (!spots.length) {
         console.log(`   UNTESTED - no instance found near ${sx},${sz}`);
@@ -82,7 +106,9 @@ for (const { name, x: sx, z: sz, noun, cat } of SEARCHABLES) {
         }
         if (!placed) continue;
 
-        const said = H.mesgs.map(m => m.text);
+        // Both channels: a mes in the chatbox and a ~mesbox set on an interface.
+        const boxed = H.ifaces.filter(i => i.kind === 'text').map(i => i.text ?? '');
+        const said = [...H.mesgs.map(m => m.text), ...boxed];
         const joined = said.join(' / ');
         if (said.some(s => /can't reach/i.test(s))) {
             console.log(`   UNTESTED ${x},${z},${level} - no reachable side`);
