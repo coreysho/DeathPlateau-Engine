@@ -450,7 +450,7 @@ So this one really does need writing. The larger bucket is 501 npc `Talk-to` opt
 state (`opsweep-backlog.md`); these are separated only because a script spawns them, so a player
 meets them in a specific moment that suggests what they would say.
 
-## 8. Enakhra's quarry has 58 dead rocks and no ore to put in them — OPEN, needs a decision
+## 8. Enakhra's quarry — RESOLVED, and my first answer to it was wrong
 
 `loc_10946` (32 placed) and `loc_10947` (26 placed) carry a live Mine and Prospect and answer
 nothing. They are the largest dead mining lines left, and unlike the three clusters in section 3
@@ -468,14 +468,36 @@ two rock models it is. So a dead rock whose four-value recolour matches a rock a
 that rock's ore — which is how three of the four orphans below were identified with no guessing.
 
 **Why these two are different.** Their ore colours are 16706 and 18821 and appear on no rock in any
-row, because they are the quarry's **sandstone and granite** — and this build has neither obj. There
-is no sandstone at all, and the only granite is gargoyle-drop equipment. A row cannot be written
-because there is nothing for it to hand the player.
+row, because they are the quarry's **sandstone and granite**.
 
-**So the decision is whether to build it**: two objs (OSRS has sandstone in four weights and granite
-in three), their rows, and the grinder that turns sandstone into sand. That is a feature, and a
-bigger one than it looks. The alternative is to accept 58 rocks that say nothing and mark them so
-the sweeps stop raising them.
+**I first reported that this build had neither obj, and that was wrong.** I searched for objs whose
+names begin with `sandstone` or `granite`, found only gargoyle-drop equipment, and concluded the
+quarry could not be wired because there was nothing for a row to hand the player. The objs are
+there: `enakh_sandstone_tiny`, `_small`, `_medium`, `_large`, `_huge_body`, `_huge_base+legs`, and
+`enakh_granite_tiny`, `_small`, `_medium`. They are prefixed for this very quarry, which is exactly
+why the search missed them.
+
+**The same mistake was already in the build, from the other side.** `quest_enakh.rs2` carried a
+comment reading *"this cache has no Desert Quarry at all - there is not one loc in loc.pack with
+sandstone or granite in its name - so the rock has to be both the pickaxe and the quarry"*, and
+`enakh_mining_stone` was made to stand in for the whole pit. The second half of that sentence is
+true and the conclusion does not follow. Two people searched by name and got the same wrong answer,
+which is the part worth keeping: **in a dump like this, a thing's name is the least reliable
+evidence about it.** The map answered in both directions — the pit is ringed by this quest's own
+scaffold, wheel barrows and secret boulder, and already had two working rocks in it.
+
+**How it is wired, and what is deliberately still undecided.** Both rocks run through the quest's
+own `~enakh_next_block`, which hands over whichever block the statue still needs — the 32kg base,
+then the 20kg body, then a 5kg lump of granite for the head, then spoil. That is what
+`enakh_mining_stone` already does, and it means **nothing has to decide which of the two rocks is
+the sandstone and which the granite**, a question the recolours genuinely cannot answer. Prospect
+names both stones for the same reason.
+
+Not a `mining_table` row, which is the fix that looks right: a row would have forced that decision,
+and `mining.rs2` prints the default for any rock with a category and no row. A direct trigger beats
+a category in the lookup order, so `loc_11193`'s dangling `category=mining_rock_normal` came off at
+the same time. `tools/sim/enakhquarry.ts` mines both rocks and asserts the build order: **12 ok,
+0 FAIL**.
 
 ### The class this came out of: a category with no row behind it — RESOLVED, with a guard
 
@@ -494,10 +516,12 @@ identified by an exact four-value recolour match against a rock already in that 
 could ever have reached the bug those rows fix. `loc_11193` is left out because it is one of the
 quarry pair above.
 
-What the work actually buys is **the invariant**, and that is the part worth having. `minerops.ts`
-sweeps every loc carrying a mining category with a clickable Mine — 124 of them — and fails if any
+What the work actually buys is **the invariant**, and that is the part worth having. `minerows.ts`
+sweeps every loc carrying a mining category with a clickable Mine — 123 of them — and fails if any
 is neither in the table nor flagged `mining_rock_empty`. It would have caught these four, and it
-will catch the next one, which may well be placed. **16 ok, 0 FAIL, 0 untested.**
+will catch the next one, which may well be placed. It carries **no exclusion list**: there was one,
+holding the quarry's four locs, and it is gone now that they answer through the quest instead.
+**16 ok, 0 FAIL, 0 untested.**
 
 ## 7. Three test assertions I rewrote — RESOLVED, the owner reviewed the diffs and kept all three
 

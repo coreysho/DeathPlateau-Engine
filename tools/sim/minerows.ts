@@ -27,14 +27,23 @@
 // loc_9716 sitting directly above it in the same file.
 //
 // loc_11193's ore colour is 18821, which appears on no rock in any row, as does 16706 on loc_10946
-// and loc_11192; loc_10947 is 18821 again. And the reason is better than "no match": the 58 placed
-// instances of loc_10946 and loc_10947 are all in one place, a quarry among the cacti at about
-// 3172,2912 surrounded by enakh_scaffold, enakh_wheel_barrow and enakh_secret_boulder - Enakhra's
-// quarry. Two of its rocks already work, loc_10948 coal and loc_10949 clay, which is why Part C
-// mines those two. The dead pair is the quarry's sandstone and granite, and THIS BUILD HAS NEITHER
-// OBJ: there is no sandstone anywhere and the only granite is gargoyle-drop equipment. So they
-// cannot be given a row, because there is nothing for the row to hand the player. That is a feature
-// to write, not a wiring gap to close, and it is in decisions.md as such.
+// and loc_11192; loc_10947 is 18821 again. Those four are Enakhra's quarry - 58 placed instances of
+// the two that the map places, in one pit at about 3172,2912, with two rocks already working in it
+// (loc_10948 coal and loc_10949 clay, which is why Part C mines those two).
+//
+// THEY ARE NOT IN THIS TABLE AND SHOULD NOT BE, and the reason is not the one I first wrote down. I
+// reported that this build had no sandstone or granite obj and that the quarry therefore could not
+// be wired at all. That was wrong - I searched for objs whose names START with sandstone or granite
+// and the build's are enakh_sandstone_tiny through _huge_base+legs and enakh_granite_tiny through
+// _medium. The same mistake, made from the other side, is in quest_enakh.rs2's own history: it
+// concluded "this cache has no Desert Quarry at all" from there being no LOC with those words in
+// its name, and made one rock stand in for the whole pit.
+//
+// So the quarry is wired now, by quest_enakh rather than by a row here: ~enakh_next_block hands
+// over whichever block the statue still needs, which means nothing has to decide which of the two
+// rocks is the sandstone and which the granite - a question the recolours cannot answer.
+// tools/sim/enakhquarry.ts covers it. A mining_table row would have forced that decision, and a
+// direct trigger beats a category in the lookup order, so this sweep no longer sees them at all.
 //
 // THREE PARTS. Part A is the static sweep and the one that lasts: every loc with a mining category
 // and a clickable Mine must be in the table or flagged empty, so it fails for the next rock
@@ -81,9 +90,10 @@ for (const row of DbRowType.getInTable(tableId)) {
 }
 
 const emptyParam = ParamType.getId('mining_rock_empty');
-// The four locs whose ore cannot be identified from their recolours. Listed by name so that the
-// sweep still fails if one of them ever gains a row under a guess rather than a finding.
-const UNIDENTIFIED = new Set(['loc_11193', 'loc_10946', 'loc_10947', 'loc_11192']);
+// No exclusions. There was a list here of four locs whose ore could not be identified - Enakhra's
+// quarry - and it is gone because they no longer carry a mining category at all: loc_11193's was
+// dropped when quest_enakh took the rock on directly, and the other three never had one. An empty
+// exclusion list is the point of this sweep, so if one ever comes back it should come back loudly.
 
 let swept = 0;
 const orphans: string[] = [];
@@ -102,11 +112,7 @@ for (let id = 0; id < LocType.count; id++) {
 }
 
 console.log(`   swept ${swept} rocks carrying a mining category with a clickable Mine`);
-const unexpected = orphans.filter(n => !UNIDENTIFIED.has(n));
-check('no rock dispatches Mine and then finds no row', unexpected.length === 0, unexpected.length ? unexpected.join(', ') + ' - each will print "Nothing interesting happens"' : '');
-if (orphans.some(n => UNIDENTIFIED.has(n))) {
-    console.log(`   (${orphans.filter(n => UNIDENTIFIED.has(n)).join(', ')} are known-unidentifiable and excluded - see the header)`);
-}
+check('no rock dispatches Mine and then finds no row', orphans.length === 0, orphans.length ? orphans.join(', ') + ' - each will print "Nothing interesting happens"' : '');
 
 // ======================================================================= Part B: the added rows
 console.log('');
