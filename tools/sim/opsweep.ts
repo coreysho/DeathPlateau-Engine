@@ -74,12 +74,15 @@ function globalOnly(trigger: number, type: number, category: number): boolean {
     return !claimed(trigger, type, category) && !!ScriptProvider.getByTriggerSpecific(trigger, -1, -1);
 }
 
-type Row = { line: string; where: string[]; instances: number };
+// `note` is presentation only and is deliberately NOT part of the ratchet signature below: the
+// signature is this option's identity, and appending a hint to it would make every annotated line
+// read as newly dead the first time the hint changed.
+type Row = { line: string; where: string[]; instances: number; note?: string };
 const dead: Row[] = [];
 const swallowed: Row[] = [];
 
-function add(into: Row[], line: string, where: string[], instances: number): void {
-    into.push({ line, where, instances });
+function add(into: Row[], line: string, where: string[], instances: number, note?: string): void {
+    into.push({ line, where, instances, note });
 }
 
 // ------------------------------------------------------------------------------ where things are
@@ -127,6 +130,8 @@ for (const npc of World.npcs) {
 
 // multiloc: a shell's options may be answered on one of its children, or the other way round.
 const locFamily = new Map<number, number[]>();
+/** child loc id -> the multiloc shell that actually dispatches its options. */
+const locShell = new Map<number, number>();
 for (let id = 0; id < LocType.count; id++) {
     const type = LocType.get(id);
     const kin = (type.multiloc ?? []).filter(i => i >= 0);
@@ -136,6 +141,16 @@ for (let id = 0; id < LocType.count; id++) {
     locFamily.set(id, [id, ...kin]);
     for (const child of kin) {
         locFamily.set(child, [...new Set([...(locFamily.get(child) ?? [child]), id, ...kin])]);
+        // THE NAME IN THIS REPORT IS NOT ALWAYS THE NAME TO HOOK. A multiloc child is where the
+        // option sits in the cache, so that is the name printed - but OpLocHandler resolves the
+        // multiloc only to decide whether the op is valid and then hands on the placed Loc, and the
+        // trigger is looked up with LocType.get(target.type), which is the SHELL. A trigger written
+        // on a child name is never reached, and it looks like a fix. Fourteen lines of this report
+        // were in that shape (Garden of Tranquillity's beds and Rind's hop patch, 192 instances),
+        // so the shell is named on the line now rather than left to be rediscovered.
+        if (!locShell.has(child)) {
+            locShell.set(child, id);
+        }
     }
 }
 
@@ -163,10 +178,12 @@ for (let id = 0; id < LocType.count; id++) {
             return claimed(ServerTriggerType.OPLOC1 + op, f, t.category) || claimed(ServerTriggerType.APLOC1 + op, f, t.category);
         });
         const where = family.flatMap(f => locPlaces.get(f) ?? []).slice(0, 3);
+        const shell = locShell.get(id);
+        const note = shell !== undefined ? `<- multiloc child; hook [oploc${op + 1},${LocType.get(shell).debugname ?? shell}]` : undefined;
         const line = `loc  ${type.debugname ?? id} op${op + 1}="${label}"`;
         if (!anyKinClaims) {
             const anyGlobal = family.some(f => globalOnly(ServerTriggerType.OPLOC1 + op, f, LocType.get(f).category));
-            add(anyGlobal ? swallowed : dead, line, where, instances);
+            add(anyGlobal ? swallowed : dead, line, where, instances, note);
         }
     }
 }
@@ -350,7 +367,7 @@ console.log('');
 
 console.log(`-- dead, and on the map (${placed.length}) - these are what a player clicks`);
 for (const row of placed.slice(0, 80)) {
-    console.log(`   ${row.line}  x${row.instances} ${row.where.join(' ')}`);
+    console.log(`   ${row.line}  x${row.instances} ${row.where.join(' ')}${row.note ? '  ' + row.note : ''}`);
 }
 if (placed.length > 80) {
     console.log(`   ... and ${placed.length - 80} more`);
@@ -419,7 +436,7 @@ const swallowedHeld = swallowed.filter(r => !swallowedUnheld.includes(r));
 console.log(`\n-- answered only by the global fallback (${swallowed.length}) - see trap 3 in this file's header`);
 console.log(`   ${swallowedHeld.length} on something a player can actually have:`);
 for (const row of swallowedHeld.slice(0, 40)) {
-    console.log(`   ${row.line}  x${row.instances} ${row.where.join(' ')}`);
+    console.log(`   ${row.line}  x${row.instances} ${row.where.join(' ')}${row.note ? '  ' + row.note : ''}`);
 }
 if (swallowedHeld.length > 40) {
     console.log(`   ... and ${swallowedHeld.length - 40} more`);
