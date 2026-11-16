@@ -579,6 +579,60 @@ test's own player. Any future sweep that reports "cannot be done" should say *by
 character with no quest progress is a narrow lens, and twice now it has made correct content look
 broken.
 
+## 9. What is actually left in the dead-options list — the honest accounting
+
+`opsweep` is at **852 dead options on locs the map places**, down from 904. That is **68 loc lines
+and 3,262 placed instances**, and the useful fact about them is how lopsided the distribution is:
+
+| instances | lines | what it is |
+| --- | --- | --- |
+| 1,516 | 3 | **Maze random event.** Nothing in any script mentions `macro_maze`. The randoms framework is large and has most of its events; this one was never built. |
+| 698 | 20 | **Construction build hotspots** (`loc474_15xxx`, `op5="Build"`). |
+| 492 | 12 | **Rogues' Den course** — trap floors, spiked walls, blocking doors. |
+| 243 | 6 | **Between a Rock's wall of flame**, and the Arzinian Being behind it, which has **no ops at all** — the whole gold-for-armour encounter is unbuilt. |
+| 63 | 6 | **Shades of Mort'ton** chests and lair doors (they want the key system). |
+| 40 | 3 | **Mage Training Arena** — exit portals and the graveyard bone piles. |
+| 28 | 2 | Lunar Isle village scenery. |
+| 16 | 1 | **Agility Pyramid.** |
+| 166 | 15 | everything else |
+
+So **95% of what is left is eight named features**, not wiring. A category or a trigger cannot close
+any of them; each needs a mechanic designed and written. That is the answer to "is the list nearly
+done": the *list* is long and the *work* in it is eight pieces plus a tail.
+
+**The tail, and why each bit of it is stuck.** These are the ones that are not features, and none of
+them is stuck for want of effort:
+
+- `regicide_trap_hand_holds` (16), `loc_14179` "Jump-out" (12), `ahoy_rock_invisible` (10),
+  `mourning_temple_agility_hanging` (9) — all **destination problems**, the ladder bucket's lesson
+  over again. A probe of the two biggest found *nothing else within eighteen tiles* to identify a
+  destination from: four climbing holds in a bare room, three lights in a bare cave. Section 4 is
+  the precedent — a hint about where it goes makes these a ten-second fix each and nothing else
+  does.
+- `loc_4027` Mine/Prospect (15 each) and `swamp_rock1` Mine/Prospect (10 each) — **two more rock
+  families whose ore colour matches nothing**, 14797 and 8288. `loc_4027` is the Rag and Bone Man's
+  camp (the Odd Old Man, the potboiler, the mastodon ribs); the swamp rocks are their own family
+  with a `swamp_rock_noore` sibling. Same shape as Enakhra's quarry before it was identified, so the
+  thing to look for is a quest that wants what they yield.
+- `kelda_hops_fullygrown` "Harvest" (16) — **blocked on a chain, not a trigger.** Nothing advances
+  `%forget_farming` past the 4 Rind sets, so state 8 is unreachable and a Harvest handler would be
+  code no player could run. The pieces are all in the cache and all unconnected: `kelda_hop_seed`
+  through `_seed_5`, the `kelda_hops` obj, and `^brew_vat_kelda_hops = 68` which `brewing.constant`
+  defines and no script reads. Growing it is the feature; the Harvest is the last line of it.
+- `loc_10799` Take-from (9), `loc_6836` Unlock (9), `aquarium` Fish-In (8) — not yet looked at.
+
+**What this stretch actually closed**, for calibration against the 852: about **600 live placed
+instances** across wheat, crates, the Sophanem sarcophagi, Icthlarin's banana trees, four bookcases,
+the Garden of Tranquillity beds, Rind's hop patch, Enakhra's quarry, the Draynor wardrobes and the
+Wilderness doors — plus the two tools that keep them shut, `minerows.ts` and the multiloc annotation
+in `opsweep` itself.
+
+**Three lessons came out of it and they are worth more than the fixes.** A shared model says two
+locs are the same *kind* of thing, not that they point the same way. A sim that cannot fail is not
+evidence. And in a dump like this, **a thing's name is the least reliable evidence about it** —
+which cost two wrong conclusions about Enakhra's quarry, one of them mine and one already in the
+build, and is the reason `opsweep` now prints the multiloc shell beside the child's name.
+
 ## Not a decision, just the measurement
 
 The first nightly on the merged engine (run 40, `9d29cbde`) was **green**, and it answers the one
