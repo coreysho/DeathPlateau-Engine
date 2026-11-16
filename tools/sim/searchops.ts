@@ -64,7 +64,17 @@ const SEARCHABLES: { name: string; x: number; z: number; noun: RegExp; cat: stri
     // Their own triggers, for the reasons in the header.
     { name: 'loc_6630', x: 3278, z: 9191, noun: /sarcophagus/i, cat: 'own trigger, NOT the Desert Treasure one' },
     { name: 'icthalarins_bananatreeempty', x: 3300, z: 2790, noun: /bananas left/i, cat: 'own trigger, NOT the banana_tree category' },
-    { name: 'dwarf_keldagrim_metal_bookcase', x: 1903, z: 4960, noun: /Red Axe/i, cat: 'own trigger, NOT the bookcase category' }
+    { name: 'dwarf_keldagrim_metal_bookcase', x: 1903, z: 4960, noun: /Red Axe/i, cat: 'own trigger, NOT the bookcase category' },
+    // THREE PLAIN BOOKCASES, and a miss of mine: wiring the Red Axe shelves above should have been
+    // the moment to look at the rest of the family, and it was not - these three stayed dead for
+    // another pass. They take category=bookcase, which the Red Axe one could not, because their own
+    // descriptions are generic ("A treasure trove of knowledge", "A case. With books.", "A good
+    // source of books!") and so do not contradict @search_bookcase's "none of them look very
+    // interesting". That handler picks one of four lines at random, so the assertion is on the one
+    // word all four share.
+    { name: 'dwarf_keldagrim_bookcase', x: 2890, z: 10205, noun: /bookcase/i, cat: 'category=bookcase' },
+    { name: 'sarim_bookcase2', x: 3027, z: 3222, noun: /bookcase/i, cat: 'category=bookcase' },
+    { name: 'bookcase_polybooks', x: 3094, z: 3159, noun: /bookcase/i, cat: 'category=bookcase' }
 ];
 
 const p = H.makePlayer('searcher', 3222, 3218) as unknown as { x: number; z: number; level: number; teleport: (x: number, z: number, l: number) => void };
