@@ -66,6 +66,18 @@ const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number 
     // Burgh de Rott - down to the cellars; the house interiors are level 1 and the cellars 0.
     { name: 'burgh_floorboard_hatch', x: 3478, z: 3224, dlevel: -1, dz: 0 },
     { name: 'burgh_ladder_hatch_up', x: 3491, z: 3244, dlevel: +1, dz: 0 },
+    // Wired on judgement with the owner's leave; the climb test is what vets them.
+    { name: 'wild_laddertop', x: 3022, z: 3638, dlevel: -1, dz: 0 },
+    { name: 'wild_ladder', x: 3022, z: 3625, dlevel: +1, dz: 0 },
+    { name: 'boardgames_ladderdown', x: 2184, z: 4952, dlevel: -1, dz: 0 },
+    { name: 'boardgames_ladderup', x: 2184, z: 4952, dlevel: +1, dz: 0 },
+    { name: 'boardgames_runesquares_ladderdown_experienced', x: 2184, z: 4951, dlevel: -1, dz: 0 },
+    { name: 'boardgames_runesquares_ladderup_experienced', x: 2184, z: 4951, dlevel: +1, dz: 0 },
+    { name: 'boardgames_runeversi_ladderdown_experienced', x: 2231, z: 4951, dlevel: -1, dz: 0 },
+    { name: 'boardgames_runeversi_ladderup_experienced', x: 2231, z: 4951, dlevel: +1, dz: 0 },
+    { name: 'fairy_ladder_wind_down', x: 2403, z: 4458, dlevel: -1, dz: 0 },
+    { name: 'fairy_ladder_wind_up', x: 2403, z: 4458, dlevel: +1, dz: 0 },
+    { name: 'prison_trapdoor', x: 3013, z: 3179, dlevel: -1, dz: 0 },
     // Wilderness - down to the dungeon, which is 6400 south rather than a level below.
     { name: 'wild_laddertop_dungeon', x: 3005, z: 3963, dlevel: 0, dz: +6400 }
 ];
@@ -96,7 +108,9 @@ for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
     const spots = [
         ...H.locsNear(name, sx, sz, 0),
         ...H.locsNear(name, sx, sz, 1),
-        ...H.locsNear(name, sx, sz, 2)
+        ...H.locsNear(name, sx, sz, 2),
+        // level 3 as well: wild_laddertop sits on a tower roof and read as UNTESTED without it.
+        ...H.locsNear(name, sx, sz, 3)
     ];
     if (!spots.length) {
         console.log(`   UNTESTED - no instance found near ${sx},${sz}`);
