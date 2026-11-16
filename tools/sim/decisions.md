@@ -208,23 +208,19 @@ more here than any amount of further analysis.
 Two separate decisions, both now researched down to a one-word answer. Nothing here needs more
 digging; it needs a choice.
 
-**`iop2="Play-With"` on the 3 fishbowl fish** (`fishbowl_greenfish`, `fishbowl_spinefish`,
-`fishbowl_bluefish`) falls through to the global `[opheld2,_]` equip and silently wears the bowl.
-The facts that decide it:
+**`iop2="Play-With"` on the 3 fishbowl fish** — DONE, and the cache answered it.
 
-- all three are `wearpos=righthand`, and **none has a Wear or Wield option**, so that mislabelled
-  click is the *only* route to holding the bowl;
-- their other options are already written out, per item, in
-  `general_use/scripts/item_ops_generated.rs2` — `iop3` Feed says *"You sprinkle some food into the
-  bowl."* and `iop1` deliberately answers *"Nothing interesting happens."*;
-- so `iop2` is the one option of three with no handler of its own, and the pattern for giving it one
-  already exists in that file.
+The option fell through to the global `[opheld2,_]` equip code and silently wore the bowl. What
+settles what it should do instead is that the cache carries three animations nothing plays:
+`human_play_with_pet_fish_blue`/`_green`/`_spine`, one per bowl. A one-to-one match with the three
+objs is not a coincidence, and the shape is Diango's toy horseys — `[opheld1,horsey_brown]`
+`@toy_horsey_say(human_playhorsey_brown)` does `p_stopaction`, `anim` and a line. Play-with plays
+an animation there, so it plays one here.
 
-Four ways to go. **Message and still equip** keeps the original cache label, explains the click, and
-keeps the bowl holdable. **Message only** matches the sibling pattern most exactly and makes the
-action match the label, at the cost of making `wearpos=righthand` unreachable. **Relabel `iop2` to
-Wield** is one line per obj and no new script, but diverges from the dump's own label in a
-preservation repo. Or leave it.
+The four options I listed as needing a choice were all answerable from the repo, so none of them
+was taken. Claiming the option was safe because **nothing reads a fishbowl out of `worn`** — that
+mislabelled click was the only route to the slot, and no script wanted it. The bowl stops being
+holdable, which `equipcycle --unwearable` now reports about it truthfully.
 
 **`iop5="Release"` on 6 items** — PARTLY DONE, and the file answered most of it.
 
