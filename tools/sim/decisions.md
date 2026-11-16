@@ -199,6 +199,23 @@ instances — about as strong as the evidence gets — and climbing it still put
 the ladder's own tile, so the landing depends on the side they approached from, and nothing in the
 map says which side that is.
 
+**Two more angles tried since, both dead**, listed so they are not tried a third time:
+
+- *Identify the area from the npcs standing in it* — the technique that cracked both mining
+  clusters. Adds nothing here: the names already say it (`elf_village_ladder` is Lletya,
+  `prison_ladder_up` the Port Sarim jail, `wild_ladder` the Wilderness, `burgh_floorboard_hatch`
+  Burgh de Rott), and `deadladders.ts` already prints each one's placement and partner.
+- *Read the destination out of a quest runner's `JUMPED to` steps* — a jump often exists because
+  a link is missing, so the manifest might name where the ladder should go. It does not: the
+  Mourning's End runner has Lletya only at level 0 and never goes up, which is true of the other
+  areas too. The runners route around these ladders rather than across them.
+
+The blocker is unchanged and is not about destinations at all. `deadladders` finds `loc_11739` a
+same-tile partner on **7 of 7** instances — the strongest evidence this gets — and climbing it
+still lands the player at 3050,3356,2, a wall. The handler telejumps from the tile the PLAYER
+stands on, so the landing depends on the side they approached from, and nothing in the map says
+which side that is.
+
 So this stays as the backlog has it: 24 one-line `category=` additions, each wanting someone who
 knows where its ladder goes. A hint by area ("the Lletya ones go up to the tree walkways") is worth
 more here than any amount of further analysis.
