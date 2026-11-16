@@ -235,20 +235,46 @@ options, two already working: `iop1` Drop runs `@hundred_place_toad`, and `iop4`
 answers with a message and deletes nothing. The singular Release is now that line in the
 singular, so the two differ only in number — which is what their labels say.
 
-**The four POH toys are the remaining question, and it is narrower than it was.** `poh_toy_cat`
-and the three wound-up toys carry `iop5=Release` and **nothing else** — no Drop. The global
-fallback is therefore a player's only way to get rid of one, so claiming the trigger with a
-message-only handler would take that away. Fixing the silence there means keeping the drop and
-adding a line to it. That is a one-line change per toy once someone says what Release should
-mean for a toy, which is the part no amount of reading the repo settles: the six wired ones are
-all live creatures being let go, and a wind-up toy soldier is not.
+**The four POH toys — the cache specifies the whole feature, and it is bigger than a line.**
+
+What is already there, all of it unused:
+
+| piece | state |
+|---|---|
+| objs `poh_toy_{soldier,doll,mouse}_wound` + `poh_toy_cat` | `iop5=Release`, **dead** |
+| npcs `poh_toy_{soldier,doll,mouse,cat}` | exist, `vislevel=hide`, `op1=Pick-up`, **dead** |
+| animations `poh_toy_soldier_walk`/`_ready`/`_fallover`, `poh_toy_doll_walk`, `mousetoy_walk` | wired as the npcs' `walkanim`/`readyanim` |
+| `[proc,release_toad]` in `bloated_toad.rs2` | the precedent: `npc_add(coord, toad, 10)` with a lifetime, then `npc_walk` away |
+
+So Release means *set the toy down and let it go*: spawn the matching npc, which walks with its
+own animation and can be picked back up. The cache answers what appears, which was the question
+I had written up as needing a decision — the third item in a row where it did.
+
+**Not done, because unlike the toads and the fish this is a feature with two halves** — four
+`Release` handlers and four `Pick-up` handlers, around thirty lines — and it has one question the
+cache does not settle: **does Pick-up give back the wound obj or the unwound one?** A toy that has
+walked about has arguably run down, which argues for unwound, and `poh_toy_cat` has no wound/unwound
+pair at all. Lifetime and the messages would also be mine to pick. Say the word and it is an
+afternoon's work; it is left here rather than taken because nobody asked for a feature.
 
 ## 6. Twelve script-spawned npcs with a dead `Talk-to` — OPEN, needs dialogue written
 
-Dialogue nobody has written, for npcs a script spawns rather than the map placing. Writing words in
-somebody's characters' mouths is not mine to do. The larger bucket is 501 npc `Talk-to` options in
-the same state (`opsweep-backlog.md`); these twelve are separated only because a script spawns them,
-so a player meets them in a specific moment that suggests what they would say.
+Dialogue nobody has written, for npcs a script spawns rather than the map placing. **Checked, and
+the repo does not answer this one** — unlike the balloon toads, the pet fish and the POH toys,
+where it did. The eleven `opsweep` lists with `<- npc_add` are `burgh_gadderanks_attackable`,
+`cyrisus_dream`, `hazeel`, `morgan_le_faye`, `regicide_evil_elf1`/`2`,
+`route_vanstrom_klause_normal`/`_vamp`/`_vamp_wingsgrow`, `ungadulu_bad` and `zadimus_ghost`, and
+**not one of them is referenced by name anywhere in any script**.
+
+A first pass suggested `hazeel` had thirteen lines of dialogue already written and `ungadulu_bad`
+one. Both were substring noise — the thirteen all belong to `hazeel_cultist`,
+`clivet_hazeel_cultist` and `butler_jones_hazeel_cultist`, which are different npcs. Matching the
+names exactly returns nothing at all. Same shape as the `$fail_coord` false positive in
+`deaddata.py`: a name that is a prefix of other names will lie to a loose grep.
+
+So this one really does need writing. The larger bucket is 501 npc `Talk-to` options in the same
+state (`opsweep-backlog.md`); these are separated only because a script spawns them, so a player
+meets them in a specific moment that suggests what they would say.
 
 ## 7. Three test assertions I rewrote — RESOLVED, the owner reviewed the diffs and kept all three
 
