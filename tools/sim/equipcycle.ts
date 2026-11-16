@@ -112,7 +112,11 @@ const flagStr = (flag: string): string | null => {
     return i === -1 ? null : args[i + 1];
 };
 
-const CYCLES = flagNum('--cycles', 3);
+// TWO AND NOT THREE. The nightly killed this sim at its cap on its first unattended run, and a
+// third of the work buys nothing: the bug it generalises - the Boots of Lightness - diverged on
+// CYCLE 1, and the second cycle is there to show the first was not a fluke. A third only costs
+// 1,427 more wear-and-remove pairs. Pass --cycles 3 by hand when hunting something that needs it.
+const CYCLES = flagNum('--cycles', 2);
 const FILTER = flagStr('--filter');
 const LIMIT = flagNum('--limit', 0);
 const LIST_UNWEARABLE = args.includes('--unwearable');

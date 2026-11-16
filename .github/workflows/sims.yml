@@ -305,9 +305,16 @@ jobs:
           # and this sim walks the whole of it, so it is not going to get faster; waiting for it to
           # cross the line would only mean reading a timeout as a failure first, which is the
           # audit7 trap this whole block exists to stop repeating.
+          #
+          # equipcycle was KILLED AT 180s on the first nightly that had it, which is the audit7 trap
+          # again and the reason this block exists. It wears and removes every one of 1,427 items,
+          # so its cost is the population and not a dice roll: there is no version of it that fits
+          # 180s while still sweeping everything, and a sweep of some of the items is not the check.
+          # Its own default was also lowered from three cycles to two at the same time, which is a
+          # third off for nothing lost - the duplication it generalises diverged on cycle 1.
           case "$label" in
             audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run) cap=600 ;;
-            gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
+            gwdguards|dpick|gwdanims|lunar|equipcycle) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
           esac
