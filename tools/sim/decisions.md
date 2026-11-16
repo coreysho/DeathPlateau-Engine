@@ -173,7 +173,47 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The dead ladders — 7 of 24 DONE, 17 still need an area hint
+## 4. The dead ladders — ALL BUT FOUR DONE, and the four left are deliberate
+
+**Current state: `tools/sim/ladderclimb.ts` reports 120 ok, 0 FAIL, 2 untested**, and
+`tools/sim/ahoyladders.ts` 49 climbs worked with no landing inside scenery. Every ladder wired in
+this bucket is climbed at every placed instance, in every direction it offers, with two assertions
+each: the player changed level the right way, and the tile they arrived on is standable. The two
+untested are board-games instances with no routable approach tile, which is a property of the room
+rather than of the ladder.
+
+**What is left, and why each is left.** `regicide_voyage_temple_well1` shares a model with
+`regicide_voyage_temple_well2`, which has its own trigger, so the backlog's recipe applies and it is
+simply not done yet. The three Lunar Isle locs (`loc474_16732`/`16733`/`16734`) are the cautionary
+case the backlog records: they were wired on tool evidence once and reverted, and `lunar_isle.loc`
+says so in the file. They stay dead until somebody who knows the island says where they go.
+
+**The last two mechanical entries are done.** `wild_ladder_middle` and `elf_village_ladder_mid`
+carry Climb / Climb-up / Climb-down, so neither can take a category — the `ladder_up` and
+`ladder_down` categories each dispatch exactly one op, and the ends of both stacks already used
+them. Both are plain vertical stacks on a single tile, which is what makes the generic one-level
+offset right here rather than guesswork, and `ladderclimb.ts` grew an `op` field to drive 2 and 3
+directly: their op1 opens a "Climb up or down?" box that a headless player never answers, and the
+dialogue only chooses between the two destinations the other ops reach anyway. Twenty new
+assertions, all green.
+
+**The ghost ship's angled pair is done, with weaker evidence, and the enum says so.**
+`ahoy_ghostshipladder_angled` and `ahoy_ghostshipladder_top_angled` route through the ship's
+existing table like its other twelve placements. But **decks 1 and 2 of that ship carry no
+collision data at all** — a 17x13 sweep of both floors comes back open but for the ladder locs
+themselves — so the "is the arrival tile standable" check that justifies every other row in that
+table cannot fail there and cannot choose between candidates. The offset therefore comes from the
+model: these are `shipladder_angled` and `shipladder_top_angled`, whose own handler steps two tiles
+out in the facing direction, which is where the top of the lean is. That is derivation, not
+measurement, and it is labelled as such in `ahoy_ladders.enum` so nobody later mistakes those four
+numbers for the measured ones beside them.
+
+That is also the general lesson this bucket ends on: **a sim that cannot fail is not evidence.**
+The standable check is what made every other ladder here safe to wire, and on one ship it silently
+had no teeth. Worth checking the next time a landing assertion looks green.
+
+### How it got here (original entry)
+
 
 **Lletya and the Port Sarim jail are done** — the owner said where each goes (up into the tree
 walkways; down to the cells) and both are the plain vertical link, so `elf_village_ladder`,
@@ -215,7 +255,7 @@ you know where it goes.
 
 `elf_village_ladder_mid` is left: Climb-up on op2 and Climb-down on op3, and the generic handler
 is op1-only, so no category answers both. It wants `[label,ladder_options]`, which `ladders.rs2`
-already has.
+already has. *(Done — see the head of this section.)*
 
 
 `npx tsx tools/sim/deadladders.ts`. These need somebody who knows the areas; three approaches have
@@ -263,7 +303,13 @@ So this stays as the backlog has it: 24 one-line `category=` additions, each wan
 knows where its ladder goes. A hint by area ("the Lletya ones go up to the tree walkways") is worth
 more here than any amount of further analysis.
 
-## 5. `Release` and `Play-With` intent — OPEN, researched, needs a choice
+## 5. `Release` and `Play-With` intent — RESOLVED, every part of it, and none needed a choice
+
+All four pieces of this entry are written and tested. What makes it worth keeping is that **every
+one of them was answered by the repository rather than by a decision**: three unused animations for
+the fishbowls, a `Release-all` sibling for the balloon toads, and for the POH toys a complete
+feature in the cache with only the three verbs missing. The four options originally listed as
+needing a choice were all answerable from the build, so none of them was ever taken.
 
 Two separate decisions, both now researched down to a one-word answer. Nothing here needs more
 digging; it needs a choice.
@@ -313,7 +359,57 @@ round trip and the count rather than the steps, because a Wind that eats the toy
 that hands back the wrong obj both pass a "did it say something" check. opsweep went 0 new / 11
 fixed, which is exactly three Winds, four Releases and four Pick-ups.
 
-## 6. Twelve script-spawned npcs with a dead `Talk-to` — OPEN, needs dialogue written
+## 6. Script-spawned npcs with a dead `Talk-to` — RESOLVED, and it split in two
+
+**The earlier entry below was wrong on its central claim.** It said none of the eleven is
+referenced by name anywhere in any script. Every one of them is, each in its own quest file, and a
+word-boundary grep finds them in one pass. The mistake was the same shape as the one that entry
+itself warns about with `hazeel`: a loose search that answers confidently either way. The correction
+matters because the context it said was missing is exactly what decided every case below.
+
+**The real question turned out to be reachability, not dialogue.** Six of the eleven are on their
+feet while the player is free to click, and six needed writing. The other five are spawned inside
+an unbroken `p_delay`/dialogue chain, where the player never gets a click to spend, so there is
+nothing to write and writing it would be dead code:
+
+| npc | verdict |
+| --- | --- |
+| `burgh_gadderanks_attackable` | reachable — a real three-on-one fight. Narrated line. |
+| `cyrisus_dream` | reachable — stands at the arena edge for 2000 ticks. |
+| `morgan_le_faye` | reachable — stands for 50 ticks after the bargain. |
+| `regicide_evil_elf1` (Essyllt) | reachable — on the path for 500 ticks either side of the scene. |
+| `regicide_evil_elf2` (Morvran) | reachable — the same. |
+| `ungadulu_bad` | reachable — on his feet for 100 ticks, and attackable. |
+| `hazeel` | **unreachable** — `npc_add`, `p_delay(5)`, then an unbroken chat chain, and `[queue,hazeel_leave]` opens with `if_close` and deletes him. |
+| `zadimus_ghost` | **unreachable** — `npc_add`, one `~chatnpc`, `npc_del`, all inside one script. |
+| `route_vanstrom_klause_normal` | **unreachable** — the whole reveal is a `p_delay` chain. |
+| `route_vanstrom_klause_vamp` | **unreachable** — same chain, one `npc_changetype_keepall` later. |
+| `route_vanstrom_klause_vamp_wingsgrow` | **unreachable** — same. |
+
+So the honest answer to five of these is **"the option is never offered to a player who can act"**,
+and that is a finding about the cache rather than a gap in the writing. It is worth keeping as a
+rule for the 501-npc bucket this was carved out of: *before writing dialogue for a script-spawned
+npc, check whether the script ever hands the player a tick in which to click it.*
+
+**Where the lines came from.** Each of the six is in the voice its own file already uses, and three
+were answerable from the file rather than invented. Essyllt and Morvran reuse the two things they
+say in the cutscene — one challenges, one quotes the law — and the file had already confirmed their
+names from `[name=]`. Gadderanks is narrated rather than given a chat box because he has a real
+conversation twenty lines further down on `burgh_gadderanks_wounded`, and because a dialogue window
+in the middle of a three-on-one is not a kindness. Cyrisus shouts with `npc_say` for the reason his
+own file writes down at length: there is a level 343 fear in that room. Morgan Le Faye gives back
+the three questions she already answers, because a player who closed the window had no other way to
+hear the Excalibur instructions again.
+
+**And clearing one dead op uncovered the next.** With his Talk-to written, `cyrisus_dream` came back
+with `op3="Inspect"` instead — dead on all three of his forms. That one was fully specified by the
+build: `%dm_armament` is a five-slot bitfield that `~dm_pick` fills one slot at a time out of Jack's
+account, and a player half-way through recovering it had no way at all to see which slots they
+already held, since Astral Contact only confirms the last guess. Inspect now lists what is still
+missing. Expect this shape again in the 501: the first dead op on an npc is often not the only one.
+
+### How it got here (original entry, including the claim that was wrong)
+
 
 Dialogue nobody has written, for npcs a script spawns rather than the map placing. **Checked, and
 the repo does not answer this one** — unlike the balloon toads, the pet fish and the POH toys,
