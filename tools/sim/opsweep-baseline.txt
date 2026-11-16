@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2725 lines at the time of writing.
+# 2723 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -213,11 +213,9 @@ dead loc  elf_city_gate_right op1="Enter"
 dead loc  elf_village_bookcase_1 op1="Search"
 dead loc  elf_village_bookcase_2 op1="Search"
 dead loc  elf_village_bookcase_3 op1="Search"
-dead loc  elf_village_ladder op1="Climb-up"
 dead loc  elf_village_ladder_mid op1="Climb"
 dead loc  elf_village_ladder_mid op2="Climb-up"
 dead loc  elf_village_ladder_mid op3="Climb-down"
-dead loc  elf_village_ladder_top op1="Climb-down"
 dead loc  elf_village_spinning_wheel op2="Spin"
 dead loc  elf_village_treegate op1="Pass"
 dead loc  elid_cupboard_closed_empty op2="Search"

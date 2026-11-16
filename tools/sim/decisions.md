@@ -173,7 +173,23 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The 24 remaining dead ladders — OPEN, needs an area hint
+## 4. The dead ladders — 2 of 24 DONE, 22 still need an area hint
+
+**Lletya is done.** The owner said where they go — up into the walkways between the trees — and
+that is the plain vertical link, so `elf_village_ladder` and `elf_village_ladder_top` now carry
+`category=ladder_up`/`ladder_down`. `tools/sim/lletyaladders.ts` climbs **every** placed instance
+and checks the player changed level the right way and landed somewhere standable: 20 ok, 0 FAIL,
+0 untested across all ten.
+
+That sim is the thing the previous attempt at this bucket lacked, and it generalises: **given a
+hint about where a ladder goes, climbing every instance and checking the landing is a sound test**
+— it is only the *guessing* of the destination that could not be made to work. Another area's
+worth of hints can be wired and verified the same way.
+
+`elf_village_ladder_mid` is left: Climb-up on op2 and Climb-down on op3, and the generic handler
+is op1-only, so no category answers both. It wants `[label,ladder_options]`, which `ladders.rs2`
+already has.
+
 
 `npx tsx tools/sim/deadladders.ts`. These need somebody who knows the areas; three approaches have
 already failed and are written up in `opsweep-backlog.md`. The specific trap, found the hard way:
