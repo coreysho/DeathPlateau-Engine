@@ -1,6 +1,6 @@
-// LLETYA'S LADDERS, CLIMBED - every placed instance, checking where the player actually ends up.
+// DEAD LADDERS WIRED ON A HINT, CLIMBED - every placed instance, checking where the player lands.
 //
-//   npx tsx tools/sim/lletyaladders.ts
+//   npx tsx tools/sim/ladderclimb.ts
 //
 // THE TEST THE LAST ATTEMPT AT THIS BUCKET DID NOT HAVE. 25 dead ladders were given
 // category=ladder_up/ladder_down once and all 25 taken off again, because no sim could tell a real
@@ -8,10 +8,10 @@
 // are open but unroutable, and climbladders.ts's router-based rule calls a working ladder broken
 // 7 times in 13. opsweep-backlog.md has the whole history.
 //
-// What makes these safe to wire where the other 22 are not is that somebody who knows the place
-// said where they go - up into the walkways between the trees - so the only open question left is
-// whether the plain vertical link lands somewhere a player can stand. That is a question about one
-// tile per instance, and it can be answered by climbing and looking.
+// What makes a ladder safe to wire is somebody who knows the place saying where it goes. That
+// leaves one question per instance - does the plain vertical link land somewhere a player can stand
+// - and that is answerable by climbing and looking. Each area is added here as its hint arrives:
+// Lletya goes up to the tree walkways, Port Sarim's jail down to the cells.
 //
 // ~climb_ladder DOES NOT VALIDATE. It p_telejumps, so a wrong destination puts the player inside a
 // wall rather than refusing, which is why loc_11739 is the cautionary case: deadladders finds it a
@@ -52,10 +52,14 @@ H.maxOut(p as never);
 
 const standable = (level: number, x: number, z: number): boolean => !isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
 
-// Lletya sits around 2320-2360, 3150-3200. Seeds come from deadladders' own placement report.
+// Seeds come from deadladders' own placement report; locsNear finds the rest from each.
 const LADDERS: [string, number, number, number][] = [
+    // Lletya - up into the walkways between the trees.
     ['elf_village_ladder', 2328, 3168, +1],
-    ['elf_village_ladder_top', 2335, 3160, -1]
+    ['elf_village_ladder_top', 2335, 3160, -1],
+    // Port Sarim jail - down to the cells.
+    ['prison_ladder_up', 3010, 3184, +1],
+    ['prison_laddertop', 3010, 3184, -1]
 ];
 
 const offsets: [number, number][] = [];

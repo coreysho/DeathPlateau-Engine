@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2723 lines at the time of writing.
+# 2721 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -1402,8 +1402,6 @@ dead loc  poordoor_doubler_inner op1="Open"
 dead loc  port_sarim_jaildoor op1="Open"
 dead loc  port_sarim_jaildoor op5="Pick-lock"
 dead loc  potteryoven op1="Fire"
-dead loc  prison_ladder_up op1="Climb-up"
-dead loc  prison_laddertop op1="Climb-down"
 dead loc  prison_trapdoor op1="Climb-down"
 dead loc  prisonbarsdoor op1="Open"
 dead loc  prisonbarsdoor_locked op1="Open"
