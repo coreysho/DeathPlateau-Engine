@@ -450,6 +450,55 @@ So this one really does need writing. The larger bucket is 501 npc `Talk-to` opt
 state (`opsweep-backlog.md`); these are separated only because a script spawns them, so a player
 meets them in a specific moment that suggests what they would say.
 
+## 8. Enakhra's quarry has 58 dead rocks and no ore to put in them — OPEN, needs a decision
+
+`loc_10946` (32 placed) and `loc_10947` (26 placed) carry a live Mine and Prospect and answer
+nothing. They are the largest dead mining lines left, and unlike the three clusters in section 3
+this one cannot be closed by wiring.
+
+**Where they are.** All 58 sit in one quarry at about 3172,2912, among cacti and `enakh_scaffold`,
+`enakh_wheel_barrow`, `enakh_secret_boulder` — Enakhra's. Two rocks in the same quarry already work:
+`loc_10948` is coal and `loc_10949` is clay.
+
+**How a rock's ore is read, which is worth keeping.** Across every rock that has a `mining_table`
+row, `recol2s` is always 6342 and **`recol2d` is the ore**: 6242 iron, 4226 coal, 22025/18854 clay,
+14798/13741 tin, 26981/14596 copper, 31393/23108 gold, 19026 silver, 6346 mithril, 6438 adamantite,
+8721 runite, 382 blurite. `recol1d` is the region's body colour and `recol1s` only says which of the
+two rock models it is. So a dead rock whose four-value recolour matches a rock already in a row is
+that rock's ore — which is how three of the four orphans below were identified with no guessing.
+
+**Why these two are different.** Their ore colours are 16706 and 18821 and appear on no rock in any
+row, because they are the quarry's **sandstone and granite** — and this build has neither obj. There
+is no sandstone at all, and the only granite is gargoyle-drop equipment. A row cannot be written
+because there is nothing for it to hand the player.
+
+**So the decision is whether to build it**: two objs (OSRS has sandstone in four weights and granite
+in three), their rows, and the grinder that turns sandstone into sand. That is a feature, and a
+bigger one than it looks. The alternative is to accept 58 rocks that say nothing and mark them so
+the sweeps stop raising them.
+
+### The class this came out of: a category with no row behind it — RESOLVED, with a guard
+
+`mining.rs2` answers Mine through `category=mining_rock_*` and then does
+`db_find(mining_table:rock, loc_type)`, falling through to `~displaymessage(^dm_default)` on null. So
+a rock with a category and no row **looks wired from outside**: the option dispatches, a handler
+runs, and `opsweep` — which asks whether any script answers the option — is satisfied. The player
+still gets "Nothing interesting happens."
+
+Four locs were in that state: `loc_9715` in `rimmington_rocks.loc` and `loc_11193`/`11194`/`11195`
+in `all.loc`, each with a category and a `next_loc_stage_mining`, none in `mine.dbrow`.
+
+**Be clear about the size of the find: none of the four is placed on the map**, which
+`tools/sim/minerows.ts` asserts rather than assumes. Three now have rows — tin, coal and clay, each
+identified by an exact four-value recolour match against a rock already in that row — and no player
+could ever have reached the bug those rows fix. `loc_11193` is left out because it is one of the
+quarry pair above.
+
+What the work actually buys is **the invariant**, and that is the part worth having. `minerops.ts`
+sweeps every loc carrying a mining category with a clickable Mine — 124 of them — and fails if any
+is neither in the table nor flagged `mining_rock_empty`. It would have caught these four, and it
+will catch the next one, which may well be placed. **16 ok, 0 FAIL, 0 untested.**
+
 ## 7. Three test assertions I rewrote — RESOLVED, the owner reviewed the diffs and kept all three
 
 Each asserted an option was **absent** and now asserts the guarantee instead: the two barrows
