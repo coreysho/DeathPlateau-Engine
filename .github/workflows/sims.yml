@@ -312,6 +312,14 @@ jobs:
           # 180s while still sweeping everything, and a sweep of some of the items is not the check.
           # Its own default was also lowered from three cycles to two at the same time, which is a
           # third off for nothing lost - the duplication it generalises diverged on cycle 1.
+          #
+          # MEASURED AFTER THAT CHANGE: 399s on the development box for 1,431 objs at two cycles.
+          # The commit that set this cap guessed "roughly ten minutes" and was wrong by a third,
+          # so the band it reasoned from was too pessimistic. Against the two runner/box ratios this
+          # file already records - audit1 357s against 2551s, fuzz 512s against 881s - 399s here is
+          # somewhere around 57s to 235s on a runner, which 600 would also have covered. 1200 is
+          # left for one night because the runner figure is still unmeasured: the near-cap notice at
+          # seven tenths will print it, and 600 is the right tier if it comes in where that suggests.
           case "$label" in
             audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar|equipcycle) cap=1200 ;;
