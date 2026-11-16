@@ -63,10 +63,18 @@ const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number 
     // Port Sarim jail - down to the cells.
     { name: 'prison_ladder_up', x: 3010, z: 3184, dlevel: +1, dz: 0 },
     { name: 'prison_laddertop', x: 3010, z: 3184, dlevel: -1, dz: 0 },
+    // Burgh de Rott - down to the cellars; the house interiors are level 1 and the cellars 0.
+    { name: 'burgh_floorboard_hatch', x: 3478, z: 3224, dlevel: -1, dz: 0 },
+    { name: 'burgh_ladder_hatch_up', x: 3491, z: 3244, dlevel: +1, dz: 0 },
     // Wilderness - down to the dungeon, which is 6400 south rather than a level below.
     { name: 'wild_laddertop_dungeon', x: 3005, z: 3963, dlevel: 0, dz: +6400 }
 ];
 
+// odx/odz below, NOT dx/dz: the inner loop used to destructure [dx, dz] and shadow the
+// ladder's own dz, so `dz !== 0` tested the TILE OFFSET instead of the ladder kind. Every
+// ladder then took whichever branch its first standable offset happened to pick, and the
+// Wilderness one's check collapsed to `p.level === 0` - trivially true, verifying nothing
+// about the 6400 move it exists to check. It reported 36 ok while testing the wrong thing.
 const offsets: [number, number][] = [];
 for (let r = 0; r < 3; r++) {
     offsets.push([r + 1, 0], [-r, 0], [0, r + 1], [0, -r], [r + 1, r + 1], [-r, -r], [r + 1, -r], [-r, r + 1]);
@@ -98,10 +106,10 @@ for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
 
     for (const { x, z, level } of spots) {
         let climbed = false;
-        for (const [dx, dz] of offsets) {
+        for (const [odx, odz] of offsets) {
             if (climbed) continue;
-            const fx = x + dx;
-            const fz = z + dz;
+            const fx = x + odx;
+            const fz = z + odz;
             if (!standable(level, fx, fz)) continue;
             p.teleport(fx, fz, level);
             H.tick(1);

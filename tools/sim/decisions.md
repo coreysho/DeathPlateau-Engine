@@ -173,7 +173,7 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The dead ladders — 5 of 24 DONE, 19 still need an area hint
+## 4. The dead ladders — 7 of 24 DONE, 17 still need an area hint
 
 **Lletya and the Port Sarim jail are done** — the owner said where each goes (up into the tree
 walkways; down to the cells) and both are the plain vertical link, so `elf_village_ladder`,
@@ -189,7 +189,16 @@ only where the hint was about.
 That sim is the thing the previous attempt at this bucket lacked, and it generalises: **given a
 hint about where a ladder goes, climbing every instance and checking the landing is a sound test**
 — it is only the *guessing* of the destination that could not be made to work. Each area's hint is
-wired and verified the same way, and `ladderclimb.ts` gains a row per area as the hints arrive.
+wired and verified the same way, and `ladderclimb.ts` gains a row per area as the hints arrive:
+Lletya, the Port Sarim jail, the Wilderness dungeon and Burgh de Rott's cellars so far — **48 ok,
+0 FAIL, 0 untested** across all seven locs.
+
+**That sim lied once and it is worth knowing how.** Its inner loop destructured the tile offset as
+`[dx, dz]`, shadowing the ladder's own `dz`, so `dz !== 0` tested the offset rather than the ladder
+kind. Every ladder took whichever branch its first standable tile happened to pick, and the
+Wilderness check collapsed to `p.level === 0` — trivially true, verifying nothing about the 6400
+move it exists to check. It reported 36 ok while testing the wrong thing. The offsets are `odx`/`odz`
+now and the header says why.
 
 **The Wilderness one was a different shape, and worth reading before the next hint.**
 `wild_laddertop_dungeon` is Climb-down on level 0, so there is no level below and a category
