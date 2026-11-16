@@ -976,6 +976,21 @@ export function tick(n = 1) {
         for (const p of World.playerLoop.all()) {
             p.lastConnected = World.currentTick;
             p.lastResponse = World.currentTick;
+            // AND NO RANDOM EVENT IS OWED. World sets afkEventReady on a coin flip every 500
+            // ticks, and content reads it through `afk_event` at the top of the things a macroer
+            // would be doing - cooking, thieving, spinning, crafting jewellery - where the pattern
+            // is "if the event is owed, spawn it AND RETURN". The action is dropped on the floor.
+            //
+            // For a player that is the game working. For a sim it is one action in a long run
+            // silently doing nothing, at a tick nothing chose, and the 131 manifests that set the
+            // `macro_event` varp do not help: that varp stops the SPAWN, and the early return
+            // happens either way. Family Crest lost its perfect ruby ring to exactly this and
+            // stalled at stage 7 - the necklace a few steps later worked, because the first press
+            // had eaten the flag (tracker issue 21).
+            //
+            // randomevents.ts drives the spawn procs directly with runProc and never reads this,
+            // so nothing that tests macro events loses anything by it being off here.
+            p.afkEventReady = false;
         }
         World.cycle();
     }
