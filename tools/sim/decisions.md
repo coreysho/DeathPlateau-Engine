@@ -173,7 +173,7 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The dead ladders — ALL BUT FOUR DONE, and the four left are deliberate
+## 4. The dead ladders — ALL BUT THREE DONE, and the three left are deliberate
 
 **Current state: `tools/sim/ladderclimb.ts` reports 120 ok, 0 FAIL, 2 untested**, and
 `tools/sim/ahoyladders.ts` 49 climbs worked with no landing inside scenery. Every ladder wired in
@@ -182,11 +182,33 @@ each: the player changed level the right way, and the tile they arrived on is st
 untested are board-games instances with no routable approach tile, which is a property of the room
 rather than of the ladder.
 
-**What is left, and why each is left.** `regicide_voyage_temple_well1` shares a model with
-`regicide_voyage_temple_well2`, which has its own trigger, so the backlog's recipe applies and it is
-simply not done yet. The three Lunar Isle locs (`loc474_16732`/`16733`/`16734`) are the cautionary
-case the backlog records: they were wired on tool evidence once and reverted, and `lunar_isle.loc`
+**What is left: the three Lunar Isle locs** (`loc474_16732`/`16733`/`16734`), which are the
+cautionary case the backlog records - wired on tool evidence once and reverted, and `lunar_isle.loc`
 says so in the file. They stay dead until somebody who knows the island says where they go.
+
+**`regicide_voyage_temple_well1` is done, and it is the case where the backlog's own recipe gives
+the wrong answer.** The recipe for a dead loc that shares a distinctive model with a wired one is
+"copy that trigger". Here the model-mate is `regicide_voyage_temple_well2`, whose body teleports to
+`0_37_151_4_54` - the blood well's tile - so copying it would take a player standing in Iban's
+temple and move them *backwards* along the Underground Pass. The two wells that share a model are
+the two **ends** of the voyage, not two copies of one end.
+
+What settled it was reading the third well rather than the matching one. `bloodwell_upass` is not a
+voyage well at all: its description is "It doesn't look like water in there...", its model is
+`cave_well`, and `quest_upass` owns both its triggers for filling Iban's doll. What it carries is
+the Well of Voyage *inscription*, which is why Regicide hangs the voyage off it and why well2
+returns there. So well1 goes the way its own name and description say - west, into the voyage temple
+under Isafdar, landing beside well2, which already brings you back - reusing
+`[label,regicide_well_of_voyage]` rather than a copy of it, and carrying the same gate
+`bloodwell_upass` has so it is a second way west for somebody who has earned the first rather than a
+shortcut into Tirannwn.
+
+`tools/sim/voyagewells.ts` asserts all three directionally - where each well puts you, not merely
+that it does something - and checks the gate as well: **10 ok, 0 FAIL**. `quest_regicide_run.ts`
+stays green at 73 of 73.
+
+**So the general lesson, alongside the one below about evidence:** a shared model says these two
+locs are the same *kind* of thing. It does not say they point the same way.
 
 **The last two mechanical entries are done.** `wild_ladder_middle` and `elf_village_ladder_mid`
 carry Climb / Climb-up / Climb-down, so neither can take a category — the `ladder_up` and
