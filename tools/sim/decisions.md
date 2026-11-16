@@ -235,27 +235,23 @@ options, two already working: `iop1` Drop runs `@hundred_place_toad`, and `iop4`
 answers with a message and deletes nothing. The singular Release is now that line in the
 singular, so the two differ only in number — which is what their labels say.
 
-**The four POH toys — the cache specifies the whole feature, and it is bigger than a line.**
+**The four POH toys — DONE.** The cache specified the whole feature and it is now written, in
+`content/scripts/skill_construction/scripts/poh_toys.rs2`.
 
-What is already there, all of it unused:
+Three verbs were dead, not one: `Wind` on the unwound objs, `Release` on the wound ones and on
+`poh_toy_cat`, and `Pick-up` on the npcs. Everything else already existed — the npcs with
+`vislevel=hide` and their own `walkanim`/`readyanim`, and `[proc,release_toad]` as the precedent
+for turning an item into a creature and letting it go.
 
-| piece | state |
-|---|---|
-| objs `poh_toy_{soldier,doll,mouse}_wound` + `poh_toy_cat` | `iop5=Release`, **dead** |
-| npcs `poh_toy_{soldier,doll,mouse,cat}` | exist, `vislevel=hide`, `op1=Pick-up`, **dead** |
-| animations `poh_toy_soldier_walk`/`_ready`/`_fallover`, `poh_toy_doll_walk`, `mousetoy_walk` | wired as the npcs' `walkanim`/`readyanim` |
-| `[proc,release_toad]` in `bloated_toad.rs2` | the precedent: `npc_add(coord, toad, 10)` with a lifetime, then `npc_walk` away |
+The two things the cache did not settle were decided and written down: **Pick-up returns the
+unwound obj**, because `Wind` exists and returning the wound one would make it unreachable; and
+the npc **lives 500 ticks**, where the toad's 10 is right for something hopping into the
+undergrowth and wrong for something you mean to pick up again.
 
-So Release means *set the toy down and let it go*: spawn the matching npc, which walks with its
-own animation and can be picked back up. The cache answers what appears, which was the question
-I had written up as needing a decision — the third item in a row where it did.
-
-**Not done, because unlike the toads and the fish this is a feature with two halves** — four
-`Release` handlers and four `Pick-up` handlers, around thirty lines — and it has one question the
-cache does not settle: **does Pick-up give back the wound obj or the unwound one?** A toy that has
-walked about has arguably run down, which argues for unwound, and `poh_toy_cat` has no wound/unwound
-pair at all. Lifetime and the messages would also be mine to pick. Say the word and it is an
-afternoon's work; it is left here rather than taken because nobody asked for a feature.
+`tools/sim/pohtoys.ts` walks the whole loop for all four toys — 25 ok, 0 FAIL — asserting the
+round trip and the count rather than the steps, because a Wind that eats the toy and a Pick-up
+that hands back the wrong obj both pass a "did it say something" check. opsweep went 0 new / 11
+fixed, which is exactly three Winds, four Releases and four Pick-ups.
 
 ## 6. Twelve script-spawned npcs with a dead `Talk-to` — OPEN, needs dialogue written
 

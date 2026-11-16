@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2736 lines at the time of writing.
+# 2725 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -2055,10 +2055,6 @@ dead npc  ollie_the_camel op1="Talk-to"
 dead npc  pest_squire_instance op1="Talk-to"
 dead npc  phillipa op1="Talk-to"
 dead npc  pirate_irate_gardener op1="Talk-to"
-dead npc  poh_toy_cat op1="Pick-up"
-dead npc  poh_toy_doll op1="Pick-up"
-dead npc  poh_toy_mouse op1="Pick-up"
-dead npc  poh_toy_soldier op1="Pick-up"
 dead npc  possessed_pickaxe_stationary op1="Take"
 dead npc  postie_pete op1="Talk-to"
 dead npc  queen_ellamaria op1="Talk-to"
@@ -2345,9 +2341,6 @@ dead obj  poh_teapot_porcelain_1 iop4="Empty"
 dead obj  poh_teapot_porcelain_2 iop4="Empty"
 dead obj  poh_teapot_porcelain_3 iop4="Empty"
 dead obj  poh_teapot_porcelain_4 iop4="Empty"
-dead obj  poh_toy_doll_unwound iop1="Wind"
-dead obj  poh_toy_mouse_unwound iop1="Wind"
-dead obj  poh_toy_soldier_unwound iop1="Wind"
 dead obj  poh_treasure_hunt_stone iop1="Feel"
 dead obj  potato_chilli+carne iop1="Eat"
 dead obj  potato_egg+tomato iop1="Eat"
@@ -2642,10 +2635,6 @@ global npc  npc_2861 op2="Talk-To"
 global npc  templetrek_snake_dead op2="Skin"
 global obj  fire_object op3="Study" (on the ground)
 global obj  magictraining_guardianstatue op3="Observe" (on the ground)
-global obj  poh_toy_cat iop5="Release"
-global obj  poh_toy_doll_wound iop5="Release"
-global obj  poh_toy_mouse_wound iop5="Release"
-global obj  poh_toy_soldier_wound iop5="Release"
 global obj  reinitialisation_01 iop5="Move"
 global obj  reinitialisation_01_inactive iop5="Move"
 global obj  reinitialisation_02 iop5="Move"
