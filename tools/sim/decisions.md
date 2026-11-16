@@ -226,13 +226,26 @@ action match the label, at the cost of making `wearpos=righthand` unreachable. *
 Wield** is one line per obj and no new script, but diverges from the dump's own label in a
 preservation repo. Or leave it.
 
-**`iop5="Release"` on 6 items** — `poh_toy_cat`, the three wound-up POH toys and the two
-`100_jubbly_balloon_toad_*` — drops the item on the floor with no message at all. All six are
-`tradeable=true`, so it is recoverable, and "Release" arguably means "put it down", which is roughly
-what already happens. So the defect is the silence rather than the behaviour: a per-item line in
-`item_ops_generated.rs2`'s style is the small fix, deleting the item is the literal one (and would
-want a confirmation, since it turns a recoverable item into a loss), and spawning a creature is the
-fullest and much the largest, needing a decision per item about what appears.
+**`iop5="Release"` on 6 items** — PARTLY DONE, and the file answered most of it.
+
+Six more Release items are already wired and they establish the pattern: `[opheld5,ferret]` is
+`inv_del` plus *"You let the ferret go. It scampers off into the undergrowth."*, and
+`bloated_toad` the same with a `~release_toad` effect. **So this project does destroy on Release,
+without a confirmation** — my earlier note that deleting "would want a confirmation dialog too"
+was wrong about this codebase.
+
+**The two `100_jubbly_balloon_toad_*` are done**, and needed no decision at all. They carry three
+options, two already working: `iop1` Drop runs `@hundred_place_toad`, and `iop4` Release-all
+answers with a message and deletes nothing. The singular Release is now that line in the
+singular, so the two differ only in number — which is what their labels say.
+
+**The four POH toys are the remaining question, and it is narrower than it was.** `poh_toy_cat`
+and the three wound-up toys carry `iop5=Release` and **nothing else** — no Drop. The global
+fallback is therefore a player's only way to get rid of one, so claiming the trigger with a
+message-only handler would take that away. Fixing the silence there means keeping the drop and
+adding a line to it. That is a one-line change per toy once someone says what Release should
+mean for a toy, which is the part no amount of reading the repo settles: the six wired ones are
+all live creatures being let go, and a wind-up toy soldier is not.
 
 ## 6. Twelve script-spawned npcs with a dead `Talk-to` — OPEN, needs dialogue written
 

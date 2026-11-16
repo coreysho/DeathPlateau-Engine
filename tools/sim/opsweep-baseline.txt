@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2741 lines at the time of writing.
+# 2739 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -2640,8 +2640,6 @@ global npc  dagannoth_weak_door_west op2="Destroy"
 global npc  elid_ranging_target op2="Shoot"
 global npc  npc_2861 op2="Talk-To"
 global npc  templetrek_snake_dead op2="Skin"
-global obj  100_jubbly_balloon_toad_brown iop5="Release"
-global obj  100_jubbly_balloon_toad_white iop5="Release"
 global obj  fire_object op3="Study" (on the ground)
 global obj  fishbowl_bluefish iop2="Play-With"
 global obj  fishbowl_greenfish iop2="Play-With"
