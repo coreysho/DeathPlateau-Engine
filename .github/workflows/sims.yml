@@ -318,11 +318,13 @@ jobs:
           # so the band it reasoned from was too pessimistic. Against the two runner/box ratios this
           # file already records - audit1 357s against 2551s, fuzz 512s against 881s - 399s here is
           # somewhere around 57s to 235s on a runner, which 600 would also have covered. 1200 is
-          # left for one night because the runner figure is still unmeasured: the near-cap notice at
-          # seven tenths will print it, and 600 is the right tier if it comes in where that suggests.
+          # set to 600 on that basis rather than parked at 1200 waiting for a runner figure. If the
+          # near-cap notice at seven tenths (420s) ever fires for it, that IS the runner number and
+          # the tier above is the answer - but 600 is 2.5x the top of the estimated band and the
+          # same tier as every other sim of this size, so parking it higher only hid the real cost.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run) cap=600 ;;
-            gwdguards|dpick|gwdanims|lunar|equipcycle) cap=1200 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run|equipcycle) cap=600 ;;
+            gwdguards|dpick|gwdanims|lunar) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
           esac
