@@ -20,7 +20,7 @@ import Component from '#/cache/config/Component.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { Interaction } from '#/engine/entity/Interaction.js';
-import { findPathToLoc, isMapBlocked, reachedEntity } from '#/engine/GameMap.js';
+import { findPathToLoc } from '#/engine/GameMap.js';
 
 await H.boot();
 
@@ -176,32 +176,15 @@ if (veliaf) {
     // though the content had refused the rod. It had not: driven from a tile he can actually be
     // reached from, he finishes the quest every time (tracker issue 21).
     //
-    // So: pick a side that the route finder agrees is a side, re-reading where he is NOW, and
-    // send the op the way a player's client would - H.opNpc routes from the current position and
-    // keeps following him if he moves off again.
-    const beside = () => {
-        for (const [dx, dz] of [
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1]
-        ]) {
-            const x = veliaf.x + dx;
-            const z = veliaf.z + dz;
-            if (isMapBlocked(x, z, veliaf.level)) continue;
-            if (!reachedEntity(veliaf.level, x, z, veliaf.x, veliaf.z, veliaf.width, veliaf.length, 1)) continue;
-            return [x, z] as [number, number];
-        }
-        return null;
-    };
-    // A few goes, because he can step away between choosing the tile and arriving on it.
+    // So: H.standBeside picks a side the route finder agrees is a side, re-reading where he is
+    // NOW, and H.opNpc sends the op the way a player's client would - routing from the current
+    // position and following him if he moves off again. A few goes, because he can step away
+    // between choosing the tile and arriving on it.
     for (let a = 0; a < 5 && v(p, 'myreque_2_quest') < 110; a++) {
-        const spot = beside();
-        if (!spot) {
+        if (!H.standBeside(p, veliaf)) {
             H.tick(5);
             continue;
         }
-        p.teleport(spot[0], spot[1], veliaf.level);
         H.tick(1);
         try {
             H.opNpc(p, veliaf, 1);
