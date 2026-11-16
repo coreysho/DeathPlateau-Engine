@@ -600,6 +600,46 @@ So **95% of what is left is eight named features**, not wiring. A category or a 
 any of them; each needs a mechanic designed and written. That is the answer to "is the list nearly
 done": the *list* is long and the *work* in it is eight pieces plus a tail.
 
+### Each bucket's actual blocker, checked rather than assumed
+
+I opened all eight rather than guessing which were features. The blockers are specific, and two of
+them are much closer to done than their instance counts suggest:
+
+- **The Maze (1,516).** Nothing anywhere mentions `macro_maze`. The map, the walls, the chest and
+  its opened state and a "Strange shrine" with `Touch` are all in the cache. What stops it is the
+  framework rather than the content: `~macro_event_general_spawn` looks up an npc for the event and
+  returns without doing anything if there is none, and **there is no maze npc** — the only two in
+  the build are the Mage Training Arena's guard and Rogues' Den's mazemaster. The maze square
+  (45_71) is also absent from the `macro_event_rooms` enum. So this needs an npc-less event path
+  through the framework, which is a change to how all 21 existing events are dispatched, plus the
+  maze's topology.
+- **Rogues' Den (492).** This is the ladder bucket at scale, not a wiring gap: 20 `Enter` passages
+  and 26 `Climb` ledges whose destinations would have to be invented, and the course is a maze so
+  there is no local rule to derive them from. The traps are not clickable obstacles either -
+  `roguesden_trap_floor_spikes` and its siblings are `blockwalk=no` with an animation, so the damage
+  belongs on stepping on the tile, and the dead `op5="Search"` is a secondary option on top of a
+  mechanic that does not exist yet. The den's entrance, wall safe and shop are already built.
+- **Construction (698).** Needs the skill.
+- **Between a Rock (243).** The wall of flame has a dead `Jump-through` and `Talk-to`, and the
+  **Arzinian Being of Bordanzan behind it has no ops at all** - so the whole gold-for-armour
+  encounter is unbuilt, and `opsweep` cannot even see that half of it, because an npc offering
+  nothing is not a dead option. The quest itself runs to completion without it.
+- **Shades of Mort'ton (63) — ONE UPSTREAM AWAY, and worth knowing.** The data is perfectly
+  name-matched: 20 `shadechest_<material>_<colour>`, 20 `shadechestopen_<material>_<colour>` and 20
+  `shadekey_<material>_<colour>`, over bronze/steel/black/silver and
+  black/bloodred/brown/crimson/purple. Chest X opens with key X and becomes open-chest X with no
+  judgement required anywhere - exactly the shape that made the crates and the wheat quick. **The
+  blocker is that `shadekey` appears in no script at all and there are no shade-remains objs**, so
+  the keys have no source and chest handlers would be code no player could run. Build the pyre loop
+  and the chests are an afternoon.
+- **Mage Training Arena (40).** Exit portals, the graveyard bone piles and the enchanting room's
+  shape piles (`loc_10799`, "Cube Pile"). A minigame.
+- **Agility Pyramid (16).** A course.
+- **Lunar Isle scenery (28).** `loc474_16860` is a tar barrel with `Take-from`, in the Lunar village
+  among the suqah and Pauline Polaris. There is a precedent for the shape - `viking_keg` got
+  `op1=Take-from` and answers "The keg is empty." when the quest does not want one - but nothing in
+  the build wants tar from Lunar Isle, so the only honest answer is flavour.
+
 **The tail, and why each bit of it is stuck.** These are the ones that are not features, and none of
 them is stuck for want of effort:
 
