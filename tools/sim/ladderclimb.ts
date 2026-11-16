@@ -53,13 +53,18 @@ H.maxOut(p as never);
 const standable = (level: number, x: number, z: number): boolean => !isFlagged(x, z, level, CollisionFlag.WALK_BLOCKED);
 
 // Seeds come from deadladders' own placement report; locsNear finds the rest from each.
-const LADDERS: [string, number, number, number][] = [
+// dz is for the ladders that are not vertical links at all: this build keeps the underground
+// 6400 south of the surface, so a dungeon ladder changes z and not level. loc_1755 going up is
+// movecoord(coord(), 0, 0, -6400), and the Wilderness one down is that mirrored.
+const LADDERS: { name: string; x: number; z: number; dlevel: number; dz: number }[] = [
     // Lletya - up into the walkways between the trees.
-    ['elf_village_ladder', 2328, 3168, +1],
-    ['elf_village_ladder_top', 2335, 3160, -1],
+    { name: 'elf_village_ladder', x: 2328, z: 3168, dlevel: +1, dz: 0 },
+    { name: 'elf_village_ladder_top', x: 2335, z: 3160, dlevel: -1, dz: 0 },
     // Port Sarim jail - down to the cells.
-    ['prison_ladder_up', 3010, 3184, +1],
-    ['prison_laddertop', 3010, 3184, -1]
+    { name: 'prison_ladder_up', x: 3010, z: 3184, dlevel: +1, dz: 0 },
+    { name: 'prison_laddertop', x: 3010, z: 3184, dlevel: -1, dz: 0 },
+    // Wilderness - down to the dungeon, which is 6400 south rather than a level below.
+    { name: 'wild_laddertop_dungeon', x: 3005, z: 3963, dlevel: 0, dz: +6400 }
 ];
 
 const offsets: [number, number][] = [];
@@ -67,11 +72,16 @@ for (let r = 0; r < 3; r++) {
     offsets.push([r + 1, 0], [-r, 0], [0, r + 1], [0, -r], [r + 1, r + 1], [-r, -r], [r + 1, -r], [-r, r + 1]);
 }
 
-for (const [name, sx, sz, dir] of LADDERS) {
+for (const { name, x: sx, z: sz, dlevel: dir, dz } of LADDERS) {
     console.log('');
     const id = LocType.getId(name);
     const lt = id === -1 ? null : LocType.get(id);
-    console.log(`-- ${name} (${lt?.category !== undefined ? 'category set' : 'no category'}), expecting level ${dir > 0 ? 'up' : 'down'}`);
+    // `!== undefined` was true for every loc, including the ones with no category at all, so this
+    // line used to claim "category set" about the Wilderness ladder, which is wired by an explicit
+    // trigger instead. -1 is the no-category value.
+    const how = (lt?.category ?? -1) !== -1 ? 'category' : 'own trigger';
+    const expect = dz !== 0 ? `z +${dz} (the dungeon)` : `level ${dir > 0 ? 'up' : 'down'}`;
+    console.log(`-- ${name} (${how}), expecting ${expect}`);
 
     // Every instance, not a sample: a ladder that works in four places and drops you into a tree in
     // the fifth is still a ladder that needs fixing, and the sample would hide it.
@@ -103,7 +113,12 @@ for (const [name, sx, sz, dir] of LADDERS) {
             climbed = true;
 
             const want = level + dir;
-            check(`${x},${z},${level} climbs to level ${want}`, p.level === want, `ended on level ${p.level} at ${p.x},${p.z}${said.length ? ' saying ' + JSON.stringify(said.slice(0, 1)) : ''}`);
+            if (dz !== 0) {
+                // A dungeon ladder keeps its level and moves 6400 south, so the assertion is about z.
+                check(`${x},${z},${level} climbs down to the dungeon`, p.level === want && Math.abs(p.z - (fz + dz)) <= 2, `ended at ${p.x},${p.z},${p.level}, wanted about ${fx},${fz + dz},${want}`);
+            } else {
+                check(`${x},${z},${level} climbs to level ${want}`, p.level === want, `ended on level ${p.level} at ${p.x},${p.z}${said.length ? ' saying ' + JSON.stringify(said.slice(0, 1)) : ''}`);
+            }
             // The one that matters: a telejump does not check, so this does.
             check('  and lands somewhere a player can stand', standable(p.level, p.x, p.z), `${p.x},${p.z},${p.level} is solid`);
         }

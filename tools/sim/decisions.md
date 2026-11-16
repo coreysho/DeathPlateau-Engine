@@ -173,7 +173,7 @@ run. `mining.rs2` keeps a player swinging with `p_oploc(3)` and `P_OPLOC` return
 slot, so such a rock mines once and stops even with the category and ore right. Every working rock
 carries `op3=hidden`.
 
-## 4. The dead ladders — 4 of 24 DONE, 20 still need an area hint
+## 4. The dead ladders — 5 of 24 DONE, 19 still need an area hint
 
 **Lletya and the Port Sarim jail are done** — the owner said where each goes (up into the tree
 walkways; down to the cells) and both are the plain vertical link, so `elf_village_ladder`,
@@ -190,6 +190,19 @@ That sim is the thing the previous attempt at this bucket lacked, and it general
 hint about where a ladder goes, climbing every instance and checking the landing is a sound test**
 — it is only the *guessing* of the destination that could not be made to work. Each area's hint is
 wired and verified the same way, and `ladderclimb.ts` gains a row per area as the hints arrive.
+
+**The Wilderness one was a different shape, and worth reading before the next hint.**
+`wild_laddertop_dungeon` is Climb-down on level 0, so there is no level below and a category
+would have dropped a player into the ground — `climbladders` had already flagged exactly that.
+Dungeon ladders in `ladders.rs2` are all explicit instead (`loc_1767` into the Lava Maze,
+`loc_1765` to the KBD lair), and the destination here needed no arithmetic: `loc_1755` sits at
+the same x and z, 6400 south, and its own handler is
+`~climb_ladder(movecoord(coord(), 0, 0, -6400), true)`. This is that mirrored, so the two ends
+agree by construction.
+
+So **a hint names the destination, not the mechanism** — some of the remaining nineteen will be
+plain vertical links and some will be teleports, and which one is a question for the map once
+you know where it goes.
 
 `elf_village_ladder_mid` is left: Climb-up on op2 and Climb-down on op3, and the generic handler
 is op1-only, so no category answers both. It wants `[label,ladder_options]`, which `ladders.rs2`

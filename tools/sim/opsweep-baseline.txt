@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2721 lines at the time of writing.
+# 2720 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -1591,7 +1591,6 @@ dead loc  wild_ladder_middle op1="Climb"
 dead loc  wild_ladder_middle op2="Climb-up"
 dead loc  wild_ladder_middle op3="Climb-down"
 dead loc  wild_laddertop op1="Climb-down"
-dead loc  wild_laddertop_dungeon op1="Climb-down"
 dead loc  win05_reclaim_puppets_full op1="Take-marionette"
 dead loc  win05_trapdoor op1="Climb-down"
 dead loc  wise_old_man_telescope op1="Observe"
