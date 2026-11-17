@@ -100,7 +100,7 @@ export type Step =
     | { useNpc: string; obj: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number; until?: string }
     | { give: string; n?: number; how?: string }
     | { setvar: string; to: number; why?: string }
-    | { stage: number }
+    | { stage: number; orLater?: boolean }
     | { level: number }
     | { varis: string; to: number }
     | { wait: number; why?: string }
@@ -1066,7 +1066,19 @@ export function play(m: Manifest, p: Player): Result[] {
         }
         if ('stage' in s) {
             const got = stageOf(p, m.stageVar);
-            soft(m.stageVar + ' is now ' + s.stage, got === s.stage, got === s.stage ? '' : 'it is ' + got);
+            // `orLater` IS FOR A STAGE THE RUN CANNOT STAND STILL ON. A stage marker is a leg
+            // boundary to ExportHelper as well as an assertion, so it has to stay in the manifest
+            // even where the run blows straight past it: The Great Brain Robbery sets tgbr to 110
+            // when Mi-Gor is confronted and 120 when Barrelchest goes down, and drive() keeps
+            // clicking through that confrontation for up to 600 ticks while a damage-immune player
+            // with maxed stats kills the thing it summoned - so by the time this step looked, 110
+            // had been and gone: "tgbr is now 110 -- it is 120" (tracker issue 21).
+            //
+            // Only where the overshoot IS the content working. A plain stage still means exactly
+            // this number, which is what catches a quest that skipped a step.
+            const orLater = 'orLater' in s && s.orLater === true;
+            const ok = orLater ? got >= s.stage : got === s.stage;
+            soft(m.stageVar + ' is now ' + s.stage + (orLater ? ' or past it' : ''), ok, ok ? '' : 'it is ' + got);
             continue;
         }
         if ('has' in s) {
