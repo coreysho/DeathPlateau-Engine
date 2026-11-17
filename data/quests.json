@@ -3073,6 +3073,19 @@
      "worn": []
     },
     {
+     "from": 8,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The ogre is down."
+      }
+     ],
+     "marks": [],
+     "steps": [],
+     "items": [],
+     "worn": []
+    },
+    {
      "from": 9,
      "headings": [
       {
@@ -3102,10 +3115,32 @@
       {
        "kind": "talk",
        "text": "Kill Khazard Scorpion.",
-       "why": "The scorpion, then Bouncer.",
+       "why": "The scorpion.",
        "target": "arena_scorpion",
        "id": 271,
        "label": "Khazard Scorpion"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 10,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Fight 3: Bouncer, out of the cage Khazard has just had opened."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Kill Bouncer.",
+       "why": "Bouncer.",
+       "target": "arena_bouncer",
+       "id": 269,
+       "label": "Bouncer"
       }
      ],
      "items": [],
