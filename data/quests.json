@@ -16426,7 +16426,7 @@
      "headings": [
       {
        "at": 0,
-       "text": "The water, and then the cart - both in the one conversation, so the stage jumps 40 to 60 and the yes/no about the cart is part of the same talk."
+       "text": "The water, and then the cart."
       }
      ],
      "marks": [],
@@ -16434,7 +16434,27 @@
       {
        "kind": "talk",
        "text": "Talk to Brother Cedric.",
-       "why": "The water sobers him up.",
+       "why": "The water sobers him up, and declining the cart leaves the quest at 50.",
+       "target": "brother_cedric",
+       "id": 280,
+       "label": "Brother Cedric",
+       "picks": [
+        "No, I've helped enough monks today!"
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 50,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Brother Cedric.",
+       "why": "Agreeing to the cart this time.",
        "target": "brother_cedric",
        "id": 280,
        "label": "Brother Cedric",
