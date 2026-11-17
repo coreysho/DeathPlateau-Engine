@@ -30665,34 +30665,6 @@
       {
        "at": 1,
        "text": "The High Priest on Entrana, who sends knights out searching."
-      },
-      {
-       "at": 3,
-       "text": "Galahad, west of McGrubor's Wood, and the holy table napkin."
-      },
-      {
-       "at": 5,
-       "text": "The southernmost room on Draynor Manor's top floor."
-      },
-      {
-       "at": 10,
-       "text": "Stand under the tower on the Karamja peninsula and blow it."
-      },
-      {
-       "at": 11,
-       "text": "The Black Knight Titan on the bridge, who heals to full if the last blow is not Excalibur's - which is why Excalibur is the only weapon this run carries."
-      },
-      {
-       "at": 13,
-       "text": "The fisherman, south along the river."
-      },
-      {
-       "at": 15,
-       "text": "The Grail bell off the ground by the bricks, rung in front of a maiden he puts the bell on the ground by the bricks at 2762,4694 as he says it."
-      },
-      {
-       "at": 18,
-       "text": "The Fisher King, and both of the options that matter."
       }
      ],
      "marks": [],
@@ -30716,7 +30688,45 @@
        "picks": [
         "Ok, I will go searching."
        ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 4,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Galahad, west of McGrubor's Wood, and the holy table napkin."
       },
+      {
+       "at": 3,
+       "text": "The southernmost room on Draynor Manor's top floor."
+      },
+      {
+       "at": 8,
+       "text": "Stand under the tower on the Karamja peninsula and blow it."
+      },
+      {
+       "at": 9,
+       "text": "The Black Knight Titan on the bridge, who heals to full if the last blow is not Excalibur's - which is why Excalibur is the only weapon this run carries."
+      },
+      {
+       "at": 11,
+       "text": "The fisherman, south along the river."
+      },
+      {
+       "at": 13,
+       "text": "The Grail bell off the ground by the bricks, rung in front of a maiden he puts the bell on the ground by the bricks at 2762,4694 as he says it."
+      },
+      {
+       "at": 16,
+       "text": "The Fisher King, and both of the options that matter."
+      }
+     ],
+     "marks": [],
+     "steps": [
       {
        "text": "Go to Galahad's house.",
        "kind": "walk",
