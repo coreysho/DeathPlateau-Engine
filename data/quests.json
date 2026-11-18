@@ -61848,74 +61848,8 @@
    "stages": [
     {
      "from": 0,
-     "headings": [
-      {
-       "at": 3,
-       "text": "Sir Tiffy on the bench in Falador Park."
-      }
-     ],
-     "marks": [
-      {
-       "at": 2,
-       "var": 657,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 4,
-       "var": 670,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 18,
-       "var": 659,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 21,
-       "var": 660,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 24,
-       "var": 661,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 26,
-       "var": 662,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 28,
-       "var": 663,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 43,
-       "var": 686,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 55,
-       "var": 664,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 57,
-       "var": 665,
-       "varbit": true,
-       "is": 1
-      }
-     ],
+     "headings": [],
+     "marks": [],
      "steps": [
       {
        "text": "Go up the western tower of the White Knights castle.",
@@ -61936,7 +61870,82 @@
        "picks": [
         "Go on."
        ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Sir Tiffy on the bench in Falador Park."
+      }
+     ],
+     "marks": [
+      {
+       "at": 0,
+       "var": 657,
+       "varbit": true,
+       "is": 1
       },
+      {
+       "at": 2,
+       "var": 670,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 16,
+       "var": 659,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 19,
+       "var": 660,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 22,
+       "var": 661,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 24,
+       "var": 662,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 26,
+       "var": 663,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 41,
+       "var": 686,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 53,
+       "var": 664,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 55,
+       "var": 665,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "text": "Go to Sir Tiffy.",
        "kind": "walk",
