@@ -33246,6 +33246,26 @@
       {
        "kind": "talk",
        "text": "Talk to Clivet.",
+       "why": "Walk away from him first, which leaves the quest at 3.",
+       "target": "clivet_hazeel_cultist",
+       "id": 893,
+       "label": "Clivet",
+       "picks": [
+        "I've heard enough of your rubbish."
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 3,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Clivet.",
        "why": "He hands you poison.",
        "target": "clivet_hazeel_cultist",
        "id": 893,
@@ -33991,6 +34011,26 @@
         3233
        ]
       },
+      {
+       "kind": "talk",
+       "text": "Talk to Clivet.",
+       "why": "Walk away from him first, which leaves the quest at 3.",
+       "target": "clivet_hazeel_cultist",
+       "id": 893,
+       "label": "Clivet",
+       "picks": [
+        "I've heard enough of your rubbish."
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 3,
+     "headings": [],
+     "marks": [],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Clivet.",
@@ -43956,6 +43996,23 @@
         4689
        ]
       },
+      {
+       "kind": "talk",
+       "text": "Talk to Boulder.",
+       "why": "Push it, and break off before answering - which leaves the quest at 19.",
+       "target": "boulder_legends",
+       "id": 939,
+       "label": "Boulder"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 19,
+     "headings": [],
+     "marks": [],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Boulder.",
