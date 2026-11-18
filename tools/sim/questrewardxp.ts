@@ -21,6 +21,7 @@
  */
 import * as H from './harness.js';
 import { check, R, player } from './a1lib.js';
+import type Player from '#/engine/entity/Player.js';
 
 await H.boot();
 
@@ -28,7 +29,7 @@ await H.boot();
 const STAT = { prayer: 5, herblore: 15 } as const;
 
 /** The reward lines the scroll was just given (inter_238:com_10..14). */
-function rewardLines(p: H.Player, from: number): string[] {
+function rewardLines(p: Player, from: number): string[] {
     return H.ifaces
         .slice(from)
         .filter(f => f.who === p.username && f.kind === 'text' && typeof f.text === 'string' && f.text.length > 0)
@@ -39,7 +40,7 @@ function rewardLines(p: H.Player, from: number): string[] {
  * Complete a quest and report the XP it really paid, in whole points.
  * The queue is run with protected access, which is what a real queue has.
  */
-function completed(name: string, queue: string, stat: number, rate: number, setup: (p: H.Player) => void) {
+function completed(name: string, queue: string, stat: number, rate: number, setup: (p: Player) => void) {
     const p = player('qrx_' + name + '_' + rate, 3435, 9897, 0);
     H.setVar(p, 'xp_rate', rate);
     setup(p);
