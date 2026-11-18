@@ -15617,13 +15617,13 @@
       {
        "kind": "talk",
        "text": "Use Journal on Filliman Tarlock.",
-       "why": "Give him the journal and offer to help.",
+       "why": "Give him the journal and then decline, which leaves the quest at 30.",
        "target": "filliman_tarlock_spirit",
        "id": 1050,
        "label": "Filliman Tarlock",
        "item": 2967,
        "picks": [
-        "How can I help?"
+        "Ok thanks."
        ]
       }
      ],
@@ -15635,6 +15635,26 @@
        "bring": false
       }
      ],
+     "worn": []
+    },
+    {
+     "from": 30,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Filliman Tarlock.",
+       "why": "Offer to help this time.",
+       "target": "filliman_tarlock_spirit",
+       "id": 1050,
+       "label": "Filliman Tarlock",
+       "picks": [
+        "How can I help?"
+       ]
+      }
+     ],
+     "items": [],
      "worn": []
     },
     {
