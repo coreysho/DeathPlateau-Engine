@@ -35388,10 +35388,6 @@
       {
        "at": 3,
        "text": "Jossik, and the level-100 Dagannoth that comes out of the water at the end of his story."
-      },
-      {
-       "at": 6,
-       "text": "Back up into the real lighthouse - the copy is gone now - and up to Jossik's library, where he reads the casket with you."
       }
      ],
      "marks": [],
@@ -35439,7 +35435,21 @@
        "target": "horror_dagannoth_jr4",
        "id": 1347,
        "label": "Dagannoth"
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 3,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Back up into the real lighthouse - the copy is gone now - and up to Jossik's library, where he reads the casket with you."
+      }
+     ],
+     "marks": [],
+     "steps": [
       {
        "kind": "talk",
        "text": "Kill Dagannoth mother.",
