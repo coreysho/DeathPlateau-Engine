@@ -65118,14 +65118,14 @@
       {
        "kind": "talk",
        "text": "Talk to Sedridor.",
-       "why": "He takes the talisman and hands over the research package.",
+       "why": "He takes the talisman, and declining the errand leaves the quest at 2.",
        "target": "head_wizard",
        "id": 300,
        "label": "Sedridor",
        "picks": [
         "looking for the head wizard",
         "here you are",
-        "Yes, certainly"
+        "No, I'm busy."
        ]
       }
      ],
@@ -65137,6 +65137,26 @@
        "bring": false
       }
      ],
+     "worn": []
+    },
+    {
+     "from": 2,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Sedridor.",
+       "why": "Accept it this time, and take the research package.",
+       "target": "head_wizard",
+       "id": 300,
+       "label": "Sedridor",
+       "picks": [
+        "Yes, certainly"
+       ]
+      }
+     ],
+     "items": [],
      "worn": []
     },
     {
