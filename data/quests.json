@@ -29946,14 +29946,6 @@
       {
        "at": 10,
        "text": "Elissa at the Digsite, her husband's notes in the Exam Centre, and back to Elissa."
-      },
-      {
-       "at": 20,
-       "text": "The curator, his pocket, and display case thirty."
-      },
-      {
-       "at": 27,
-       "text": "The statuette in the alcove, then the four statues."
       }
      ],
      "marks": [
@@ -30161,7 +30153,38 @@
        "picks": [
         "Where is the statuette that Varmen took back from Uzer?"
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Black mushroom",
+       "id": 4620,
+       "n": 1,
+       "bring": false
       },
+      {
+       "name": "Varmen's notes",
+       "id": 4616,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 3,
+     "headings": [
+      {
+       "at": 1,
+       "text": "The curator, his pocket, and display case thirty."
+      },
+      {
+       "at": 8,
+       "text": "The statuette in the alcove, then the four statues."
+      }
+     ],
+     "marks": [],
+     "steps": [
       {
        "text": "Go to the Varrock Museum.",
        "kind": "walk",
@@ -30283,18 +30306,6 @@
       }
      ],
      "items": [
-      {
-       "name": "Black mushroom",
-       "id": 4620,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Varmen's notes",
-       "id": 4616,
-       "n": 1,
-       "bring": false
-      },
       {
        "name": "Display cabinet key",
        "id": 4617,
@@ -30423,14 +30434,7 @@
        "text": "He does not believe you, so the mushroom becomes ink, the feather becomes a pen, the papyrus becomes a program, and the implement opens his head long enough to put it in."
       }
      ],
-     "marks": [
-      {
-       "at": 10,
-       "var": 353,
-       "varbit": true,
-       "is": 1
-      }
-     ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -30488,7 +30492,23 @@
        "target": "golem_golem",
        "id": 1907,
        "label": "Broken clay golem"
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 7,
+     "headings": [],
+     "marks": [
+      {
+       "at": 4,
+       "var": 353,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "obj",
        "text": "Use Pestle and mortar on Black mushroom.",
