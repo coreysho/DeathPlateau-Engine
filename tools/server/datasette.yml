@@ -54,24 +54,34 @@ databases:
       player_alts:
         title: Other accounts on the same address or machine
         description: >-
-          uid 0 is excluded on both sides. It is the client install id, and it is 0 when the
-          client could not read uid.dat - so it is shared by strangers. Matching on it names
-          them alts.
+          Two sentinels are excluded and neither is NULL: uid 0 (the client install id, 0 when
+          the client could not read uid.dat) and the literal address 'unknown' (what
+          normalizeAddress returns for a socket with no address). Both are shared by strangers,
+          and matching on either turns them into alts. shared_address names the address that
+          matched, because a match nobody can check is how that went unnoticed.
         sql: |-
           with mine as (
               select s.uid, s.ip
               from session s
               join account a on a.id = s.account_id
               where lower(replace(a.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
+          ),
+          my_ips as (
+              select distinct ip from mine
+              where ip is not null and ip <> '' and ip <> 'unknown'
+          ),
+          my_uids as (
+              select distinct uid from mine where uid <> 0
           )
           select
               other.username as account,
               case
-                  when max(s.uid != 0 and s.uid in (select uid from mine where uid != 0)) = 1
-                   and max(s.ip in (select ip from mine where ip is not null)) = 1 then 'same PC + address'
-                  when max(s.uid != 0 and s.uid in (select uid from mine where uid != 0)) = 1 then 'same PC'
+                  when max(s.uid <> 0 and s.uid in (select uid from my_uids)) = 1
+                   and max(s.ip in (select ip from my_ips)) = 1 then 'same PC + address'
+                  when max(s.uid <> 0 and s.uid in (select uid from my_uids)) = 1 then 'same PC'
                   else 'same address'
               end as link,
+              group_concat(distinct case when s.ip in (select ip from my_ips) then s.ip end) as shared_address,
               count(*) as logins,
               min(s.timestamp) as first_seen,
               max(s.timestamp) as last_seen,
@@ -81,8 +91,8 @@ databases:
           join account other on other.id = s.account_id
           where other.username != (select username from account where lower(replace(username, ' ', '_')) = lower(replace(:name, ' ', '_')))
             and (
-                  s.ip in (select ip from mine where ip is not null)
-               or (s.uid != 0 and s.uid in (select uid from mine where uid != 0))
+                  s.ip in (select ip from my_ips)
+               or (s.uid <> 0 and s.uid in (select uid from my_uids))
             )
           group by other.id
           order by link = 'same address', last_seen desc
@@ -91,7 +101,11 @@ databases:
         title: Addresses many accounts have used
         description: Context for the query above. A busy address means an address match proves nothing.
         sql: |-
-          select ip, count(distinct account_id) as accounts, count(*) as logins, max(timestamp) as last_seen
+          select ip,
+                 case when ip is null or ip = '' or ip = 'unknown'
+                      then 'NOT AN ADDRESS - the socket had none. Never a link between accounts.'
+                      else '' end as note,
+                 count(distinct account_id) as accounts, count(*) as logins, max(timestamp) as last_seen
           from session
           where ip is not null
           group by ip

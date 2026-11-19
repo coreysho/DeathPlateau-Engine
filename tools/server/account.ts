@@ -1169,9 +1169,28 @@ async function cmdAudit() {
 // coinciding, and it survives a change of address. It does NOT survive a cache wipe, so a uid
 // that fails to match proves nothing either way.
 //
-// AN IP IS THE WEAKER HALF. Families, shared houses, phone networks and VPNs all put unrelated
-// people on one address, so an address that many accounts have used says little; `whois` counts
-// how many and says so rather than presenting a crowded address as a finding.
+// AN ADDRESS OF 'unknown' IS NOT AN ADDRESS, and it is the same trap wearing different clothes.
+// normalizeAddress (src/server/ConnectionLimiter.ts) returns the LITERAL STRING 'unknown' when a
+// socket has no address - which Node does for a connection already destroyed by the time the
+// event fires - and that string goes straight into session.ip. It is not NULL, so a plain
+// not-null test lets it through, and then every bad-socket login matches every other one. On the
+// live server that turned eight unrelated players, each with one or two such logins, into the
+// owner's alts. Found only because somebody read the output and knew it was wrong.
+//
+// SO THE MATCHED ADDRESS IS PRINTED. A match that cannot name what it matched on is a match
+// nobody can check, which is exactly how the above survived being written, tested and shipped.
+//
+// AN ADDRESS IS THE WEAKER HALF even when it is real. Families, shared houses, phone networks and
+// VPNs all put unrelated people on one address, so an address that many accounts have used says
+// little; `whois` counts how many and says so rather than presenting a crowded one as a finding.
+
+/**
+ * An address worth matching on. NOT just "not null": normalizeAddress writes the literal string
+ * 'unknown' for a socket with no address, and an empty string is as empty as a null.
+ */
+function usableAddress(ip: string | null | undefined): ip is string {
+    return typeof ip === 'string' && ip.length > 0 && ip !== 'unknown';
+}
 
 function coordText(coord: number) {
     const level = (coord >> 28) & 0x3;
@@ -1309,15 +1328,18 @@ async function cmdWhois(username: string) {
         return;
     }
 
-    // A uid of 0 is "the client could not read uid.dat", not a machine - see the note above.
-    const ips = [...new Set(mine.map(s => s.ip).filter((x): x is string => typeof x === 'string' && x.length > 0))];
+    // Neither sentinel is NULL, and that is the whole point - see the note above. uid 0 is "the
+    // client could not read uid.dat"; ip 'unknown' is "the socket had no address". Both are
+    // shared by strangers, so neither is a link.
+    const ips = [...new Set(mine.map(s => s.ip).filter(usableAddress))];
     const uids = [...new Set(mine.map(s => s.uid).filter(x => typeof x === 'number' && x !== 0))];
 
     const ipLogins = new Map<string, number>();
-    for (const s of mine) if (s.ip) ipLogins.set(s.ip, (ipLogins.get(s.ip) ?? 0) + 1);
+    for (const s of mine) if (usableAddress(s.ip)) ipLogins.set(s.ip, (ipLogins.get(s.ip) ?? 0) + 1);
+    const unreadable = mine.filter(s => !usableAddress(s.ip)).length;
 
     console.log(`  ${account.username} (account ${account.id}) - ${mine.length} login${mine.length === 1 ? '' : 's'} recorded`);
-    console.log(`    addresses:      ${ips.length ? ips.map(ip => `${ip} (${ipLogins.get(ip)})`).join(', ') : 'none recorded'}`);
+    console.log(`    addresses:      ${ips.length ? ips.map(ip => `${ip} (${ipLogins.get(ip)})`).join(', ') : 'none usable'}${unreadable ? `  (and ${unreadable} login${unreadable === 1 ? '' : 's'} whose socket had no address - not matchable)` : ''}`);
     console.log(`    client installs: ${uids.length ? uids.join(', ') : 'none usable'}${mine.some(s => s.uid === 0) ? '  (some logins reported uid 0 - unknown, not matchable)' : ''}`);
     console.log('');
 
@@ -1344,12 +1366,15 @@ async function cmdWhois(username: string) {
         return;
     }
 
-    type Match = { byIp: boolean; byUid: boolean; first: string; last: string; logins: number };
+    type Match = { byIp: boolean; byUid: boolean; first: string; last: string; logins: number; addresses: Set<string> };
     const matches = new Map<number, Match>();
     for (const row of others) {
         const ts = String(row.timestamp).slice(0, 19);
-        const m = matches.get(row.account_id) ?? { byIp: false, byUid: false, first: ts, last: ts, logins: 0 };
-        if (row.ip && ips.includes(row.ip)) m.byIp = true;
+        const m = matches.get(row.account_id) ?? { byIp: false, byUid: false, first: ts, last: ts, logins: 0, addresses: new Set<string>() };
+        if (row.ip && ips.includes(row.ip)) {
+            m.byIp = true;
+            m.addresses.add(row.ip);
+        }
         if (row.uid !== 0 && uids.includes(row.uid)) m.byUid = true;
         if (ts < m.first) m.first = ts;
         if (ts > m.last) m.last = ts;
@@ -1373,6 +1398,10 @@ async function cmdWhois(username: string) {
     console.log(`  ${order.length} other account${order.length === 1 ? '' : 's'} seen from the same address or machine:`);
     console.log('');
     const nameWidth = Math.max(8, ...order.map(id => (byId.get(id)?.username ?? `account ${id}`).length));
+    // The address goes in its own column rather than inline, so a "same PC" row with no address
+    // and a "same address" row with one still line up against each other.
+    const vias = new Map(order.map(id => [id, [...matches.get(id)!.addresses].join(', ')]));
+    const viaWidth = Math.max(0, ...vias.values().map(v => v.length));
     for (const id of order) {
         const other = byId.get(id);
         const m = matches.get(id)!;
@@ -1382,7 +1411,7 @@ async function cmdWhois(username: string) {
         if (other?.banned_until && new Date(other.banned_until) > new Date()) flags.push(`BANNED until ${String(other.banned_until).slice(0, 19)}`);
         if (other?.muted_until && new Date(other.muted_until) > new Date()) flags.push(`MUTED until ${String(other.muted_until).slice(0, 19)}`);
         if (other && other.staffmodlevel > 0) flags.push(`staff level ${other.staffmodlevel}`);
-        console.log(`  ${name.padEnd(nameWidth)}  ${link.padEnd(17)}  ${m.logins} login${m.logins === 1 ? '' : 's'}, ${m.first} to ${m.last}${flags.length ? `  ${flags.join(', ')}` : ''}`);
+        console.log(`  ${name.padEnd(nameWidth)}  ${link.padEnd(17)}  ${(vias.get(id) ?? '').padEnd(viaWidth)}  ${m.logins} login${m.logins === 1 ? '' : 's'}, ${m.first} to ${m.last}${flags.length ? `  ${flags.join(', ')}` : ''}`);
     }
     console.log('');
 
