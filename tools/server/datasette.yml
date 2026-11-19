@@ -22,13 +22,16 @@ databases:
 
       player_chat:
         title: What a player said
-        description: Public chat and private messages in one list, newest first.
+        description: >-
+          Public chat, private messages and clan channel lines in one list, newest first. A clan
+          line names its channel in the channel column; the other two leave it empty.
         sql: |-
           select
               pc.timestamp as said_at,
               'public' as kind,
               a.username as who,
               '' as to_who,
+              '' as channel,
               pc.message as message,
               ((pc.coord >> 14) & 16383) || ', ' || (pc.coord & 16383) as tile
           from public_chat pc
@@ -41,6 +44,7 @@ databases:
               'private',
               sender.username,
               recip.username,
+              '',
               p.message,
               ((p.coord >> 14) & 16383) || ', ' || (p.coord & 16383)
           from private_chat p
@@ -48,6 +52,19 @@ databases:
           join account recip on recip.id = p.to_account_id
           where lower(replace(sender.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
              or lower(replace(recip.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
+          union all
+          select
+              cc.timestamp,
+              'clan',
+              a.username,
+              '',
+              cc.channel,
+              cc.message,
+              ((cc.coord >> 14) & 16383) || ', ' || (cc.coord & 16383) || ', level ' || ((cc.coord >> 28) & 3)
+          from clan_chat cc
+          join session s on s.uuid = cc.session_uuid
+          join account a on a.id = s.account_id
+          where lower(replace(a.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
           order by said_at desc
           limit 500
 
@@ -124,3 +141,42 @@ databases:
           group by p.account_id, p.to_account_id
           order by messages desc
           limit 200
+
+      clan_channel:
+        title: A clan channel, as a conversation
+        description: >-
+          Takes the channel's name or its owner, since a name can be changed and a report quotes
+          whichever it saw. Newest 500 lines, shown oldest first so it reads forwards.
+        sql: |-
+          select * from (
+              select
+                  cc.timestamp as said_at,
+                  a.username as who,
+                  cc.message as message,
+                  cc.channel as channel,
+                  cc.owner as owner,
+                  ((cc.coord >> 14) & 16383) || ', ' || (cc.coord & 16383) || ', level ' || ((cc.coord >> 28) & 3) as tile
+              from clan_chat cc
+              join session s on s.uuid = cc.session_uuid
+              join account a on a.id = s.account_id
+              where lower(cc.channel) = lower(:channel) or lower(cc.owner) = lower(:channel)
+              order by cc.timestamp desc
+              limit 500
+          )
+          order by said_at
+
+      clan_channels:
+        title: Which channels have been talked in
+        description: The way in to the page above when you do not know the channel's name.
+        sql: |-
+          select
+              channel,
+              owner,
+              count(*) as lines_said,
+              count(distinct s.account_id) as speakers,
+              min(cc.timestamp) as first_seen,
+              max(cc.timestamp) as last_seen
+          from clan_chat cc
+          join session s on s.uuid = cc.session_uuid
+          group by cc.owner, cc.channel
+          order by last_seen desc

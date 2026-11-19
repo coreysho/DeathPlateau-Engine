@@ -11,12 +11,14 @@
 
 
 -- ---------------------------------------------------------------------------- 1. player_chat
--- Everything one player said, public and private, newest first, names resolved.
+-- Everything one player said - public, private and clan - newest first, names resolved.
+-- Clan lines carry the channel's name in the `channel` column; the other two leave it empty.
 select
     pc.timestamp as said_at,
     'public' as kind,
     a.username as who,
     '' as to_who,
+    '' as channel,
     pc.message as message,
     ((pc.coord >> 14) & 16383) || ', ' || (pc.coord & 16383) || ', level ' || ((pc.coord >> 28) & 3) as tile
 from public_chat pc
@@ -29,6 +31,7 @@ select
     'private',
     sender.username,
     recip.username,
+    '',
     p.message,
     ((p.coord >> 14) & 16383) || ', ' || (p.coord & 16383) || ', level ' || ((p.coord >> 28) & 3)
 from private_chat p
@@ -36,6 +39,19 @@ join account sender on sender.id = p.account_id
 join account recip on recip.id = p.to_account_id
 where lower(replace(sender.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
    or lower(replace(recip.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
+union all
+select
+    cc.timestamp,
+    'clan',
+    a.username,
+    '',
+    cc.channel,
+    cc.message,
+    ((cc.coord >> 14) & 16383) || ', ' || (cc.coord & 16383) || ', level ' || ((cc.coord >> 28) & 3)
+from clan_chat cc
+join session s on s.uuid = cc.session_uuid
+join account a on a.id = s.account_id
+where lower(replace(a.username, ' ', '_')) = lower(replace(:name, ' ', '_'))
 order by said_at desc
 limit 500;
 
@@ -130,3 +146,47 @@ join account recip on recip.id = p.to_account_id
 group by p.account_id, p.to_account_id
 order by messages desc
 limit 200;
+
+
+-- -------------------------------------------------------------------------- 5. clan_channel
+-- A whole clan channel as a conversation.  player_chat answers "what did this person say", which
+-- deliberately leaves out everyone they were talking to; a channel only reads as a conversation.
+--
+-- TAKES THE NAME OR THE OWNER, because a channel's identity is its owner while its name can be
+-- changed at any time, and whoever is reading a report has whichever of the two it quoted.
+--
+-- NEWEST 500, SHOWN OLDEST FIRST - the subquery is what gets that.  Ordering ascending with a
+-- limit would hand back the oldest 500 lines the channel ever carried, which on a busy one is
+-- its first week and nothing since.
+select * from (
+    select
+        cc.timestamp as said_at,
+        a.username as who,
+        cc.message as message,
+        cc.channel as channel,
+        cc.owner as owner,
+        ((cc.coord >> 14) & 16383) || ', ' || (cc.coord & 16383) || ', level ' || ((cc.coord >> 28) & 3) as tile
+    from clan_chat cc
+    join session s on s.uuid = cc.session_uuid
+    join account a on a.id = s.account_id
+    where lower(cc.channel) = lower(:channel) or lower(cc.owner) = lower(:channel)
+    order by cc.timestamp desc
+    limit 500
+)
+order by said_at;
+
+
+-- ------------------------------------------------------------------------- 6. clan_channels
+-- Which channels have been talked in, how much, and by how many people.  The way in to the one
+-- above when you do not already know the name.
+select
+    channel,
+    owner,
+    count(*) as lines_said,
+    count(distinct s.account_id) as speakers,
+    min(cc.timestamp) as first_seen,
+    max(cc.timestamp) as last_seen
+from clan_chat cc
+join session s on s.uuid = cc.session_uuid
+group by cc.owner, cc.channel
+order by last_seen desc;
