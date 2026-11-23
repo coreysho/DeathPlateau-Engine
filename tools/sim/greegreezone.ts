@@ -17,6 +17,7 @@
 import * as H from './harness.ts';
 import { check, R, player, held } from './a1lib.ts';
 import World from '#/engine/World.js';
+import { CoordGrid } from '#/engine/CoordGrid.js';
 import NpcType from '#/cache/config/NpcType.js';
 import HuntType from '#/cache/config/HuntType.js';
 import ObjType from '#/cache/config/ObjType.js';
@@ -35,7 +36,45 @@ const DUNGEON = { x0: 2688, x1: 2815, z0: 9088, z1: 9215, lv: 3 };
 const ZOO = { x0: 2595, x1: 2612, z0: 3269, z1: 3288, lv: 0 };
 
 const inRect = (r: typeof ATOLL, x: number, z: number, level = 0) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 && level <= r.lv;
-const allowed = (x: number, z: number, level = 0) => inRect(ATOLL, x, z, level) || inRect(DUNGEON, x, z, level) || inRect(ZOO, x, z, level);
+/** The three rectangles as this file understands them, from the comment above. */
+const byRect = (x: number, z: number, level = 0) => inRect(ATOLL, x, z, level) || inRect(DUNGEON, x, z, level) || inRect(ZOO, x, z, level);
+
+// AND THE CONTENT'S OWN ANSWER, which is what sections 1 and 2 go on. Asking the rectangles in
+// TypeScript would make those sections a test of this file's arithmetic: dropping the zoo from
+// ~mm_greegree_zone left every one of section 1's zoo checks green, because none of them had asked
+// the game. A mutation run is the only reason that is known.
+const probe: any = player('zoneprobe', 3200, 3200, 0);
+H.setVar(probe, 'tutorial', 1000);
+H.tick(2);
+const allowed = (x: number, z: number, level = 0) => H.runProc(probe, '[proc,mm_greegree_zone]', [CoordGrid.packCoord(level, x, z)])[0] === 1;
+
+// ---------------------------------------------------------------- 0. and the two agree everywhere
+//
+// So the rectangles written in the comment above are the rectangles the game uses. 1,600-odd tiles
+// across the island, the dungeon and the whole Ardougne neighbourhood, which is what makes the
+// numbers in this file documentation rather than decoration.
+console.log('\n0. THE GAME AGREES WITH THE RECTANGLES THIS FILE DESCRIBES');
+{
+    const disagreed: string[] = [];
+    let n = 0;
+    for (const [x0, x1, z0, z1, step] of [
+        [2680, 2825, 2680, 2825, 5],
+        [2585, 2625, 3255, 3300, 2],
+        [2680, 2825, 9080, 9225, 10],
+        [3100, 3300, 3150, 3500, 25]
+    ] as const) {
+        for (let x = x0; x <= x1; x += step) {
+            for (let z = z0; z <= z1; z += step) {
+                n++;
+                if (allowed(x, z, 0) !== byRect(x, z, 0)) disagreed.push(`${x},${z}`);
+            }
+        }
+    }
+    check(`  over ${n} tiles, the game and this file agree`, disagreed.slice(0, 6).join(' ') || '(everywhere)', '(everywhere)');
+    // AND NOT BECAUSE EVERY ANSWER WAS NO. A ~mm_greegree_zone that returned false for everything
+    // would agree with nothing and this check would still pass if the rectangles were empty.
+    check('    with both answers in the sample', [...new Set([2762, 2596].map((x, i) => allowed(x, [2724, 3277][i], 0))), allowed(3213, 3424, 0)].join(','), 'true,false');
+}
 
 function wornGreegree(p: any): boolean {
     const inv = p.getInventory(InvType.WORN);
@@ -158,12 +197,20 @@ for (const [what, x, z, want] of [
     H.tick(2);
     check(`  ${what.padEnd(28)} -> a monkey`, isMonkey(p), want);
     check(`    ${' '.repeat(26)} and it is worn`, wornGreegree(p), want);
+    // BOTH CHANNELS. The refusal is a mes() line plus a ~mesbox, and a mesbox's text arrives as an
+    // interface update, not as a chat message - reading only H.mesgs passed over the half of the
+    // refusal that actually explains itself.
+    const said = [...H.mesgs.map(m => m.text), ...H.ifaces.map(i => i.text ?? '')].join(' | ');
     if (!want) {
-        // BOTH CHANNELS. The refusal is a mes() line plus a ~mesbox, and a mesbox's text arrives as
-        // an interface update, not as a chat message - reading only H.mesgs passed over the half of
-        // the refusal that actually explains itself.
-        const said = [...H.mesgs.map(m => m.text), ...H.ifaces.map(i => i.text ?? '')].join(' | ');
-        check('    and it says why, naming Zooknock or Ape Atoll', /Zooknock|Ape Atoll/.test(said), true);
+        // THE WIELD CHECK'S OWN WORDS, and not just "Zooknock" - which the watch also says. Deleting
+        // the wield check entirely left this whole section green: the hold succeeded, and the watch
+        // took the greegree back off two ticks later, so every check above still read "not a monkey,
+        // not worn". A mutation run is the only reason that is known. These two lines are what tell
+        // "it was refused" from "it was allowed and then undone".
+        check("    refused in its own words, not the watch's", /carved wood/.test(said), true);
+        check('    and never got as far as holding it up', /hold up the greegree/.test(said), false);
+    } else {
+        check('    and it says you held it up', /hold up the greegree/.test(said), true);
     }
     H.despawn(p);
 }
