@@ -40501,14 +40501,6 @@
       {
        "at": 0,
        "text": "Winelda will teleport you over the lava for twenty limpwurt roots."
-      },
-      {
-       "at": 3,
-       "text": "Ending B: side with Lucien."
-      },
-      {
-       "at": 11,
-       "text": "Lucien takes it, between Edgeville and the Grand Exchange."
       }
      ],
      "marks": [],
@@ -40532,7 +40524,23 @@
        "picks": [
         "Yes I do!"
        ]
-      },
+      }
+     ],
+     "items": [
+      {
+       "name": "Limpwurt root",
+       "id": 225,
+       "n": 20,
+       "bring": true
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 50,
+     "headings": [],
+     "marks": [],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Winelda.",
@@ -40540,7 +40548,25 @@
        "target": "ikov_winelda",
        "id": 276,
        "label": "Winelda"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 60,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Ending B: side with Lucien."
       },
+      {
+       "at": 8,
+       "text": "Lucien takes it, between Edgeville and the Grand Exchange."
+      }
+     ],
+     "marks": [],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the brick wall.",
@@ -40626,12 +40652,6 @@
       }
      ],
      "items": [
-      {
-       "name": "Limpwurt root",
-       "id": 225,
-       "n": 20,
-       "bring": true
-      },
       {
        "name": "Staff of armadyl",
        "id": 84,
