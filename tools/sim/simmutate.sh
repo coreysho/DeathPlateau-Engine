@@ -38,17 +38,22 @@
 # triggers. A mutation harness is the one caller that cannot live with a wrong no, because the whole
 # exercise is to trust the red. See DeathPlateau-Bugs#81 for the other two shapes this takes.
 #
-# ONE MUTATION PER LINE: sim, the content file, the line number, and the text to comment out. The
-# line number is checked against the text before anything is edited, so a file that has shifted
-# fails loudly instead of mutating the wrong line.
+# ONE MUTATION PER LINE: sim, the content file, the config block it belongs to, and the text to
+# comment out. The line is RESOLVED from the block rather than written down, because a line number
+# is a fact about the file on the day it was typed: both brewing rows went stale when all.npc
+# shifted 39 lines under them, and a run that cannot place its mutation proves nothing. Resolving
+# it also makes the lesson below structural instead of something a human has to get right - the
+# text has to sit inside the named block, and a text that appears there no times, or more than
+# once, is reported rather than guessed at.
 #
 # THE FOURTH MUTATION, AND THE LESSON IN IT. The first attempt at the Ent one disabled
 # moverestrict=nomove on line 1432 of antimacro.npc and woodcutents.ts stayed green - which looked
 # like a hole in the sim and was not. Line 1432 belongs to macro_whirlpool_freshfish, a FISHING
 # macro event npc that a woodcutting sim has no business asserting about. The mutation missed its
 # target, the sim was right, and that is exactly the failure mode mutate_labels exists to prevent:
-# a mutation nobody checked is pointed at the check it is written for. Hence the target name in each
-# row below, and the `expect` on the end.
+# a mutation nobody checked is pointed at the check it is written for. That is why every row names
+# the block it is about - and now why the line is looked up inside that block, so a row CANNOT
+# point at another npc's config even if the file moves.
 
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 1
@@ -98,33 +103,65 @@ rebuild() {
     return 0
 }
 
-# sim | file | line | exact text on that line | what the mutation is | the npc/loc it must be about
+# sim | file | the [block] it must be about | exact text inside that block | what the mutation is
 MUTATIONS=(
-"junglechop|scripts/quests/quest_mm/configs/mm.loc|1050|category=tree|Ape Atoll's jungle tree loses the category that dispatches its Chop-down|mm_bush_kharazi_jungle_tree1"
-"woodcutents|scripts/macro events/configs/antimacro.npc|3446|moverestrict=nomove|an Ent is allowed to walk off its tree's tile|macro_ent_tree1"
-"brewing|scripts/_unpack/377/all.npc|52530|param=shop_sell_multiplier,1000|Blandebir falls back to the stale per-cent default, selling 25gp yeast for 2gp|blandebir"
-"brewing|scripts/_unpack/377/all.npc|52567|param=shop_sell_multiplier,200|Metarialus falls back to two ectotokens where his comment says five|metarialus"
+"junglechop|scripts/quests/quest_mm/configs/mm.loc|mm_bush_kharazi_jungle_tree1|category=tree|Ape Atoll's jungle tree loses the category that dispatches its Chop-down"
+"woodcutents|scripts/macro events/configs/antimacro.npc|macro_ent_tree1|moverestrict=nomove|an Ent is allowed to walk off its tree's tile"
+"brewing|scripts/_unpack/377/all.npc|blandebir|param=shop_sell_multiplier,1000|Blandebir falls back to the stale per-cent default, selling 25gp yeast for 2gp"
+"brewing|scripts/_unpack/377/all.npc|metarialus|param=shop_sell_multiplier,200|Metarialus falls back to two ectotokens where his comment says five"
 )
+
+# WHERE DOES THIS TEXT LIVE? Prints the line number of every line inside the [$target] block of
+# $file whose trimmed text is exactly $text. Zero lines means the row is stale; more than one means
+# the row is ambiguous and the caller must not pick. Both are reported rather than mutated.
+#
+# THE CARRIAGE RETURNS ARE NOT OPTIONAL. Parts of the content repo are CRLF - quest_mm/configs
+# mm.loc is, all 1,875 lines of it - so a record read straight out of awk ends in \r and matches
+# nothing. The first version of this resolver compared the raw record, found no [block] header at
+# all in that file, and reported the junglechop row as stale when it was perfectly good. The old
+# line-number code got away with it because it ran the one line it already knew through
+# `tr -d '\r'`; a resolver that has to FIND the line has to normalise every record it reads.
+resolve_line() {
+    local file=$1 target=$2 text=$3
+    (cd "$CONTENT" && awk -v t="[$target]" -v want="$text" '
+        { rec = $0; gsub(/\r/, "", rec) }
+        rec == t { inblk = 1; next }
+        inblk && rec ~ /^\[/ { exit }
+        inblk {
+            line = rec
+            sub(/^[ \t]+/, "", line)
+            sub(/[ \t]+$/, "", line)
+            if (line == want) { print NR }
+        }
+    ' "$file")
+}
 
 caught=0
 missed=0
 broken=0
 
 for row in "${MUTATIONS[@]}"; do
-    IFS='|' read -r sim file line text what target <<<"$row"
+    IFS='|' read -r sim file target text what <<<"$row"
     [ -n "$FILTER" ] && [[ "$sim" != *"$FILTER"* ]] && continue
 
     echo ""
     echo "== $sim : $what"
     echo "   target: $target"
 
-    actual=$(cd "$CONTENT" && sed -n "${line}p" "$file" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    if [ "$actual" != "$text" ]; then
-        echo "   BROKEN MUTATION - $file:$line reads '$actual', expected '$text'"
-        echo "   the file has shifted; fix the line number rather than trusting this run"
+    hits=$(resolve_line "$file" "$target" "$text")
+    found=$(printf '%s' "$hits" | grep -c . || true)
+    if [ "${found:-0}" -ne 1 ]; then
+        if [ "${found:-0}" -eq 0 ]; then
+            echo "   BROKEN MUTATION - no line reading '$text' inside [$target] in $file"
+            echo "   the config has changed; fix the row rather than trusting this run"
+        else
+            echo "   BROKEN MUTATION - '$text' appears $found times inside [$target] in $file"
+            echo "   the row is ambiguous, and guessing which one is how a mutation misses its target"
+        fi
         broken=$((broken + 1))
         continue
     fi
+    line=$hits
 
     # Is the sim green before the mutation? A sim that is already red proves nothing either way.
     if ! timeout 600 npx tsx "tools/sim/$sim.ts" >/dev/null 2>&1; then
