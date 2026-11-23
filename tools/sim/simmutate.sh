@@ -28,6 +28,16 @@
 # and names it, and brewing notices either brewer falling back to the stale per-cent shop
 # multiplier - 25gp yeast for 2gp, two ectotokens instead of five.
 #
+# EVERY BUILD HERE IS A FORCED BUILD, and that is not a detail. The packer decides what to repack
+# by comparing mtimes, and an mtime comparison can answer "nothing is stale" when something is:
+# delete a .rs2 and nothing the packer looks at got newer, so the build reports success in two
+# seconds, does nothing, and leaves the previous script.dat in place. The sim then runs against
+# content that was never mutated and reports the guard as passing. Measured on 377-wip: deleting
+# interface_bank/scripts/bank_booth.rs2 outright and rebuilding normally left opsweep --check green
+# with zero new dead options; the same deletion with --force turned up all six of that file's
+# triggers. A mutation harness is the one caller that cannot live with a wrong no, because the whole
+# exercise is to trust the red. See DeathPlateau-Bugs#81 for the other two shapes this takes.
+#
 # ONE MUTATION PER LINE: sim, the content file, the line number, and the text to comment out. The
 # line number is checked against the text before anything is edited, so a file that has shifted
 # fails loudly instead of mutating the wrong line.
@@ -58,11 +68,34 @@ revert_all() {
 }
 trap revert_all EXIT INT TERM
 
+# REBUILD WITH --force, AND SAY HOW LONG IT TOOK. Both halves of that matter, and both were wrong
+# here before (DeathPlateau-Bugs#81):
+#
+#   1. This used to force a repack by DELETING pack files in the content checkout and touching
+#      interface.pack - writing to a repo it does not own, to make an mtime comparison come out the
+#      way it needed. It worked by side effect: removing script.pack made regenScriptPack write a
+#      fresh one, whose new mtime finally made script.dat look stale. Nothing said so, nothing
+#      covered models, maps, graphics or midi, and a mutation outside the config packs got a build
+#      that skipped it. --force asks the packer directly and the content checkout is left alone.
+#
+#   2. It used to send the build to /dev/null, which threw away the one tell that a build did
+#      nothing: its own timing. A no-op build here is ~2.5s and a real one ~21s, so the difference
+#      between a trustworthy mutation run and a meaningless one was being discarded to keep the
+#      output tidy. The pack line is printed for every build now, so a 2-second build in the middle
+#      of a mutation run is visible instead of silent.
+#
+# The build is still allowed to FAIL: a mutation that makes the content uncompilable is a caught
+# mutation, not a harness error, so the caller decides what to make of a non-zero exit.
 rebuild() {
-    (cd "$CONTENT" && rm -f pack/script.pack pack/param.pack pack/category.pack pack/enum.pack \
-        pack/struct.pack pack/mesanim.pack pack/dbtable.pack pack/dbrow.pack pack/hunt.pack \
-        pack/varn.pack pack/vars.pack && touch pack/interface.pack)
-    npx tsx tools/pack/Build.ts >/dev/null 2>&1
+    local out
+    out=$(npx tsx tools/pack/Build.ts --force 2>&1)
+    local rc=$?
+    echo "   $(echo "$out" | grep '^pack:' || echo 'pack: DID NOT RUN')"
+    if [ "$rc" -ne 0 ]; then
+        echo "   build exited $rc:"
+        echo "$out" | tail -15 | sed 's/^/     /'
+    fi
+    return 0
 }
 
 # sim | file | line | exact text on that line | what the mutation is | the npc/loc it must be about
@@ -120,6 +153,17 @@ for row in "${MUTATIONS[@]}"; do
     # made equipcycle.ts look calibrated when it was reading stale scripts.
     (cd "$CONTENT" && git checkout -- "$file")
     rebuild
+
+    # AND CHECK THE REVERT TOOK. A mutation run makes two claims - green before, red after - and
+    # both are worthless if the cache is not actually tracking the file. Re-running the sim on the
+    # restored content is what distinguishes "this sim catches the mutation" from "this sim is red
+    # for some other reason and happened to be red at the right moment". It is one more sim run per
+    # mutation and it is the difference between a demonstration and a coincidence.
+    if ! timeout 600 npx tsx "tools/sim/$sim.ts" >/dev/null 2>&1; then
+        echo "   !! $sim is STILL RED after the revert and rebuild - do not trust the line above."
+        echo "      either the revert did not take, or the cache is not tracking $file."
+        broken=$((broken + 1))
+    fi
 done
 
 echo ""
