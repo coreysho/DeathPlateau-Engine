@@ -33,15 +33,32 @@ import DbRowType from '#/cache/config/DbRowType.js';
 
 await H.boot();
 
-/** The obj names a shop stocks, in slot order. */
+/**
+ * The obj names a shop stocks, in slot order.
+ *
+ * 65535 IS AN EMPTY SLOT, not an obj, and it is what a GAP in the stockN numbering packs down to.
+ * This function used to guard against 0 and then crash on 65535 - ObjType.get(65535) is undefined -
+ * which took the whole sim down mid-run and reported nothing at all, so a mutation that left a gap
+ * looked like a sim that produced no output rather than a failure. Counted rather than ignored:
+ * emptySlots() is checked on its own, because across all 318 shops in the build exactly zero have
+ * one, so an empty slot is a config error and not padding.
+ */
+const EMPTY_SLOT = 65535;
+
 function stock(shopName: string): string[] {
     const inv = InvType.get(InvType.getId(shopName));
     const out: string[] = [];
     for (const id of inv.stockobj ?? []) {
-        if (id === undefined || id === 0) continue;
-        out.push(ObjType.get(id).debugname ?? String(id));
+        if (id === undefined || id === 0 || id === EMPTY_SLOT) continue;
+        const t = ObjType.get(id);
+        out.push(t ? (t.debugname ?? String(id)) : `<<unresolvable obj ${id}>>`);
     }
     return out;
+}
+
+function emptySlots(shopName: string): number {
+    const inv = InvType.get(InvType.getId(shopName));
+    return [...(inv.stockobj ?? [])].filter(id => id === EMPTY_SLOT).length;
 }
 
 /** What a shop stocks of a named obj, by slot: [count, restock]. */
@@ -50,7 +67,7 @@ function slot(shopName: string, objName: string): [number, number] | null {
     const want = ObjType.getId(objName);
     const ids = inv.stockobj ?? [];
     for (let i = 0; i < ids.length; i++) {
-        if (ids[i] === want) return [inv.stockcount?.[i] ?? 0, (inv as any).stockdelay?.[i] ?? -1];
+        if (ids[i] === want) return [inv.stockcount?.[i] ?? 0, inv.stockrate?.[i] ?? -1];
     }
     return null;
 }
@@ -80,6 +97,13 @@ console.log("\n2. Lowe's keeps the bronze bolts and the crossbow, which the wiki
     check('  a crossbow (wiki: 2)', slot('archeryshop', 'crossbow')?.[0], 2);
     for (const o of ['bronze_arrow', 'iron_arrow', 'steel_arrow', 'shortbow', 'longbow', 'maple_longbow']) {
         check(`  ${o}`, lowe.includes(o), true);
+    }
+    // AND NO HOLE WHERE A ROW USED TO BE. Removing a stockN line without renumbering the ones after
+    // it packs a gap down to an empty slot (obj 65535, count 0) that a player's shop window shows
+    // as a blank square. Exactly zero of the build's 318 stocked shops have one, so this is a
+    // config error rather than padding - and it is the mistake this very fix could have made.
+    for (const shop of ['archeryshop', 'archeryshop2', 'gnomeshop_gulluck', 'lathastrainingstore', 'lletyaarcheryshop1', 'ranging_guild_bowshop']) {
+        check(`  ${shop.padEnd(22)} has no empty stock slot`, emptySlots(shop), 0);
     }
 }
 
