@@ -19,6 +19,7 @@ import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
 import LocType from '#/cache/config/LocType.js';
 import CategoryType from '#/cache/config/CategoryType.js';
+import VarNpcType from '#/cache/config/VarNpcType.js';
 import type Npc from '#/engine/entity/Npc.js';
 
 await H.boot();
@@ -169,7 +170,36 @@ console.log('\n4. a teller with no booth beside it is left exactly as it was');
     check(`none of them were pointed anywhere (${moved} were)`, moved, 0);
 }
 
-// ---- 5. AND THE TELLERS THAT WANDER OFF THEIR BOOTH ARE A KNOWN LIST -------------------------
+// ---- 5. AND THE SHARED SPAWN DEFAULTS STILL RUN ----------------------------------------------
+// THE TRAP ai_spawn.rs2 NAMES IN ITS OWN COMMENT, and this file did not catch it until a mutation
+// showed it up. A trigger written for one npc - or for one CATEGORY, which is what the fix adds -
+// REPLACES the wildcard [ai_spawn,_] for every npc it covers, because the engine picks the most
+// specific and runs only that. So [ai_spawn,_bank_teller] takes 98 npcs off ~npc_spawn_defaults,
+// and if it forgets to call it back they lose %npc_start_coord and %npc_combat_xp_multiplier in
+// silence. The Spinolyps had been doing exactly that for months.
+//
+// Deleting the ~npc_spawn_defaults line changed nothing in this file - 13 ok - until this section
+// existed. %npc_start_coord is the one worth reading: it is set to npc_coord at spawn, so for a
+// teller that cannot move it must still BE its coord.
+console.log('\n5. and the shared spawn defaults still ran for all of them');
+{
+    const START = VarNpcType.getId('npc_start_coord');
+    check('npc_start_coord exists to be read', START >= 0, true);
+    let unset = 0;
+    let checked = 0;
+    for (const npc of tellers) {
+        if (!staysPut(npc)) continue;
+        checked++;
+        const packed = (npc as any).getVar(START) as number;
+        // CoordGrid.packCoord's shape: level << 28 | x << 14 | z
+        const want = (npc.level << 28) | (npc.x << 14) | npc.z;
+        if (packed !== want) unset++;
+    }
+    console.log(`      (${checked} fixed tellers checked)`);
+    check(`every one has %npc_start_coord set to where it stands (${unset} do not)`, unset, 0);
+}
+
+// ---- 6. AND THE TELLERS THAT WANDER OFF THEIR BOOTH ARE A KNOWN LIST -------------------------
 // Not a pass and not a failure: a pin. These twelve types have no movement config, so they walk
 // away from the counter a player is using and lose their spawn facing doing it, where banker1 and
 // banker2 are nomove with wanderrange 0. Making them stand still is a change to several quests'
@@ -178,7 +208,7 @@ console.log('\n4. a teller with no booth beside it is left exactly as it was');
 //
 // The list is asserted so a NEW wandering teller shows up as a failure in this file rather than as
 // a report from a player a year later.
-console.log('\n5. the teller types that wander off their booth, which is filed separately');
+console.log('\n6. the teller types that wander off their booth, which is filed separately');
 {
     const KNOWN = [
         'ahoy_ghost_banker',
