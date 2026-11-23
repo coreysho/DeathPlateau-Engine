@@ -292,13 +292,26 @@ console.log('\n6. the level rule, both sides of it');
         check('  and the level 106 one in the basement still attacks them', hunts(low, maxed2, 1), true);
 
         // AND THE PLAYER THE REPORT IS ABOUT IS STILL ATTACKED. The guild takes 130 Attack +
-        // Strength to enter, so "nobody there is low level" is a fair worry about this half of the
-        // change: a 70/70 player is combat 77, under 112, and the top floor still wants them.
-        freshen(top);
-        const t3 = tileAt(top, 1)!;
-        const mid = probe(70, t3[0], t3[1], top.level);
-        console.log(`      (a 70-in-everything player is combat ${mid.combatLevel})`);
-        check('  a 70-stat player (combat under 112) is still attacked on the top floor', hunts(top, mid, 1), true);
+        // Strength to enter, so "nobody up there is under the cutoff" is a fair worry about this
+        // half of the change: a 70-in-everything player is well under combat 112 and the top floor
+        // still wants them.
+        //
+        // ON A DIFFERENT LEVEL 56, not the one above. freshen() puts an npc back, but an npc that
+        // has just been in real combat with the maxed probe is not the same starting position as
+        // one that has not, and under a mutated build this check failed for that reason rather than
+        // its own - a mutant failing the wrong check is a mutant that taught me nothing.
+        // wguild_cyclops_3 is the same vislevel 56 and has not been touched since section 4.
+        const other = find('wguild_cyclops_3');
+        if (!other) {
+            check('  a second level 56 cyclops has a spawn', false, true);
+        } else {
+            check('  ...and it is also level 56', NpcType.get(other.type).vislevel, 56);
+            freshen(other);
+            const t3 = tileAt(other, 1)!;
+            const mid = probe(70, t3[0], t3[1], other.level);
+            console.log(`      (a 70-in-everything player is combat ${mid.combatLevel})`);
+            check('  a 70-stat player (combat under 112) is still attacked on the top floor', hunts(other, mid, 1), true);
+        }
     }
 }
 
