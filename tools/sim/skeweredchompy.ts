@@ -162,10 +162,28 @@ console.log("\n4. the burn curve is tuna's, and so are the level and the experie
 
     const CHOMPY = 'cooking_generic_skewered_chompy';
     const TUNA = 'cooking_generic_tuna';
+
+    // BOTH THE RELATIVE AND THE ABSOLUTE, and the pair is the point.
+    //
+    // The relative check alone was not enough, and a mutation proved it rather than a hunch:
+    // nudging successchance from 58,372 to 58,300 was caught by nothing, because tuna's row carries
+    // the literal SAME two numbers and the edit moved both rows at once - so "the chompy matches
+    // tuna" stayed true of two rows that had both moved. A relative pin cannot see a change to its
+    // own reference.
+    //
+    // So the wiki's figures are written out here as well. The relative check says WHY these numbers
+    // are these numbers; the absolute one says what they are, and between them a change to either
+    // row has to come through this file.
+    const WIKI: Record<string, string> = {
+        successchance: '[58,372]',
+        levelrequired: '[30]',
+        experience: '[1000]' // 100 xp, and the table is in tenths
+    };
     for (const what of ['successchance', 'levelrequired', 'experience']) {
         const mine = JSON.stringify(field(CHOMPY, what));
         const theirs = JSON.stringify(field(TUNA, what));
         check(`  ${what.padEnd(13)} is tuna's: ${mine}`, mine, theirs);
+        check(`    ...and is still ${WIKI[what]}, which tuna moving would not tell us`, mine, WIKI[what]);
     }
     // getValue hands back the column's whole value LIST, so a single-valued field arrives as
     // [id] and comparing it to the id itself fails while printing the right number next to it.
