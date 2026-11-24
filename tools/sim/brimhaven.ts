@@ -151,8 +151,8 @@ function heldOver(p: Player, n: number) {
 // ---- 4. the vines want an axe, and a level ---------------------------------------------------
 const VINE = H.locsNear('karam_dungeon_vineblocking1', 2690, 9564, 0)[0];
 
-function atVine(who: string, wc: number, axe: boolean) {
-    const p = player(who, VINE.x + 1, VINE.z, 0);
+function atVine(who: string, wc: number, axe: boolean, at?: [number, number]) {
+    const p = player(who, at ? at[0] : VINE.x + 1, at ? at[1] : VINE.z, 0);
     H.setVar(p, 'tutorial', 1000);
     H.clearInv(p);
     p.setLevel(8, wc); // WOODCUTTING
@@ -193,6 +193,71 @@ function atVine(who: string, wc: number, axe: boolean) {
         swings++;
     }
     check(`with an axe and the level, the vine comes down (${swings} swings)`, gone, true);
+    // AND THE POINT OF CUTTING A VINE IS WALKING THROUGH IT, which this file did not ask.
+    // "the vine comes down" was the whole of the old check, and it stayed green while chopping
+    // opened nothing at all: the five vine tiles each carried the landscape's own block flag
+    // (f1, BLOCK_MAP_SQUARE) on top of the loc's, so loc_del cleared the loc's collision and the
+    // land's remained. A player chopped, walked into the gap and stopped dead
+    // (DeathPlateau-Bugs#103). The flags are off those five tiles now.
+    check('  ...and the gap it leaves can be walked through', canTravel(0, VINE.x + 1, VINE.z, -1, 0, 1, CollisionFlag.BLOCK_NPC_AND_PLAYERS, CollisionType.NORMAL), true);
+}
+
+// ---- 4b. ALL FIVE VINES ARE DOORS: shut until cut, and joining two rooms once they are -------
+//
+// Each of the five sits in a one-tile gap in a wall with the unallocated void to either side and
+// a REAL ROOM on each of the other two sides - measured, and the reason this is a map fix rather
+// than a script one:
+//
+//     vine1 2690,9564   the entrance room (191) <-> the stepping-stones channel (635)
+//     vine2 2683,9569   the channel (635)       <-> a room of 491
+//     vine3 2673,9499   a room of 1434          <-> a room of 37
+//     vine4 2675,9479   a room of 1434          <-> a room of 113
+//     vine5 2694,9482   a room of 113           <-> the 3,266-tile room #103 was reported from
+//
+// So they are the dungeon's five doors, and every one of them was a wall. Both halves are checked
+// per vine, because "it opens" alone would pass on a vine that was never shut, and "it is shut"
+// alone is what shipped.
+{
+    // VINE 1 IS STILL DOWN FROM SECTION 4, which chopped it as its example, so this waits out
+    // ^brimhaven_vine_regrow (100 ticks) before asking whether the gaps are shut. The first draft
+    // did not, and vine1 reported "not placed" and "not shut" while the other four passed - which
+    // is the regrow being tested by accident, so it is asserted on purpose below.
+    H.tick(110);
+    const VINES: { n: number; at: [number, number]; side: [number, number] }[] = [
+        { n: 1, at: [2690, 9564], side: [1, 0] },
+        { n: 2, at: [2683, 9569], side: [0, 1] },
+        { n: 3, at: [2673, 9499], side: [1, 0] },
+        { n: 4, at: [2675, 9479], side: [1, 0] },
+        { n: 5, at: [2694, 9482], side: [1, 0] }
+    ];
+    for (const v of VINES) {
+        const [vx, vz] = v.at;
+        const [dx, dz] = v.side;
+        const name = `karam_dungeon_vineblocking${v.n}`;
+        check(`vine${v.n} is placed at ${vx},${vz}${v.n === 1 ? ' (grown back)' : ''}`, H.locAt(0, vx, vz, name), true);
+        const before = walkableRegion(vx + dx, vz + dz);
+        check('  ...and shut: the gap is not walkable while it stands', before.has(`${vx},${vz}`), false);
+        const p = atVine(`gate_${v.n}`, 50, true, [vx + dx, vz + dz]);
+        let gone = false;
+        for (let i = 0; i < 60 && !gone; i++) {
+            if (!H.locAt(0, vx, vz, name)) {
+                gone = true;
+                break;
+            }
+            H.opLoc(p, vx, vz, name, i === 0 ? 1 : 3);
+            H.tick(1);
+        }
+        check('  ...it comes down', gone, true);
+        const after = walkableRegion(vx + dx, vz + dz);
+        check(`  ...and the room on the far side is now reachable (${before.size} -> ${after.size} tiles)`, after.size > before.size + 20, true);
+    }
+    // PUT THEM BACK, because the sections after this one chop vines of their own and a vine that
+    // is already down throws out of H.opLoc rather than failing a check. Asserted rather than
+    // assumed, which also pins the regrow for all five.
+    H.tick(110);
+    for (const v of VINES) {
+        check(`vine${v.n} grows back`, H.locAt(0, v.at[0], v.at[1], `karam_dungeon_vineblocking${v.n}`), true);
+    }
 }
 
 // ---- 5. AND CHOPPING NEVER HOLDS THE PLAYER --------------------------------------------------
@@ -263,10 +328,22 @@ for (const [name, sx, sz] of STONES) {
     }
     // southbound with the level: across
     {
+        // RETRIED, because southbound has a fail roll and a failure leaves you on the starting
+        // side - so a single click proves nothing when it comes up short. It came up short the
+        // moment this file's own map change shifted the seeded dice, which is red over nothing in
+        // the same way a one-roll pass is green over nothing. What the gate promises is that 12
+        // gets across and 11 never does, so 12 is given the attempts to show it.
+        //
+        // DeathPlateau-Engine#145 carries this same hunk, for the same reason on a different
+        // change. Whichever of the two lands second will conflict on it trivially - keep either.
         const p = atStone(`st_${sz}_ok`, sx, sz, 'N', 12);
-        H.opLoc(p, sx, sz, name, 1);
-        H.tick(10);
-        check(`  ...and exactly 12 does (${p.x},${p.z})`, p.z === sz - 1, true);
+        let tries = 0;
+        while (p.z !== sz - 1 && tries < 15) {
+            tries++;
+            H.opLoc(p, sx, sz, name, 1);
+            H.tick(10);
+        }
+        check(`  ...and 12 does, in ${tries} attempt(s) (${p.x},${p.z})`, p.z === sz - 1, true);
     }
     // northbound at level 1: free, and it must LAND - the roll is southbound only, or the player
     // who got down here with no Agility could never get back out
