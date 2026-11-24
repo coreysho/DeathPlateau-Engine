@@ -75,7 +75,7 @@ const PLACES: { n: number; at: [number, number]; place: string; clue: string; pr
     { n: 10, at: [2443, 3091], place: 'Castle Wars', clue: 'ticket', proof: { npc: 'Lanthus', within: 10 } },
     { n: 11, at: [2465, 3497], place: 'Grand Tree', clue: 'gnome tailoring', proof: { npc: 'King Narnode Shareen', within: 10 } },
     { n: 12, at: [2793, 3157], place: 'Brimhaven', clue: 'eye patch', proof: { label: 'Brimhaven', within: 40 } },
-    { n: 13, at: [3282, 3215], place: 'Al Kharid', clue: 'beard', proof: { npc: 'Gem trader', within: 10 } },
+    { n: 13, at: [3305, 3209], place: 'Al Kharid', clue: 'beard', proof: { npc: 'Ali Morrisane', within: 8 } },
     { n: 14, at: [2955, 3503], place: 'Goblin Village', clue: 'Goblin-sized', proof: { label: 'Goblin Village', within: 25 } },
     { n: 15, at: [2555, 3080], place: 'Dragon Inn', clue: "Greenman's", proof: { npc: 'Bartender', within: 10 } },
     { n: 16, at: [2666, 3506], place: "McGrubor's Wood", clue: 'worm', proof: { npc: 'Guard dog', within: 15 } },
