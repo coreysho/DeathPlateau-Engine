@@ -230,7 +230,11 @@ for (let id = 0; id < NpcType.count; id++) {
         //
         // The other is tbwt_tiadeche, placed once at 2528,4589, excused by the two
         // tbwt_tiadeche_multinpc_* shells at 2782,3056 and 2911,3118 that carry the Trio's
-        // conversations. That one is still dead and is in the baseline now.
+        // conversations. That one is still dead and is in the baseline now - though nothing in the
+        // content names a coordinate anywhere in that map square (m39_71, with a general_karambwan
+        // and a seabird beside him), so it reads as an unused import spawn rather than a click
+        // anybody meets. "Reachable" in this file's counting means the map places it, not that a
+        // player can walk there.
         //
         // STILL NOT COVERED, deliberately: a placed SHELL whose trigger lives only on a face. The
         // shell's own op labels are usually empty, so nothing is reported, and knowing which face
