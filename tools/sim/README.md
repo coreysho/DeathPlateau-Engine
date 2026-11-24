@@ -443,3 +443,52 @@ been mistaken for content faults at least once, so the signature matters as much
 - **One fight per process.** `%lastcombat` and `%aggressive_npc` survive a fight, and the content's
   own singles rule then refuses the next one. That is correct behaviour, but it is not what you are
   usually measuring.
+
+## Write the property, not the example
+
+Seven of the ten sims that were failing on 24 November 2026 were failing because content had
+deliberately changed something they had hardcoded. Not one of them was a bug in the game:
+
+| what the sim said | what had actually happened |
+| --- | --- |
+| `ten rows` on the vote shelf | the clerk gained the seed box, because nothing in the game produced one |
+| `nineteen rows now` on the Undertaker's | the shelf gained the fighter torso, because Barbarian Assault is not in this build |
+| `a banker four tiles away still faces south` | twelve bank tellers were given a facing so they stop wandering off your booth |
+| `the fairy is told to be not interested` | all forty-two Zanaris fairies were given real dialogue |
+| `possessed_pickaxe_stationary ... gets the blunt line` | Haunted Mine's pickaxe was wired up |
+| `every npc on a greegree-guarded hunt is inside` | seven npc types were moved onto the island's own hunts, and three of them have spawns elsewhere |
+| `H.give(p, 'plank', 5)` | three quests were moved off `plank`, a dead duplicate the server deletes on login, onto `woodplank` |
+
+Each of those is a check going red because the game got **better**, which is the worst signal a
+suite can send: it trains whoever reads it to assume the sims are wrong, and they will be right
+seven times out of ten.
+
+So, where you have a choice:
+
+- **Choose the example from the running world rather than naming it.** `talkfallback.ts` asks which
+  npcs still advertise Talk-to with no script behind them and walks up to one of those, printing
+  which it picked. Writing dialogue can no longer look like a broken fallback.
+- **Assert the shape, not the count** - and where a count is the point, say what the extras ARE.
+  The vote shelf asserts the ten diary rewards as a set and an order and then names the seed box as
+  the eleventh, so a twelfth row still fails.
+- **Assert the thing the bug report was about.** `greegreezone.ts` was checking that no
+  greegree-aware npc stands outside the zone, which is inert - outside the zone nobody can be a
+  monkey. It is now checking that every hunting npc INSIDE the zone reads the greegree, which is
+  the property the report was about and which nothing had been checking.
+- **Pin a roll rather than sampling it, and say where the rate is asserted instead.**
+  `quest_rag_run.ts` killed thirty goblins waiting on a one-in-four drop, and the harness's dice are
+  seeded: that is not thirty chances, it is the same sequence every run, and on `SIM_SEED=1` it
+  never came up. The rate belongs in content's `gennpcdrops.py`, which derives it from the death
+  script; the playthrough's job is whether the quest can be finished.
+- **A control has to be chosen too.** `voteshop.ts` proved "facing is opt-in" against a named
+  banker, and the bank tellers then opted in. It now finds the nearest npc that asks for no facing
+  *and* does not wander, because `faceAngleX/Z` is overwritten by the last step taken.
+
+And the two measurement traps behind the other three failures, both worth knowing generally:
+
+- **`teleport()` is a request, `H.despawn()` is not.** `wguildcyclopsaggro.ts` moved its old probes
+  out of the way with `teleport(1, 1, 0)`; one that had just been in combat stayed where it was for
+  the tick it was given, so the npc under test was busy with a probe from the previous section.
+- **A distance pinned before a tick is not a distance during it.** The same file recomputed the
+  player's tile every tick and still measured the wrong thing, because the npc walks during the tick
+  the hunt runs in. If a check is about a number, assert that number at the moment it is used.

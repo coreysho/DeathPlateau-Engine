@@ -33,11 +33,42 @@
 # sims open '../content/scripts/...' directly. That is their convention and this matches it.
 name: Nightly sims
 
+# ONE RUN PER REF, AND THE SCHEDULE IS NEVER THE ONE CANCELLED. A burst of merges would otherwise
+# queue a full sweep each, and the last one is the only one anybody wants - but a push must not be
+# able to kill the nightly, so the group carries the event name and only a push cancels its own.
+concurrency:
+  group: sims-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+# AND NOT ONLY NIGHTLY, which is the change of 24 November 2026 and the reason for it is worth
+# writing down. This job was red for four nights running, and when it was finally read, four of the
+# sixteen failures had ALREADY BEEN FIXED by merges: the nightly was reporting yesterday's news
+# against a pair of branches that had both moved since. Seven more were content changing something
+# on purpose - a shop row, a facing, forty-two fairies given dialogue - with nothing to tell anyone
+# until 03:00, by which time the merge that did it was a day old and belonged to nobody.
+#
+# A push run fixes the half of that which can be fixed here: an engine merge gets the suite inside
+# the hour, and the Discord post names the sims next to the commit that moved them.
+#
+# THE CONTENT HALF CANNOT BE DONE FROM THIS FILE. A content merge is a push in the OTHER
+# repository, and GITHUB_TOKEN cannot start a workflow across repositories - that needs a PAT with
+# `workflow` scope, saved here as a secret, and a step in content's own CI that calls this
+# repository's dispatch endpoint. The `repository_dispatch` trigger below is the receiving end,
+# ready for the day that secret exists: until then, a content change that moves a sim is still
+# found by the nightly rather than by its own merge.
+#
+# In the meantime a content author can run the pair by hand before merging - Actions -> Nightly
+# sims -> Run workflow, with content_ref set to their branch. That is what the two inputs are for.
 on:
   schedule:
     # 03:00 UTC, off the hour everything else in this project uses. GitHub delays scheduled runs
     # under load and is not shy about it - the first unattended run fired at 10:28.
     - cron: '0 3 * * *'
+  push:
+    branches: [377-wip]
+  repository_dispatch:
+    # content's CI can fire this once a PAT exists; see the note above.
+    types: [content-merged]
   workflow_dispatch:
     inputs:
       content_ref:
