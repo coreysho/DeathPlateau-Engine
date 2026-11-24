@@ -144,6 +144,26 @@ console.log('\nAND THE KNIGHT ARRIVES AFTER THE BOX, not during it');
         // the click is a knight the player fights instead of clicking - which leaves the sighting
         // unrecorded for ever.
         check('  and the box is read before the knight arrives', boxAt < addAt, true);
+
+        // AND THE SAME FOR THE LAST FIGHT, which had the identical shape. wanted_final npc_adds
+        // Solus - aggressive, since the stats landed - and then opens a box. He arrives while the
+        // player is still reading it, hits them, and their swing back is dropped: the engine drops
+        // a queued op on a busy player without a word. The night's log has it on the knight, which
+        // is the same bug one stop earlier:
+        //
+        //   corey op4 on npc wanted_summoned_black_knight - no longer valid
+        //
+        // The quest's bookkeeping is safe either way - wanted_final writes it before any of this -
+        // so this is about the fight opening fairly, not about getting stuck.
+        const fin = /\[label,wanted_final\]([\s\S]*?)\n\[/.exec(src)?.[1] ?? '';
+        check('  the finale was found to read', fin.length > 0, true);
+        const finAdd = fin.indexOf('npc_add(');
+        const finBox = fin.lastIndexOf('~mesbox(');
+        check('  it spawns Solus and shows a box', finAdd >= 0 && finBox >= 0, true);
+        check('  and the box is read before Solus arrives', finBox < finAdd, true);
+        // The sighting is recorded BEFORE either, which is what keeps this from ever stranding a
+        // player the way the knight did.
+        check('  with the sighting recorded before both', fin.indexOf('~wanted_mark_done(') < finBox, true);
     }
 
     const id = NpcType.getId('wanted_solus13');
