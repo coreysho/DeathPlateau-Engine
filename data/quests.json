@@ -42747,12 +42747,17 @@
    ]
   },
   {
-   "stageVarId": 131,
-   "stageIsVarbit": false,
+   "stageVarId": 3151,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 131,
+    "lsb": 0,
+    "msb": 3
+   },
    "id": "itexam",
    "name": "THE DIGSITE",
    "source": "oldschool.runescape.wiki/w/The_Digsite/Quick_guide",
-   "stageVar": "itexamlevel",
+   "stageVar": "itexam_progress",
    "done": 9,
    "start": [
     3359,

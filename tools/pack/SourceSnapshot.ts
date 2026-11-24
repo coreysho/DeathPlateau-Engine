@@ -13,6 +13,17 @@ function makeKey(root: string, ext: string) {
 
 export class SourceSnapshot {
     private latest = new Map<string, number>();
+    /**
+     * How many files each (root, ext) holds.
+     *
+     * WHY A COUNT AS WELL AS A TIMESTAMP (DeathPlateau-Bugs#81). `latest` answers "is any source
+     * newer than the pack", and a DELETED source has no mtime to be newer - so removing a .rs2
+     * left every check reading "up to date" and the removal never reached the pack. A mutation
+     * harness that deletes a script to see a guard go red was then testing the old script. The
+     * count notices a removal, and a rename or a swap notices either way because the new file is
+     * newer than the pack.
+     */
+    private counts = new Map<string, number>();
 
     static async create(roots: RootSpec[]) {
         const snapshot = new SourceSnapshot();
@@ -23,6 +34,7 @@ export class SourceSnapshot {
     private async scanRoot(root: RootSpec) {
         for (const ext of root.exts) {
             this.latest.set(makeKey(root.path, ext), 0);
+            this.counts.set(makeKey(root.path, ext), 0);
         }
 
         await this.walk(root.path, new Set(root.exts), root.path);
@@ -83,11 +95,27 @@ export class SourceSnapshot {
                 if (modified > current) {
                     this.latest.set(key, modified);
                 }
+                // Read and written with no await between the two, for the same reason as above.
+                this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
             })
         );
     }
 
     isNewer(root: string, ext: string, timestamp: number) {
         return (this.latest.get(makeKey(root, ext)) ?? 0) > timestamp;
+    }
+
+    /**
+     * One line per (root, ext) with how many files it holds, in a fixed order.
+     *
+     * Compared against the last build's copy to notice a source file that has gone away. Sorted
+     * because the walk is concurrent and the insertion order is whatever the filesystem handed
+     * back - an unsorted line would report a change on every build.
+     */
+    fileCounts() {
+        return [...this.counts.entries()]
+            .map(([key, count]) => `${key}=${count}`)
+            .sort()
+            .join('\n');
     }
 }
