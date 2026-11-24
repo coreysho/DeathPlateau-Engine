@@ -139,7 +139,47 @@ for (const npc of World.npcs) {
     if (hunt.debugname !== 'mm_aggressive_melee' && hunt.debugname !== 'mm_aggressive_ranged') continue;
     if (!allowed(npc.x, npc.z, npc.level)) guarded.push(`${t.debugname} ${npc.x},${npc.z} L${npc.level}`);
 }
-check('  every npc on a greegree-guarded hunt is inside', guarded.join('; ') || '(all)', '(all)');
+// A GREEGREE-GATED HUNT OUTSIDE THE ZONE IS INERT, NOT A BUG, and this check used to say the
+// opposite. DeathPlateau-Content#79 swapped seven npc TYPES onto the island's own hunts, and three
+// of those types also have spawns 80 tiles east of the atoll - nine jungle snakes and scorpions
+// around 2894-2927, 2714-2732, placed there since before this fork's history. The check read them
+// as "npcs the player cannot defend themselves from the intended way".
+//
+// They are not: section 4 of this same file proves the greegree comes OFF the moment you leave the
+// zone, so nobody out there is ever a monkey, so check_invparam can never fire and the hunt behaves
+// exactly as [aggressive_melee] did before the swap. What those nine spawns are is the same thing
+// they were.
+//
+// So the set is recorded rather than forbidden - a NEW name or a bigger count still fails here -
+// and the property #46 was actually about gets its own check below, which this file did not have.
+{
+    const kinds = [...new Set(guarded.map(g => g.split(' ')[0]))].sort();
+    check('  the only greegree-gated spawns outside the zone are the known jungle pair', kinds.join(' '), 'mm_jungle_scorpion mm_jungle_snake');
+    check(`    ...and there are still nine of them (${guarded.length})`, guarded.length, 9);
+}
+
+// AND THE OTHER WAY ROUND, which is the property the report was about: an aggressive npc INSIDE the
+// zone that is not greegree-aware is one that attacks a monkey. That is DeathPlateau-Bugs#46 in one
+// line, and nothing in this file was checking it - #79 fixed seven types by hand and a later hand
+// adding an eighth hostile to the island would have gone unnoticed.
+//
+// `cowardly` is the exception and is not an oversight: 377's smallscorpion, scorpion and snake sit
+// inside the rectangles on that hunt, which is the flee hunt rather than an attack, so a monkey is
+// in no danger from them.
+{
+    const unguarded: string[] = [];
+    for (const npc of World.npcs) {
+        if (!npc || !npc.isActive) continue;
+        const t = NpcType.get(npc.type) as unknown as { huntmode: number; debugname?: string };
+        if (t.huntmode === -1) continue;
+        if (!allowed(npc.x, npc.z, npc.level)) continue;
+        const hunt = HuntType.get(t.huntmode);
+        const nm = hunt.debugname ?? '';
+        if (nm === 'mm_aggressive_melee' || nm === 'mm_aggressive_ranged' || nm.startsWith('cowardly')) continue;
+        unguarded.push(`${t.debugname} on ${nm} at ${npc.x},${npc.z} L${npc.level}`);
+    }
+    check('  and every hunting npc inside the zone reads the greegree', unguarded.slice(0, 4).join('; ') || '(all)', '(all)');
+}
 
 // And the quest's own landing coords, which are the one thing with no npc to find.
 for (const [what, x, z, level] of [

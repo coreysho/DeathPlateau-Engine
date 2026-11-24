@@ -364,7 +364,13 @@ console.log('MOUNTAIN DAUGHTER');
     H.give(p, 'bronze_axe');
     op(p, 2802, 3703, 'mdaughter_passable_tree');
     check('a pole cut from the dead tree', [H.invCount(p, 'mdaughter_stick'), locAt(2802, 3703, 0, 'mdaughter_passable_tree_stump')], [1, true]);
-    H.give(p, 'plank');
+    // woodplank, NOT plank. There are two plank objs: `woodplank` is the real one the sawmill cuts,
+    // and `plank` is a dead duplicate that ~sawmill_old_planks_login deletes out of the inventory
+    // and the bank on every login. Mountain Daughter used to ask for the dead one, which meant the
+    // stone crossing could not be done at all; content f79bb04b fixed that across three quests and
+    // this file kept handing over the item the server removes. The four failures that followed all
+    // read as a map or route fault - "onto the island: [2774,3691]" - and none of them was.
+    H.give(p, 'woodplank');
     p.teleport(2771, 3680, 0);
     H.tick(1);
     let from2 = H.mesgs.length;
@@ -378,7 +384,7 @@ console.log('MOUNTAIN DAUGHTER');
     op(p, 2773, 3688, 'mdaughter_polerocks');
     check('vault the rocks with the pole: the north ledge', [at(p), free(p)], [[2773, 3691, 0], true]);
     op(p, 2775, 3691, 'mdaughter_flatstone1');
-    check('plank the flat stones: onto the island', [at(p), free(p), H.invCount(p, 'plank')], [[2778, 3691, 0], true, 1]);
+    check('plank the flat stones: onto the island', [at(p), free(p), H.invCount(p, 'woodplank')], [[2778, 3691, 0], true, 1]);
     check('  the burial ground is in reach', reach(0, p.x, p.z)(2783, 3694), true);
 
     // THE BURIAL: her necklace on her before she goes in the ground, and five rocks off the goat

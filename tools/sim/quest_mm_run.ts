@@ -31,8 +31,66 @@ const marimArrest = (count: number): Step[] => [
     { go: [2720, 2764], r: 250, why: 'walk up to the Marim gate as a human' },
     { loc: 'mm_bamboo_largedoor', at: [2719, 2766], why: 'and get shot for it' },
     { varis: 'mm_jail_count', to: count },
-    { loc: 'mm_jail_door', at: [2771, 2795], why: 'pick the cell lock' },
-    { go: [2771, 2797], r: 32, why: 'out into Marim' }
+    // NO GUARD IN THE CORRIDOR FOR THIS RUN, and that is the same choice as the disabled damage
+    // and the suppressed random events above: this file audits whether the quest can be COMPLETED.
+    // ~mm_captor_add puts a guard outside on about half of all escapes and it re-arrests you, so
+    // the run escaped, walked ten tiles towards Garkor and woke up back in the cell - a faithful
+    // outcome that says nothing about the quest being finishable. The guard itself is measured
+    // properly in mmjaildoor.ts: that it appears on roughly half of escapes, never for a player in
+    // a greegree, and never twice inside the cooldown.
+    //
+    // %mm_guards_cooldown is the content's own gate - it only adds a guard when the cooldown has
+    // expired - so holding it in the future is the smallest thing that turns this off.
+    { setvar: 'mm_guards_cooldown', to: 2000000000, why: 'no escape guard: see mmjaildoor.ts for the guard itself' },
+    // AND THE ARREST'S INTERFACE HAS TO BE SHUT BEFORE THE LOCK IS TOUCHED. @mm_jail_knockout ends
+    // on a modal, an open interface makes the player busy(), and the engine drops a queued loc op
+    // on a busy player without a word. So the pick below reported ok - the harness click WAS
+    // accepted - with no lock script behind it at all: not one line of "You pick at the bamboo and
+    // brass...". The walk after it then read "NO WALKABLE ROUTE from 2771,2795", which is a player
+    // standing in a doorway that never opened, and reads exactly like a map fault.
+    //
+    // Measured from the other side before changing anything: a maxed player with a lockpick opens
+    // this door from the cell, from the doorway and from the corridor, every time. So it was never
+    // the position, never the roll, and never the map. `wait` cannot fix it either - a script
+    // parked on a continue is not waiting for ticks, which is what this file's own `close`/`wait`
+    // comment in questrun.ts says.
+    { close: true, why: 'the arrest ends on a modal, and a busy player cannot pick a lock' },
+    // THE PICK HAS TO BE WAITED FOR, and that is the whole of why this run stopped here. The lock
+    // is [oploc1,mm_jail_door]: a message, an animation, p_delay(2), the roll, and only then
+    // p_teleport out of the cell. A loc step reports ok once the click is accepted, so the walk
+    // after it left before the lock had resolved - and "NO WALKABLE ROUTE from 2771,2795" is a
+    // player still inside a cell whose door had not opened yet, which reads exactly like a map
+    // fault and is not one.
+    //
+    // There is no position check in that handler and no second escape route: the only reason the
+    // run reached Garkor before is that the timing happened to fall the other way.
+    // CLICKED FOUR TIMES, because one click proves nothing and no single step can tell whether it
+    // worked. The lock is a roll; the second escape can also meet a guard in the corridor, and a
+    // player in combat loses the op. `want`/`tries` cannot help: they match drive()'s interface
+    // text and this door speaks in mes(), so the step reported ok on an attempt that did nothing -
+    // which is how the first arrest passed and the second did not, in the same run.
+    //
+    // Re-clicking after you are already out is harmless: [oploc1,mm_jail_door] keeps no state, so
+    // a spare click rolls the lock again and teleports you to the corridor you are standing in.
+    // THREE ROUNDS OF pick-wait-walk, and every part of that shape was paid for:
+    //
+    //   pick   one click is not an attempt and not a proof. The lock is a roll, the second escape
+    //          can meet a guard in the corridor, and a player in combat loses the op - so the first
+    //          arrest opened first time and the second did not, in the same run. `want`/`tries`
+    //          cannot help: they match drive()'s interface text and this door speaks in mes().
+    //   wait   the script is a message, an animation and p_delay(2) before the roll, and the engine
+    //          drops a click on a delayed player. Four clicks in a row are ONE attempt and three
+    //          thrown away, which is how clicking four times came out worse than clicking once.
+    //   walk   a loc step stands the player on the door's own tile, so a round that ENDS on a click
+    //          leaves them in the doorway - and the next walk reads "NO WALKABLE ROUTE", which is
+    //          what sent me looking for a map fault that was never there.
+    //
+    // Re-picking after you are out is harmless: [oploc1,mm_jail_door] keeps no state.
+    ...Array.from({ length: 3 }, () => [
+        { loc: 'mm_jail_door', at: [2771, 2795] as [number, number], soft: true, why: 'pick the cell lock' },
+        { wait: 6, why: 'let the attempt resolve' },
+        { go: [2771, 2797] as [number, number], r: 32, soft: true, why: 'out into Marim' }
+    ]).flat()
 ];
 // and IN as a monkey, which nobody looks at twice
 const _marimIn = (): Step[] => [

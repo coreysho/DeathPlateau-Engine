@@ -171,8 +171,33 @@ console.log('== the Vote clerk faces east, and only he does');
     // proves two things at once: [ai_spawn,_] gaining a line changed nothing for the other 16,000
     // npcs, and east really is a different direction from the default rather than a no-op that
     // happened to pass.
-    const banker = H.npcNear('banker1', 3096, 3489)!;
-    check('a banker four tiles away still faces south', [banker.faceAngleX, banker.faceAngleZ], [CoordGrid.fine(banker.x, 1), CoordGrid.fine(banker.z - 1, 1)]);
+    // THE CONTROL IS CHOSEN, NOT NAMED. This was banker1 beside the clerk, and the bank tellers
+    // then opted in themselves: content #84 gave twelve of them a spawn_face so they stop wandering
+    // off the booth you are using (DeathPlateau-Bugs#80). The control was still right about the
+    // rule and wrong about its example, which is the sort of check that reads as a regression in
+    // the thing it was watching. So the nearest npc that asks for NO facing is found and used,
+    // whichever it turns out to be, and its name is printed so the next reader knows who stood in.
+    const face = ParamType.getId('spawn_face');
+    let control: { x: number; z: number; faceAngleX: number; faceAngleZ: number; type: number } | null = null;
+    for (const npc of World.npcs) {
+        if (!npc || !npc.isActive || npc.level !== 0) continue;
+        if (Math.max(Math.abs(npc.x - x), Math.abs(npc.z - z)) > 12) continue;
+        const ct = NpcType.get(npc.type);
+        if (ct.params?.get(face) !== undefined) continue;
+        // AND IT HAS TO STAND STILL. faceAngleX/Z is overwritten by the direction of the last step,
+        // so a wandering npc reports wherever it happened to turn: hundred_dave_mum was the first
+        // candidate found and she had walked north-east of her own tile, which is not a statement
+        // about defaults at all.
+        if ((ct.wanderrange ?? 0) !== 0) continue;
+        control = npc;
+        break;
+    }
+    check('there is an npc nearby that asks for no facing at all', control !== null, true);
+    if (control) {
+        const who = NpcType.get(control.type).debugname ?? String(control.type);
+        console.log(`      (the control is ${who} at ${control.x},${control.z})`);
+        check(`${who} nearby still faces south`, [control.faceAngleX, control.faceAngleZ], [CoordGrid.fine(control.x, 1), CoordGrid.fine(control.z - 1, 1)]);
+    }
 }
 
 // ============================================================ 1. the ticket
