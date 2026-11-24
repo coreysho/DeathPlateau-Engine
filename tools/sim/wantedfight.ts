@@ -15,6 +15,7 @@ import * as A from './a1lib.js';
 import { check, R, player } from './a1lib.js';
 import World from '#/engine/World.js';
 import NpcType from '#/cache/config/NpcType.js';
+import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
 import { NpcStat } from '#/engine/entity/NpcStat.js';
 
@@ -130,12 +131,28 @@ console.log('\n== and the last stop is a fight he loses, not a paragraph');
     check('  ...nor moved on', H.getVarBit(p, 'wanted_main'), 30);
     if (solus) {
         check('  ...Attack is on his menu', H.npcOpWord(p, solus, 2), 'Attack');
+        const died = { x: solus.x, z: solus.z, level: solus.level };
         H.attackNpc(p, solus);
         for (let t = 0; t < 400 && solus.isActive; t++) H.tick(1);
         check('he can be killed', solus.isActive, false);
         H.tick(6);
         A.drive(p);
         H.tick(4);
+        // AND HIS BONES. Giving him an [ai_queue3] of his own takes him off [ai_queue3,_], where
+        // ~npc_default_death drops npc_param(death_drop) - so the trigger that made him killable
+        // is also what could quietly stop him leaving anything. tools/gennpcdrops.py noticed
+        // before this check existed: he fell out of the generated drop viewer altogether.
+        // Looked for over a few tiles and under both owners: he chases while you fight him, so
+        // where he falls is not where he was first clicked, and a fresh drop belongs to its killer
+        // before it goes public.
+        const bones = ObjType.getId('bones');
+        let found = false;
+        for (let dx = -8; dx <= 8 && !found; dx++) {
+            for (let dz = -8; dz <= 8 && !found; dz++) {
+                found = !!(World.getObj(died.x + dx, died.z + dz, died.level, bones, p.hash64) ?? World.getObj(died.x + dx, died.z + dz, died.level, bones, -1n));
+            }
+        }
+        check('  ...and his bones are left where he fell, as before', found, true);
         check('  ...killing him corners the quest', H.getVarBit(p, 'wanted_main'), 40);
         check('  ...and his hat is the proof', H.invCount(p, 'wanted_solus_trophy'), 1);
     }
