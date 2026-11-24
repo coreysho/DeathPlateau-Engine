@@ -173,5 +173,74 @@ function atVine(who: string, wc: number, axe: boolean) {
     check('  ...and share one category, which is what the trigger is on', cats.size, 1);
 }
 
+// ---- 7. the stepping stones: twelve Agility one way, free the other ---------------------------
+// Each stone is a one-tile plug in a north-south channel - its own tile blocked, open above and
+// below, wall either side - so crossing is a two-tile hop over it. North is the way out (the exit
+// is at z=9564, above both), so north is the free direction.
+const STONES: [string, number, number][] = [
+    ['karam_dungeon_stone1', 2649, 9561],
+    ['karam_dungeon_stone2', 2647, 9558]
+];
+
+function atStone(who: string, sx: number, sz: number, side: 'N' | 'S', agility: number) {
+    const p = player(who, sx, side === 'N' ? sz + 1 : sz - 1, 0);
+    H.setVar(p, 'tutorial', 1000);
+    H.clearInv(p);
+    p.setLevel(16, agility); // AGILITY
+    return p;
+}
+
+for (const [name, sx, sz] of STONES) {
+    // the geometry this is all built on, asserted rather than assumed
+    check(`${name} is a plug: its own tile is blocked`, isMapBlocked(sx, sz, 0), true);
+    check('  ...with open ground north and south', !isMapBlocked(sx, sz + 1, 0) && !isMapBlocked(sx, sz - 1, 0), true);
+    check('  ...and wall east and west', isMapBlocked(sx + 1, sz, 0) && isMapBlocked(sx - 1, sz, 0), true);
+
+    // southbound under the level: refused, and still standing where they were
+    {
+        // ELEVEN AND TWELVE, the published boundary, and not 5 and 60. On its own "11 cannot
+        // cross" is true of a trigger that does not exist as well - it was green before this
+        // content was written - so it earns its place only as half of a pair whose other half
+        // (twelve crosses) cannot pass without the script. The harness has no capture for mes(),
+        // so asserting the refusal's wording is not available here.
+        const p = atStone(`st_${sz}_low`, sx, sz, 'N', 11);
+        H.opLoc(p, sx, sz, name, 1);
+        H.tick(8);
+        check(`${name}: 11 Agility cannot cross southward (${p.x},${p.z})`, p.z === sz + 1, true);
+    }
+    // southbound with the level: across
+    {
+        const p = atStone(`st_${sz}_ok`, sx, sz, 'N', 12);
+        H.opLoc(p, sx, sz, name, 1);
+        H.tick(10);
+        check(`  ...and exactly 12 does (${p.x},${p.z})`, p.z === sz - 1, true);
+    }
+    // northbound at level 1: free, and it must LAND - the roll is southbound only, or the player
+    // who got down here with no Agility could never get back out
+    {
+        const p = atStone(`st_${sz}_out`, sx, sz, 'S', 1);
+        H.opLoc(p, sx, sz, name, 1);
+        H.tick(10);
+        check(`  ...and 1 Agility crosses northward for free (${p.x},${p.z})`, p.z === sz + 1, true);
+    }
+    // CLICKING FROM OFF TO THE SIDE WALKS INTO LINE AND THEN CROSSES, which is what a click is:
+    // opLoc paths the player to the loc first, exactly as a real client does. The first draft of
+    // this asserted they were REFUSED, and failed - correctly. The in-line guard in the script is
+    // a safety net for an op that arrives without that pathing (p_oploc from script), not
+    // something a clicking player should ever meet.
+    {
+        const p = player(`st_${sz}_diag`, sx + 1, sz + 1, 0);
+        H.setVar(p, 'tutorial', 1000);
+        H.clearInv(p);
+        p.setLevel(16, 99);
+        H.opLoc(p, sx, sz, name, 1);
+        H.tick(14);
+        // THE FAR SIDE, not merely in line. Starting north-east of the stone, the pathing alone
+        // puts them at sx,sz+1 - so "in line" was true without any crossing having happened, and
+        // this check passed against a dead trigger too. Crossed means sz-1.
+        check(`  ...and a click from off to the side walks into line and crosses (${p.x},${p.z})`, p.x === sx && p.z === sz - 1, true);
+    }
+}
+
 console.log(R.bad ? `FAILED: ${R.bad} of ${R.ok + R.bad}` : `${R.ok} ok`);
 process.exit(R.bad ? 1 : 0);
