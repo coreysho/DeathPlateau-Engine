@@ -321,8 +321,18 @@ jobs:
           # be trimmed without testing a different door each round. 180 would be 43% of the cap HERE
           # and this box is faster than a runner, so it is exactly the audit7 shape: slow, not
           # broken, and killed on the first night.
+          # AND THREE MORE, from the four nights this job spent red. mmjaildoor and namedtrolls were
+          # both reported as "fails twice" and both PASS: 179s for mmjaildoor's 9 checks against a
+          # 180s cap - one second inside it - and 261s for namedtrolls' 32, which is simply over.
+          # mmjaildoor is the sharpest example of the audit7 shape yet: 120 lock-picking attempts at
+          # four Thieving levels, each waiting for its own outcome, and nothing in it to trim.
+          #
+          # quest_mm_run is here because it GREW, and grew for a good reason: it used to stop at
+          # step 37 of 154 on a jail door that never opened, so it took a fraction of its cap by
+          # failing early. A complete Monkey Madness is 135s here, which is 75% of 180 - past the
+          # seven-tenths line this job already warns at, and the audit7 trap exactly.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run|zanaris) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run|zanaris|mmjaildoor|namedtrolls|quest_mm_run) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar|equipcycle) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;
