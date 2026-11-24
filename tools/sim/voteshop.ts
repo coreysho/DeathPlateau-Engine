@@ -444,6 +444,15 @@ console.log('== the shop');
     invButton(p, 'shop_template:inv', 0, 2);
     settle(p);
     check('exactly enough: bought, and the points are gone', [count(p, 'explorers_ring_4'), points(p)], [1, 0]);
+    // AND THE LOG'S VOTE SHOP PAGE RECORDS IT. It could not until 23 November: shop.rs2 logged a
+    // purchase only at the Undertaker's shelf, so all ten of the elite diary slots on that page
+    // were unfillable and nothing reported it. A pure read of the log, no ticks - the restock check
+    // below reads the shelf and anything that ticks the world first spoils it.
+    const ringLog = p.getInventory(InvType.getId('collection_log'));
+    const ringId = ObjType.getId('explorers_ring_4');
+    let ringLogged = false;
+    if (ringLog) for (let i = 0; i < ringLog.capacity; i++) if (ringLog.get(i)?.id === ringId) ringLogged = true;
+    check('and the collection log records the ring', ringLogged, true);
 }
 console.log('== the shelf cannot run out');
 {
@@ -597,6 +606,63 @@ console.log('== restocking puts the item back in its OWN slot');
     // ...and it stops at the stocked amount rather than climbing forever.
     H.tick(it.stockrate![0] * (target + 4));
     check('and tops out at the stocked amount', shop.getItemCount(id), target);
+}
+
+// ======================================================================= the seed box (23 November)
+//
+// THE ONE ROW HERE THAT IS NOT A DIARY REWARD, and it is on the shelf for the same reason they are:
+// nothing in the game produced one. Every handler needed to USE a seed box has been in
+// storage_items/scripts/storage_items.rs2 since it was imported - Fill, Empty, Check, Open - and no
+// source for one existed anywhere (tools/obtainable.py). In Old School it comes from Tithe Farm,
+// which this build does not have.
+//
+// IT GOES LAST ON PURPOSE. Written in the middle of the file, between the ring's purchases and the
+// "shelf cannot run out" block, it failed that block: the shelf restocks a row by one every tick,
+// so the dozen ticks this block spends buying a box were enough for the ring row to climb back to a
+// thousand, and `the purchases above came off the shelf` reads the ring's count. Nothing here is
+// wrong with the shop - the check just has to see the shelf before anything else ticks the world.
+console.log('== the seed box');
+{
+    // The price is read off the obj exactly as the ring's is: ^vote_price_seed_box is written into
+    // its cost=, and a copy of the number here is a copy that goes stale - which is what happened
+    // to the ring when its price moved from 50 to 200.
+    const BOX_PRICE = ObjType.get(ObjType.getId('seed_box')).cost;
+    const npc = H.npcNear('vote_clerk', CLERK[0], CLERK[1])!;
+    const p = player('boxbuyer');
+    check('the box is the eleventh row', ObjType.get(World.getInventory(InvType.getId('vote_shop'))!.get(10)!.id).debugname, 'seed_box');
+    check('and costs the floor of the band', BOX_PRICE, 40);
+    check('which is no dearer than the cheapest diary piece', BOX_PRICE <= ObjType.get(ObjType.getId('kandarin_headgear_4')).cost, true);
+    check('the shop opens on Trade', openShop(p, npc), true);
+    H.clearLogs();
+    invButton(p, 'shop_template:inv', 10, 1);
+    H.tick(1);
+    check('the price is quoted in vote points', said(p, `currently costs ${BOX_PRICE} vote points.`), true);
+
+    H.setVar(p, 'vote_points', BOX_PRICE - 1);
+    H.clearLogs();
+    invButton(p, 'shop_template:inv', 10, 2);
+    settle(p);
+    check('one point short: refused', [count(p, 'seed_box'), points(p)], [0, BOX_PRICE - 1]);
+
+    H.setVar(p, 'vote_points', BOX_PRICE);
+    H.clearLogs();
+    invButton(p, 'shop_template:inv', 10, 2);
+    settle(p);
+    check('exactly enough: bought, and the points are gone', [count(p, 'seed_box'), points(p)], [1, 0]);
+    // AND IT IS A USABLE ONE: the box that comes off the shelf answers the Fill handler that has
+    // been waiting for it, and cannot be sold on to anyone.
+    check('the box that arrives is the one with the handlers', ObjType.get(ObjType.getId('seed_box')).iop[0], 'Fill');
+    check('and stays on the account that bought it', ObjType.get(ObjType.getId('seed_box')).tradeable, false);
+
+    // THE COLLECTION LOG. Buying anything from any shop calls ~collection_log_add (shop.rs2), and
+    // that proc returns quietly for an item the log does not list - so a row on the shelf with no
+    // slot in the log records nothing and says nothing about it. The Vote Shop page now lists the
+    // box beside the ten diary rewards.
+    const log = p.getInventory(InvType.getId('collection_log'));
+    const boxId = ObjType.getId('seed_box');
+    let logged = false;
+    if (log) for (let i = 0; i < log.capacity; i++) if (log.get(i)?.id === boxId) logged = true;
+    check('and buying one records it in the collection log', logged, true);
 }
 
 console.log('');
