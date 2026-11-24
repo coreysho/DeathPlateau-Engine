@@ -44,11 +44,25 @@ for (let id = 0; id < DbRowType.count; id++) {
     if (!row || row.tableId !== table) continue;
     const name = row.columnValues?.[1]?.[0];
     if (typeof name !== 'string') continue;
+    // THE START COLUMNS, NOT THE FULL ONES. Only what the wiki marks as needed to START may
+    // refuse a player at the door; the rest are needed later and the quest lets you begin.
+    //
+    // Columns are, in order: quest, name, questpoints, startquestpoints, skills, startskills,
+    // quests, other. They are read by index because a dbrow carries no names at runtime - which
+    // means adding a column silently shifts every one after it, and adding startquestpoints did
+    // exactly that: this went on reading questpoints as the start total and skills as the start
+    // skills, and reported nineteen correctly-behaved quests as letting a new character through.
+    // The assertion below is what turns that into a failure instead of a wrong number.
+    const cols = row.columnValues ?? [];
+    if (cols.length !== 8) {
+        throw new Error(`quest_requirement has ${cols.length} columns, expected 8 - the column`
+            + ' order in this file is out of date with quest_requirement.dbtable');
+    }
     rows.push({
         name,
-        qp: Number(row.columnValues?.[2]?.[0] ?? 0),
-        skills: (row.columnValues?.[3]?.length ?? 0) / 2,
-        quests: (row.columnValues?.[4]?.length ?? 0) / 2
+        qp: Number(cols[3]?.[0] ?? 0),
+        skills: (cols[5]?.length ?? 0) / 2,
+        quests: (cols[6]?.length ?? 0) / 2
     });
 }
 rows.sort((a, b) => a.name.localeCompare(b.name));
