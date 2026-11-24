@@ -1,5 +1,5 @@
-// A LOC CLICK IS DISPATCHED ON THE TYPE THE MAP PLACED, NOT ON THE FACE THE PLAYER IS LOOKING AT.
-// Usage: NODE_MEMBERS=true npx tsx tools/sim/multilocdeadops.ts   (exit code is the verdict)
+// A CLICK IS DISPATCHED ON THE TYPE THE MAP PLACED, NOT ON THE FACE THE PLAYER IS LOOKING AT.
+// Usage: NODE_MEMBERS=true npx tsx tools/sim/multideadops.ts   (exit code is the verdict)
 //
 // OpLocHandler resolves a multiloc through its varp/varbit and uses the RESOLVED face to decide
 // whether the option the client clicked exists. It then calls setInteraction with the Loc entity,
@@ -14,7 +14,10 @@
 //   fever_multi_cannon      state 0  op2="Empty-Out"   [oploc2,fever_cannon], on the face
 //
 // Each answered "Nothing interesting happens." after a `No trigger for [oploc2,<shell>]` in the
-// journal. All three are fixed in the content by putting a trigger on the SHELL - safe without a
+// journal. The npcs work the same way - OpNpcHandler resolves multinpc to validate the option and
+// Player.getOpTrigger reads the standing npc's own type - and this build had one of those too:
+// alice_the_camel_multinpc, whose Talk-to appears when desert_alkharid_alis_visible is set and
+// whose only handler was [opnpc1,alice_the_camel], on the face. All three are fixed in the content by putting a trigger on the SHELL - safe without a
 // state check, because the engine's own validation half means op2 cannot be clicked in a state
 // whose face does not carry the label.
 //
@@ -28,6 +31,7 @@
 import * as H from './harness.js';
 import { check, R, player, mark, mesSince } from './a1lib.js';
 import LocType from '#/cache/config/LocType.js';
+import NpcType from '#/cache/config/NpcType.js';
 import { isVisibleOp } from '#/cache/config/OpVisibility.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
@@ -95,6 +99,50 @@ console.log('\nTHE USE-ON HALF, STILL OPEN - DeathPlateau-Bugs#106');
     check('  exactly the three known ones', faceOnly(true), ['burgh_furnace_multiloc state 3 use-on x1', 'enakh_furnace_multiloc state 1 use-on x1', 'enakh_fountain_multiloc state 1 use-on x1'].sort());
 }
 
+/**
+ * The same question for npcs: a placed shell showing a face's label, with the handler on the face.
+ *
+ * Separate from faceOnly() because the npc side has no use-on to worry about and because the two
+ * halves are worth reading apart - but it is the same mistake, and OpNpcHandler splits validation
+ * from dispatch exactly as OpLocHandler does.
+ */
+function npcFaceOnly(): string[] {
+    const out = new Set<string>();
+    const placedNpcs = new Map<number, number>();
+    for (const npc of World.npcs) {
+        if (npc && npc.isActive) {
+            placedNpcs.set(npc.type, (placedNpcs.get(npc.type) ?? 0) + 1);
+        }
+    }
+    for (const [id, n] of placedNpcs) {
+        const base = NpcType.get(id);
+        if (!base) continue;
+        const faces = (base.multinpc ?? []).map((f, i) => [f, i] as [number, number]).filter(([f]) => f >= 0);
+        if (!faces.length) continue;
+        for (let op = 0; op < 5; op++) {
+            if (claims(ServerTriggerType.OPNPC1 + op, id, base.category) || claims(ServerTriggerType.APNPC1 + op, id, base.category)) continue;
+            for (const [f, i] of faces) {
+                const face = NpcType.get(f);
+                const label = face.op?.[op];
+                // Attack is the engine's own and has no content trigger anywhere.
+                if (!label || !isVisibleOp(label) || /^attack$/i.test(label)) continue;
+                if (!claims(ServerTriggerType.OPNPC1 + op, f, face.category) && !claims(ServerTriggerType.APNPC1 + op, f, face.category)) continue;
+                out.add(`${base.debugname} state ${i} op${op + 1}="${label}" x${n}`);
+            }
+        }
+    }
+    return [...out].sort();
+}
+
+console.log('\nAND THE SAME QUESTION OF THE NPCS');
+{
+    const dead = npcFaceOnly();
+    if (dead.length) {
+        for (const row of dead) console.log('      ' + row);
+    }
+    check('  no npc option is answered only on a face', dead, []);
+}
+
 /** Click an op on a loc from a tile that can reach it, with the multiloc put in the state asked. */
 function clickLoc(who: string, name: string, x: number, z: number, level: number, varbit: string, state: number, op: number, dx = 3, dz = 0): string[] {
     const p = player(who, x + dx, z + dz, level);
@@ -145,6 +193,37 @@ console.log('\nAND THE RUM DEAL CANNON, WHICH CAN BE STARTED OVER');
         out.some(m => m.includes("I can't reach that!")),
         false
     );
+}
+
+console.log('\nALICE THE CAMEL, WHOSE HANDLER WAS WRITTEN FOR A DAY THAT WOULD NOT HAVE WORKED');
+{
+    // Her shell's state 1 shows "Talk-to" when desert_alkharid_alis_visible is set, and nothing in
+    // this build sets it - Ali Morrisane's traders are not here - so this is not a bug a player can
+    // reach today. It is the one the content's own comment promised would be right "the day the bit
+    // is set", and it would not have been: the handler was on the face. Set the bit and click.
+    const npc = H.npcNear('alice_the_camel_multinpc', 3285, 3201, 0);
+    check('  the shell is still placed in Al Kharid', !!npc, true);
+    if (npc) {
+        const p = player('mlalice', npc.x + 1, npc.z, npc.level);
+        H.setVarBit(p, 'desert_alkharid_alis_visible', 1);
+        H.tick(1);
+        check('  with the bit set she offers Talk-to', H.npcOpWord(p, npc, 1), 'Talk-to');
+        H.standBeside(p, npc);
+        const from = mark();
+        H.opNpc(p, npc, 1);
+        H.tick(4);
+        const out = mesSince(p, from);
+        check(
+            '  and the click is answered',
+            out.some(m => m.startsWith('No trigger for')),
+            false
+        );
+        check(
+            '  not with nothing interesting happening',
+            out.some(m => m.includes('Nothing interesting happens.')),
+            false
+        );
+    }
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
