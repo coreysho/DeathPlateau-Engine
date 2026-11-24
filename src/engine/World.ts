@@ -1163,7 +1163,8 @@ class World {
                     // This does not change the decision. It records when the stall began and says
                     // which of the four conditions is holding it, so the next occurrence leaves
                     // evidence instead of a restart. Whether a forced logout should eventually
-                    // override them is a behaviour question and is not answered here.
+                    // override them is a behaviour question and is not answered here:
+                    // DeathPlateau-Bugs#105.
                     this.reportStalledLogout(player, force, queueDiscardable);
                 }
             }

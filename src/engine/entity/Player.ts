@@ -356,7 +356,8 @@ export default class Player extends PathingEntity {
     // slot: they stay in World.players, getHumanPlayerCount() counts them, and nothing says a word.
     // Reported as players showing online who were not, and cleared by restarting the world - which
     // is exactly what in-memory state does. There was nothing to look at afterwards, so this
-    // records the stall and World.reportStalledLogout names the blocker.
+    // records the stall and World.reportStalledLogout names the blocker. Whether a forced logout
+    // should eventually override any of it is a question about the game: DeathPlateau-Bugs#105.
     logoutStallSince: number = -1;
     logoutStallReported: number = 0;
     // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
