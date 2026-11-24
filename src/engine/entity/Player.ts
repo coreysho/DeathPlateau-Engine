@@ -1146,6 +1146,47 @@ export default class Player extends PathingEntity {
         return true;
     }
 
+    /**
+     * The face a multiloc/multinpc target shows this player, as the handlers resolve it.
+     *
+     * WHY THE TRIGGER LOOKUP NEEDS THIS (DeathPlateau-Bugs#106, decided 25 November 2026).
+     * OpLocHandler and OpNpcHandler resolve a multi target through its varp/varbit and use the
+     * RESOLVED face to decide whether the clicked option exists - then hand setInteraction the
+     * entity, whose type is the one the map placed. So the engine validated against the face and
+     * dispatched against the shell, and a handler written on a face could never fire. Five options
+     * in this build were written that way and all five were dead.
+     *
+     * A FALLBACK AND NOT A PRECEDENCE CHANGE, which is the whole of the decision. Resolving the
+     * face FIRST would move 77 loc op pairs over 37,717 placed locs and 127 npc pairs onto
+     * different scripts - 698 POH windows, four millbases, Swan Song's own opener, azzanadra - all
+     * of it content that works today and whose authors put the handler on the shell deliberately.
+     * This runs only when the placed type and its category claim nothing at all, so nothing that
+     * works moves and the dead ones come alive.
+     *
+     * NOT A COMPLETE FIX, and worth knowing before reading it as one: it changes which script
+     * runs, not what the active loc IS. `loc_name`, `loc_param` and `loc_category` inside that
+     * script still read the placed type, which is why the shells that now answer need a `name=`
+     * of their own - the fountain said "You fill the bucket from the null." until it had one.
+     */
+    private resolvedFaceType(): { typeId: number; categoryId: number } | null {
+        if (this.target instanceof Loc) {
+            const type = LocType.get(this.target.type);
+            const state = type.multivarp !== -1 ? (this.getVar(type.multivarp) as number) : type.multivarbit !== -1 ? this.getVarBit(type.multivarbit) : -1;
+            if (state >= 0 && state < type.multiloc.length && type.multiloc[state] !== -1) {
+                const face = LocType.get(type.multiloc[state]);
+                return { typeId: face.id, categoryId: face.category };
+            }
+        } else if (this.target instanceof Npc) {
+            const type = NpcType.get(this.target.type);
+            const state = type.multivarp !== -1 ? (this.getVar(type.multivarp) as number) : type.multivarbit !== -1 ? this.getVarBit(type.multivarbit) : -1;
+            if (state >= 0 && state < type.multinpc.length && type.multinpc[state] !== -1) {
+                const face = NpcType.get(type.multinpc[state]);
+                return { typeId: face.id, categoryId: face.category };
+            }
+        }
+        return null;
+    }
+
     getOpTrigger() {
         if (!this.target) {
             return null;
@@ -1177,7 +1218,19 @@ export default class Player extends PathingEntity {
             typeId = this.targetSubject.com;
         }
 
-        return ScriptProvider.getByTrigger(this.targetOp + 7, typeId, categoryId) ?? null;
+        const own = ScriptProvider.getByTrigger(this.targetOp + 7, typeId, categoryId);
+        if (own) {
+            return own;
+        }
+        // Nothing on the placed type or its category: try the face it is showing. See
+        // resolvedFaceType - a fallback, so nothing that already answers moves.
+        if (this.targetSubject.com === -1) {
+            const face = this.resolvedFaceType();
+            if (face) {
+                return ScriptProvider.getByTrigger(this.targetOp + 7, face.typeId, face.categoryId) ?? null;
+            }
+        }
+        return null;
     }
 
     getApTrigger() {
@@ -1211,7 +1264,17 @@ export default class Player extends PathingEntity {
             typeId = this.targetSubject.com;
         }
 
-        return ScriptProvider.getByTrigger(this.targetOp, typeId, categoryId) ?? null;
+        const own = ScriptProvider.getByTrigger(this.targetOp, typeId, categoryId);
+        if (own) {
+            return own;
+        }
+        if (this.targetSubject.com === -1) {
+            const face = this.resolvedFaceType();
+            if (face) {
+                return ScriptProvider.getByTrigger(this.targetOp, face.typeId, face.categoryId) ?? null;
+            }
+        }
+        return null;
     }
 
     setInteraction(interaction: Interaction, target: Entity, op: TargetOp, com?: number): boolean {

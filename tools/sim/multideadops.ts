@@ -41,6 +41,19 @@ await H.boot();
 
 const claims = (trigger: number, type: number, category: number): boolean => !!ScriptProvider.getByTriggerSpecific(trigger, type, -1) || (category !== -1 && !!ScriptProvider.getByTriggerSpecific(trigger, -1, category));
 
+/** Where the one placed loc of this type is, or null. */
+function placedAt(name: string): { x: number; z: number; level: number } | null {
+    const id = LocType.getId(name);
+    for (const zone of World.gameMap.existingZones()) {
+        for (const loc of zone.getAllLocsUnsafe()) {
+            if (loc.type === id) {
+                return { x: loc.x, z: loc.z, level: loc.level };
+            }
+        }
+    }
+    return null;
+}
+
 /** Every loc type the map places, and how many of each. */
 const placed = new Map<number, number>();
 for (const zone of World.gameMap.existingZones()) {
@@ -92,11 +105,19 @@ console.log('THE PROPERTY: NO PLACED LOC HAS AN OPTION ONLY ITS FACE ANSWERS');
     check('  no clickable option is answered only on a face', dead, []);
 }
 
-console.log('\nTHE USE-ON HALF, STILL OPEN - DeathPlateau-Bugs#106');
+console.log('\nTHE USE-ON HALF, WHICH THE FALLBACK FIXED TOO');
 {
-    // Asserted as a LIST and not as a count, so that one more of these cannot arrive unnoticed and
-    // so that fixing one makes this file say so.
-    check('  exactly the three known ones', faceOnly(true), ['burgh_furnace_multiloc state 3 use-on x1', 'enakh_furnace_multiloc state 1 use-on x1', 'enakh_fountain_multiloc state 1 use-on x1'].sort());
+    // THIS WAS A LIST OF THREE AND IS NOW EMPTY (DeathPlateau-Bugs#106, decided 25 November 2026).
+    // oplocu has no label for OpLocUHandler to validate, so a trigger on the shell would have
+    // answered at the cracked furnace and the unlit one as well - which is why these three could
+    // not be fixed the way the op half was. The engine falls back to the face's trigger when the
+    // placed type claims nothing, so the state decides it instead: the lit face carries the
+    // category, the unlit one does not.
+    // ASSERTED AS A LIST AND NOT AS A ZERO, because these three rely on the fallback for good: a
+    // use-on has no label, so a trigger on the shell would answer in every state and the content
+    // cannot fix them the way the op half was fixed. The list is what says so - one more arriving
+    // fails this file, and if somebody does give a shell its own oplocu it fails too and should.
+    check('  exactly the three the fallback carries', faceOnly(true), ['burgh_furnace_multiloc state 3 use-on x1', 'enakh_fountain_multiloc state 1 use-on x1', 'enakh_furnace_multiloc state 1 use-on x1'].sort());
 }
 
 /**
@@ -221,6 +242,53 @@ console.log('\nALICE THE CAMEL, WHOSE HANDLER WAS WRITTEN FOR A DAY THAT WOULD N
         check(
             '  not with nothing interesting happening',
             out.some(m => m.includes('Nothing interesting happens.')),
+            false
+        );
+    }
+}
+
+console.log('\nAND THE THREE USE-ON CASES THE FALLBACK REVIVED');
+{
+    // Each was `No trigger for [oplocu,<shell>]` and "Nothing interesting happens." before: an ore
+    // on either furnace, and a bucket at Enakhra's fountain. The fountain is also why the three
+    // shells now carry a `name=` - the water source reads loc_name, the active loc is still the
+    // shell, and it said "You fill the bucket from the null."
+    const cases: [string, string, number, string, string][] = [
+        ['burgh_furnace_multiloc', 'burgh_furnace_fix', 3, 'iron_ore', 'You smelt the iron in the furnace.'],
+        ['enakh_furnace_multiloc', 'enakh_smoke_room', 1, 'iron_ore', 'You smelt the iron in the furnace.'],
+        ['enakh_fountain_multiloc', 'enakh_ice_room', 1, 'bucket_empty', 'You fill the bucket from the fountain.']
+    ];
+    let n = 0;
+    for (const [name, varbit, state, item, wanted] of cases) {
+        n++;
+        const at = placedAt(name);
+        check(`  ${name} is still placed`, !!at, true);
+        if (!at) {
+            continue;
+        }
+        // NAMED BY INDEX, because two of the three start with "enakh_" and a1lib's player()
+        // refuses a duplicate username - which is exactly the collision fitname.ts exists for.
+        const p = player('mluse' + n, at.x + 2, at.z, at.level);
+        H.setVarBit(p, varbit, state);
+        H.give(p, item, 1);
+        H.tick(1);
+        const from = mark();
+        H.useHeldOnLoc(p, item, at.x, at.z, name);
+        H.tick(20);
+        const said = mesSince(p, from);
+        check(
+            `  using ${item} on it is answered`,
+            said.some(m => m === wanted),
+            true
+        );
+        check(
+            '  ...and not with a missing trigger',
+            said.some(m => m.startsWith('No trigger for')),
+            false
+        );
+        check(
+            '  ...nor with a null in the sentence',
+            said.some(m => m.includes('null')),
             false
         );
     }
