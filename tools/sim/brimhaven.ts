@@ -329,13 +329,11 @@ for (const [name, sx, sz] of STONES) {
     // southbound with the level: across
     {
         // RETRIED, because southbound has a fail roll and a failure leaves you on the starting
-        // side - so a single click proves nothing when it comes up short. It came up short the
-        // moment this file's own map change shifted the seeded dice, which is red over nothing in
-        // the same way a one-roll pass is green over nothing. What the gate promises is that 12
-        // gets across and 11 never does, so 12 is given the attempts to show it.
-        //
-        // DeathPlateau-Engine#145 carries this same hunk, for the same reason on a different
-        // change. Whichever of the two lands second will conflict on it trivially - keep either.
+        // side - so a single click proves nothing when it comes up short. This check was green for
+        // one roll and went red the day an unrelated map change shifted the seeded dice under it
+        // (eighteen npc spawns moved in DeathPlateau-Bugs#98), which is red over nothing in the
+        // same way a one-roll pass is green over nothing. What the gate actually promises is that
+        // 12 gets across and 11 never does, so 12 is given the attempts to show it.
         const p = atStone(`st_${sz}_ok`, sx, sz, 'N', 12);
         let tries = 0;
         while (p.z !== sz - 1 && tries < 15) {
