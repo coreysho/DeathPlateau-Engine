@@ -347,6 +347,18 @@ export default class Player extends PathingEntity {
 
     requestLogout: boolean = false;
     requestIdleLogout: boolean = false;
+    // custom (2026-11-24) - the tick a logout first asked to complete and was refused, or -1.
+    //
+    // WHY IT IS WORTH A FIELD. A logout only finishes when canAccess() && the engine queue is empty
+    // && every queued request is discardable, and that is true of a FORCED logout as well - the one
+    // exception is World.shutdown, where canAccess() returns true outright. So a player holding
+    // protected access in a script that never resumes, or left `delayed` with no end, keeps their
+    // slot: they stay in World.players, getHumanPlayerCount() counts them, and nothing says a word.
+    // Reported as players showing online who were not, and cleared by restarting the world - which
+    // is exactly what in-memory state does. There was nothing to look at afterwards, so this
+    // records the stall and World.reportStalledLogout names the blocker.
+    logoutStallSince: number = -1;
+    logoutStallReported: number = 0;
     // the tick of this player's last real input - an action, chat, a click or a camera move (NetworkPlayer.read).
     // -1 until the world first looks at it. World.processLogouts logs out on it (2026-10-19).
     lastUserInput: number = -1;
