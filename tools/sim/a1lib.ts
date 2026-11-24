@@ -70,11 +70,23 @@ export const mesSince = (p: Player, from: number) =>
 export const said = (p: Player, from: number, s: string) => mesSince(p, from).some(m => m.includes(s));
 
 export let chatLog: string[] = [];
-/** Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based). */
-export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3): string[] {
+/**
+ * Let a script run out, clicking through any chat pages and taking `picks` at menus (1-based).
+ *
+ * `stop` IS FOR WALKING OUT PART-WAY, which is a thing players do and sims could not. A quest
+ * stage written in the middle of a conversation - Swan Song's ^swan_fed, written three lines before
+ * the letter goes out - is a stage a driven dialogue never stands still on, so there was no way to
+ * assert it and no way to give the quest helper a leg for it. With `stop` the caller gets to say
+ * "that far and no further": it is checked before every click, and a true return leaves the
+ * conversation open exactly where it was. The caller is then responsible for abandoning it, the way
+ * a player does by walking away - questrun's talk step clears the suspended script and closes the
+ * window, which is what the engine does to a player who leaves.
+ */
+export function drive(p: Player, picks: (number | string)[] = [], guardTicks = 3, stop?: () => boolean): string[] {
     const from = H.ifaces.length;
     let idle = 0;
     for (let guard = 0; guard < 600 && idle < guardTicks; guard++) {
+        if (stop && stop()) break;
         const s = p.activeScript;
         if (!s || s.execution !== ScriptState.PAUSEBUTTON) {
             // A WORLD_SUSPENDED SCRIPT IS NOT THE PLAYER'S BUSINESS. world_delay parks a script
@@ -195,9 +207,27 @@ export function findNpc(npcName: string, p: Player, walking = false): Npc {
     if (!best) throw new Error('no npc ' + npcName);
     return best;
 }
-/** Talk to the nearest npc of a type (any floor), standing next to it first. */
+/**
+ * Talk to the nearest npc of a type, standing next to it first.
+ *
+ * WITH teleport FALSE IT HAS TO BE AN NPC ON THIS FLOOR, and that is what findNpc's `walking`
+ * argument is for. This called findNpc(npcName, p) in both cases, so the npc was chosen on x and z
+ * alone with the level ignored - fine when the caller is about to teleport onto that level, and
+ * never right when it is not, because opNpc paths on the player's OWN level.
+ *
+ * Measured, standing where tools/sim/batch1012.ts stands at 0:3658,3517: there are three
+ * ahoy_disciples, and the any-floor search returned the one at 1:3655,3514 - three tiles away and
+ * one floor UP - over the one at 0:3653,3516, five tiles away on the player's own floor. The walk
+ * went nowhere, the click was aimed through a ceiling, and the sim asked for its ecto-tokens and
+ * got silence (DeathPlateau-Bugs#90).
+ *
+ * So it can now pick a FURTHER npc than it used to, and that is the whole point: one on this floor
+ * is a better place to walk to than a nearer one through a ceiling. It falls back to the old
+ * any-floor search when this floor has none, so a caller that really did mean "wherever it is"
+ * still works.
+ */
 export function talk(p: Player, npcName: string, picks: (number | string)[] = [], op = 1, teleport = true): string[] {
-    const npc = findNpc(npcName, p);
+    const npc = findNpc(npcName, p, !teleport);
     if (!teleport) {
         H.opNpc(p, npc, op);
         for (let t = 0; t < 40 && !p.activeScript; t++) H.tick(1);
