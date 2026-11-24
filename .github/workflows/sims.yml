@@ -50,12 +50,15 @@ concurrency:
 # A push run fixes the half of that which can be fixed here: an engine merge gets the suite inside
 # the hour, and the Discord post names the sims next to the commit that moved them.
 #
-# THE CONTENT HALF CANNOT BE DONE FROM THIS FILE. A content merge is a push in the OTHER
-# repository, and GITHUB_TOKEN cannot start a workflow across repositories - that needs a PAT with
-# `workflow` scope, saved here as a secret, and a step in content's own CI that calls this
-# repository's dispatch endpoint. The `repository_dispatch` trigger below is the receiving end,
-# ready for the day that secret exists: until then, a content change that moves a sim is still
-# found by the nightly rather than by its own merge.
+# THE CONTENT HALF IS SENT FROM CONTENT. A content merge is a push in the OTHER repository, and
+# GITHUB_TOKEN is scoped to one repository - so content's CI holds a PAT and calls this repository's
+# dispatch endpoint. That job exists: `tell-engine` in content's .github/workflows/content.yml,
+# which fires `content-merged` below and no-ops if the token is missing.
+#
+# THE TOKEN WANTS 'CONTENTS: WRITE' ON THIS REPOSITORY, which is what POST /repos/.../dispatches
+# documents - NOT `workflow`, which is for editing workflow files, and which an earlier version of
+# this comment asked for by mistake. It is saved in CONTENT's secrets as ENGINE_DISPATCH_TOKEN,
+# because that is where the step that uses it runs.
 #
 # In the meantime a content author can run the pair by hand before merging - Actions -> Nightly
 # sims -> Run workflow, with content_ref set to their branch. That is what the two inputs are for.
