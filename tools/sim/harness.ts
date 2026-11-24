@@ -140,6 +140,16 @@ function seedTheDice(): void {
 
 export async function boot() {
     if (booted) return;
+    // MEASUREMENT ONLY - prints the worst delay streak when the sim ends, however it ends, so the
+    // sweep needs no edit to any of the ~300 scenarios.
+    process.on('exit', () => {
+        try {
+            reportDelayStreaks(process.argv[1]?.split('/').pop() ?? 'sim');
+        } catch {
+            // a sim that died mid-boot has nothing to report, and the measurement must not be
+            // the thing that changes an exit code
+        }
+    });
     // BEFORE World.start, because starting the world spawns 12,666 static npcs and rolls for them.
     seedTheDice();
     await World.start(false, false);
@@ -241,6 +251,19 @@ export async function boot() {
         mesgs.push({ tick: World.currentTick, who: this.username, text: msg });
         return origMes.call(this, msg);
     };
+}
+
+/** MEASUREMENT ONLY. Print the worst streak seen, for the sweep behind DeathPlateau-Bugs#86. */
+export function reportDelayStreaks(label: string) {
+    const rows = [...delayStreaks.entries()].filter(([, r]) => r.worst > 0);
+    rows.sort((a, b) => b[1].worst - a[1].worst);
+    if (rows.length === 0) {
+        console.log(`DELAYSTREAK ${label} none`);
+        return;
+    }
+    for (const [who, r] of rows.slice(0, 3)) {
+        console.log(`DELAYSTREAK ${label} ${who} worst=${r.worst} at=${r.at}`);
+    }
 }
 
 export function clearLogs() {
@@ -1015,8 +1038,40 @@ export function despawn(...players: Player[]) {
     }
 }
 
+/**
+ * MEASUREMENT ONLY - not for merge. The longest unbroken run of ticks each player spent delayed.
+ *
+ * p_delay sets player.delayed, and nineteen client handlers throw away a click made while it is
+ * set rather than deferring it (MoveClickHandler and eighteen op handlers). That is what
+ * DeathPlateau-Bugs#39, #85 and #86 all were, so the question behind them is: where ELSE is a
+ * player held long enough to lose a click, and is it anywhere the player would want to act?
+ *
+ * A static check cannot answer it - the furnace's own hold lived in a proc the loop called, and
+ * following calls reports the farming rake and mining, which are correct. So this watches the
+ * running engine instead, through the ~300 sims that already drive real content, and records the
+ * worst streak each one produces.
+ */
+export const delayStreaks = new Map<string, { worst: number; at: number; cur: number }>();
+
 export function tick(n = 1) {
     for (let i = 0; i < n; i++) {
+        for (const p of World.playerLoop.all()) {
+            const key = p.username ?? 'unknown';
+            let row = delayStreaks.get(key);
+            if (!row) {
+                row = { worst: 0, at: 0, cur: 0 };
+                delayStreaks.set(key, row);
+            }
+            if (p.delayed) {
+                row.cur++;
+                if (row.cur > row.worst) {
+                    row.worst = row.cur;
+                    row.at = World.currentTick;
+                }
+            } else {
+                row.cur = 0;
+            }
+        }
         // A sim player has no socket, so to the engine it has lost its connection since the tick it
         // was made, and World.processLogouts asks it to idle-logout after TIMEOUT_NO_CONNECTION (50
         // ticks). Anything longer than half a minute would quietly lose its players - clicks on a
