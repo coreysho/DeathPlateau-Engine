@@ -1137,7 +1137,37 @@ class World {
                     queueDiscardable = false;
                     break;
                 }
-                if (player.canAccess() && player.engineQueue.head() === null && queueDiscardable) {
+                // AND THE ONE OVERRIDE THERE IS (DeathPlateau-Bugs#105, decided 25 November 2026).
+                // A logout used to be refused for as long as any of the conditions below held, with
+                // a world restart as the only cure - reported from play as players showing online
+                // who were not. Overriding them all would cut a script off mid-way, and `protect`,
+                // `delayed` and the queues exist so that a trade, a death or an item being moved is
+                // not interrupted: that is where a dupe or a lost item comes from.
+                //
+                // So the override is the case where there is nothing to lose. A BARE DELAY - no
+                // protected access, no modal, no active script to resume, no engine-queued request
+                // and nothing in the queue that is not discardable - is a player the engine is
+                // holding for a timer and nothing else. After LOGOUT_OVERRIDE_TICKS of that, the
+                // delay is given up and the logout completes.
+                //
+                // NOT ONLY FOR A FORCED LOGOUT, which is where the question came from: the
+                // condition is what makes this safe, not who asked. A player who clicked logout and
+                // is held by a timer with nothing behind it is in the same position as one the
+                // engine is trying to kick.
+                //
+                // The threshold is longer than the one the warning uses, so the journal always has
+                // the stall and its blocker written down before anything is overridden.
+                const bareDelay = player.delayed && !player.protect && !player.containsModalInterface() && player.activeScript === null && player.engineQueue.head() === null && queueDiscardable;
+                const override = bareDelay && player.logoutStallSince !== -1 && this.currentTick - player.logoutStallSince >= World.LOGOUT_OVERRIDE_TICKS;
+                if (override) {
+                    printWarning(
+                        `logout override for ${player.username}: held ${this.currentTick - player.logoutStallSince} ticks by a bare delay with no script, ` +
+                            `no engine queue and nothing queued, so the delay is given up - reason "${player.logoutReason ?? 'unknown'}".`
+                    );
+                    player.delayed = false;
+                    player.delayedUntil = -1;
+                }
+                if (override || (player.canAccess() && player.engineQueue.head() === null && queueDiscardable)) {
                     const script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.LOGOUT, -1, -1);
                     if (!script) {
                         printError('LOGOUT TRIGGER IS BROKEN!');
@@ -1163,8 +1193,9 @@ class World {
                     // This does not change the decision. It records when the stall began and says
                     // which of the four conditions is holding it, so the next occurrence leaves
                     // evidence instead of a restart. Whether a forced logout should eventually
-                    // override them is a behaviour question and is not answered here:
-                    // DeathPlateau-Bugs#105.
+                    // override them is answered just above, and only for the case that can lose
+                    // nothing: DeathPlateau-Bugs#105. Everything else still waits, and is still
+                    // reported rather than silent.
                     this.reportStalledLogout(player, force, queueDiscardable);
                 }
             }
@@ -1190,6 +1221,15 @@ class World {
     // otherwise write a line a tick and make the journal part of the problem.
     private static readonly LOGOUT_STALL_TICKS: number = 50; // 30s, the same patience as an idle logout
     private static readonly LOGOUT_STALL_REPORT_INTERVAL: number = 50;
+    /**
+     * How long a logout held by a BARE DELAY waits before the delay is given up.
+     *
+     * A minute, which is twice the patience of the warning above - so a stall that is overridden
+     * has always been written down first, with the blocker named, before anything acts on it. See
+     * processLogouts for what "bare" means and why nothing else is overridden
+     * (DeathPlateau-Bugs#105).
+     */
+    private static readonly LOGOUT_OVERRIDE_TICKS: number = 100;
 
     private reportStalledLogout(player: Player, force: boolean, queueDiscardable: boolean): void {
         if (player.logoutStallSince === -1) {
