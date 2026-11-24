@@ -30,15 +30,12 @@ import Environment from '#/util/Environment.js';
 await H.boot();
 H.loginOrder();
 
-const labels: [string, number, number][] = [];
-for (const line of fs.readFileSync(`${Environment.BUILD_SRC_DIR}/maps/labels.txt`, 'ascii').split(/\r?\n/)) {
-    const m = /^=([^,]+),(\d+),(\d+),(\d+)/.exec(line.trim());
-    if (m) labels.push([m[1].replace(/\//g, ' '), Number(m[2]), Number(m[3])]);
-}
-const labelNear = (x: number, z: number, name: string) => {
-    const hit = labels.find(l => l[0] === name);
-    return hit ? Math.max(Math.abs(hit[1] - x), Math.abs(hit[2] - z)) : -1;
-};
+// NO MAP-LABEL PROOFS. Three places used to prove themselves against the world map's own label
+// within 25 to 40 tiles - Brimhaven, Goblin Village and Draynor Village. A 40-tile radius passes
+// for a coord anywhere in the settlement, so it would NOT have caught the bug this file exists
+// for: stop 13 sat one tile outside the quest's own 24-tile scan radius while a player stood at
+// the landmark its clue named. All eighteen now prove against a thing that is standing there, and
+// `labels.txt` is no longer read. If a nineteenth place ever needs a label, git history has it.
 const npcNearName = (x: number, z: number, wantName: string) => {
     let best = -1;
     for (const npc of World.npcs) {
@@ -59,7 +56,7 @@ const locNear = (x: number, z: number, locName: string) => {
     return best;
 };
 
-type Proof = { label: string; within: number } | { npc: string; within: number } | { loc: string; within: number };
+type Proof = { npc: string; within: number } | { loc: string; within: number };
 // shell -> tile, the place it is meant to BE, the word the clue sentence must carry, and a thing
 // standing there that proves the place is what the clue says it is.
 const PLACES: { n: number; at: [number, number]; place: string; clue: string; proof: Proof }[] = [
@@ -74,12 +71,20 @@ const PLACES: { n: number; at: [number, number]; place: string; clue: string; pr
     { n: 9, at: [2654, 3311], place: 'Ardougne Market', clue: 'Bear', proof: { npc: 'Silver merchant', within: 10 } },
     { n: 10, at: [2443, 3091], place: 'Castle Wars', clue: 'ticket', proof: { npc: 'Lanthus', within: 10 } },
     { n: 11, at: [2465, 3497], place: 'Grand Tree', clue: 'gnome tailoring', proof: { npc: 'King Narnode Shareen', within: 10 } },
-    { n: 12, at: [2793, 3157], place: 'Brimhaven', clue: 'eye patch', proof: { label: 'Brimhaven', within: 40 } },
+    // The rum is the pub, so the pub's own bartender proves it - measured 2 tiles. There are also
+    // six `pirate2` within five tiles for the eye patch, which is the clue's other half.
+    { n: 12, at: [2793, 3157], place: 'Brimhaven', clue: 'eye patch', proof: { npc: 'Bartender', within: 6 } },
     { n: 13, at: [3305, 3209], place: 'Al Kharid', clue: 'beard', proof: { npc: 'Ali Morrisane', within: 8 } },
-    { n: 14, at: [2955, 3503], place: 'Goblin Village', clue: 'Goblin-sized', proof: { label: 'Goblin Village', within: 25 } },
+    // Bentnoze and not a goblin: a `Goblin` stands 1 tile away, but goblins stand all over Asgarnia
+    // and one proves nothing about WHICH place this is. General Bentnoze is in Goblin Village and
+    // nowhere else - measured 7 tiles.
+    { n: 14, at: [2955, 3503], place: 'Goblin Village', clue: 'Goblin-sized', proof: { npc: 'General Bentnoze', within: 10 } },
     { n: 15, at: [2555, 3080], place: 'Dragon Inn', clue: "Greenman's", proof: { npc: 'Bartender', within: 10 } },
     { n: 16, at: [2666, 3506], place: "McGrubor's Wood", clue: 'worm', proof: { npc: 'Guard dog', within: 15 } },
-    { n: 17, at: [3082, 3247], place: 'Draynor Village', clue: 'horse', proof: { label: 'Draynor Village', within: 40 } },
+    // The clue is a little wooden horse and Diango is the man who sells them - his config name is
+    // literally `aprilfoolshorsesalesman`. Measured 2 tiles. This is the tightest of the eighteen:
+    // the clue names an object and the npc beside it is that object's seller.
+    { n: 17, at: [3082, 3247], place: 'Draynor Village', clue: 'horse', proof: { npc: 'Diango', within: 6 } },
     { n: 18, at: [2464, 3228], place: 'Shrine of Scorpius', clue: 'unholy symbol', proof: { npc: 'Spirit of Scorpius', within: 10 } }
 ];
 // The words the orb is NOT allowed to use. Naming the place is the bug; the clue is the object.
@@ -174,10 +179,7 @@ for (const pl of PLACES) {
 
 console.log('\n== and each tile really is the place its clue points at');
 for (const pl of PLACES) {
-    if ('label' in pl.proof) {
-        const d = labelNear(pl.at[0], pl.at[1], pl.proof.label);
-        check(`${pl.place}: the "${pl.proof.label}" map label is ${d} tiles away`, d >= 0 && d <= pl.proof.within, true);
-    } else if ('loc' in pl.proof) {
+    if ('loc' in pl.proof) {
         // The essence mine is the one place of the eighteen with no npc in it at all - it is a
         // cave full of rocks - so the rock is what proves it.
         const d = locNear(pl.at[0], pl.at[1], pl.proof.loc);
