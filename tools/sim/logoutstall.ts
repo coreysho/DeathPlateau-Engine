@@ -175,6 +175,16 @@ console.log('\n== 4. a delay with no end: refused for ever, forced or not, and n
     check('only a world shutdown lifts the refusal', underShutdown, true);
     check('  ...whereas a running world still refuses', p.canAccess(), false);
 
+    // AND THE ACCOUNT CANNOT GET BACK IN, which is the half of this a player actually feels. The
+    // login path refuses a username that is still in the world - processLogins, 'already logged in',
+    // reply 5 - and a stalled player is still in it. NOT through logoutRequests: that map is only
+    // written by flushPlayer, when a logout COMPLETES, so a stall never reaches it. H.makePlayer
+    // reuses the same account for the same label, so this is the same name coming back.
+    const again = H.makePlayer('stall_held', 3222, 3220);
+    H.tick(2);
+    check('a fresh login under the same name is refused', again.isActive, false);
+    check('  ...and the world still holds the stuck one', World.getPlayerByUsername('stall_held') === p, true);
+
     // AND IT CLEARS THE MOMENT THE BLOCKER DOES: the logout was never broken, only blocked.
     p.delayed = false;
     H.tick(4);
