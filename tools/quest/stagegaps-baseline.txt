@@ -15,22 +15,18 @@ FIGHT ARENA                           |  12 | benign       | general_khazard.rs2
 GARDEN OF TRANQUILLITY                |  20 | unclassified | NOT YET JUDGED - read the quest
 GOBLIN DIPLOMACY                      |   5 | transient    | the armour is handed over, four chat lines, then queue(goblin_diplomacy_complete_quest)
 HAZEEL CULT                           |   5 | benign       | the evil side poisoning the soup; the HAZEEL CULT (Hazeel side) row HAS a leg for 5. The two rows share one varp, so each reports the other branch values
-HEROES' QUEST (Phoenix side)          |   5 | blocked      | Grip dead. The two-player heist: [proc,grip_attack] refuses a Black Arm member, and the side door needs the key Grip gives his own deputy. heroes_candlestick.ts drives both players and asserts it, but is not manifest-driven. #16 step 4
-HEROES' QUEST (Phoenix side)          |   6 | blocked      | the armband, which Straven only hands over for a candlestick stolen at 5. As 5
+HEROES' QUEST (Black Arm side)        |   2 | benign       | Phoenix branch (Straven); the HEROES' QUEST (Phoenix side) row HAS a leg for 2. The two rows share one varp, so each reports the other branch's values. Was blocked until the candlestick heist became manifest-driven
+HEROES' QUEST (Black Arm side)        |   3 | benign       | Phoenix branch (Alfonse); the HEROES' QUEST (Phoenix side) row HAS a leg for 3. The two rows share one varp, so each reports the other branch's values. Was blocked until the candlestick heist became manifest-driven
+HEROES' QUEST (Black Arm side)        |   4 | benign       | Phoenix branch (Charlie); the HEROES' QUEST (Phoenix side) row HAS a leg for 4. The two rows share one varp, so each reports the other branch's values. Was blocked until the candlestick heist became manifest-driven
+HEROES' QUEST (Black Arm side)        |   5 | benign       | Phoenix branch (Grip dead); the HEROES' QUEST (Phoenix side) row HAS a leg for 5. The two rows share one varp, so each reports the other branch's values. Was blocked until the candlestick heist became manifest-driven
+HEROES' QUEST (Black Arm side)        |   6 | benign       | Phoenix branch (the armband); the HEROES' QUEST (Phoenix side) row HAS a leg for 6. The two rows share one varp, so each reports the other branch's values. Was blocked until the candlestick heist became manifest-driven
 HEROES' QUEST (Phoenix side)          |   7 | benign       | Black Arm branch (Katrine); the HEROES' QUEST (solo part) row HAS a leg for 7. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |   8 | benign       | Black Arm branch (Grubor's door); the HEROES' QUEST (solo part) row HAS a leg for 8. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |   9 | benign       | Black Arm branch (Trobert's papers); the HEROES' QUEST (solo part) row HAS a leg for 9. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |  10 | benign       | Black Arm branch (Garv's gate); the HEROES' QUEST (solo part) row HAS a leg for 10. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |  11 | benign       | Black Arm branch (Grip's post); the HEROES' QUEST (solo part) row HAS a leg for 11. The two rows share one varp, so each reports the other branch's values
-HEROES' QUEST (Phoenix side)          |  12 | blocked      | Black Arm, and past where one player can go either - neither row reaches it. As the solo part's 12
-HEROES' QUEST (Phoenix side)          |  13 | blocked      | as 12
-HEROES' QUEST (solo part)             |   2 | benign       | Phoenix branch (Straven); the HEROES' QUEST (Phoenix side) row HAS a leg for 2. The two rows share one varp, so each reports the other branch's values. Was blocked until quest_hero_phoenix_run.ts played it
-HEROES' QUEST (solo part)             |   3 | benign       | Phoenix branch (Alfonse), as 2
-HEROES' QUEST (solo part)             |   4 | benign       | Phoenix branch (Charlie), as 2
-HEROES' QUEST (solo part)             |   5 | blocked      | Phoenix branch, and past where one player can go: the two-player heist. Written by a drop (grip.rs2), not a conversation. #16 step 4
-HEROES' QUEST (solo part)             |   6 | blocked      | Phoenix branch, as 5 - the armband needs the candlestick from the heist
-HEROES' QUEST (solo part)             |  12 | blocked      | Black Arm, but past where one player can go: the candlestick needs a Phoenix partner. Falls back to leg 11, which has NO steps, so the panel is empty here
-HEROES' QUEST (solo part)             |  13 | blocked      | as 12, and the same empty panel
+HEROES' QUEST (Phoenix side)          |  12 | benign      | Black Arm branch (the candlestick chest); the HEROES' QUEST (Black Arm side) row HAS a leg for 12. The two rows share one varp, so each reports the other branch's values. Was blocked - neither row reached it - until the heist became manifest-driven
+HEROES' QUEST (Phoenix side)          |  13 | benign      | Black Arm branch (Katrine's armband); the HEROES' QUEST (Black Arm side) row HAS a leg for 13. As 12
 HOLY GRAIL                            |   7 | benign       | ^grail_failed_defeat_titan, the Titan beaten without Excalibur. Since leg 4 exists it falls back there, and leg 4 names the Titan
 ICTHLARIN'S LITTLE HELPER             |  22 | transient    | jars placed, then if_close/p_delay(3) straight to 24. Nothing clickable
 IN AID OF THE MYREQUE                 |  30 | transient    | overwritten with m2_tithe two lines later in the same script, with no player input between

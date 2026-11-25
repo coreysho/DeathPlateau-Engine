@@ -114,24 +114,82 @@ const m: Manifest = {
         { note: 'wiki step 8: through the secret door behind the kitchen and Mr Olbors’ garden to' },
         { note: 'the mansion’s blocked side entrance, which only a Black Arm partner can open from' },
         { note: 'the inside - with the odd key Grip hands his own deputy.' },
-        { note: 'NO STEP ON PURPOSE, and the heading above is why this leg exists at all: the' },
-        { note: 'exporter keeps a leg only if it carries a step, an item or a heading, so the first' },
-        { note: 'version of this manifest asserted stage 4 and still had no row in the table - a' },
-        { note: 'Phoenix player at 4 was shown leg 3, "Talk to Alfonse", which they had just done.' },
-        { note: 'Same mechanism as Fight Arena 8. There is nothing for one player to click here,' },
-        { note: 'which is what makes legNow walk the panel on rather than park it. #16.' }
+        { note: 'This leg used to carry no step at all, because there was nothing ONE player could' },
+        { note: 'click here. It has the partner opening the door now, which is a helper span and so' },
+        { note: 'contributes nothing to the table either - the heading is still what makes the leg' },
+        { note: 'exist. Kept as a note because the mechanism bit twice on #16: the exporter keeps a' },
+        { note: 'leg only if it carries a step, an item or a heading.' },
+        { actor: 'helper', why: 'the Black Arm deputy opens the side door from the mansion side' },
+        { note: 'THE PARTNER. Shield of Arrav with the BLACK ARM and Heroes’ as far as Grip’s own' },
+        { note: 'deputy, which is who the odd key is given to and the only person the side door and' },
+        { note: 'the treasure room will answer.' },
+        { setvar: 'blackarmgang', to: 4 },
+        { setvar: 'heroquest', to: 11, why: '^hero_blackarm_id_papers_given' },
+        { give: 'misc_key' },
+        { setpos: [2781, 3198, 0], why: 'to the side door, from the mansion side' },
+        { useLoc: 'pete_sidedoor', at: [2781, 3197], obj: 'misc_key', why: 'unlock it' },
+        { actor: 'player', why: 'and the Phoenix thief walks in' },
+
+        { note: 'wiki step 9: kill Grip. Only a Phoenix member may - [proc,grip_attack] turns a Black' },
+        { note: 'Arm member away with "Perhaps you need another player’s help...?" - so this half is' },
+        { note: 'yours and the partner stands off.' },
+        { setpos: [2776, 3194, 0], why: 'in through the side door to Grip’s room' },
+        { fight: 'grip', untilvar: 'heroquest', to: 5, tries: 8, r: 16, why: 'kill the head guard' },
+        { stage: 5, why: '^hero_phoenix_killed_grip - legless until now' },
+
+        { note: 'wiki step 10: the keys to the treasure room are in Grip’s jacket, and the door takes' },
+        { note: 'them only from whoever handed Scarface Pete’s guards the ID papers - your partner. The' },
+        { note: 'chest holds two candlesticks, "one for you, and one for the person who killed Grip' },
+        { note: 'for you", and they trade yours over.' },
+        { actor: 'helper', why: 'the deputy empties the jacket and the treasure room' },
+        { setpos: [2774, 3192, 0], why: 'to where Grip fell' },
+        { take: 'grip_keys', r: 6, why: 'the keys out of his jacket' },
+        { setpos: [2765, 3197, 0], why: 'to the treasure room door' },
+        { useLoc: 'pete_treasuredoor', at: [2764, 3197], obj: 'grip_keys', want: 'unlocks the door', why: 'open it' },
+        { setpos: [2766, 3198, 0], why: 'in to the chest' },
+        { loc: 'shutcandlechest', at: [2766, 3199], why: 'open the chest' },
+        { loc: 'opencandlechest', at: [2766, 3199], why: 'two candlesticks out of it, one each' },
+        { has: 'petecandlestick', n: 2 },
+        { actor: 'player', why: 'and the pair of them split it' },
+
+        { note: 'THE TRADE IS THE ONE THING HERE NOT PROVED BY THE ENGINE, because no sim can make a' },
+        { note: 'trade. Declared with a give rather than mimed - what IS proved, two lines up, is the' },
+        { note: 'chest producing a second candlestick for the thief to be given at all.' },
+        { give: 'petecandlestick' },
+
+        { note: 'wiki step 11: Straven swaps the candlestick for the master thief’s armband, as' },
+        { note: 'Katrine does for the Black Arm.' },
+        { setpos: [3247, 9781, 0], why: 'back into the Phoenix hideout' },
+        { talk: 'straven', why: 'hand the candlestick over' },
+        { stage: 6, why: '^hero_phoenix_armband_obtained - legless until now' },
+        { has: 'master_thief_armband' },
+
+        { note: 'wiki step 12: back to Achietties with all three - the Entranan firebird’s feather,' },
+        { note: 'the cooked lava eel and the master thief’s armband. Identical on both routes, and' },
+        { note: 'this run now reaches it: the armband was the only one of the three a single player' },
+        { note: 'could not get.' },
+        { setpos: [2904, 3510, 0], why: 'back to the Heroes’ Guild' },
+        { talk: 'achietties', want: 'Congratulations', why: 'hand all three in' },
+        { stage: 15 },
+        { hasnt: 'master_thief_armband' }
     ]
 };
 
 const p: any = H.makePlayer('herophoenix', m.start[0], m.start[1]);
+// THE BLACK ARM PARTNER. Only what the steps cannot say is set here - damage off, macro_event,
+// maxed stats - exactly as for the quest player; their gang, their quest stage and everything they
+// do is in the manifest, inside the `actor: 'helper'` spans.
+const partner: any = H.makePlayer('heroblackarmpartner', 2781, 3198);
 H.tick(2);
 p.teleport(m.start[0], m.start[1], m.start[2]);
-p.applyDamage = function () {};
-H.setVar(p, 'macro_event', 1);
-H.maxOut(p);
+for (const who of [p, partner]) {
+    who.applyDamage = function () {};
+    H.setVar(who, 'macro_event', 1);
+    H.maxOut(who);
+}
 H.tick(1);
 
-const res = play(m, p);
+const res = play(m, p, partner);
 const bad = res.filter(r => !r.ok);
 console.log('');
 if (bad.length) {
