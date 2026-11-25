@@ -81679,18 +81679,31 @@
      "marks": [],
      "steps": [
       {
+       "kind": "note",
+       "text": "Sir Tiffy charges for the commorb."
+      },
+      {
        "kind": "talk",
        "text": "Talk to Sir Tiffy Cashien.",
-       "why": "He hands over a commorb.",
+       "why": "He sells you a commorb.",
        "target": "rd_teleporter_guy",
        "id": 2290,
        "label": "Sir Tiffy Cashien",
        "picks": [
-        "Go on."
+        "Do you have any jobs for me yet?",
+        "Go on.",
+        "I'll pay the 10000 coins."
        ]
       }
      ],
-     "items": [],
+     "items": [
+      {
+       "name": "Coins",
+       "id": 995,
+       "n": 10000,
+       "bring": false
+      }
+     ],
      "worn": []
     },
     {
@@ -81939,7 +81952,10 @@
        "why": "He takes it.",
        "target": "rd_teleporter_guy",
        "id": 2290,
-       "label": "Sir Tiffy Cashien"
+       "label": "Sir Tiffy Cashien",
+       "picks": [
+        "About Solus Dellagar..."
+       ]
       }
      ],
      "items": [],

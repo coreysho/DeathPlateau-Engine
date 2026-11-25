@@ -423,8 +423,22 @@ if (run('wanted')) {
     // Recruitment Drive done
     const rdComplete = constant('recruitmentdrive_complete');
     H.setVarBit(p, 'rd_main', rdComplete);
-    talk(p, 'rd_teleporter_guy', [1]);
-    check('Sir Tiffy hands over the commorb', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_crystal_ball')], [10, 1]);
+    // AND THE REQUIREMENTS THE QUEST ITSELF NOW ENFORCES: 32 quest points, The Lost Tribe, Priest
+    // in Peril and Enter the Abyss. A maxed sim player has NO quest points, so without these Tiffy
+    // refuses at the first line and the run dies before it starts. The values are the ones
+    // tools/sim/wantedstart.ts drives the gate against.
+    H.setVar(p, 'qp', 32);
+    H.setVarBit(p, 'lost_tribe_quest', 11);
+    H.setVar(p, 'priestperil', 60);
+    H.setVar(p, 'abyssal_miniquest', 4);
+    H.give(p, 'coins', 10000); // the commorb is sold, not given
+    // 'jobs' first: Tiffy's post-quest conversation opens with a menu now, and this quest is
+    // one option on it (the other is his armoury - temple_knight/scripts/temple_knight.rs2).
+    // THREE MENUS NOW. This file's own drive() takes option NUMBERS, not substrings: 1 is the
+    // jobs option on Tiffy's post-quest menu (his armoury is the other), 1 is "Go on.", and 1 is
+    // paying the ten thousand for the orb.
+    talk(p, 'rd_teleporter_guy', [1, 1, 1]);
+    check('Sir Tiffy sells you the commorb', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_crystal_ball'), H.invCount(p, 'coins')], [10, 1, 0]);
     H.opheld(p, 'wanted_crystal_ball', 2);
     drive(p);
     check('Contact: Savant briefs you', var_(p, 'wanted_main'), 20);
@@ -510,7 +524,9 @@ if (run('wanted')) {
     H.clearInv(p);
     p.teleport(2997, 3375, 0);
     H.tick(1);
-    talk(p, 'rd_teleporter_guy');
+    // By now the menu's first option is worded for a quest that is all but finished.
+    // And option 1 of his menu again, which by now reads "About Solus Dellagar...".
+    talk(p, 'rd_teleporter_guy', [1]);
     check('Tiffy finishes the quest even with the hat lost', [var_(p, 'wanted_main'), H.ifaces.some(i => i.who === p.username && (i.text ?? '').includes('Wanted!'))], [50, true]);
 }
 
