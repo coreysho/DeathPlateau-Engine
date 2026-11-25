@@ -216,7 +216,11 @@ const m: Manifest = {
         { varis: 'rd_room7_complete', to: 1 },
         { loc: 'rd_room7_exitdoor', at: R7_DOOR, hop: true, soft: true, why: 'and out' },
         { stage: 2 },
-        { has: 'coins', n: 3000 }
+        { has: 'coins', n: 3000 },
+        // The helm as well, as Old School's reward does. It was left out of the quest for years
+        // because a comment in quest_rd.constant said the armour was not in this cache; it is
+        // (basic_tk_helm), and Tiffy's armoury sells the rest of the set.
+        { has: 'basic_tk_helm', n: 1 }
     ]
 };
 

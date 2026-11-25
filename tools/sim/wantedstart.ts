@@ -54,7 +54,13 @@ const saidTo = (p: any, picks: string[] = []) => {
     H.clearLogs();
     let lines: string[] = [];
     try {
-        lines = A.talk(p, 'rd_teleporter_guy', picks);
+        // ONE PICK AHEAD OF EVERY CALLER'S. Tiffy's post-quest conversation opens with a menu -
+        // this quest is one option on it and his armoury is another - so the gate every check
+        // below is about now sits one click further in. The option is worded for where the quest
+        // is ("any jobs yet?" early on, "About Solus Dellagar..." once the deed is done), and
+        // a1lib's || takes whichever of the two is on the menu. A refused candidate never reaches
+        // the menus after this one, which is what the catch below is for.
+        lines = A.talk(p, 'rd_teleporter_guy', ['jobs||Solus Dellagar', ...picks]);
         H.tick(8);
         A.drive(p);
     } catch (e) {

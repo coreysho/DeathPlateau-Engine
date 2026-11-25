@@ -37,7 +37,14 @@ export const helper: Manifest = {
     start: [2998, 3373, 0],
     steps: [
         { note: 'wiki step 1: Sir Tiffy Cashien, on the bench in Falador Park' },
-        { talk: 'rd_teleporter_guy', picks: ['Go on.'], why: 'he hands over a commorb' },
+        // TWO PICKS, because Tiffy now opens with a menu: this quest is one option on it and his
+        // armoury is another (temple_knight/scripts/temple_knight.rs2). Before that, whichever of
+        // the two had something to say claimed the whole conversation, and the quest always won -
+        // so an initiate could not buy armour for as long as this quest was open.
+        // THE ORB IS SOLD, NOT GIVEN: ten thousand coins, or a law rune, an enchanted gem and
+        // molten glass. That is a real item requirement, so it is declared as one here.
+        { give: 'coins', n: 10000, how: 'Sir Tiffy charges for the commorb' },
+        { talk: 'rd_teleporter_guy', picks: ['jobs', 'Go on.', "I'll pay"], why: 'he sells you a commorb' },
         { stage: 10 },
 
         { note: 'wiki step 2: contact Savant on the orb, and she briefs you' },
@@ -64,7 +71,8 @@ export const helper: Manifest = {
         { stage: 40 },
 
         { note: 'wiki step 9: back to Sir Tiffy with the hat' },
-        { talk: 'rd_teleporter_guy', why: 'he takes it' },
+        // And the option is worded for where the quest is by the time you bring the hat back.
+        { talk: 'rd_teleporter_guy', picks: ['Solus Dellagar'], why: 'he takes it' },
         { stage: 50 }
     ]
 };
@@ -101,6 +109,15 @@ p.applyDamage = function () {};
 H.setVar(p, 'macro_event', 1);
 H.maxOut(p);
 H.setVarBit(p, 'rd_main', 2); // ^recruitmentdrive_complete - a varbit, and Tiffy will not deal with anyone who has not passed it
+// AND THE REQUIREMENTS THE QUEST ITSELF NOW ENFORCES: 32 quest points, The Lost Tribe, Priest
+// in Peril and Enter the Abyss. A maxed sim player has NO quest points, so without these Tiffy
+// refuses at the first line and the run dies before it starts. The values are the ones
+// tools/sim/wantedstart.ts drives the gate against.
+H.setVar(p, 'qp', 32);
+H.setVarBit(p, 'lost_tribe_quest', 11);
+H.setVar(p, 'priestperil', 60);
+H.setVar(p, 'abyssal_miniquest', 4);
+H.give(p, 'coins', 10000); // and the orb's price - see the manifest step above
 H.tick(1);
 
 console.log('');
@@ -113,7 +130,7 @@ const tiffy = H.npcNear('rd_teleporter_guy', 2998, 3373, 0)!;
 check('Sir Tiffy is on his bench', !!tiffy, tiffy ? tiffy.x + ',' + tiffy.z : '');
 H.opNpc(p, tiffy, 1);
 H.tick(3);
-drive(p, ['Go on.']);
+drive(p, ['jobs', 'Go on.', "I'll pay"]); // his menu, the quest's own, then the orb's price
 check('he hands over a commorb', H.invCount(p, 'wanted_crystal_ball') > 0);
 check('and the quest starts', H.getVarBit(p, 'wanted_main') === 10, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 
@@ -184,7 +201,7 @@ H.tick(2);
 const tiffy2 = H.npcNear('rd_teleporter_guy', 2998, 3373, 0)!;
 H.opNpc(p, tiffy2, 1);
 H.tick(3);
-drive(p, []);
+drive(p, ['Solus Dellagar']); // his menu again, worded for a quest that is all but done
 check('Sir Tiffy takes the hat', H.invCount(p, 'wanted_solus_trophy') === 0);
 check('and the quest is complete', H.getVarBit(p, 'wanted_main') === 50, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 
