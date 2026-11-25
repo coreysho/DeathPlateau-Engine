@@ -45,7 +45,7 @@ const m: Manifest = {
         { has: 'slug_commorb' },
         { hasnt: 'wanted_crystal_ball' },
 
-        { note: 'quick guide step 2: Col. O\'Niall on the Witchaven dock' },
+        { note: "quick guide step 2: Col. O'Niall on the Witchaven dock" },
         { setpos: [2722, 3306, 0], why: 'Ardougne teleport and east to the Witchaven dock' },
         { talk: 'witchaven_oniall', picks: ["What's the mission?", "That's enough for now."], soft: true, why: 'the code phrase, and the three names' },
         { stage: 20 },
@@ -136,7 +136,7 @@ const m: Manifest = {
         { go: [2729, 3291], why: 'east to the shop' },
         { loc: 'osrsloc_18168', at: [2730, 3292], why: "the shop's own door" },
         { go: [2733, 3292], why: 'up to the counter' },
-        { talk: 'witchaven_lovecraft', want: "no good to me", why: 'he kept the page because nobody asked for it' },
+        { talk: 'witchaven_lovecraft', want: 'no good to me', why: 'he kept the page because nobody asked for it' },
         { has: 'slug_page2' },
 
         { note: 'quick guide step 14: the colonel has the last page, in three pieces' },
