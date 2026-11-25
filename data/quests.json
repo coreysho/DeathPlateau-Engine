@@ -72007,7 +72007,10 @@
        "why": "The quest ends where it started.",
        "target": "rd_teleporter_guy",
        "id": 2290,
-       "label": "Sir Tiffy Cashien"
+       "label": "Sir Tiffy Cashien",
+       "picks": [
+        "I have something to report."
+       ]
       }
      ],
      "items": [],
