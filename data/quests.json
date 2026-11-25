@@ -37062,116 +37062,7 @@
        "text": "The Culinaromancer's chest in the castle cellar, which opens its first tier of food the moment Aris has explained it."
       }
      ],
-     "marks": [
-      {
-       "at": 23,
-       "var": 1892,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 25,
-       "var": 1892,
-       "varbit": true,
-       "is": 4
-      },
-      {
-       "at": 32,
-       "var": 1892,
-       "varbit": true,
-       "is": 7
-      },
-      {
-       "at": 56,
-       "var": 1896,
-       "varbit": true,
-       "is": 2
-      },
-      {
-       "at": 71,
-       "var": 1867,
-       "varbit": true,
-       "is": 2
-      },
-      {
-       "at": 81,
-       "var": 1867,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 91,
-       "var": 1895,
-       "varbit": true,
-       "is": 2
-      },
-      {
-       "at": 94,
-       "var": 1895,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 117,
-       "var": 1878,
-       "varbit": true,
-       "is": 2
-      },
-      {
-       "at": 122,
-       "var": 1878,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 122,
-       "var": 1883,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 125,
-       "var": 1879,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 126,
-       "var": 1878,
-       "varbit": true,
-       "is": 4
-      },
-      {
-       "at": 136,
-       "var": 1904,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 139,
-       "var": 1904,
-       "varbit": true,
-       "is": 5
-      },
-      {
-       "at": 141,
-       "var": 1904,
-       "varbit": true,
-       "is": 6
-      },
-      {
-       "at": 145,
-       "var": 1904,
-       "varbit": true,
-       "is": 7
-      },
-      {
-       "at": 163,
-       "var": 1914,
-       "varbit": true,
-       "is": 2
-      }
-     ],
+     "marks": [],
      "steps": [
       {
        "kind": "walk",
@@ -37368,6 +37259,272 @@
        "op": 2
       },
       {
+       "kind": "walk",
+       "text": "Go to the time barrier.",
+       "at": [
+        1861,
+        5317
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Pass-through Barrier.",
+       "why": "Back through it.",
+       "target": "hundred_portal_door1",
+       "id": 12351,
+       "label": "Barrier",
+       "at": [
+        1861,
+        5316
+       ]
+      },
+      {
+       "text": "Go to the top floor of Falador castle.",
+       "kind": "walk",
+       "at": [
+        2963,
+        3336,
+        2
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Amik Varze.",
+       "why": "Ask him what he wanted.",
+       "target": "sir_amik_varze",
+       "id": 608,
+       "label": "Sir Amik Varze",
+       "picks": [
+        "2"
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Ashes on Fruit blast.",
+       "why": "Spoil it properly.",
+       "target": "fruit_blast",
+       "id": 2084,
+       "label": "Fruit blast",
+       "item": 592,
+       "gives": [
+        7497
+       ]
+      },
+      {
+       "text": "Go back to Lumbridge castle, to the portal.",
+       "kind": "walk",
+       "at": [
+        3208,
+        3218,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Portal.",
+       "why": "Step through it.",
+       "target": "hundred_portal_multi",
+       "id": 12354,
+       "label": "Portal",
+       "at": [
+        3209,
+        3218
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the barrier landing.",
+       "at": [
+        1861,
+        5318
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Dirty blast on Sir Amik Varze.",
+       "why": "Put it in his hand.",
+       "target": "hundred_varze_base",
+       "id": 12345,
+       "label": "Sir Amik Varze",
+       "item": 7497,
+       "at": [
+        1865,
+        5321
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to Aris.",
+       "at": [
+        1866,
+        5325
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Gypsy.",
+       "why": "Ask to be sent in.",
+       "target": "hundred_aris",
+       "id": 3383,
+       "label": "Gypsy",
+       "picks": [
+        "1"
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Agrith-Na-Na.",
+       "why": "The first minion.",
+       "target": "hundred_minion1",
+       "id": 3493,
+       "label": "Agrith-Na-Na"
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Flambeed.",
+       "why": "The second.",
+       "target": "hundred_minion2",
+       "id": 3494,
+       "label": "Flambeed"
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Karamel.",
+       "why": "The third.",
+       "target": "hundred_minion3",
+       "id": 3495,
+       "label": "Karamel"
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Dessourt.",
+       "why": "The fourth.",
+       "target": "hundred_minion4",
+       "id": 3496,
+       "label": "Dessourt"
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Gelatinnoth Mother.",
+       "why": "The Gelatinnoth Mother.",
+       "target": "hundred_minion5_air",
+       "id": 3497,
+       "label": "Gelatinnoth Mother"
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Culinaromancer.",
+       "why": "The Culinaromancer.",
+       "target": "hundred_culinaromancer_final",
+       "id": 3491,
+       "label": "Culinaromancer"
+      }
+     ],
+     "items": [
+      {
+       "name": "Fruit blast",
+       "id": 2084,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Ashes",
+       "id": 592,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Dirty blast",
+       "id": 7497,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1892,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 681,
+    "lsb": 0,
+    "msb": 10
+   },
+   "id": "hundred_dwarf",
+   "name": "RECIPE FOR DISASTER (Mountain Dwarf)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "hundred_dwarf_quest",
+   "done": 7,
+   "start": [
+    1862,
+    5321,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect the Mountain Dwarf's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Dwarf.",
+       "why": "Inspect the Mountain Dwarf's plinth.",
+       "target": "hundred_dwarf_ambassador_base",
+       "id": 12330,
+       "label": "Dwarf",
+       "at": [
+        1862,
+        5321
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 1,
+       "text": "The dish is a dwarven rock cake, and Rohak will only bake one for a dwarven stout with a gold coin in the bottom."
+      }
+     ],
+     "marks": [
+      {
+       "at": 3,
+       "var": 1892,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 5,
+       "var": 1892,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 12,
+       "var": 1892,
+       "varbit": true,
+       "is": 7
+      },
+      {
+       "at": 12,
+       "var": 1892,
+       "varbit": true,
+       "is": 7
+      }
+     ],
+     "steps": [
+      {
        "text": "Go to the east end of the White Wolf tunnel.",
        "kind": "walk",
        "at": [
@@ -37490,7 +37647,112 @@
         1862,
         5321
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Asgarnian ale",
+       "id": 1905,
+       "n": 1,
+       "bring": true
       },
+      {
+       "name": "Coins",
+       "id": 995,
+       "n": 10,
+       "bring": true
+      },
+      {
+       "name": "Asgarnian ale (g)",
+       "id": 7508,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Dwarven rock cake",
+       "id": 7509,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Dwarven rock cake",
+       "id": 7510,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1896,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 683,
+    "lsb": 12,
+    "msb": 15
+   },
+   "id": "hundred_guide",
+   "name": "RECIPE FOR DISASTER (Lumbridge Guide)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "100guide_prog",
+   "done": 2,
+   "start": [
+    1865,
+    5325,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect the Lumbridge Guide's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Lumbridge Guide.",
+       "why": "Inspect the Lumbridge Guide's plinth.",
+       "target": "hundred_guide_base",
+       "id": 12339,
+       "label": "Lumbridge Guide",
+       "at": [
+        1865,
+        5325
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a cake of guidance - bake a plain cake, then enchant it with the three ingredients the people of Lumbridge hold."
+      }
+     ],
+     "marks": [
+      {
+       "at": 24,
+       "var": 1896,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 24,
+       "var": 1896,
+       "varbit": true,
+       "is": 2
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -37743,101 +38005,136 @@
         1865,
         5325
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Pot of flour",
+       "id": 1933,
+       "n": 1,
+       "bring": false
       },
       {
-       "kind": "walk",
-       "text": "Go to the time barrier.",
-       "at": [
-        1861,
-        5317
-       ]
+       "name": "Egg",
+       "id": 1944,
+       "n": 1,
+       "bring": false
       },
+      {
+       "name": "Bucket of milk",
+       "id": 1927,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Cake tin",
+       "id": 1887,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Uncooked cake",
+       "id": 1889,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Cake",
+       "id": 1891,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Cake",
+       "id": 1891,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Cake of guidance",
+       "id": 11218,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1867,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 679,
+    "lsb": 9,
+    "msb": 14
+   },
+   "id": "hundred_goblin",
+   "name": "RECIPE FOR DISASTER (Goblin generals)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "100goblin",
+   "done": 4,
+   "start": [
+    1862,
+    5325,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect the Goblin generals' plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
       {
        "kind": "loc",
-       "text": "Pass-through Barrier.",
-       "why": "Back through it.",
-       "target": "hundred_portal_door1",
-       "id": 12351,
-       "label": "Barrier",
+       "text": "Inspect General Wartface.",
+       "why": "Inspect the Goblin generals' plinth.",
+       "target": "hundred_goblin1_base",
+       "id": 12332,
+       "label": "General Wartface",
        "at": [
-        1861,
-        5316
+        1862,
+        5325
        ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a stew the two generals can agree on - ask each of them, bring all three dishes and put them through the cauldron in the goblin kitchen."
+      }
+     ],
+     "marks": [
+      {
+       "at": 6,
+       "var": 1867,
+       "varbit": true,
+       "is": 2
       },
       {
-       "text": "Go to the top floor of Falador castle.",
-       "kind": "walk",
-       "at": [
-        2963,
-        3336,
-        2
-       ]
+       "at": 16,
+       "var": 1867,
+       "varbit": true,
+       "is": 3
       },
       {
-       "kind": "talk",
-       "text": "Talk to Sir Amik Varze.",
-       "why": "Ask him what he wanted.",
-       "target": "sir_amik_varze",
-       "id": 608,
-       "label": "Sir Amik Varze",
-       "picks": [
-        "2"
-       ]
-      },
-      {
-       "kind": "obj",
-       "text": "Use Ashes on Fruit blast.",
-       "why": "Spoil it properly.",
-       "target": "fruit_blast",
-       "id": 2084,
-       "label": "Fruit blast",
-       "item": 592,
-       "gives": [
-        7497
-       ]
-      },
-      {
-       "text": "Go back to Lumbridge castle, to the portal.",
-       "kind": "walk",
-       "at": [
-        3208,
-        3218,
-        0
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Use Portal.",
-       "why": "Step through it.",
-       "target": "hundred_portal_multi",
-       "id": 12354,
-       "label": "Portal",
-       "at": [
-        3209,
-        3218
-       ]
-      },
-      {
-       "kind": "walk",
-       "text": "Go to the barrier landing.",
-       "at": [
-        1861,
-        5318
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Use Dirty blast on Sir Amik Varze.",
-       "why": "Put it in his hand.",
-       "target": "hundred_varze_base",
-       "id": 12345,
-       "label": "Sir Amik Varze",
-       "item": 7497,
-       "at": [
-        1865,
-        5321
-       ]
-      },
+       "at": 22,
+       "var": 1867,
+       "varbit": true,
+       "is": 4
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -38060,7 +38357,148 @@
         1862,
         5325
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Bread",
+       "id": 2309,
+       "n": 1,
+       "bring": true
       },
+      {
+       "name": "Bucket of water",
+       "id": 1929,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Fishing bait",
+       "id": 313,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Spice",
+       "id": 2007,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Orange slices",
+       "id": 2112,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Red dye",
+       "id": 1763,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Soggy bread",
+       "id": 7512,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Spicy maggots",
+       "id": 7513,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Dyed orange",
+       "id": 7514,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Slop of compromise",
+       "id": 7511,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1895,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 683,
+    "lsb": 0,
+    "msb": 11
+   },
+   "id": "hundred_pirate",
+   "name": "RECIPE FOR DISASTER (Pirate Pete)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "100_pirate_quest_var",
+   "done": 4,
+   "start": [
+    1862,
+    5323,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect Pirate Pete's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Pirate Pete.",
+       "why": "Inspect Pirate Pete's plinth.",
+       "target": "hundred_pirate_base",
+       "id": 12337,
+       "label": "Pirate Pete",
+       "at": [
+        1862,
+        5323
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a fishcake, and three of its four ingredients are on the seabed under the Fishing Trawler, where Murphy lowers you in diving gear."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 1895,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 7,
+       "var": 1895,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 26,
+       "var": 1895,
+       "varbit": true,
+       "is": 4
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -38340,7 +38778,195 @@
         1862,
         5323
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Fishbowl helmet",
+       "id": 7534,
+       "n": 1,
+       "bring": false
       },
+      {
+       "name": "Diving apparatus",
+       "id": 7535,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Kelp",
+       "id": 7516,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Crab meat",
+       "id": 7518,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Raw cod",
+       "id": 341,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Bread",
+       "id": 2309,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Pestle and mortar",
+       "id": 233,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Ground kelp",
+       "id": 7517,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Ground crab meat",
+       "id": 7527,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Ground cod",
+       "id": 7528,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Breadcrumbs",
+       "id": 7515,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Raw fishcake",
+       "id": 7529,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Cooked fishcake",
+       "id": 7530,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": [
+      {
+       "name": "Fishbowl helmet",
+       "id": 7534,
+       "bring": false
+      },
+      {
+       "name": "Diving apparatus",
+       "id": 7535,
+       "bring": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "stageVarId": 1878,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 680,
+    "lsb": 0,
+    "msb": 2
+   },
+   "id": "hundred_dave",
+   "name": "RECIPE FOR DISASTER (Evil Dave)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "hundred_dave_main",
+   "done": 5,
+   "start": [
+    1865,
+    5323,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect Evil Dave's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Evil Dave.",
+       "why": "Inspect Evil Dave's plinth.",
+       "target": "hundred_dave_base",
+       "id": 12341,
+       "label": "Evil Dave",
+       "at": [
+        1865,
+        5323
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a stew spiced with three doses of one of four colours, cooked in the cellar under his mother's house."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 1878,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 9,
+       "var": 1878,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 9,
+       "var": 1883,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 12,
+       "var": 1879,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 13,
+       "var": 1878,
+       "varbit": true,
+       "is": 4
+      },
+      {
+       "at": 19,
+       "var": 1878,
+       "varbit": true,
+       "is": 5
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -38522,7 +39148,112 @@
         1865,
         5323
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Stew",
+       "id": 2003,
+       "n": 1,
+       "bring": true
       },
+      {
+       "name": "Red spice (4)",
+       "id": 7480,
+       "n": 1,
+       "bring": true
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1904,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 684,
+    "lsb": 3,
+    "msb": 10
+   },
+   "id": "hundred_ogre",
+   "name": "RECIPE FOR DISASTER (Skrach Uglogwee)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "100_ogre_prog",
+   "done": 8,
+   "start": [
+    1863,
+    5328,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect Skrach Uglogwee's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Skrach Uglogwee.",
+       "why": "Inspect Skrach Uglogwee's plinth.",
+       "target": "hundred_ogre_base",
+       "id": 12343,
+       "label": "Skrach Uglogwee",
+       "at": [
+        1863,
+        5328
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a cooked jubbly bird from an island off the Feldip shore, so first Rantz needs a boat."
+      }
+     ],
+     "marks": [
+      {
+       "at": 4,
+       "var": 1904,
+       "varbit": true,
+       "is": 3
+      },
+      {
+       "at": 7,
+       "var": 1904,
+       "varbit": true,
+       "is": 5
+      },
+      {
+       "at": 9,
+       "var": 1904,
+       "varbit": true,
+       "is": 6
+      },
+      {
+       "at": 13,
+       "var": 1904,
+       "varbit": true,
+       "is": 7
+      },
+      {
+       "at": 22,
+       "var": 1904,
+       "varbit": true,
+       "is": 8
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -38743,7 +39474,118 @@
         1863,
         5328
        ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Bronze axe",
+       "id": 1351,
+       "n": 1,
+       "bring": true
       },
+      {
+       "name": "Balloon toad",
+       "id": 7564,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Raw jubbly",
+       "id": 7566,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Tinderbox",
+       "id": 590,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Logs",
+       "id": 1511,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Cooked jubbly",
+       "id": 7568,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    }
+   ]
+  },
+  {
+   "stageVarId": 1914,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 685,
+    "lsb": 0,
+    "msb": 6
+   },
+   "id": "hundred_monkey",
+   "name": "RECIPE FOR DISASTER (King Awowogei)",
+   "source": "oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide",
+   "stageVar": "hundred_ilm_quest",
+   "done": 3,
+   "start": [
+    1865,
+    5319,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Inspect King Awowogei's plinth in the Culinaromancer's chamber to start freeing them."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "loc",
+       "text": "Inspect Awowogei.",
+       "why": "Inspect King Awowogei's plinth.",
+       "target": "hundred_monkey_base",
+       "id": 12347,
+       "label": "Awowogei",
+       "at": [
+        1865,
+        5319
+       ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 1,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The dish is a stuffed snake, to a recipe the three wise monkeys give you on Ape Atoll, so all of it needs Monkey Madness."
+      }
+     ],
+     "marks": [
+      {
+       "at": 9,
+       "var": 1914,
+       "varbit": true,
+       "is": 2
+      },
+      {
+       "at": 41,
+       "var": 1914,
+       "varbit": true,
+       "is": 3
+      }
+     ],
+     "steps": [
       {
        "kind": "walk",
        "text": "Go to the time barrier.",
@@ -39151,358 +39993,9 @@
         1865,
         5319
        ]
-      },
-      {
-       "kind": "walk",
-       "text": "Go to Aris.",
-       "at": [
-        1866,
-        5325
-       ]
-      },
-      {
-       "kind": "talk",
-       "text": "Talk to Gypsy.",
-       "why": "Ask to be sent in.",
-       "target": "hundred_aris",
-       "id": 3383,
-       "label": "Gypsy",
-       "picks": [
-        "1"
-       ]
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Agrith-Na-Na.",
-       "why": "The first minion.",
-       "target": "hundred_minion1",
-       "id": 3493,
-       "label": "Agrith-Na-Na"
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Flambeed.",
-       "why": "The second.",
-       "target": "hundred_minion2",
-       "id": 3494,
-       "label": "Flambeed"
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Karamel.",
-       "why": "The third.",
-       "target": "hundred_minion3",
-       "id": 3495,
-       "label": "Karamel"
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Dessourt.",
-       "why": "The fourth.",
-       "target": "hundred_minion4",
-       "id": 3496,
-       "label": "Dessourt"
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Gelatinnoth Mother.",
-       "why": "The Gelatinnoth Mother.",
-       "target": "hundred_minion5_air",
-       "id": 3497,
-       "label": "Gelatinnoth Mother"
-      },
-      {
-       "kind": "talk",
-       "text": "Kill Culinaromancer.",
-       "why": "The Culinaromancer.",
-       "target": "hundred_culinaromancer_final",
-       "id": 3491,
-       "label": "Culinaromancer"
       }
      ],
      "items": [
-      {
-       "name": "Asgarnian ale",
-       "id": 1905,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Coins",
-       "id": 995,
-       "n": 10,
-       "bring": true
-      },
-      {
-       "name": "Asgarnian ale (g)",
-       "id": 7508,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Dwarven rock cake",
-       "id": 7509,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Dwarven rock cake",
-       "id": 7510,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Pot of flour",
-       "id": 1933,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Egg",
-       "id": 1944,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Bucket of milk",
-       "id": 1927,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Cake tin",
-       "id": 1887,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Uncooked cake",
-       "id": 1889,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Cake",
-       "id": 1891,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Cake",
-       "id": 1891,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Cake of guidance",
-       "id": 11218,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Fruit blast",
-       "id": 2084,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Ashes",
-       "id": 592,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Dirty blast",
-       "id": 7497,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Bread",
-       "id": 2309,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Bucket of water",
-       "id": 1929,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Fishing bait",
-       "id": 313,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Spice",
-       "id": 2007,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Orange slices",
-       "id": 2112,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Red dye",
-       "id": 1763,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Soggy bread",
-       "id": 7512,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Spicy maggots",
-       "id": 7513,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Dyed orange",
-       "id": 7514,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Slop of compromise",
-       "id": 7511,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Fishbowl helmet",
-       "id": 7534,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Diving apparatus",
-       "id": 7535,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Kelp",
-       "id": 7516,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Crab meat",
-       "id": 7518,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Raw cod",
-       "id": 341,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Bread",
-       "id": 2309,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Pestle and mortar",
-       "id": 233,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Ground kelp",
-       "id": 7517,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Ground crab meat",
-       "id": 7527,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Ground cod",
-       "id": 7528,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Breadcrumbs",
-       "id": 7515,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Raw fishcake",
-       "id": 7529,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Cooked fishcake",
-       "id": 7530,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Stew",
-       "id": 2003,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Red spice (4)",
-       "id": 7480,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Bronze axe",
-       "id": 1351,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Balloon toad",
-       "id": 7564,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Raw jubbly",
-       "id": 7566,
-       "n": 1,
-       "bring": false
-      },
-      {
-       "name": "Tinderbox",
-       "id": 590,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Logs",
-       "id": 1511,
-       "n": 1,
-       "bring": true
-      },
-      {
-       "name": "Cooked jubbly",
-       "id": 7568,
-       "n": 1,
-       "bring": false
-      },
       {
        "name": "Rope",
        "id": 954,
@@ -39571,16 +40064,6 @@
       }
      ],
      "worn": [
-      {
-       "name": "Fishbowl helmet",
-       "id": 7534,
-       "bring": false
-      },
-      {
-       "name": "Diving apparatus",
-       "id": 7535,
-       "bring": false
-      },
       {
        "name": "Monkey greegree",
        "id": 4026,
