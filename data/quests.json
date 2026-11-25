@@ -70967,6 +70967,1055 @@
    ]
   },
   {
+   "stageVarId": 3151,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 2011,
+    "lsb": 0,
+    "msb": 7
+   },
+   "id": "slugmenace",
+   "name": "THE SLUG MENACE",
+   "source": "oldschool.runescape.wiki/w/The_Slug_Menace/Quick_guide",
+   "stageVar": "slugmenace_stage",
+   "done": 90,
+   "start": [
+    2998,
+    3373,
+    0
+   ],
+   "stages": [
+    {
+     "from": 0,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Tiffy Cashien.",
+       "why": "He takes the old orb and upgrades it.",
+       "target": "rd_teleporter_guy",
+       "id": 2290,
+       "label": "Sir Tiffy Cashien",
+       "picks": [
+        "Do you have any jobs for me yet?",
+        "Yes, I'll go."
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Commorb",
+       "id": 6635,
+       "n": 1,
+       "bring": true
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 10,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go to Ardougne teleport and east to the Witchaven dock.",
+       "kind": "walk",
+       "at": [
+        2722,
+        3306,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Col. O'Niall.",
+       "why": "The code phrase, and the three names.",
+       "target": "witchaven_oniall",
+       "id": 5151,
+       "label": "Col. O'Niall",
+       "picks": [
+        "What's the mission?",
+        "That's enough for now."
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Commorb v2",
+       "id": 11521,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 20,
+     "headings": [],
+     "marks": [
+      {
+       "at": 4,
+       "var": 3152,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 5,
+       "var": 3174,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 9,
+       "var": 3153,
+       "varbit": true,
+       "is": 1
+      },
+      {
+       "at": 11,
+       "var": 3154,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
+      {
+       "kind": "walk",
+       "text": "Go west through the village.",
+       "at": [
+        2712,
+        3290
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Large door.",
+       "why": "The mayor's front door.",
+       "target": "osrsloc_1521",
+       "id": 19829,
+       "label": "Large door",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go into the study.",
+       "at": [
+        2708,
+        3292
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Mayor Hobb.",
+       "why": "He knows your name and should not.",
+       "target": "witchaven_hobb",
+       "id": 5152,
+       "label": "Mayor Hobb",
+       "picks": [
+        "Nothing at the moment, thanks."
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb v2.",
+       "target": "slug_commorb",
+       "id": 11521,
+       "label": "Commorb v2",
+       "op": 1
+      },
+      {
+       "kind": "walk",
+       "text": "Go back out of the house.",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Large door.",
+       "why": "Through the door.",
+       "target": "osrsloc_1521",
+       "id": 19829,
+       "label": "Large door",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go east to the church.",
+       "at": [
+        2726,
+        3284
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Brother Maledict.",
+       "why": "His congregation has stopped listening.",
+       "target": "witchaven_maledict",
+       "id": 5153,
+       "label": "Brother Maledict",
+       "picks": [
+        "What's worrying you?",
+        "That's enough for now."
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go north to the dock.",
+       "at": [
+        2720,
+        3305
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Holgart.",
+       "why": "The boat is the third thing wrong.",
+       "target": "holgartland",
+       "id": 700,
+       "label": "Holgart"
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Col. O'Niall.",
+       "why": "The report.",
+       "target": "witchaven_oniall",
+       "id": 5151,
+       "label": "Col. O'Niall"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 30,
+     "headings": [],
+     "marks": [
+      {
+       "at": 4,
+       "var": 3155,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
+      {
+       "kind": "walk",
+       "text": "Go west out of the village to the ruins.",
+       "at": [
+        2696,
+        3283
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-down Ladder.",
+       "why": "Climb down - the 377 ladder already lands in the chamber.",
+       "target": "loc_1754",
+       "id": 1754,
+       "label": "Ladder",
+       "at": [
+        2696,
+        3282
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go across the chamber to the east wall.",
+       "at": [
+        2700,
+        9688
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Push Wall.",
+       "why": "It is not a wall.",
+       "target": "slugmenace_false_wall",
+       "id": 19791,
+       "label": "Wall",
+       "at": [
+        2701,
+        9688
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Push Wall.",
+       "why": "Through it, which needs the orb.",
+       "target": "slugmenace_false_wall",
+       "id": 19791,
+       "label": "Wall",
+       "at": [
+        2701,
+        9688
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go east along the first corridor.",
+       "at": [
+        2712,
+        10344
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-through Shortcut.",
+       "why": "The hole in the rock - Agility 30.",
+       "target": "slugmenace_shortcut",
+       "id": 19802,
+       "label": "Shortcut",
+       "at": [
+        2715,
+        10344
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go on to the doors.",
+       "at": [
+        2733,
+        10342
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Imposing Doors.",
+       "why": "It will not open for a hand.",
+       "target": "slugmenace_doors",
+       "id": 19801,
+       "label": "Imposing Doors",
+       "at": [
+        2732,
+        10341
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb v2.",
+       "target": "slug_commorb",
+       "id": 11521,
+       "label": "Commorb v2",
+       "op": 1
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 40,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "obj",
+       "text": "Pick up Dead sea slug.",
+       "why": "It is lying in the sanctum - Savant notices on the pickup.",
+       "target": "slug_dead_sea_slug",
+       "id": 11523,
+       "label": "Dead sea slug",
+       "gives": [
+        11523
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go back west to the passage.",
+       "at": [
+        2707,
+        10352
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Enter Passage.",
+       "why": "Out to the chamber.",
+       "target": "slugmenace_passage",
+       "id": 19800,
+       "label": "Passage",
+       "at": [
+        2706,
+        10352
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the ladder.",
+       "at": [
+        2696,
+        9682
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-up Exit.",
+       "why": "Climb up to the ruins.",
+       "target": "slugmenace_temple_exit",
+       "id": 19788,
+       "label": "Exit",
+       "at": [
+        2696,
+        9682
+       ]
+      },
+      {
+       "text": "Go round to the Outpost.",
+       "kind": "walk",
+       "at": [
+        2437,
+        3347,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Jorral.",
+       "why": "He reads the glyphs - the hook needs the copy in hand, so Making History keeps its own quest giver.",
+       "target": "makinghistory_jorral",
+       "id": 2932,
+       "label": "Jorral"
+      }
+     ],
+     "items": [
+      {
+       "name": "Door transcription",
+       "id": 11522,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Dead sea slug",
+       "id": 11523,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 50,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back to the Witchaven dock.",
+       "kind": "walk",
+       "at": [
+        2722,
+        3306,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Col. O'Niall.",
+       "why": "The name means nothing to him.",
+       "target": "witchaven_oniall",
+       "id": 5151,
+       "label": "Col. O'Niall"
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 60,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "walk",
+       "text": "Go to the church.",
+       "at": [
+        2726,
+        3284
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Brother Maledict.",
+       "why": "Whatever is in the Mayor takes him mid-sentence.",
+       "target": "witchaven_maledict",
+       "id": 5153,
+       "label": "Brother Maledict"
+      },
+      {
+       "kind": "walk",
+       "text": "Go west again.",
+       "at": [
+        2712,
+        3290
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Large door.",
+       "why": "His front door.",
+       "target": "osrsloc_1521",
+       "id": 19829,
+       "label": "Large door",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the desk.",
+       "at": [
+        2708,
+        3293
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Search Study desk.",
+       "why": "The locked drawer.",
+       "target": "witchaven_study_desk",
+       "id": 19922,
+       "label": "Study desk",
+       "at": [
+        2708,
+        3294
+       ],
+       "gives": [
+        11525
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go out of the house.",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Large door.",
+       "why": "Through the door.",
+       "target": "osrsloc_1521",
+       "id": 19829,
+       "label": "Large door",
+       "at": [
+        2713,
+        3291
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go east to the shop.",
+       "at": [
+        2729,
+        3291
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "The shop's own door.",
+       "target": "osrsloc_18168",
+       "id": 19873,
+       "label": "Door",
+       "at": [
+        2730,
+        3292
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go up to the counter.",
+       "at": [
+        2733,
+        3292
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Ezekial Lovecraft.",
+       "why": "He kept the page because nobody asked for it.",
+       "target": "witchaven_lovecraft",
+       "id": 5150,
+       "label": "Ezekial Lovecraft",
+       "gives": [
+        11526
+       ]
+      },
+      {
+       "text": "Go back to the dock.",
+       "kind": "walk",
+       "at": [
+        2722,
+        3306,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Col. O'Niall.",
+       "why": "He has been sitting on it.",
+       "target": "witchaven_oniall",
+       "id": 5151,
+       "label": "Col. O'Niall",
+       "gives": [
+        11528,
+        11530
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Fragment 1 on Swamp paste.",
+       "why": "She stops you.",
+       "target": "swamppaste",
+       "id": 1941,
+       "label": "Swamp paste",
+       "item": 11528
+      },
+      {
+       "kind": "walk",
+       "text": "Go along the dock to Jeb.",
+       "at": [
+        2721,
+        3305
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Jeb.",
+       "why": "The crossing.",
+       "target": "witchaven_jeb",
+       "id": 5154,
+       "label": "Jeb",
+       "picks": [
+        "Will you take me, please?"
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go south-west across the platform.",
+       "at": [
+        2767,
+        3277
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "The door to Bailey's room.",
+       "target": "loc_1533",
+       "id": 1533,
+       "label": "Door",
+       "at": [
+        2765,
+        3277
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go inside.",
+       "at": [
+        2764,
+        3276
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Bailey.",
+       "why": "His gumbo has been on too long.",
+       "target": "bailey",
+       "id": 695,
+       "label": "Bailey",
+       "gives": [
+        11524
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Use Fragment 1 on Sea slug glue.",
+       "why": "The page is whole.",
+       "target": "slug_sea_slug_glue",
+       "id": 11524,
+       "label": "Sea slug glue",
+       "item": 11528,
+       "gives": [
+        11527
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Page 1",
+       "id": 11525,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Page 2",
+       "id": 11526,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Fragment 1",
+       "id": 11528,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Fragment 3",
+       "id": 11530,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Swamp paste",
+       "id": 1941,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Sea slug glue",
+       "id": 11524,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Page 3",
+       "id": 11527,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 70,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "kind": "obj",
+       "text": "Shape-Air Page 1.",
+       "target": "slug_page1",
+       "id": 11525,
+       "label": "Page 1",
+       "op": 3,
+       "gives": [
+        11531
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Shape-Water Page 2.",
+       "target": "slug_page2",
+       "id": 11526,
+       "label": "Page 2",
+       "op": 3
+      },
+      {
+       "kind": "obj",
+       "text": "Shape-Earth Page 1.",
+       "target": "slug_page1",
+       "id": 11525,
+       "label": "Page 1",
+       "op": 2
+      },
+      {
+       "kind": "obj",
+       "text": "Shape-Fire Page 2.",
+       "target": "slug_page2",
+       "id": 11526,
+       "label": "Page 2",
+       "op": 2
+      },
+      {
+       "kind": "obj",
+       "text": "Shape-Mind Page 3.",
+       "target": "slug_page3",
+       "id": 11527,
+       "label": "Page 3",
+       "op": 2,
+       "gives": [
+        11539
+       ]
+      },
+      {
+       "text": "Go to the Air temple.",
+       "kind": "walk",
+       "at": [
+        2842,
+        4833,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank mind rune on Altar.",
+       "why": "The pairing is checked, not assumed.",
+       "target": "air_altar",
+       "id": 2478,
+       "label": "Altar",
+       "item": 11539,
+       "at": [
+        2843,
+        4833
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank air rune on Altar.",
+       "why": "Air.",
+       "target": "air_altar",
+       "id": 2478,
+       "label": "Altar",
+       "item": 11531,
+       "at": [
+        2843,
+        4833
+       ],
+       "gives": [
+        11532
+       ]
+      },
+      {
+       "text": "Go to the Water temple.",
+       "kind": "walk",
+       "at": [
+        2714,
+        4835,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank water rune on Altar.",
+       "why": "Water.",
+       "target": "water_altar",
+       "id": 2480,
+       "label": "Altar",
+       "item": 11533,
+       "at": [
+        2715,
+        4835
+       ]
+      },
+      {
+       "text": "Go to the Earth temple.",
+       "kind": "walk",
+       "at": [
+        2656,
+        4840,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank earth rune on Altar.",
+       "why": "Earth.",
+       "target": "earth_altar",
+       "id": 2481,
+       "label": "Altar",
+       "item": 11535,
+       "at": [
+        2657,
+        4840
+       ]
+      },
+      {
+       "text": "Go to the Fire temple.",
+       "kind": "walk",
+       "at": [
+        2583,
+        4837,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank fire rune on Altar.",
+       "why": "Fire.",
+       "target": "fire_altar",
+       "id": 2482,
+       "label": "Altar",
+       "item": 11537,
+       "at": [
+        2584,
+        4837
+       ]
+      },
+      {
+       "text": "Go to the Mind temple.",
+       "kind": "walk",
+       "at": [
+        2784,
+        4840,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Blank mind rune on Altar.",
+       "why": "Mind - this altar has no [oplocu] of its own and falls through the category handler.",
+       "target": "mind_altar",
+       "id": 2479,
+       "label": "Altar",
+       "item": 11539,
+       "at": [
+        2785,
+        4840
+       ],
+       "gives": [
+        11540
+       ]
+      },
+      {
+       "text": "Go back to the ruins.",
+       "kind": "walk",
+       "at": [
+        2696,
+        3283,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Climb-down Ladder.",
+       "why": "Down.",
+       "target": "loc_1754",
+       "id": 1754,
+       "label": "Ladder",
+       "at": [
+        2696,
+        3282
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the false wall.",
+       "at": [
+        2700,
+        9688
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Push Wall.",
+       "why": "Through.",
+       "target": "slugmenace_false_wall",
+       "id": 19791,
+       "label": "Wall",
+       "at": [
+        2701,
+        9688
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go to the doors.",
+       "at": [
+        2733,
+        10342
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Imposing Doors.",
+       "why": "The enchantment only opened for a Temple Knight.",
+       "target": "slugmenace_doors",
+       "id": 19801,
+       "label": "Imposing Doors",
+       "at": [
+        2732,
+        10341
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Slug Prince.",
+       "why": "He drains prayer and nothing but melee touches him.",
+       "target": "slug_prince",
+       "id": 5148,
+       "label": "Slug Prince"
+      }
+     ],
+     "items": [
+      {
+       "name": "Chisel",
+       "id": 1755,
+       "n": 1,
+       "bring": true
+      },
+      {
+       "name": "Rune essence",
+       "id": 1436,
+       "n": 20,
+       "bring": true
+      },
+      {
+       "name": "Blank air rune",
+       "id": 11531,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Blank mind rune",
+       "id": 11539,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Air rune",
+       "id": 11532,
+       "n": 1,
+       "bring": false
+      },
+      {
+       "name": "Mind rune",
+       "id": 11540,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 80,
+     "headings": [],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go to Falador Park.",
+       "kind": "walk",
+       "at": [
+        2998,
+        3373,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Sir Tiffy Cashien.",
+       "why": "The quest ends where it started.",
+       "target": "rd_teleporter_guy",
+       "id": 2290,
+       "label": "Sir Tiffy Cashien"
+      }
+     ],
+     "items": [],
+     "worn": []
+    }
+   ]
+  },
+  {
    "stageVarId": 2011,
    "stageIsVarbit": true,
    "stageBits": {
