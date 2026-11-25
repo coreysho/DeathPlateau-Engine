@@ -3563,12 +3563,16 @@
        "text": "The right half of the shield is in a cupboard upstairs in the headquarters, which only a member can reach."
       },
       {
-       "at": 4,
-       "text": "The Curator at the museum writes the certificate."
+       "at": 3,
+       "text": "The other half, which no Black Arm member can reach."
       },
       {
-       "at": 6,
-       "text": "The certificate to King Roald."
+       "at": 5,
+       "text": "The Curator at the museum writes both certificates."
+      },
+      {
+       "at": 7,
+       "text": "A certificate to King Roald."
       }
      ],
      "marks": [],
@@ -3610,6 +3614,10 @@
        ]
       },
       {
+       "kind": "note",
+       "text": "Traded from a player on the Phoenix side - one account can only ever reach one half."
+      },
+      {
        "text": "Go north to the museum.",
        "kind": "walk",
        "at": [
@@ -3621,7 +3629,7 @@
       {
        "kind": "talk",
        "text": "Talk to Curator.",
-       "why": "He takes the half shield.",
+       "why": "He takes the whole shield.",
        "target": "curator",
        "id": 646,
        "label": "Curator",
@@ -3655,9 +3663,15 @@
        "bring": false
       },
       {
+       "name": "Broken shield",
+       "id": 763,
+       "n": 1,
+       "bring": false
+      },
+      {
        "name": "Certificate",
        "id": 769,
-       "n": 1,
+       "n": 2,
        "bring": false
       }
      ],
@@ -3969,12 +3983,16 @@
        "text": "The chest in the hideout, and half the shield in it."
       },
       {
-       "at": 4,
-       "text": "The Curator at the Varrock museum writes the certificate."
+       "at": 3,
+       "text": "The other half, which no Phoenix member can reach."
       },
       {
-       "at": 6,
-       "text": "The certificate to King Roald."
+       "at": 5,
+       "text": "The Curator at the Varrock museum writes both certificates."
+      },
+      {
+       "at": 7,
+       "text": "A certificate to King Roald."
       }
      ],
      "marks": [],
@@ -4015,6 +4033,10 @@
        ]
       },
       {
+       "kind": "note",
+       "text": "Traded from a player on the Black Arm side - one account can only ever reach one half."
+      },
+      {
        "text": "Go east to the museum.",
        "kind": "walk",
        "at": [
@@ -4026,7 +4048,7 @@
       {
        "kind": "talk",
        "text": "Talk to Curator.",
-       "why": "He takes the half shield.",
+       "why": "He takes the whole shield.",
        "target": "curator",
        "id": 646,
        "label": "Curator",
@@ -4060,9 +4082,15 @@
        "bring": false
       },
       {
+       "name": "Broken shield",
+       "id": 765,
+       "n": 1,
+       "bring": false
+      },
+      {
        "name": "Certificate",
        "id": 769,
-       "n": 1,
+       "n": 2,
        "bring": false
       }
      ],

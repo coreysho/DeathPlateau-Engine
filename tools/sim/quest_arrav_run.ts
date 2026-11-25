@@ -71,17 +71,34 @@ const m: Manifest = {
         { loc: 'phoenixopenchest', at: [3235, 9761], until: 'arravshield1', tries: 3, why: 'and search it' },
         { has: 'arravshield1' },
 
-        { note: 'wiki step 9: the Curator at the Varrock museum writes the certificate' },
-        { setpos: [3258, 3446, 0], why: 'east to the museum' },
-        { talk: 'curator', want: 'certificate', why: 'he takes the half shield' },
-        { has: 'arravcertificate' },
-        { hasnt: 'arravshield1' },
+        { note: 'wiki step 9: the other half, which no Phoenix member can reach' },
+        // THE TRADE THE QUEST IS BUILT AROUND, and the reason this is a `give`. The gangs refuse
+        // each other - katrine.rs2 turns away anyone who joined the Phoenix - and each hideout
+        // door wants its own gang's varp, so ONE ACCOUNT can only ever reach one half. Both
+        // halves are tradeable, so the other one comes from a player on the Black Arm side,
+        // exactly as the quest intends.
+        //
+        // IT USED TO BE SOLOABLE HERE: half a shield bought one certificate, which was a
+        // convenience for a quiet server rather than the real rule, and a player reported it as a
+        // divergence (DeathPlateau-Bugs#74). The owner's call was to put the real rule back, so
+        // this sim now walks the route a player actually has to walk.
+        { give: 'arravshield2', how: 'traded from a player on the Black Arm side - one account can only ever reach one half' },
 
-        { note: 'wiki step 10: and the certificate to King Roald' },
+        { note: 'wiki step 10: the Curator at the Varrock museum writes both certificates' },
+        { setpos: [3258, 3446, 0], why: 'east to the museum' },
+        { talk: 'curator', want: 'certificate', why: 'he takes the whole shield' },
+        // TWO, one for each of you. The certificate was only ever worth half the bounty.
+        { has: 'arravcertificate', n: 2 },
+        { hasnt: 'arravshield1' },
+        { hasnt: 'arravshield2' },
+
+        { note: 'wiki step 11: and a certificate to King Roald' },
         { setpos: [3220, 3477, 0], why: 'west to the palace' },
         { talk: 'king_roald', why: 'the reward' },
         { stage: 10 },
-        { hasnt: 'arravcertificate' },
+        // ONE LEFT, not none: the quest-complete queue deletes exactly one, and the other is the
+        // partner's - the king's own "already claimed" line says to give it to them.
+        { has: 'arravcertificate' },
         { has: 'coins', n: 600 }
     ]
 };
