@@ -19,6 +19,10 @@
 //   and released again: what is being tested is that the right rune comes out of the right altar,
 //   not that the dice work.
 //
+// SIR TIFFY HAS A MENU. Recruitment Drive's handler offers one - this quest, Wanted! and the
+// Temple Knight armoury - so both talk steps here pick an option before the quest's own dialogue
+// starts, and option one is worded for where the quest has got to.
+//
 //   NODE_MEMBERS=true npx tsx tools/sim/quest_slugmenace_run.ts
 import * as H from './harness.js';
 import { play, Manifest } from './questrun.js';
@@ -219,7 +223,12 @@ const m: Manifest = {
 
         { note: 'quick guide step 23: Sir Tiffy, and the promotion' },
         { setpos: [2998, 3373, 0], why: 'Falador Park' },
-        { talk: 'rd_teleporter_guy', want: 'Proselyte', why: 'the quest ends where it started' },
+        { note: 'Tiffy\'s menu words option one for where the quest is: "Do you have any jobs for me' },
+        { note: 'yet?" before it starts and "I have something to report." after, so the two talk' },
+        { note: 'steps in this run pick different strings. It is written out in full because these' },
+        { note: 'picks are exported to the helper table, and a player told to pick "report" is being' },
+        { note: 'shown the matcher rather than the option.' },
+        { talk: 'rd_teleporter_guy', picks: ['I have something to report.'], want: 'Proselyte', why: 'the quest ends where it started' },
         { wait: 4, why: 'the completion is queued' },
         { stage: 90 }
     ]
