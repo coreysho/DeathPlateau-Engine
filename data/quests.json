@@ -71238,19 +71238,7 @@
       {
        "kind": "loc",
        "text": "Push Wall.",
-       "why": "It is not a wall.",
-       "target": "slugmenace_false_wall",
-       "id": 19791,
-       "label": "Wall",
-       "at": [
-        2701,
-        9688
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Push Wall.",
-       "why": "Through it, which needs the orb.",
+       "why": "It is not a wall, and the orb is what gets you through it.",
        "target": "slugmenace_false_wall",
        "id": 19791,
        "label": "Wall",
@@ -71572,15 +71560,6 @@
        ]
       },
       {
-       "kind": "obj",
-       "text": "Use Fragment 1 on Swamp paste.",
-       "why": "She stops you.",
-       "target": "swamppaste",
-       "id": 1941,
-       "label": "Swamp paste",
-       "item": 11528
-      },
-      {
        "kind": "walk",
        "text": "Go along the dock to Jeb.",
        "at": [
@@ -71677,12 +71656,6 @@
        "bring": false
       },
       {
-       "name": "Swamp paste",
-       "id": 1941,
-       "n": 1,
-       "bring": true
-      },
-      {
        "name": "Sea slug glue",
        "id": 11524,
        "n": 1,
@@ -71755,19 +71728,6 @@
         2842,
         4833,
         0
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Use Blank mind rune on Altar.",
-       "why": "The pairing is checked, not assumed.",
-       "target": "air_altar",
-       "id": 2478,
-       "label": "Altar",
-       "item": 11539,
-       "at": [
-        2843,
-        4833
        ]
       },
       {
