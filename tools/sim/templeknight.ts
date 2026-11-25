@@ -51,17 +51,27 @@ if (!Environment.NODE_MEMBERS) {
 // Falador Park, the grass in front of Tiffy's bench. ^rd_park is 0_46_52_53_44, i.e. (2997, 3372).
 const PARK: [number, number] = [2997, 3372];
 const DEFENCE_LEVEL = 20; // ^initiate_defence_level
+const PROSELYTE_DEFENCE = 30; // ^proselyte_defence_level
+const PROSELYTE_PRAYER = 20; // ^proselyte_prayer_level
 const RD_DONE = 2; // ^recruitmentdrive_complete
 const INITIATE = ['basic_tk_helm', 'basic_tk_body', 'basic_tk_legs'];
 const PROSELYTE = ['proselyte_sallet', 'proselyte_hauberk', 'proselyte_cuisse', 'proselyte_tasset'];
 const WEARPOS = { hat: 0, torso: 4, legs: 7 };
 
 let bucket = 1;
-// WANTED! IS NOT STARTED ON A FRESH ACCOUNT (%wanted_main = 0), and ~wanted_tiffy_wants says yes
-// in that state - so a player who has only finished Recruitment Drive gets the THREE-option menu.
-// That is correct, and it is section 6's business; the sections that are about the shop on its own
-// put Wanted! behind them with ^wanted_complete so the menu is the two-option one.
+// NEITHER QUEST IS STARTED ON A FRESH ACCOUNT, and each says yes to Tiffy in that state - Wanted!
+// at %wanted_main 0, and The Slug Menace once Wanted! is done - so a player who has only finished
+// Recruitment Drive gets the THREE-option menu. That is correct, and it is section 6's business;
+// the sections that are about the shop on its own put both quests behind them so the menu is the
+// two-option one.
 const WANTED_DONE = 50; // ^wanted_complete
+const SLUG_DONE = 90; // ^slugmenace_complete
+
+/** Past both quests, which is the state in which Tiffy has nothing but the armoury to offer. */
+function clearOfQuests(p: Player) {
+    H.setVarBit(p, 'wanted_main', WANTED_DONE);
+    H.setVarBit(p, 'slugmenace_stage', SLUG_DONE);
+}
 
 function player(name: string, rd = 0): Player {
     const p = H.makePlayer(name, PARK[0], PARK[1], bucket++);
@@ -236,19 +246,52 @@ console.log('\n== initiate: Recruitment Drive, then 20 Defence');
 }
 
 // ============================================================ 2. the proselyte worn gate
-console.log('\n== proselyte: closed until The Slug Menace exists (the intended state for now)');
+console.log('\n== proselyte: The Slug Menace, then 30 Defence and 20 Prayer');
 {
     const p = player('prosewear', RD_DONE);
     for (const piece of PROSELYTE) H.give(p, piece, 1);
+
+    // Maxed, Recruitment Drive behind them, and NOT a proselyte: the rank is the only thing in the
+    // way, and ~tk_proselyte_rank is the one place the quest is named.
     for (const piece of PROSELYTE) {
         H.clearLogs();
         H.opheld(p, piece, 2);
         settle(p);
-        check(`${piece} is refused`, said(p, 'Only Temple Knight proselytes may wear this armour.'), true);
+        check(`${piece} is refused without the quest`, said(p, 'Only Temple Knight proselytes may wear this armour.'), true);
     }
-    // 99 in everything, the quest before it done, and still nothing worn: the only thing in the way
-    // is the rank, which is what ~tk_proselyte_rank returning false means.
-    check('nothing is worn', [H.wornName(p, WEARPOS.hat), H.wornName(p, WEARPOS.torso), H.wornName(p, WEARPOS.legs)], [null, null, null]);
+    check('and nothing is worn', [H.wornName(p, WEARPOS.hat), H.wornName(p, WEARPOS.torso), H.wornName(p, WEARPOS.legs)], [null, null, null]);
+
+    H.setVarBit(p, 'slugmenace_stage', SLUG_DONE);
+    p.setLevel(PlayerStat.PRAYER, PROSELYTE_PRAYER - 1);
+    H.clearLogs();
+    H.opheld(p, 'proselyte_sallet', 2);
+    settle(p);
+    check('with the quest but 19 Prayer it is refused', said(p, `Prayer level of ${PROSELYTE_PRAYER}`), true);
+    check('and still nothing is worn', H.wornName(p, WEARPOS.hat), null);
+
+    p.setLevel(PlayerStat.PRAYER, PROSELYTE_PRAYER);
+    p.setLevel(PlayerStat.DEFENCE, PROSELYTE_DEFENCE - 1);
+    H.clearLogs();
+    H.opheld(p, 'proselyte_sallet', 2);
+    settle(p);
+    check('at 29 Defence it is refused', said(p, `defence level of ${PROSELYTE_DEFENCE}`), true);
+    check('and still nothing is worn', H.wornName(p, WEARPOS.hat), null);
+
+    // Exactly the requirement, and not a point over: this is the line the whole set hangs on.
+    p.setLevel(PlayerStat.DEFENCE, PROSELYTE_DEFENCE);
+    for (const [piece, slot] of [
+        ['proselyte_sallet', WEARPOS.hat],
+        ['proselyte_hauberk', WEARPOS.torso],
+        ['proselyte_cuisse', WEARPOS.legs]
+    ] as [string, number][]) {
+        H.opheld(p, piece, 2);
+        settle(p);
+        check(`${piece} goes on`, H.wornName(p, slot), piece);
+    }
+    // The tasset is the skirt, so it takes the legs slot the cuisse is in and displaces it.
+    H.opheld(p, 'proselyte_tasset', 2);
+    settle(p);
+    check('the tasset takes the legs slot from the cuisse', [H.wornName(p, WEARPOS.legs), H.invCount(p, 'proselyte_cuisse')], ['proselyte_tasset', 1]);
     H.despawn(p);
 }
 
@@ -264,32 +307,70 @@ console.log('\n== before the quest he is just a man on a bench');
     H.despawn(p);
 }
 
-// ============================================================ 4. the initiate armoury
-console.log('\n== after the quest: the initiate counter');
+// ============================================================ 4. the two counters
+console.log('\n== an initiate gets the initiate counter');
 {
+    // AN INITIATE IS SOMEBODY WITH A QUEST STILL OPEN, necessarily: the only thing that closes
+    // Tiffy's jobs option is finishing The Slug Menace, and finishing it is what makes you a
+    // proselyte. So the initiate counter is always reached from the three-option menu, and the
+    // armour option is option 2 there.
     const p = player('initiate', RD_DONE);
-    H.setVarBit(p, 'wanted_main', WANTED_DONE);
+    H.setVarBit(p, 'wanted_main', WANTED_DONE); // Wanted! done, The Slug Menace not
     H.clearLogs();
     const lines = tiffyMenu(p);
-    check('two options', chatOptions(p), ['Can I buy some armour?', 'Nothing, thanks.']);
+    check('three options, the quest first', chatOptions(p), ['Do you have any jobs for me yet?', 'Can I buy some armour?', 'Nothing, thanks.']);
     check('and the greeting was said once', greetings(lines), 1);
 
-    const more = drive(p, [1]);
+    const more = drive(p, [2]);
     check('the initiate counter opens', p.modalMain, Component.getId('shop_template'));
     check('with the right title', shopTitle(p), 'Initiate Temple Knight Armoury');
     check('and he says what your rank allows', more.some(t => t.includes('Initiate issue only')), true);
     check('three pieces on the shelf, in the order the counter lists them', shelf('tk_initiate_armoury'), ['basic_tk_helm', 'basic_tk_legs', 'basic_tk_body']);
     H.despawn(p);
 
-    // "Nothing, thanks." is the other half of the menu and must open nothing.
+    // "Nothing, thanks." is the last option on both menus and must open nothing.
     const q = player('initiate2', RD_DONE);
     H.setVarBit(q, 'wanted_main', WANTED_DONE);
     H.clearLogs();
     tiffyMenu(q);
-    const bye = drive(q, [2]);
+    const bye = drive(q, [3]);
     check('declining is answered', bye.some(t => t.includes('decorative')), true);
     check('and opens no shop', q.modalMain, -1);
     H.despawn(q);
+}
+
+console.log('\n== a proselyte gets the proselyte counter, which carries both sets');
+{
+    const p = player('proselyte', RD_DONE);
+    clearOfQuests(p); // both quests behind them, so Tiffy has nothing but the shop to offer
+    H.clearLogs();
+    const lines = tiffyMenu(p);
+    check('two options once both quests are done', chatOptions(p), ['Can I buy some armour?', 'Nothing, thanks.']);
+    check('and the greeting was said once', greetings(lines), 1);
+
+    const more = drive(p, [1]);
+    check('the proselyte counter opens', shopTitle(p), 'Proselyte Temple Knight Armoury');
+    check('and he says the rank is yours', more.some(t => t.includes('Proselyte issue')), true);
+    // Both sets, in the order Old School lists them: sallet, cuisse, hauberk - initiate first.
+    check('seven pieces on the shelf', shelf('tk_proselyte_armoury'), [
+        'basic_tk_helm',
+        'basic_tk_legs',
+        'basic_tk_body',
+        'proselyte_sallet',
+        'proselyte_cuisse',
+        'proselyte_hauberk',
+        'proselyte_tasset'
+    ]);
+
+    // And it is a real till, not just a list: the hauberk is 12,000 because that is its cost.
+    const price = ObjType.get(ObjType.getId('proselyte_hauberk')).cost;
+    H.give(p, 'coins', 100000);
+    const before = coins(p);
+    H.invButton(p, 'shop_template:inv', 2, 5); // shelf slot 5 is the proselyte hauberk
+    settle(p);
+    check('a proselyte hauberk is bought at its cost', [H.invCount(p, 'proselyte_hauberk'), before - coins(p)], [1, price]);
+    check('which is 12,000', price, 12000);
+    H.despawn(p);
 }
 
 // ============================================================ 5. the till
@@ -299,9 +380,9 @@ console.log('\n== buying and selling');
     check('the helm costs 3,000 - the 377 value, not Old School\'s 6,000', helmPrice, 3000);
 
     const p = player('buyer', RD_DONE);
-    H.setVarBit(p, 'wanted_main', WANTED_DONE);
+    H.setVarBit(p, 'wanted_main', WANTED_DONE); // an initiate: the quest option is still on the menu
     H.give(p, 'coins', 100000);
-    tiffyTalk(p, [1]);
+    tiffyTalk(p, [2]);
     check('the shop is open', p.modalMain, Component.getId('shop_template'));
 
     // The helm is shelf slot 0, and inv_button2 on the shop's own strip is "Buy 1".
@@ -375,13 +456,54 @@ console.log('\n== Wanted! is an option on the same menu, not a hijack of the con
     check('the option reads for where the quest is', chatOptions(s)[0], 'About Solus Dellagar...');
     H.despawn(s);
 
-    // AFTER Wanted!, the quest stops asking for the conversation and the menu goes back to two.
+    // AFTER Wanted!, that quest stops asking for the conversation - and The Slug Menace starts.
+    // The option is still there and still first, but it is a different quest behind it.
     const t = player('wanted4', RD_DONE);
-    H.setVarBit(t, 'wanted_main', 50); // ^wanted_complete
+    H.setVarBit(t, 'wanted_main', WANTED_DONE);
     H.clearLogs();
     tiffyMenu(t);
-    check('back to two options once it is over', chatOptions(t), ['Can I buy some armour?', 'Nothing, thanks.']);
+    check('the option passes to the next quest', chatOptions(t), ['Do you have any jobs for me yet?', 'Can I buy some armour?', 'Nothing, thanks.']);
     H.despawn(t);
+}
+
+// ============================================================ 7. The Slug Menace shares it too
+console.log('\n== and so does The Slug Menace, which is the quest that opens the second counter');
+{
+    // NOT STARTED. ~slugmenace_tiffy_wants only says yes once Wanted! is done, so the two quests
+    // can never both be on the menu - which is why three options is the most it ever has.
+    const p = player('slug0', RD_DONE);
+    H.setVarBit(p, 'wanted_main', WANTED_DONE);
+    H.clearLogs();
+    const lines = tiffyTalk(p, [1]);
+    // The fragment stops short of "Knights?": ~chatnpc splits a line at 380 pixels and this one
+    // wraps, so a substring spanning the break matches nothing.
+    check('option 1 lands in The Slug Menace', lines.some(t => t.includes('missions for the Temple')), true);
+    check('without a second greeting', greetings(lines), 1);
+    H.despawn(p);
+
+    // MID-QUEST the option is reworded, because "any jobs yet?" is wrong once you are on one.
+    const q = player('slug1', RD_DONE);
+    H.setVarBit(q, 'wanted_main', WANTED_DONE);
+    H.setVarBit(q, 'slugmenace_stage', 10);
+    H.clearLogs();
+    const qlines = tiffyMenu(q);
+    check('the option reads for where the quest is', chatOptions(q)[0], 'I have something to report.');
+    check('and the greeting is said once', greetings(qlines), 1);
+    const more = drive(q, [1]);
+    check('and it reaches the quest', more.some(t => t.includes('Anything to report?')), true);
+    check('without repeating the greeting', greetings(more), 0);
+    H.despawn(q);
+
+    // AND THE ARMOURY IS REACHABLE THROUGHOUT, which is the whole point of the menu.
+    const r = player('slug2', RD_DONE);
+    H.setVarBit(r, 'wanted_main', WANTED_DONE);
+    H.setVarBit(r, 'slugmenace_stage', 10);
+    H.clearLogs();
+    tiffyMenu(r);
+    drive(r, [2]);
+    check('the counter opens mid-quest', shopTitle(r), 'Initiate Temple Knight Armoury');
+    check('and it is still the initiate one until the quest is done', r.modalMain, Component.getId('shop_template'));
+    H.despawn(r);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} failed`);
