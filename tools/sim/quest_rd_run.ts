@@ -57,10 +57,19 @@ const R7_DOOR: [number, number] = [2452, 4943];
 const m: Manifest = {
     quest: 'RECRUITMENT DRIVE',
     source: 'oldschool.runescape.wiki/w/Recruitment_Drive',
-    stageVar: 'rd_main',
-    done: 2, // ^recruitmentdrive_complete
+    // %rd_progress, not %rd_main. The quest's own stage holds three values - not started, started,
+    // complete - so it can buy at most three legs, and all seven tests sat inside the middle one:
+    // a fixed 56-step march through all seven rooms in order, shown to a player who sits five of
+    // them in whatever order the draw gave. %rd_progress is a nine-rung ladder written for this
+    // (quest_rd.constant): 0 not started, 1 see Sir Tiffy, 2-8 sitting test 1-7, 9 finished, so
+    // the nine `stage:` markers below are nine legs and the panel shows the test you are in.
+    // DeathPlateau-Bugs#72 option C. The exporter needed nothing taught - it already keys a quest
+    // on a varbit and emits its stageBits - so this is the whole of C on this side.
+    stageVar: 'rd_progress',
+    done: 9, // ^rd_progress_done
     start: TIFFY,
     steps: [
+        { note: 'wiki step 1: Sir Amik Varze is at the top of the western tower of the White Knights castle in Falador.' },
         { note: 'requirements: Black Knights’ Fortress and Druidic Ritual. No items - Sir Tiffy' },
         { note: 'sends you in with nothing carried and nothing worn, which is why this run gives' },
         { note: 'the player nothing at all.' },
@@ -72,7 +81,6 @@ const m: Manifest = {
         // WALKED, NOT WRITTEN. This was a setvar to ^rd_started with a note saying Sir Amik's
         // half is one dialogue - which it is, and it is also the first thing a player clicks in
         // this quest, so writing the stage instead left the helper with no opening step at all.
-        { note: 'wiki step 1: Sir Amik Varze, top of the western tower of the White Knights castle' },
         // The tower rather than the park, and by setpos as quest_blackknight_run reaches him -
         // that run STARTS on plane 2 beside him, and there is no walk from Falador park up three
         // floors that the router will take.
@@ -82,27 +90,33 @@ const m: Manifest = {
         { note: 'never asserted, so leg 0 carried the whole quest - the tower, Sir Amik, Sir Tiffy' },
         { note: 'and all seven rooms - and a player anywhere in the maze was being told to go up' },
         { note: 'the western tower of the White Knights castle and talk to Sir Amik, which is how' },
-        { note: 'they got in. The var only holds 0, 1 and 2, so this one marker is the whole of the' },
-        { note: 'split there is to make. DeathPlateau-Bugs#16.' },
+        { note: 'they got in. DeathPlateau-Bugs#16 was this one marker; #72 is the seven below it.' },
         { stage: 1 },
         { varis: 'rd_main', to: 1 },
+        { varis: 'rd_progress', to: 1, nomark: true },
 
         { note: 'wiki step 2: Sir Tiffy on the bench in Falador Park' },
         { setpos: TIFFY, why: 'to Sir Tiffy' },
         { talk: 'rd_teleporter_guy', picks: ["I'm ready. Test me."], want: 'Good luck', why: 'he starts the run' },
         { varis: 'rd_room1_initiated', to: 1 },
 
-        { note: 'a real run skips two of the seven at random. All seven bits are cleared here so' },
-        { note: 'every test is sat, and the walk starts at room 1.' },
-        { setvar: 'rd_room1_complete', to: 0 },
-        { setvar: 'rd_room2_complete', to: 0 },
-        { setvar: 'rd_room3_complete', to: 0 },
-        { setvar: 'rd_room4_complete', to: 0 },
-        { setvar: 'rd_room5_complete', to: 0 },
-        { setvar: 'rd_room6_complete', to: 0 },
-        { setvar: 'rd_room7_complete', to: 0 },
+        { note: 'a real run draws five of the seven at random. All seven are marked DRAWN here so' },
+        { note: 'every test is sat and the walk starts at room 1 - the draw bits are what this' },
+        { note: 'overrides now, not the completion bits, which is the whole of DeathPlateau-Bugs#72:' },
+        { note: 'the completion bits mean completion, so the helper can read them as progress.' },
+        { note: 'tools/sim/rddraw.ts covers the real five-of-seven draw this walk deliberately' },
+        { note: 'steps around.' },
+        { setvar: 'rd_room1_drawn', to: 1 },
+        { setvar: 'rd_room2_drawn', to: 1 },
+        { setvar: 'rd_room3_drawn', to: 1 },
+        { setvar: 'rd_room4_drawn', to: 1 },
+        { setvar: 'rd_room5_drawn', to: 1 },
+        { setvar: 'rd_room6_drawn', to: 1 },
+        { setvar: 'rd_room7_drawn', to: 1 },
         { setpos: R1, why: "into Sir Spishyus' room" },
 
+        { stage: 2 }, // sitting test 1
+        { note: 'wiki: Sir Spishyus - get the fox, the chicken and the grain across the bridge one at a time, and never leave the fox with the chicken or the chicken with the grain.' },
         { note: 'ROOM 1: fox, chicken, grain; the bridge takes one of them at a time. Leaving the' },
         { note: 'fox with the chicken, or the chicken with the grain, fails the room - so the five' },
         { note: 'crossings below are the only order that works.' },
@@ -127,6 +141,8 @@ const m: Manifest = {
         { varis: 'rd_room1_complete', to: 1 },
         { loc: 'rd_room1_exitdoor', at: R1_DOOR, hop: true, soft: true, why: 'through to the next test' },
 
+        { stage: 3 }, // sitting test 2
+        { note: 'wiki: Lady Table - look at her twelve statues, let her put them back, then touch the one that had been taken away.' },
         { note: 'ROOM 2: twelve statues, one taken away. Arrangement 1 leaves shell 6 empty, and' },
         { note: 'the shell left empty is the statue to touch once they are all back.' },
         { rng: 0, why: 'random(12) + 1 -> arrangement 1' },
@@ -136,6 +152,8 @@ const m: Manifest = {
         { varis: 'rd_room2_complete', to: 1 },
         { loc: 'rd_room2_exitdoor', at: R2_DOOR, hop: true, soft: true, why: 'on again' },
 
+        { stage: 4 }, // sitting test 3
+        { note: 'wiki: Sir Kuam Ferentse - kill Sir Leye with your bare hands. He is blessed against bladed weapons.' },
         { note: 'ROOM 3: Sir Leye is blessed against blades, so this is an unarmed kill - the run' },
         { note: 'carries no weapon at all, which makes every hit crush.' },
         { talk: 'rd_observer_room_3', want: 'blunt weapon', why: 'he explains the blessing' },
@@ -143,6 +161,8 @@ const m: Manifest = {
         { varis: 'rd_room3_complete', to: 1 },
         { loc: 'rd_room3_exitdoor', at: R3_DOOR, hop: true, soft: true, why: 'on again' },
 
+        { stage: 5 }, // sitting test 4
+        { note: 'wiki: Sir Tinley - stand perfectly still until he is satisfied. Doing anything at all fails the test.' },
         { note: 'ROOM 4: Sir Tinley. Thirteen ticks of p_delay and a queue a tick past it; any' },
         { note: 'click at all aborts the delay and the queue then fails the room.' },
         { talk: 'rd_observer_room_4', picks: ["I'm ready."], want: 'perfectly still', why: 'do nothing' },
@@ -150,6 +170,8 @@ const m: Manifest = {
         { varis: 'rd_room4_complete', to: 1 },
         { loc: 'rd_room4_exitdoor', at: R4_DOOR, hop: true, soft: true, why: 'on again' },
 
+        { stage: 6 }, // sitting test 5
+        { note: 'wiki: Sir Ren Itchood - read the riddle on the wall and tell him the word hidden in it.' },
         { note: 'ROOM 5: an acrostic. random(4) = 0 is the BITE riddle.' },
         { rng: 0, why: 'random(4) -> the BITE riddle' },
         { talk: 'rd_observer_room_5', picks: ['BITE'], want: 'That is the word', why: 'read the beginnings' },
@@ -157,6 +179,8 @@ const m: Manifest = {
         { varis: 'rd_room5_complete', to: 1 },
         { loc: 'rd_room5_exitdoor', at: R5_DOOR, hop: true, soft: true, why: 'on again' },
 
+        { stage: 7 }, // sitting test 6
+        { note: 'wiki: Miss Cheevers - mix her chemicals, set off the reaction and get the stone door open.' },
         { note: 'ROOM 6: Miss Cheevers. Two reactions out of the notes - cupric sulfate and water' },
         { note: 'for heat, gypsum and water for plaster - and a bronze casting of the key on the' },
         { note: 'wall. The stone door has to be opened as well as the exit: its tile is the only' },
@@ -204,6 +228,8 @@ const m: Manifest = {
         { varis: 'rd_room6_complete', to: 1 },
         { loc: 'rd_room6_exitdoor', at: R6_DOOR, hop: true, soft: true, why: 'on again' },
 
+        { stage: 8 }, // sitting test 7
+        { note: 'wiki: Hynn Terprett asks you a riddle - answer it.' },
         { note: 'ROOM 7: logic. random(3) = 0 is the starving wolves, answer three.' },
         { rng: 0, why: 'random(3) -> the wolves' },
         {
@@ -215,7 +241,8 @@ const m: Manifest = {
         { rng: null },
         { varis: 'rd_room7_complete', to: 1 },
         { loc: 'rd_room7_exitdoor', at: R7_DOOR, hop: true, soft: true, why: 'and out' },
-        { stage: 2 },
+        { stage: 9 }, // ^rd_progress_done - the exporter drops everything from `done` on
+        { varis: 'rd_main', to: 2 },
         { has: 'coins', n: 3000 },
         // The helm as well, as Old School's reward does. It was left out of the quest for years
         // because a comment in quest_rd.constant said the armour was not in this cache; it is
