@@ -44,7 +44,9 @@ export const helper: Manifest = {
         // THE ORB IS SOLD, NOT GIVEN: ten thousand coins, or a law rune, an enchanted gem and
         // molten glass. That is a real item requirement, so it is declared as one here.
         { give: 'coins', n: 10000, how: 'Sir Tiffy charges for the commorb' },
-        { talk: 'rd_teleporter_guy', picks: ['jobs', 'Go on.', "I'll pay"], why: 'he sells you a commorb' },
+        // The options in full rather than as substrings: these are EXPORTED to the quest helper,
+        // and a player told to pick "jobs" is being shown the sim's matcher, not their own menu.
+        { talk: 'rd_teleporter_guy', picks: ['Do you have any jobs for me yet?', 'Go on.', "I'll pay the 10000 coins."], why: 'he sells you a commorb' },
         { stage: 10 },
 
         { note: 'wiki step 2: contact Savant on the orb, and she briefs you' },
@@ -72,7 +74,7 @@ export const helper: Manifest = {
 
         { note: 'wiki step 9: back to Sir Tiffy with the hat' },
         // And the option is worded for where the quest is by the time you bring the hat back.
-        { talk: 'rd_teleporter_guy', picks: ['Solus Dellagar'], why: 'he takes it' },
+        { talk: 'rd_teleporter_guy', picks: ['About Solus Dellagar...'], why: 'he takes it' },
         { stage: 50 }
     ]
 };
