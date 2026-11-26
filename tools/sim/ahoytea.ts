@@ -74,6 +74,12 @@ console.log('== the tea itself was never the problem');
     H.give(p, 'bucket_milk');
     A.useHeld(p, 'bucket_milk', 'bowl_nettletea');
     check('  and milk goes into the boiled tea', H.invCount(p, 'bowl_nettletea_milky'), 1);
+    // THE MILK IS SPENT (DeathPlateau-Bugs#92, owner's call: "consume it"). The bucket used to
+    // stay full, so one bucket milked every tea in the game for ever. Asserted as a PAIR, because
+    // "the milk is gone" alone would also pass if the bucket vanished outright - and it should
+    // not: cakes.rs2 hands a bucket_empty back from the same recipe shape, and so does brewing.
+    check('  the bucket of milk is spent', H.invCount(p, 'bucket_milk'), 0);
+    check('  ...and the bucket comes back empty', H.invCount(p, 'bucket_empty'), 1);
 }
 
 console.log('\n== she hands the cup over, which is the half that did not exist');
@@ -111,7 +117,11 @@ console.log('\n== and being well prepared is not punished');
     // And from there the quest finishes, which is the whole point.
     A.useHeld(p, 'bowl_nettletea', 'chinacup_empty');
     H.give(p, 'bucket_milk');
+    const bucketsBefore = H.invCount(p, 'bucket_empty');
     A.useHeld(p, 'bucket_milk', 'chinacup_of_nettletea');
+    // The cup path spends it too - the two used to disagree about nothing, since neither spent it.
+    check('  the bucket of milk is spent on the cup as well', H.invCount(p, 'bucket_milk'), 0);
+    check('  ...and that bucket comes back empty too', H.invCount(p, 'bucket_empty'), bucketsBefore + 1);
     talkRead(p);
     check('  so she gets her tea and the quest moves on', H.getVarBit(p, 'ahoy_questvar'), TOLD);
 }
@@ -148,7 +158,11 @@ console.log('\n== the tea goes into the cup, from either side of the click');
     const p = atHer('milk_in_cup');
     H.give(p, 'chinacup_of_nettletea');
     H.give(p, 'bucket_milk');
+    const bucketsBefore = H.invCount(p, 'bucket_empty');
     A.useHeld(p, 'bucket_milk', 'chinacup_of_nettletea');
+    // The cup path spends it too - the two used to disagree about nothing, since neither spent it.
+    check('  the bucket of milk is spent on the cup as well', H.invCount(p, 'bucket_milk'), 0);
+    check('  ...and that bucket comes back empty too', H.invCount(p, 'bucket_empty'), bucketsBefore + 1);
     check('and milk can go in after the pour', H.invCount(p, 'chinacup_of_nettletea_milky'), 1);
 }
 
