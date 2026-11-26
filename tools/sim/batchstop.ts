@@ -43,7 +43,8 @@
  * this. The fault in them is read from the code being the same shape, and from glassblowing.
  */
 import * as H from './harness.js';
-import { check, R, player } from './a1lib.js';
+import { check, R, player, talk } from './a1lib.js';
+import World from '#/engine/World.js';
 import type Player from '#/engine/entity/Player.js';
 
 await H.boot();
@@ -226,6 +227,64 @@ function tryToLeave(p: Player) {
         check(`well: filling had started (${20 - leaving} filled)`, leaving < 20, true);
         check('  ...and a click lands within two ticks, as its comment claims', accepted > 0, true);
         check(`  ...and stops the run (${leaving} left, ${after} after)`, leaving - after <= 2, true);
+    }
+}
+
+// ================================================================= 5. the three sell-alls
+// THE LAST OF #86, and the half that was a decision rather than a defect. Baraek's two fur loops
+// and Lunderwin's cabbages paid one item per tick - twenty-eight ticks rooted to the spot for a
+// full pack, with every click of the player's DISCARDED rather than queued. lunderwin.rs2 said in
+// its own comment that Old School has no delay there and that RSC's had been copied on purpose, so
+// the three sat in holdloop_battery's table of deliberate holds, labelled as unsettled, until the
+// owner called it: Old School's pacing.
+//
+// WHAT IS MEASURED, and why it is ticks rather than a flag. These are conversations, and a
+// conversation has deliberate beats in it - Baraek takes p_delay(3) to look at the fur before he
+// names a price, and that is correct. So "never delayed", which sections 1 to 3 can assert, is the
+// wrong claim here. What was wrong is being held for as long as your PACK: 28 items against 3
+// ticks of examining. The bound below separates the two cleanly - about 4 with the fix, about 31
+// without.
+{
+    const PACK = 28;
+    /** Drive a conversation and return how many ticks the whole thing took. */
+    function sell(p: Player, npc: string, picks: string[]) {
+        const from = World.currentTick;
+        talk(p, npc, picks);
+        return World.currentTick - from;
+    }
+
+    {
+        const p = fresh('sell_fur');
+        H.give(p, 'fur', PACK);
+        const took = sell(p, 'baraek', ['buy my fur', 'OK, here you go']);
+        check(`baraek: all ${PACK} furs sold (${H.invCount(p, 'fur')} left)`, H.invCount(p, 'fur'), 0);
+        check(`  ...paid 12 each (${H.invCount(p, 'coins')})`, H.invCount(p, 'coins'), PACK * 12);
+        // THE REPORT, measured. A tick per fur is what went: the whole conversation now costs less
+        // than the selling alone used to.
+        check(`  ...and the whole conversation cost ${took} ticks, not ${PACK}+ (bound 20)`, took < 20, true);
+    }
+
+    {
+        const p = fresh('sell_grey');
+        H.give(p, 'grey_wolf_fur', PACK);
+        const took = sell(p, 'baraek', ['buy my grey wolf fur', 'Yep, sounds fine']);
+        check(`baraek: all ${PACK} grey wolf furs sold (${H.invCount(p, 'grey_wolf_fur')} left)`, H.invCount(p, 'grey_wolf_fur'), 0);
+        check(`  ...paid 120 each (${H.invCount(p, 'coins')})`, H.invCount(p, 'coins'), PACK * 120);
+        check(`  ...and the whole conversation cost ${took} ticks (bound 20)`, took < 20, true);
+    }
+
+    {
+        const p = fresh('sell_cabbage');
+        H.give(p, 'cabbage', PACK);
+        const mark = H.mesgs.length;
+        const took = sell(p, 'fairy_lunderwin', ['sell you all my cabbages']);
+        check(`lunderwin: all ${PACK} cabbages sold (${H.invCount(p, 'cabbage')} left)`, H.invCount(p, 'cabbage'), 0);
+        check(`  ...paid 100 each (${H.invCount(p, 'coins')})`, H.invCount(p, 'coins'), PACK * 100);
+        check(`  ...and the whole conversation cost ${took} ticks (bound 20)`, took < 20, true);
+        // ONE LINE PER CABBAGE STAYS. Old School prints one, so the loop keeps its message even
+        // though it no longer keeps its delay - the delay was RSC's, the line is not.
+        const said = H.mesgs.slice(mark).filter(m => m.who === p.username && m.text.includes('You sell a cabbage')).length;
+        check(`  ...and said so once per cabbage (${said})`, said, PACK);
     }
 }
 
