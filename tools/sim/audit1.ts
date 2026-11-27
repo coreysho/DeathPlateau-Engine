@@ -1013,6 +1013,33 @@ if (run('monk')) {
     journalStages(p, 'drunkmonkquest', 'questlist:drunkmonk', [0, 10, 20, 30, 40, 50, 60, 70, 80]);
 }
 
+// ============================================================================ Vampire Slayer
+// THE JOURNAL SENT PLAYERS TO THE WRONG INN. dr_harlow stands in the Blue Moon Inn, south of
+// Varrock square, and the journal named the Jolly Boar - north-east of the city, past the
+// wilderness edge, with a different bartender. Reported as pointing at "the old location"
+// (DeathPlateau-Bugs#116), which it literally was: Harlow drank in the Jolly Boar until the update
+// of 7 February 2006 moved him to the Blue Moon, and this is a 377 server - so the move is already
+// history here and the line was describing a game older than the cache it ships with.
+//
+// Morgan's line had already been corrected and this one was missed with it.
+//
+// ASSERTED FROM BOTH SIDES - the right inn named AND the wrong one absent - because deleting the
+// sentence altogether would pass a check that only asked for one of them. And the npc's own tile
+// is pinned next to it: a journal naming the right inn is worth nothing if Harlow is somewhere
+// else, which is the half that made the report true rather than merely inconsistent.
+if (run('vampire')) {
+    console.log('VAMPIRE SLAYER');
+    const p = player('vampj', 3222, 3397);
+    // ^quest_vampire_started: Morgan spoken to, Harlow not yet - the stage whose page names the inn.
+    H.setVar(p, 'vampire', 1);
+    const t = journal(p, 'questlist:vampire');
+    check('the journal sends you to the Blue Moon Inn', t.includes('Blue Moon Inn'), true);
+    check('  ...and not to the Jolly Boar', t.includes('Jolly Boar'), false);
+    const h = findNpc('dr_harlow', p);
+    check('  ...which is where dr_harlow actually stands', [h.startX, h.startZ], [3222, 3397]);
+    journalStages(p, 'vampire', 'questlist:vampire', [0, 1, 2, 3]);
+}
+
 // ============================================================================ Goblin Diplomacy
 if (run('gobdip')) {
     console.log('GOBLIN DIPLOMACY');
