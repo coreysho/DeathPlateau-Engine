@@ -1190,7 +1190,7 @@ export default class Player extends PathingEntity {
             typeId = this.targetSubject.com;
         }
 
-        return ScriptProvider.getByTrigger(this.targetOp + 7, typeId, categoryId) ?? null;
+        return this.triggerWithFace(this.targetOp + 7, typeId, categoryId);
     }
 
     getApTrigger() {
@@ -1224,7 +1224,69 @@ export default class Player extends PathingEntity {
             typeId = this.targetSubject.com;
         }
 
-        return ScriptProvider.getByTrigger(this.targetOp, typeId, categoryId) ?? null;
+        return this.triggerWithFace(this.targetOp, typeId, categoryId);
+    }
+
+    /**
+     * The face a multiloc or multinpc target is showing THIS player, or null if it has none.
+     *
+     * The same resolution OpLocHandler and OpNpcHandler already do to decide whether the option a
+     * client clicked exists: varp first, then varbit, bounds-checked, with -1 meaning "no face for
+     * this state". Kept as a copy of theirs on purpose and not a shared helper, so that the three
+     * cannot drift apart without somebody reading all of them - and so that this change touches
+     * neither handler.
+     */
+    private multiFace(): LocType | NpcType | null {
+        const target = this.target;
+        if (target instanceof Loc) {
+            const base = LocType.get(target.type);
+            const state = base.multivarp !== -1 ? (this.getVar(base.multivarp) as number) : base.multivarbit !== -1 ? this.getVarBit(base.multivarbit) : -1;
+            return state >= 0 && state < base.multiloc.length && base.multiloc[state] !== -1 ? LocType.get(base.multiloc[state]) : null;
+        }
+        if (target instanceof Npc) {
+            const base = NpcType.get(target.type);
+            const state = base.multivarp !== -1 ? (this.getVar(base.multivarp) as number) : base.multivarbit !== -1 ? this.getVarBit(base.multivarbit) : -1;
+            return state >= 0 && state < base.multinpc.length && base.multinpc[state] !== -1 ? NpcType.get(base.multinpc[state]) : null;
+        }
+        return null;
+    }
+
+    /**
+     * Find the script for a click, falling back to the multiloc/multinpc FACE when the placed type
+     * claims nothing (DeathPlateau-Bugs#106, owner's call: "C").
+     *
+     * THE ENGINE VALIDATED AGAINST THE FACE AND DISPATCHED AGAINST THE SHELL. OpLocHandler resolves
+     * a multiloc to decide whether the clicked option exists, then setInteraction takes the Loc
+     * entity and the trigger lookup reads the type the map PLACED - so a handler written on a face
+     * could never fire, and the player got "Nothing interesting happens." with nothing reported.
+     * Three furnace and fountain use-ons, a Rum Deal cannon option, Devin Mendelberg and Alice the
+     * camel were all written that way.
+     *
+     * A FALLBACK, NOT A PRECEDENCE CHANGE, and that is the whole of the decision. Resolving the face
+     * FIRST would move 77 loc pairs over 37,717 placed locs and 127 npc pairs onto different
+     * scripts - Swan Song's opener and Azzanadra are deliberately written on the shell - so the
+     * face is only consulted when nothing the shell could claim is there.
+     *
+     * "NOTHING THE SHELL CLAIMS" EXCLUDES THE GLOBAL DEFAULT. getByTrigger falls through to a bare
+     * [op,_] script, and counting that as a claim would let any global handler hide a face's real
+     * one for ever. So the shell's own type and category are asked specifically, then the face's,
+     * and the global default is only the answer when none of them has one - which is also exactly
+     * today's answer, so a target with no face behaves byte for byte as it did.
+     */
+    private triggerWithFace(trigger: number, typeId: number, categoryId: number) {
+        const found = ScriptProvider.getByTrigger(trigger, typeId, categoryId) ?? null;
+        const face = this.multiFace();
+        if (!face) {
+            return found;
+        }
+        if ((typeId !== -1 && ScriptProvider.getByTriggerSpecific(trigger, typeId)) || (categoryId !== -1 && ScriptProvider.getByTriggerSpecific(trigger, -1, categoryId))) {
+            return found;
+        }
+        // A spell or item on a target is keyed by its component, so the type half of the lookup is
+        // that and not the face's id - only the category comes from the face then.
+        const faceTypeId = this.targetSubject.com !== -1 ? this.targetSubject.com : face.id;
+        const viaFace = ScriptProvider.getByTriggerSpecific(trigger, faceTypeId) ?? (face.category !== -1 ? ScriptProvider.getByTriggerSpecific(trigger, -1, face.category) : undefined);
+        return viaFace ?? found;
     }
 
     setInteraction(interaction: Interaction, target: Entity, op: TargetOp, com?: number): boolean {
