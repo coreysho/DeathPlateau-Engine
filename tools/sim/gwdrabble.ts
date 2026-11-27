@@ -125,12 +125,13 @@ const SHARED: [string, string | null, number | null, string | null][] = [
     // bloodvelds leave no bones - so a pinned roll stands in as the proof the table ran.
     ['gwd_bloodveld', null, 0, 'coins'],
     ['gwd_pyrefiend', 'ashes', null, null],
-    // The icefiend's config says ashes and ITS TABLE NEVER DROPS THEM: icefiend.rs2 has no
+    // The icefiend's config says ashes and ITS TABLE USED NOT TO DROP THEM: icefiend.rs2 had no
     // obj_add(npc_param(death_drop)) line at all, which is the "a table that forgets that row is a
-    // monster that leaves nothing" trap gwd_bodyguard_drops.rs2 records. That is true of the
-    // ORDINARY icefiend too and is not this issue's to fix, so it is pinned like the bloodveld and
-    // filed separately rather than papered over here.
-    ['gwd_icefiend', null, 0, 'waterrune'],
+    // monster that leaves nothing" trap gwd_bodyguard_drops.rs2 records. That was true of the
+    // ORDINARY icefiend too, so it was pinned around here like the bloodveld and filed as
+    // DeathPlateau-Bugs#109 rather than papered over. It is fixed there, so the God Wars copy is
+    // asserted like the pyrefiend now: a handful of ashes for every kill that happened.
+    ['gwd_icefiend', 'ashes', null, null],
     ['gwd_imp', 'ashes', null, null]
 ];
 for (const [name, bone, at, want] of SHARED) {
@@ -146,6 +147,22 @@ for (const [name, bone, at, want] of SHARED) {
         const { got, killed } = loot(name, 3, at);
         check(`  ...and it runs: a pinned roll gives ${want}`, [killed, got.has(want!)], [3, true]);
     }
+}
+
+// ------------------------------------------------------------------ the ordinary icefiend
+console.log('THE ORDINARY ICEFIEND, WHICH IS THE ONE A SLAYER PLAYER ACTUALLY MEETS');
+// DeathPlateau-Bugs#109. The God Wars copy above is the same creature on the same table, but it
+// is a corner of the map; slayer_icefiend_1 is the Ice Mountain icefiend that a Slayer task sends
+// people to, and "twelve kills, zero ashes" was measured on that one. Its config says
+// param=death_drop,ashes and the table had no line that dropped it.
+{
+    check('slayer_icefiend_1 has a table at all', H.hasScript('[ai_queue3,slayer_icefiend_1]'), true);
+    const { got, killed } = loot('slayer_icefiend_1', 10);
+    check(`  ...and it drops its ashes on all ${killed} kills`, [killed >= 9, (got.get('ashes') ?? 0) >= killed], [true, true]);
+    // AND THE ROLLS STILL RUN: the new line goes before them and must not have replaced them.
+    // A pinned roll 0 is the water rune branch (random(128) < 4).
+    const rolled = loot('slayer_icefiend_1', 3, 0);
+    check('  ...and its rune roll is still there beside it', [rolled.killed, rolled.got.has('waterrune')], [3, true]);
 }
 
 // ------------------------------------------------------------------ the ork, branch by branch
