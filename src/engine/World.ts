@@ -1137,6 +1137,18 @@ class World {
                     queueDiscardable = false;
                     break;
                 }
+                // THE MIDDLE OPTION (DeathPlateau-Bugs#105, owner's call): a FORCED logout may release a
+                // BARE delay, and nothing else. See isBareDelay for why that, and only that, is safe.
+                // Released here, before the access test below, so the logout goes through this very
+                // tick instead of waiting for the next one.
+                if (force && this.shouldReleaseBareDelay(player, queueDiscardable)) {
+                    printWarning(
+                        `logout override for ${player.username}: a delay with no script behind it held a FORCED ` +
+                            `logout for ${this.currentTick - player.logoutStallSince} ticks (reason "${player.logoutReason ?? 'unknown'}"). ` +
+                            'Releasing it; nothing was queued and no script was running, so nothing is cut off.'
+                    );
+                    player.delayed = false;
+                }
                 if (player.canAccess() && player.engineQueue.head() === null && queueDiscardable) {
                     const script = ScriptProvider.getByTriggerSpecific(ServerTriggerType.LOGOUT, -1, -1);
                     if (!script) {
@@ -1160,10 +1172,10 @@ class World {
                     // slot in World.players for as long as the world runs, getHumanPlayerCount()
                     // reports them online, and the only cure anybody found was restarting.
                     //
-                    // This does not change the decision. It records when the stall began and says
-                    // which of the four conditions is holding it, so the next occurrence leaves
-                    // evidence instead of a restart. Whether a forced logout should eventually
-                    // override them is a behaviour question and is not answered here:
+                    // It records when the stall began and says which of the four conditions is holding
+                    // it, so the next occurrence leaves evidence instead of a restart. The one case
+                    // that no longer waits for a restart is a bare delay on a forced logout, handled
+                    // just above; everything else here still does, deliberately.
                     // DeathPlateau-Bugs#105.
                     this.reportStalledLogout(player, force, queueDiscardable);
                 }
@@ -1183,6 +1195,47 @@ class World {
         }
 
         this.cycleStats[WorldStat.LOGOUT] = Date.now() - start;
+    }
+
+    /**
+     * HOW LONG A FORCED LOGOUT WAITS ON A BARE DELAY BEFORE IT IS RELEASED, in ticks (60s).
+     *
+     * LONGER THAN THE REPORT THRESHOLD ON PURPOSE: the warning above fires at 50 ticks, so the
+     * journal says who is stuck and why for a full 50 ticks before anything is done about it, and a
+     * delay that is merely long gets that long to finish by itself. It is also past every delay the
+     * content sets on purpose - the longest queue delay anywhere is 255 ticks, which is a queue and
+     * not a bare delay, and is not touched.
+     */
+    private static readonly LOGOUT_OVERRIDE_TICKS: number = 100;
+
+    /**
+     * IS A DELAY ALL THAT IS HOLDING THIS LOGOUT - with nothing behind it that releasing it could
+     * cut off? (DeathPlateau-Bugs#105, owner's call: "bare-delayed middle option".)
+     *
+     * The whole risk of overriding a refused logout is the one the refusal exists for: `protect`,
+     * `delayed` and the queues are there so that a trade, a death, or an item halfway between two
+     * inventories is not interrupted. So this is true only when NONE of that is in play:
+     *
+     *   - delayed, because that is the thing being released;
+     *   - NOT protect, no modal, nothing in the engine queue and nothing in the player queue -
+     *     there is no pending work for the release to strand;
+     *   - and NO ACTIVE SCRIPT. A parked script is a script that will RESUME when the delay ends
+     *     and carry on doing whatever it was in the middle of, which is precisely what must not be
+     *     cut short. A delay with no script is a timer with nothing left to time.
+     *
+     * AND ONLY ON A FORCED LOGOUT, and only after LOGOUT_OVERRIDE_TICKS of it. A forced logout means
+     * the client is gone - timed out, or idle in combat - so nobody is waiting on the delay. A
+     * logout the player asked for from a live client is left alone: it is not what was reported, and
+     * a connected player has other ways out of a stuck state than the engine deciding for them.
+     */
+    private shouldReleaseBareDelay(player: Player, queueDiscardable: boolean): boolean {
+        if (!player.delayed || player.logoutStallSince === -1) {
+            return false;
+        }
+        if (this.currentTick - player.logoutStallSince < World.LOGOUT_OVERRIDE_TICKS) {
+            return false;
+        }
+        return !player.protect && !player.containsModalInterface() && player.engineQueue.head() === null && queueDiscardable && player.activeScript === null;
     }
 
     // ONE LINE PER STALLED PLAYER EVERY 30 SECONDS, the same shape as the slow-tick and
