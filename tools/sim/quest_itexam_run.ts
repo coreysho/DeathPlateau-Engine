@@ -81,7 +81,7 @@ const OUT_OF_THE_CENTRE: Step[] = [
 const m: Manifest = {
     quest: 'THE DIGSITE',
     source: 'oldschool.runescape.wiki/w/The_Digsite/Quick_guide',
-    stageVar: 'itexamlevel',
+    stageVar: 'itexam_progress',
     done: 9, // ^itexam_complete
     start: EXAMINER,
     steps: [
