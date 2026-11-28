@@ -209,10 +209,45 @@ for (let id = 0; id < NpcType.count; id++) {
         if (/^attack$/i.test(label)) {
             continue;
         }
-        const anyKinClaims = family.some(f => {
-            const t = NpcType.get(f);
-            return claimed(ServerTriggerType.OPNPC1 + op, f, t.category) || claimed(ServerTriggerType.APNPC1 + op, f, t.category);
-        });
+        // WHOSE TRIGGER ANSWERS THE CLICK, and the one place the family rule had to be narrowed.
+        // The engine dispatches on the type of the npc STANDING THERE - Player.getOpTrigger reads
+        // the entity's own type, and OpNpcHandler resolves multinpc only to decide whether the
+        // option exists at all. So a kinsman's trigger is an answer only for a type the map never
+        // places on its own: a face reachable solely as some shell's appearance, where the click
+        // really does arrive on the shell. A type the map DOES place must claim its own option, or
+        // that spawn's Talk-to dies.
+        //
+        // TWO OPTIONS IN THIS BUILD WERE EXCUSED THAT WAY, and the fuzzer found one of them by
+        // walking up to it and clicking: `[opnpc1,swan_colonist_1] does not exist`, from a bot at
+        // the Swan Song colony. Devin Mendelberg stands there beside George Laxmeister and Ramara
+        // du Croissant, whose dead Talk-to has been in this baseline all along; the only reason his
+        // was not is that swan_boat_colonist lists swan_colonist_1 in multinpc and claims the
+        // option - and swan_boat_colonist is placed in NO map square, so the row was excused by a
+        // type with no spawn at all. Content#107 gives the colonist a trigger of his own, and his
+        // row is in the baseline anyway: this side has to be mergeable on its own, and a row that
+        // has since been fixed prints as `fixed` and asks for a --baseline, where a missing row
+        // whose fix has not landed yet prints as NEW and fails the build.
+        //
+        // The other is tbwt_tiadeche, placed once at 2528,4589, excused by the two
+        // tbwt_tiadeche_multinpc_* shells at 2782,3056 and 2911,3118 that carry the Trio's
+        // conversations. That one is still dead and is in the baseline now - though nothing in the
+        // content names a coordinate anywhere in that map square (m39_71, with a general_karambwan
+        // and a seabird beside him), so it reads as an unused import spawn rather than a click
+        // anybody meets. "Reachable" in this file's counting means the map places it, not that a
+        // player can walk there.
+        //
+        // STILL NOT COVERED, deliberately: a placed SHELL whose trigger lives only on a face. The
+        // shell's own op labels are usually empty, so nothing is reported, and knowing which face
+        // a shell is showing means reading the varbit it switches on. That one needs a click.
+        const ownClaims = claimed(ServerTriggerType.OPNPC1 + op, id, type.category) || claimed(ServerTriggerType.APNPC1 + op, id, type.category);
+        const placedItself = (npcCount.get(id) ?? 0) > 0;
+        const anyKinClaims =
+            ownClaims ||
+            (!placedItself &&
+                family.some(f => {
+                    const t = NpcType.get(f);
+                    return claimed(ServerTriggerType.OPNPC1 + op, f, t.category) || claimed(ServerTriggerType.APNPC1 + op, f, t.category);
+                }));
         const where = family.flatMap(f => npcPlaces.get(f) ?? []).slice(0, 3);
         const line = `npc  ${type.debugname ?? id} op${op + 1}="${label}"`;
         if (!anyKinClaims) {
