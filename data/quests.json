@@ -58659,11 +58659,11 @@
       },
       {
        "kind": "loc",
-       "text": "Use Broken furnace.",
+       "text": "Use Furnace.",
        "why": "Clay and water.",
        "target": "burgh_furnace_multiloc",
        "id": 12805,
-       "label": "Broken furnace",
+       "label": "Furnace",
        "at": [
         3527,
         3209
@@ -58671,11 +58671,11 @@
       },
       {
        "kind": "loc",
-       "text": "Use Broken furnace.",
+       "text": "Use Furnace.",
        "why": "Five coal.",
        "target": "burgh_furnace_multiloc",
        "id": 12805,
-       "label": "Broken furnace",
+       "label": "Furnace",
        "at": [
         3527,
         3209
@@ -58683,11 +58683,11 @@
       },
       {
        "kind": "loc",
-       "text": "Use Broken furnace.",
+       "text": "Use Furnace.",
        "why": "A tinderbox.",
        "target": "burgh_furnace_multiloc",
        "id": 12805,
-       "label": "Broken furnace",
+       "label": "Furnace",
        "at": [
         3527,
         3209
@@ -59441,11 +59441,11 @@
       },
       {
        "kind": "loc",
-       "text": "Use Silver bar on Broken furnace.",
+       "text": "Use Silver bar on Furnace.",
        "why": "Open the casting panel.",
        "target": "burgh_furnace_multiloc",
        "id": 12805,
-       "label": "Broken furnace",
+       "label": "Furnace",
        "item": 2355,
        "at": [
         3527,
