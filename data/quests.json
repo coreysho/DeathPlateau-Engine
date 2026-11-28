@@ -54597,7 +54597,7 @@
        "text": "Shot at the gate, arrested, and pick the cell lock the Marim gate."
       },
       {
-       "at": 4,
+       "at": 8,
        "text": "Garkor, who now tells you where the mould and the dentures are instead of handing them over."
       }
      ],
@@ -54628,6 +54628,46 @@
        "at": [
         2719,
         2766
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Pick-lock Jail Door.",
+       "why": "Pick the cell lock.",
+       "target": "mm_jail_door",
+       "id": 4799,
+       "label": "Jail Door",
+       "at": [
+        2771,
+        2795
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go out into Marim.",
+       "at": [
+        2771,
+        2797
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Pick-lock Jail Door.",
+       "why": "Pick the cell lock.",
+       "target": "mm_jail_door",
+       "id": 4799,
+       "label": "Jail Door",
+       "at": [
+        2771,
+        2795
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go out into Marim.",
+       "at": [
+        2771,
+        2797
        ]
       },
       {
@@ -54898,6 +54938,46 @@
        "at": [
         2719,
         2766
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Pick-lock Jail Door.",
+       "why": "Pick the cell lock.",
+       "target": "mm_jail_door",
+       "id": 4799,
+       "label": "Jail Door",
+       "at": [
+        2771,
+        2795
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go out into Marim.",
+       "at": [
+        2771,
+        2797
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Pick-lock Jail Door.",
+       "why": "Pick the cell lock.",
+       "target": "mm_jail_door",
+       "id": 4799,
+       "label": "Jail Door",
+       "at": [
+        2771,
+        2795
+       ]
+      },
+      {
+       "kind": "walk",
+       "text": "Go out into Marim.",
+       "at": [
+        2771,
+        2797
        ]
       },
       {
