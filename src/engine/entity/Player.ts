@@ -53,6 +53,7 @@ import IfClose from '#/network/game/server/model/IfClose.js';
 import IfSetTab from '#/network/game/server/model/IfSetTab.js';
 import LastLoginInfo from '#/network/game/server/model/LastLoginInfo.js';
 import MessageGame from '#/network/game/server/model/MessageGame.js';
+import LootFeed from '#/engine/entity/LootFeed.js';
 import MidiJingle from '#/network/game/server/model/MidiJingle.js';
 import MidiSong from '#/network/game/server/model/MidiSong.js';
 import ResetAnims from '#/network/game/server/model/ResetAnims.js';
@@ -385,6 +386,9 @@ export default class Player extends PathingEntity {
     weakQueue: LinkList<PlayerQueueRequest> = new LinkList();
     engineQueue: LinkList<PlayerQueueRequest> = new LinkList();
     cameraPackets: LinkList<CameraInfo> = new LinkList();
+
+    // custom (2026-11-28) - what this player's loot tracker is told about their kills. See LootFeed.
+    lootFeed: LootFeed = new LootFeed();
     timers: Map<number, EntityTimer> = new Map();
     tabs: number[] = new Array(14).fill(-1);
     modalState = ModalState.NONE;
