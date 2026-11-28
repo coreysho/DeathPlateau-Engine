@@ -37,6 +37,7 @@ import * as H from './harness.js';
 import { check, R, player } from './a1lib.js';
 import { PlayerQueueType } from '#/engine/entity/PlayerQueueRequest.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
+import ScriptRunner from '#/engine/script/ScriptRunner.js';
 import World from '#/engine/World.js';
 
 await H.boot();
@@ -47,12 +48,13 @@ const warnings: string[] = [];
 const realLog = console.log.bind(console);
 console.log = (...args: unknown[]) => {
     const line = args.map(a => String(a)).join(' ');
-    if (line.includes('logout stalled')) {
+    if (line.includes('logout stalled') || line.includes('logout override')) {
         warnings.push(line);
     }
     realLog(...args);
 };
 const stallLines = (username: string): string[] => warnings.filter(l => l.includes(`logout stalled for ${username}`));
+const overrideLines = (username: string): string[] => warnings.filter(l => l.includes(`logout override for ${username}`));
 
 const online = () => World.getHumanPlayerCount();
 const here = (username: string) => !!World.getPlayerByUsername(username);
@@ -117,7 +119,7 @@ console.log('\n== 3. a delay that still has an end: refused while it runs, finis
     check('  ...and the stall record is cleared with it', p.logoutStallSince, -1);
 }
 
-console.log('\n== 4. a delay with no end: refused for ever, forced or not, and now named');
+console.log('\n== 4. a delay with no end: a REQUESTED logout is refused for ever, and now named');
 {
     const p: any = player('stall_held', 3222, 3220, 0);
     H.tick(2);
@@ -147,23 +149,11 @@ console.log('\n== 4. a delay with no end: refused for ever, forced or not, and n
     H.tick(2);
     check('  ...and repeats once the interval is up', stallLines('stall_held').length, written + 1);
 
-    // AND A FORCED LOGOUT IS NO BETTER, which is the part that makes this a defect rather than a
-    // delay. 100 ticks of silence is World.TIMEOUT_NO_RESPONSE: the engine decides to log them out
-    // itself, force = true, and the refusal is identical.
-    p.lastResponse = World.currentTick - 200;
-    p.lastConnected = World.currentTick - 200;
-    const beforeForce = stallLines('stall_held').length;
-    tickSilent(60);
-    check('the engine forces the logout after 60s of silence', p.logoutReason, 'no response for 60s');
-    check('  ...and it is refused on the same terms', here('stall_held'), true);
-    check(
-        '  ...with the line now saying FORCED',
-        stallLines('stall_held')
-            .slice(beforeForce)
-            .some(l => l.includes('FORCED')),
-        true
-    );
-    check('  ...and they are STILL counted online', online(), before);
+    // A FORCED LOGOUT USED TO BE NO BETTER, which is the part that made this a defect and not just
+    // a delay: the engine decides to log them out itself after 100 ticks of silence, force = true,
+    // and the refusal was identical. That is no longer true of THIS case - a bare delay - and it
+    // is pinned in section 6, which also pins the cases where it is deliberately still true. This
+    // section stays on the requested logout, where the client is connected and nothing is overridden.
 
     // THE ONE OVERRIDE, and the reason a restart cured it. Read as a plain call rather than by
     // cycling the world, so that nothing else in this run sees a shutting-down world.
@@ -231,6 +221,121 @@ console.log('\n== 5. a queued request does it too, and is named separately');
     H.tick(4);
     check('clearing both lets them go', here('stall_queue'), false);
     check('  ...and the count comes down', online(), before - 1);
+}
+
+console.log('\n== 6. the middle option: a FORCED logout releases a BARE delay, and only that');
+// DeathPlateau-Bugs#105, owner's call. Everything above is what is still refused; this is the one
+// thing that no longer is. THE RISK OF OVERRIDING A REFUSED LOGOUT is the one the refusal exists for -
+// protect, delayed and the queues are there so that a trade, a death or an item halfway between two
+// inventories is not interrupted - so the override is true only when none of that is in play.
+//
+// EVERY SCENARIO CLEANS UP BEFORE THE NEXT. tickSilent cycles the world without refreshing anybody's
+// connection, so a player left stuck by one scenario would time out and become a forced logout in
+// the next, and the next would be measuring the last.
+const forceSilent = (p: any) => {
+    p.lastResponse = World.currentTick - 200;
+    p.lastConnected = World.currentTick - 200;
+};
+const bareDelay = (p: any) => {
+    p.delayed = true;
+    p.delayedUntil = World.currentTick + 1 + 1000000;
+};
+{
+    // ---- A. the override itself, and its threshold ----
+    const p: any = player('stall_bare', 3222, 3222, 0);
+    H.tick(2);
+    const before = online();
+    bareDelay(p);
+    forceSilent(p);
+    tickSilent(1);
+    check('the engine forces the logout', p.logoutReason, 'no response for 60s');
+    check('  ...and a stall has begun', p.logoutStallSince !== -1, true);
+    // READ NOW. A successful logout resets logoutStallSince to -1 on the way out, so measuring the
+    // wait afterwards against it gave currentTick + 1 - 414 ticks of "stall" for a player who was
+    // released at 100. The first draft of this check did exactly that.
+    const since = p.logoutStallSince;
+
+    // THE THRESHOLD, from the engine's own record of when the stall began rather than this file's
+    // idea of how many ticks have passed. Still refused well inside it.
+    tickSilent(90);
+    check('90 ticks in, it is still refused - the delay gets time to finish by itself', here('stall_bare'), true);
+    check('  ...with nothing overridden yet', overrideLines('stall_bare').length, 0);
+    check(
+        '  ...and the ordinary line naming the delay has been written',
+        stallLines('stall_bare').some(l => l.includes('held by delayed') && l.includes('FORCED')),
+        true
+    );
+
+    // THEN IT GOES, ON THE TICK THE THRESHOLD IS REACHED. Counted rather than assumed.
+    let guard = 0;
+    while (here('stall_bare') && guard++ < 30) {
+        tickSilent(1);
+    }
+    const waited = World.currentTick - since;
+    check('past the threshold the forced logout goes through', here('stall_bare'), false);
+    check(`  ...after ${waited} ticks of stall, which is 100 or one over`, waited >= 100 && waited <= 102, true);
+    check('  ...and they stop being counted online', online(), before - 1);
+    check('  ...with exactly one override line, not one per tick', overrideLines('stall_bare').length, 1);
+    check('  ...saying why nothing was cut off', overrideLines('stall_bare')[0]?.includes('no script behind it'), true);
+}
+
+{
+    // ---- B. a REQUESTED logout from a live client is not touched ----
+    const p: any = player('stall_live', 3222, 3223, 0);
+    H.tick(2);
+    bareDelay(p);
+    p.requestLogout = true;
+    // H.tick, not tickSilent: this client is connected, which is the whole point of the case.
+    H.tick(300);
+    check('a client that is still connected is not overridden, however long it waits', here('stall_live'), true);
+    check('  ...and no override was ever written for them', overrideLines('stall_live').length, 0);
+    p.delayed = false;
+    H.tick(4);
+    check('  ...and it still completes the moment the delay ends', here('stall_live'), false);
+}
+
+{
+    // ---- C. REAL WORK PENDING stays refused, forced or not ----
+    const p: any = player('stall_work', 3222, 3224, 0);
+    H.tick(2);
+    const script = ScriptProvider.getByName('[queue,damage_player]');
+    p.enqueueScript(script!, PlayerQueueType.NORMAL, 1000000, [0]);
+    bareDelay(p);
+    forceSilent(p);
+    tickSilent(300);
+    check('a forced logout with a QUEUED request is still refused after 300 ticks', here('stall_work'), true);
+    check('  ...the queued request is still there, uncut', H.queued(p, '[queue,damage_player]').length, 1);
+    check('  ...nothing was overridden', overrideLines('stall_work').length, 0);
+    check(
+        '  ...and the line still names both',
+        stallLines('stall_work').some(l => l.includes('held by delayed + queue')),
+        true
+    );
+    p.delayed = false;
+    p.queue.clear();
+    tickSilent(4);
+    check('  ...and it goes the moment the work is gone', here('stall_work'), false);
+}
+
+{
+    // ---- D. A PARKED SCRIPT stays refused, forced or not ----
+    // A script in the middle of a delay will RESUME when it ends and carry on doing whatever it was
+    // doing - which is exactly what must not be cut short. A delay with no script is a timer with
+    // nothing left to time; this one has something to resume.
+    const p: any = player('stall_script', 3222, 3225, 0);
+    H.tick(2);
+    const script = ScriptProvider.getByName('[queue,damage_player]');
+    p.activeScript = ScriptRunner.init(script!, p);
+    bareDelay(p);
+    forceSilent(p);
+    tickSilent(300);
+    check('the script is still parked there', p.activeScript !== null, true);
+    check('a forced logout with a parked script is still refused after 300 ticks', here('stall_script'), true);
+    check('  ...nothing was overridden', overrideLines('stall_script').length, 0);
+    p.activeScript = null;
+    p.delayed = false;
+    tickSilent(4);
+    check('  ...and it goes once the script is gone', here('stall_script'), false);
 }
 
 console.log = realLog;
