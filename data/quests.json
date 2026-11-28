@@ -42747,12 +42747,17 @@
    ]
   },
   {
-   "stageVarId": 131,
-   "stageIsVarbit": false,
+   "stageVarId": 3183,
+   "stageIsVarbit": true,
+   "stageBits": {
+    "varp": 131,
+    "lsb": 0,
+    "msb": 3
+   },
    "id": "itexam",
    "name": "THE DIGSITE",
    "source": "oldschool.runescape.wiki/w/The_Digsite/Quick_guide",
-   "stageVar": "itexamlevel",
+   "stageVar": "itexam_progress",
    "done": 9,
    "start": [
     3359,
@@ -64482,18 +64487,18 @@
    ]
   },
   {
-   "stageVarId": 657,
+   "stageVarId": 3182,
    "stageIsVarbit": true,
    "stageBits": {
-    "varp": 496,
-    "lsb": 0,
-    "msb": 2
+    "varp": 2013,
+    "lsb": 7,
+    "msb": 10
    },
    "id": "rd",
    "name": "RECRUITMENT DRIVE",
    "source": "oldschool.runescape.wiki/w/Recruitment_Drive",
-   "stageVar": "rd_main",
-   "done": 2,
+   "stageVar": "rd_progress",
+   "done": 9,
    "start": [
     2997,
     3374,
@@ -64502,7 +64507,12 @@
    "stages": [
     {
      "from": 0,
-     "headings": [],
+     "headings": [
+      {
+       "at": 1,
+       "text": "Sir Amik Varze is at the top of the western tower of the White Knights castle in Falador."
+      }
+     ],
      "marks": [],
      "steps": [
       {
@@ -64549,54 +64559,6 @@
        "var": 670,
        "varbit": true,
        "is": 1
-      },
-      {
-       "at": 16,
-       "var": 659,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 19,
-       "var": 660,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 22,
-       "var": 661,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 24,
-       "var": 662,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 26,
-       "var": 663,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 41,
-       "var": 686,
-       "varbit": true,
-       "is": 3
-      },
-      {
-       "at": 53,
-       "var": 664,
-       "varbit": true,
-       "is": 1
-      },
-      {
-       "at": 55,
-       "var": 665,
-       "varbit": true,
-       "is": 1
       }
      ],
      "steps": [
@@ -64628,7 +64590,28 @@
         4972,
         0
        ]
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 2,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Sir Spishyus - get the fox, the chicken and the grain across the bridge one at a time, and never leave the fox with the chicken or the chicken with the grain."
+      }
+     ],
+     "marks": [
+      {
+       "at": 13,
+       "var": 659,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Sir Spishyus.",
@@ -64786,7 +64769,28 @@
         2472,
         4972
        ]
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 3,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Lady Table - look at her twelve statues, let her put them back, then touch the one that had been taken away."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 660,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Lady Table.",
@@ -64821,7 +64825,28 @@
         2447,
         4979
        ]
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 4,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Sir Kuam Ferentse - kill Sir Leye with your bare hands."
+      }
+     ],
+     "marks": [
+      {
+       "at": 2,
+       "var": 661,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Sir Kuam Ferentse.",
@@ -64849,7 +64874,28 @@
         2463,
         4963
        ]
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 5,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Sir Tinley - stand perfectly still until he is satisfied."
+      }
+     ],
+     "marks": [
+      {
+       "at": 1,
+       "var": 662,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Sir Tinley.",
@@ -64872,7 +64918,28 @@
         2480,
         4956
        ]
-      },
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 6,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Sir Ren Itchood - read the riddle on the wall and tell him the word hidden in it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 1,
+       "var": 663,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Sir Ren Itchood.",
@@ -64895,7 +64962,34 @@
         2446,
         4956
        ]
+      }
+     ],
+     "items": [],
+     "worn": []
+    },
+    {
+     "from": 7,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Miss Cheevers - mix her chemicals, set off the reaction and get the stone door open."
+      }
+     ],
+     "marks": [
+      {
+       "at": 14,
+       "var": 686,
+       "varbit": true,
+       "is": 3
       },
+      {
+       "at": 26,
+       "var": 664,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
       {
        "kind": "talk",
        "text": "Talk to Miss Cheevers.",
@@ -65215,29 +65309,6 @@
         2478,
         4940
        ]
-      },
-      {
-       "kind": "talk",
-       "text": "Talk to Ms. Hynn Terprett.",
-       "why": "Answer it.",
-       "target": "rd_observer_room_7",
-       "id": 2289,
-       "label": "Ms. Hynn Terprett",
-       "picks": [
-        "Because there are no wolves - a valley of wolves that never eat has no wolves left in it."
-       ]
-      },
-      {
-       "kind": "loc",
-       "text": "Open Door.",
-       "why": "Out.",
-       "target": "rd_room7_exitdoor",
-       "id": 7354,
-       "label": "Door",
-       "at": [
-        2452,
-        4943
-       ]
       }
      ],
      "items": [
@@ -65266,6 +65337,50 @@
        "bring": false
       }
      ],
+     "worn": []
+    },
+    {
+     "from": 8,
+     "headings": [
+      {
+       "at": 0,
+       "text": "Hynn Terprett asks you a riddle - answer it."
+      }
+     ],
+     "marks": [
+      {
+       "at": 1,
+       "var": 665,
+       "varbit": true,
+       "is": 1
+      }
+     ],
+     "steps": [
+      {
+       "kind": "talk",
+       "text": "Talk to Ms. Hynn Terprett.",
+       "why": "Answer it.",
+       "target": "rd_observer_room_7",
+       "id": 2289,
+       "label": "Ms. Hynn Terprett",
+       "picks": [
+        "Because there are no wolves - a valley of wolves that never eat has no wolves left in it."
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Door.",
+       "why": "Out.",
+       "target": "rd_room7_exitdoor",
+       "id": 7354,
+       "label": "Door",
+       "at": [
+        2452,
+        4943
+       ]
+      }
+     ],
+     "items": [],
      "worn": []
     }
    ]
