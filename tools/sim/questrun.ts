@@ -139,6 +139,14 @@ export type Step =
     | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { castLoc: string; at: [number, number]; spell: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number }
+    // A SUB-QUEST'S OWN BLOCK, for a quest whose branches are parallel rather than sequential.
+    // `{ sub: 'id' }` says the steps that follow belong to that entry in the manifest's `subs`
+    // list, and `{ sub: null }` hands them back to the quest itself. The RUNNER does not care -
+    // it walks every step in file order either way - and the exporter slices on these markers to
+    // emit one helper entry per sub-quest, keyed on that sub-quest's own progress varbit, because
+    // the panel picks a leg by one var value and ten parallel branches cannot share one.
+    // See DeathPlateau-Bugs#60.
+    | { sub: string | null; why?: string }
     | { note: string };
 
 export type Manifest = {
@@ -148,6 +156,42 @@ export type Manifest = {
     done: number; // its value at completion
     start: [number, number, number];
     steps: Step[];
+    /** Helper entries of its own, one per parallel branch. See SubQuest and the `sub:` step. */
+    subs?: SubQuest[];
+};
+
+/**
+ * One parallel branch of a quest, exported as a quest helper entry of its own.
+ *
+ * The panel picks the leg to show by ONE var value (QuestHelperPlugin.stageNow), so a quest whose
+ * branches can be taken in any order cannot be one entry: Recipe for Disaster's ten victims were
+ * 203 steps inside a single leg keyed on %hundred_main_quest_var, which does not move when you
+ * pick a different plinth. Each victim does have a progress varbit of its own, which is exactly
+ * what an entry needs, so each becomes an entry. DeathPlateau-Bugs#60.
+ *
+ * Only for a branch with its own var. Recipe for Disaster's Sir Amik is one step and no varbit, so
+ * he stays in the quest's own leg.
+ */
+export type SubQuest = {
+    /** The entry's id, as the client's saved "following" setting records it. */
+    id: string;
+    /** What the quest list shows. By convention the parent's name and the branch in brackets. */
+    name: string;
+    /** This branch's own progress varp or varbit - the entry's stageVar. */
+    stageVar: string;
+    /** Its value when the branch is finished. */
+    done: number;
+    /**
+     * The click that STARTS this branch, which becomes the entry's leg 0.
+     *
+     * Written here rather than in the block because the quest itself already walks it - Recipe for
+     * Disaster inspects all eight plinths in its own step 4 - and walking it a second time inside
+     * the block would be clicking a plinth that has already been inspected. The loc name and tile
+     * are the same ones that step proves.
+     */
+    opens?: { loc: string; at: [number, number]; why: string };
+    /** The guide's wording for leg 0, under which `opens` sits. */
+    note?: string;
 };
 
 const W = 66; // how wide a step line is before the verdict column
@@ -523,6 +567,10 @@ export function play(m: Manifest, p: Player): Result[] {
         if ('note' in s) {
             console.log('');
             console.log('      -- ' + s.note);
+            continue;
+        }
+        // An export-time marker only: the walk is the same walk either way.
+        if ('sub' in s) {
             continue;
         }
         if ('give' in s) {

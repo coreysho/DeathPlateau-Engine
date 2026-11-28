@@ -93,6 +93,77 @@ const m: Manifest = {
     stageVar: 'hundred_main_quest_var',
     done: 5, // ^hundred_complete
     start: COOK,
+    // SEVEN OF THE NINE VICTIMS ARE HELPER ENTRIES OF THEIR OWN. The panel picks the leg to show
+    // by one var value, and %hundred_main_quest_var does not move when you pick a different
+    // plinth, so all 203 of these steps sat in ONE leg in a fixed order and the panel took the
+    // furthest mark it could satisfy: free King Awowogei first and it jumped to step 163 and
+    // stopped mentioning the six victims still waiting. Each victim has a progress varbit of its
+    // own, which is what an entry needs. DeathPlateau-Bugs#60.
+    //
+    // Sir Amik is not here: he is one step and has no varbit, so he stays in the quest's own leg,
+    // as does the Culinaromancer's fight at the end.
+    //
+    // `done` is the victim's own ^hundred_*_done constant, NOT the last value this walk asserts -
+    // those differ for five of the seven, because the walk stopped asserting one step before the
+    // dish goes into the plinth. The `varis` lines at the end of each block now close that gap.
+    subs: [
+        {
+            id: 'hundred_dwarf',
+            name: 'RECIPE FOR DISASTER (Mountain Dwarf)',
+            stageVar: 'hundred_dwarf_quest',
+            done: 7,
+            note: "wiki: inspect the Mountain Dwarf's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[0][0], at: PLINTHS[0][1], why: "inspect the Mountain Dwarf's plinth" }
+        },
+        {
+            id: 'hundred_guide',
+            name: 'RECIPE FOR DISASTER (Lumbridge Guide)',
+            stageVar: '100guide_prog',
+            done: 2,
+            note: "wiki: inspect the Lumbridge Guide's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[3][0], at: PLINTHS[3][1], why: "inspect the Lumbridge Guide's plinth" }
+        },
+        {
+            id: 'hundred_goblin',
+            name: 'RECIPE FOR DISASTER (Goblin generals)',
+            stageVar: '100goblin',
+            done: 4,
+            note: "wiki: inspect the Goblin generals' plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[1][0], at: PLINTHS[1][1], why: "inspect the Goblin generals' plinth" }
+        },
+        {
+            id: 'hundred_pirate',
+            name: 'RECIPE FOR DISASTER (Pirate Pete)',
+            stageVar: '100_pirate_quest_var',
+            done: 4,
+            note: "wiki: inspect Pirate Pete's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[2][0], at: PLINTHS[2][1], why: "inspect Pirate Pete's plinth" }
+        },
+        {
+            id: 'hundred_dave',
+            name: 'RECIPE FOR DISASTER (Evil Dave)',
+            stageVar: 'hundred_dave_main',
+            done: 5,
+            note: "wiki: inspect Evil Dave's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[4][0], at: PLINTHS[4][1], why: "inspect Evil Dave's plinth" }
+        },
+        {
+            id: 'hundred_ogre',
+            name: 'RECIPE FOR DISASTER (Skrach Uglogwee)',
+            stageVar: '100_ogre_prog',
+            done: 8,
+            note: "wiki: inspect Skrach Uglogwee's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[5][0], at: PLINTHS[5][1], why: "inspect Skrach Uglogwee's plinth" }
+        },
+        {
+            id: 'hundred_monkey',
+            name: 'RECIPE FOR DISASTER (King Awowogei)',
+            stageVar: 'hundred_ilm_quest',
+            done: 3,
+            note: "wiki: inspect King Awowogei's plinth in the Culinaromancer's chamber to start freeing them.",
+            opens: { loc: PLINTHS[7][0], at: PLINTHS[7][1], why: "inspect King Awowogei's plinth" }
+        }
+    ],
     steps: [
         { note: 'requirement: Cook’s Assistant, which is what puts the Cook on speaking terms' },
         { setvar: 'cookquest', to: 2, why: '^cook_complete' },
@@ -151,6 +222,8 @@ const m: Manifest = {
         { close: true, why: 'shut the shop again' },
 
         // ------------------------------------------------------------------ Freeing the Mountain Dwarf
+        { sub: 'hundred_dwarf' },
+        { note: 'wiki: the dish is a dwarven rock cake, and Rohak will only bake one for a dwarven stout with a gold coin in the bottom.' },
         { note: 'SUB-QUEST 2, the Mountain Dwarf. Rohak is at the east end of the tunnel under' },
         { note: 'White Wolf Mountain - the one the Fishing Contest opens - and he is two npcs: a' },
         { note: 'multi that is "An old Dwarf" until you learn his name, and a second shell for the' },
@@ -176,8 +249,11 @@ const m: Manifest = {
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_dwarf_ambassador_base', at: PLINTHS[0][1], obj: 'hundred_dwarf_cool_rockcake', why: 'put it in his hand' },
         { varis: 'hundred_dwarf_quest', to: 7 },
+        { varis: 'hundred_dwarf_quest', to: 7 },
 
         // ------------------------------------------------------------------ Freeing the Lumbridge Guide
+        { sub: 'hundred_guide' },
+        { note: 'wiki: the dish is a cake of guidance - bake a plain cake, then enchant it with the three ingredients the people of Lumbridge hold.' },
         { note: 'SUB-QUEST 5, the Lumbridge Guide. The dish is a cake, and the three ingredients' },
         { note: 'come from the three people in Lumbridge who would have them - the Cook and the' },
         { note: 'two local farmers, Gee and Donie.' },
@@ -230,7 +306,9 @@ const m: Manifest = {
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_guide_base', at: PLINTHS[3][1], obj: 'hundred_cake_of_guidance', why: 'put it in his hand' },
         { varis: '100guide_prog', to: 2 },
+        { varis: '100guide_prog', to: 2 },
 
+        { sub: null },
         // ------------------------------------------------------------------ Freeing Sir Amik Varze
         { note: 'SUB-QUEST 8, Sir Amik Varze. He is ASKED, not taken over - option 2 of his menu,' },
         { note: 'because the quest branch running first would leave Black Knights’ Fortress' },
@@ -246,6 +324,8 @@ const m: Manifest = {
         { useLoc: 'hundred_varze_base', at: PLINTHS[6][1], obj: 'hundred_fruit_blast', why: 'put it in his hand' },
 
         // ------------------------------------------------------------------ Freeing the Goblin generals
+        { sub: 'hundred_goblin' },
+        { note: 'wiki: the dish is a stew the two generals can agree on - ask each of them, bring all three dishes and put them through the cauldron in the goblin kitchen.' },
         { note: 'SUB-QUEST 3, the Goblin generals. Two generals who cannot agree, three dishes to' },
         { note: 'bring them, and a cauldron in the goblin kitchen that makes one out of all three.' },
         ...OUT_OF_THE_ROOM,
@@ -284,8 +364,11 @@ const m: Manifest = {
         { loc: '100_goblin_ladder_up', at: GOBLIN_LADDER_UP, hop: true, soft: true, why: 'climb out' },
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_goblin1_base', at: PLINTHS[1][1], obj: '100goblin_compromise_mush', why: 'put it in his hand' },
+        { varis: '100goblin', to: 4 },
 
         // ------------------------------------------------------------------ Freeing Pirate Pete
+        { sub: 'hundred_pirate' },
+        { note: 'wiki: the dish is a fishcake, and three of its four ingredients are on the seabed under the Fishing Trawler, where Murphy lowers you in diving gear.' },
         { note: 'SUB-QUEST 4, Pirate Pete. The dish is a fishcake, and three of its four' },
         { note: 'ingredients are on the seabed under the Fishing Trawler - Murphy lends the' },
         { note: 'diving gear and lowers you down. He is ASKED, not taken over: option 2 of his' },
@@ -339,8 +422,11 @@ const m: Manifest = {
         { has: 'hundred_pirate_fishcake' },
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_pirate_base', at: PLINTHS[2][1], obj: 'hundred_pirate_fishcake', why: 'put it in his hand' },
+        { varis: '100_pirate_quest_var', to: 4 },
 
         // ------------------------------------------------------------------ Freeing Evil Dave
+        { sub: 'hundred_dave' },
+        { note: "wiki: the dish is a stew spiced with three doses of one of four colours, cooked in the cellar under his mother's house." },
         { note: 'SUB-QUEST 6, Evil Dave. His mother points you at the cellar under her house; the' },
         { note: 'dish is a stew spiced to a recipe he will not tell you, three doses out of four' },
         { note: 'colours, and the hints in the journal are all you get.' },
@@ -378,8 +464,11 @@ const m: Manifest = {
         { level: 0 },
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_dave_base', at: PLINTHS[4][1], obj: 'hundred_dave_stew', why: 'put it in his hand' },
+        { varis: 'hundred_dave_main', to: 5 },
 
         // ------------------------------------------------------------------ Freeing Skrach Uglogwee
+        { sub: 'hundred_ogre' },
+        { note: 'wiki: the dish is a cooked jubbly bird from an island off the Feldip shore, so first Rantz needs a boat.' },
         { note: 'SUB-QUEST 7, Skrach Uglogwee. The dish is a jubbly bird, which lives on an island' },
         { note: 'off the Feldip shore - so the sub-quest is really a boat: Rantz pushes a tree' },
         { note: 'over, you cut the roots off and hollow it out, and his kids row you across.' },
@@ -428,8 +517,11 @@ const m: Manifest = {
         { has: '100_jubbly_meat_cooked' },
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_ogre_base', at: PLINTHS[5][1], obj: '100_jubbly_meat_cooked', why: 'put it on his platter' },
+        { varis: '100_ogre_prog', to: 8 },
 
         // ------------------------------------------------------------------ Freeing King Awowogei
+        { sub: 'hundred_monkey' },
+        { note: 'wiki: the dish is a stuffed snake, to a recipe the three wise monkeys give you on Ape Atoll, so all of it needs Monkey Madness.' },
         { note: 'SUB-QUEST 9, King Awowogei. Every step of it is on or under Ape Atoll, so it' },
         { note: 'needs Monkey Madness. The three wise monkeys give the recipe; the dish is a snake' },
         { note: 'stuffed with sliced red banana and Tchiki nut paste.' },
@@ -554,7 +646,9 @@ const m: Manifest = {
         { has: 'hundred_ilm_cooked_stuffed_snake' },
         ...INTO_THE_ROOM,
         { useLoc: 'hundred_monkey_base', at: PLINTHS[7][1], obj: 'hundred_ilm_cooked_stuffed_snake', why: 'put it on his platter' },
+        { varis: 'hundred_ilm_quest', to: 3 },
 
+        { sub: null },
         // ------------------------------------------------------------------ The Culinaromancer
         { note: 'SUB-QUEST 10, the Culinaromancer himself. Nine victims out, and Aris will put you' },
         { note: 'in the arena with him - five minions and then the man, one after another.' },
