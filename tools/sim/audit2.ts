@@ -606,6 +606,7 @@ if (run('mourning2')) {
 if (run('dwarfrock')) {
     console.log('Between a Rock... (not changed - checked start to finish)');
     const p = player('rockq', 2825, 10168);
+    H.meetQuestRequirements(p, 'Between a Rock...');
     const e0 = errors.length;
     const Q = () => v(p, 'dwarfrock_quest');
     talkNear(p, 'dwarfrock_multi_dondakan', 2824, 10168, [1]);

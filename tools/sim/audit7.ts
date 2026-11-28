@@ -1051,6 +1051,7 @@ if (want('enakh')) {
 if (want('tbwt')) {
     console.log('TAI BWO WANNAI TRIO');
     const p = player('tbwtq', 2781, 3087, 1);
+    H.meetQuestRequirements(p, 'Tai Bwo Wannai Trio');
     talk(p, 'tbwt_timfraku', [1]);
     check('Timfraku: stage 1', v(p, 'tbwt_main'), 1);
     for (const son of ['tbwt_tiadeche_multinpc_shore', 'tbwt_tinsay_multinpc_island', 'tbwt_tamayu_multinpc_jungle']) talk(p, son);
