@@ -585,6 +585,11 @@ export const enum ScriptOpcode {
     // a separate op makes that structural instead of a guess about the message. Appended, like
     // every opcode here: the numbers are implicit and inserting one renumbers the rest.
     BROADCAST_NEWS,
+    // custom (2026-11-28) - tells the player's loot tracker what an inv just paid them: a clue
+    // casket, the Barrows chest. Kills need no op - obj_add in a death queue is reported by the
+    // engine itself (LootFeed.ts) - but a reward rolled into an inv is not a drop, and only content
+    // knows when one is finished and what to call it. Appended, like every opcode here.
+    LOOT_EVENT,
 
     // Debug ops (10000-11000)
     CONSOLE = 10000,
@@ -799,6 +804,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['STAFFMODLEVEL', ScriptOpcode.STAFFMODLEVEL],
     ['CHATCROWN', ScriptOpcode.CHATCROWN],
     ['BROADCAST_MILESTONE', ScriptOpcode.BROADCAST_MILESTONE],
+    ['LOOT_EVENT', ScriptOpcode.LOOT_EVENT],
     ['MILESTONE_FIRST', ScriptOpcode.MILESTONE_FIRST],
     ['BROADCAST_NEWS', ScriptOpcode.BROADCAST_NEWS],
     ['STAT_ADD', ScriptOpcode.STAT_ADD],
