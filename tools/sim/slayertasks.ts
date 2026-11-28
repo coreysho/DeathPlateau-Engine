@@ -195,8 +195,8 @@ console.log('\nTHE ONE-ARMED VETERAN, THE WILDERNESS MASTER');
     check(
         '  the seven new tasks each have a monster that counts',
         [['rogue', 'rogue'], ['dark_warrior', 'darkwarrior'], ['pirate_aggressive', 'pirate'], ['magicaxe', 'magicaxe'],
-         ['chaos_druid', 'chaosdruid'], ['elder_chaos_druid', 'chaosdruid'], ['brawling_bandit', 'bandit'],
-         ['guard_bandit', 'bandit'], ['aggressive_black_knight', 'blackknight']].map(([n, c]) => catOf(n) === taskId('slayer_' + c)),
+            ['chaos_druid', 'chaosdruid'], ['elder_chaos_druid', 'chaosdruid'], ['brawling_bandit', 'bandit'],
+            ['guard_bandit', 'bandit'], ['aggressive_black_knight', 'blackknight']].map(([n, c]) => catOf(n) === taskId('slayer_' + c)),
         [true, true, true, true, true, true, true, true, true]
     );
 
