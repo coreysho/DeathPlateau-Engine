@@ -35516,11 +35516,113 @@
       {
        "at": 0,
        "text": "Through the secret door behind the kitchen and Mr Olbors' garden to the mansion's blocked side entrance, which only a Black Arm partner can open from the inside - with the odd key Grip hands his own deputy."
+      },
+      {
+       "at": 1,
+       "text": "Kill Grip."
       }
      ],
      "marks": [],
-     "steps": [],
+     "steps": [
+      {
+       "text": "Go in through the side door to Grip's room.",
+       "kind": "walk",
+       "at": [
+        2776,
+        3194,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Grip.",
+       "why": "Kill the head guard.",
+       "target": "grip",
+       "id": 792,
+       "label": "Grip"
+      }
+     ],
      "items": [],
+     "worn": []
+    },
+    {
+     "from": 5,
+     "headings": [
+      {
+       "at": 0,
+       "text": "The keys to the treasure room are in Grip's jacket, and the door takes them only from whoever handed Scarface Pete's guards the ID papers - your partner."
+      },
+      {
+       "at": 1,
+       "text": "Straven swaps the candlestick for the master thief's armband, as Katrine does for the Black Arm."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back into the Phoenix hideout.",
+       "kind": "walk",
+       "at": [
+        3247,
+        9781,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Straven.",
+       "why": "Hand the candlestick over.",
+       "target": "straven",
+       "id": 644,
+       "label": "Straven"
+      }
+     ],
+     "items": [
+      {
+       "name": "Pete's candlestick",
+       "id": 1577,
+       "n": 1,
+       "bring": true
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 6,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Back to Achietties with all three - the Entranan firebird's feather, the cooked lava eel and the master thief's armband."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back to the Heroes' Guild.",
+       "kind": "walk",
+       "at": [
+        2904,
+        3510,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Achietties.",
+       "why": "Hand all three in.",
+       "target": "achietties",
+       "id": 796,
+       "label": "Achietties"
+      }
+     ],
+     "items": [
+      {
+       "name": "Thieves' armband",
+       "id": 1579,
+       "n": 1,
+       "bring": false
+      }
+     ],
      "worn": []
     }
    ]
@@ -35529,7 +35631,7 @@
    "stageVarId": 188,
    "stageIsVarbit": false,
    "id": "hero",
-   "name": "HEROES' QUEST (solo part)",
+   "name": "HEROES' QUEST (Black Arm side)",
    "source": "oldschool.runescape.wiki/w/Heroes%27_Quest",
    "stageVar": "heroquest",
    "done": 15,
@@ -36047,13 +36149,195 @@
     },
     {
      "from": 11,
-     "headings": [],
+     "headings": [
+      {
+       "at": 1,
+       "text": "The candlestick takes one player of each gang."
+      },
+      {
+       "at": 3,
+       "text": "The treasure room keys were in Grip's jacket all along, which is what asking about your duties told you."
+      }
+     ],
      "marks": [],
-     "steps": [],
+     "steps": [
+      {
+       "text": "Go back through the mansion to the blocked side entrance.",
+       "kind": "walk",
+       "at": [
+        2781,
+        3198,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Miscellaneous key on Door.",
+       "why": "Unlock it from the inside.",
+       "target": "pete_sidedoor",
+       "id": 2622,
+       "label": "Door",
+       "item": 1586,
+       "at": [
+        2781,
+        3197
+       ]
+      },
+      {
+       "text": "Go over to where Grip fell.",
+       "kind": "walk",
+       "at": [
+        2774,
+        3192,
+        0
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Pick up Grips' keyring.",
+       "why": "The keys out of his jacket.",
+       "target": "grip_keys",
+       "id": 1588,
+       "label": "Grips' keyring"
+      },
+      {
+       "text": "Go to the treasure room door.",
+       "kind": "walk",
+       "at": [
+        2765,
+        3197,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Use Grips' keyring on Door.",
+       "why": "Open it.",
+       "target": "pete_treasuredoor",
+       "id": 2621,
+       "label": "Door",
+       "item": 1588,
+       "at": [
+        2764,
+        3197
+       ]
+      },
+      {
+       "text": "Go in to the chest.",
+       "kind": "walk",
+       "at": [
+        2766,
+        3198,
+        0
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Open Chest.",
+       "target": "shutcandlechest",
+       "id": 2632,
+       "label": "Chest",
+       "at": [
+        2766,
+        3199
+       ]
+      },
+      {
+       "kind": "loc",
+       "text": "Search Chest.",
+       "why": "Empty it - there are two candlesticks, one each.",
+       "target": "opencandlechest",
+       "id": 2633,
+       "label": "Chest",
+       "at": [
+        2766,
+        3199
+       ]
+      }
+     ],
      "items": [
       {
        "name": "Miscellaneous key",
        "id": 1586,
+       "n": 1,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 12,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Your own gang leader swaps a candlestick for the armband - Katrine for the Black Arm, while the partner takes their half to Straven."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back to Varrock and down into the Black Arm hideout.",
+       "kind": "walk",
+       "at": [
+        3187,
+        3387,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Katrine.",
+       "why": "Hand it over.",
+       "target": "katrine",
+       "id": 642,
+       "label": "Katrine",
+       "picks": [
+        "I have a candlestick now!"
+       ]
+      }
+     ],
+     "items": [
+      {
+       "name": "Pete's candlestick",
+       "id": 1577,
+       "n": 2,
+       "bring": false
+      }
+     ],
+     "worn": []
+    },
+    {
+     "from": 13,
+     "headings": [
+      {
+       "at": 1,
+       "text": "Back to Achietties with all three - the Entranan firebird's feather, the cooked lava eel and the master thief's armband."
+      }
+     ],
+     "marks": [],
+     "steps": [
+      {
+       "text": "Go back to the Heroes' Guild.",
+       "kind": "walk",
+       "at": [
+        2904,
+        3510,
+        0
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Achietties.",
+       "why": "Hand all three in.",
+       "target": "achietties",
+       "id": 796,
+       "label": "Achietties"
+      }
+     ],
+     "items": [
+      {
+       "name": "Thieves' armband",
+       "id": 1579,
        "n": 1,
        "bring": false
       }

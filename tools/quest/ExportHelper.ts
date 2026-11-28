@@ -385,7 +385,7 @@ const ASSERT_KINDS = new Set(['varis', 'count', 'zone', 'nearnpc', 'hasnt', 'not
 // nothing to do in it at all. It carries no target a plugin can highlight, because an interface
 // button is not a thing in the world, so it comes out as its own prose - which is the difference
 // between telling a player to bow and telling them nothing.
-const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'say', 'sv', 'varbit', 'seed', 'wakehunt', 'sub']);
+const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'say', 'sv', 'varbit', 'seed', 'wakehunt', 'sub', 'actor']);
 
 /**
  * A note's wording, tidied for a player.
@@ -745,9 +745,33 @@ function stepsOf(raw: unknown[]): { stages: HelperStage[]; dropped: Record<strin
         else if (!heading) commentary++;
     };
 
+    // THE SECOND PLAYER'S STEPS ARE NOT THIS PANEL'S INSTRUCTIONS. A two-player manifest hands a
+    // stretch to a partner with `{ actor: 'helper' }` (Heroes' Quest's candlestick heist), and the
+    // row being built is about the quest's own player: the partner's clicks are theirs, and an item
+    // the partner carries does not belong on this player's bring-list. So a helper span contributes
+    // nothing at all - what the player must ARRANGE is said in a `wiki:` note outside the span.
+    // DeathPlateau-Bugs#16.
+    let helperSpan = false;
     for (const entry of raw) {
         if (!entry || typeof entry !== 'object') continue;
         const s = entry as Record<string, unknown>;
+
+        if ('actor' in s) {
+            flushNotes();
+            helperSpan = s.actor === 'helper';
+            dropped['actor'] = (dropped['actor'] ?? 0) + 1;
+            continue;
+        }
+        if (helperSpan) {
+            // A leg boundary can only mean the tracked player's own progress, so one here is a
+            // manifest bug rather than something to drop quietly: it would key a leg on the
+            // partner's var and the panel has no way to show that.
+            if ('stage' in s) {
+                throw new Error('a `stage:` marker inside an `actor: "helper"` span: switch back with { actor: "player" } first');
+            }
+            dropped['helper-step'] = (dropped['helper-step'] ?? 0) + 1;
+            continue;
+        }
 
         // A `stage:` marker closes the current leg and opens the next one at that varp value.
         if ('stage' in s) {

@@ -11,9 +11,16 @@
 //   [oploc1,opencandlechest]  gives TWO candlesticks: "one for you, and one for the person who
 //                             killed Grip for you".
 //
-// So neither half can finish alone, and quest_hero_run.ts stops at the deputy's post. This drives
-// both halves at once: the deputy unlocks the side door, the Phoenix thief comes in and kills Grip,
-// the deputy opens the treasure room with his keys, and they split the chest.
+// So neither half can finish alone. This drives both halves at once: the deputy unlocks the side
+// door, the Phoenix thief comes in and kills Grip, the deputy opens the treasure room with his
+// keys, and they split the chest.
+//
+// NO LONGER THE ONLY COVERAGE OF IT (DeathPlateau-Bugs#16). quest_hero_run.ts and
+// quest_hero_phoenix_run.ts both play the heist now and both finish the quest, because a manifest
+// can hand a stretch of steps to a second player with `{ actor: 'helper' }`. What this file still
+// has that neither of them does is the REFUSAL asked directly: [proc,grip_attack] returning false
+// for the Black Arm member and true for the Phoenix one, which is the rule that makes the quest
+// two-player in the first place. A manifest can only show the permitted half succeeding.
 //
 //   npx tsx tools/sim/heroes_candlestick.ts
 import * as H from './harness.js';

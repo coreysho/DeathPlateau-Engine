@@ -139,6 +139,20 @@ export type Step =
     | { wakehunt: string; untilvar?: string; to?: number; r?: number; tries?: number; why?: string }
     | { cast: string; on: string; r?: number; tries?: number; want?: string; why?: string }
     | { castLoc: string; at: [number, number]; spell: string; picks?: (number | string)[]; want?: string; why?: string; tries?: number }
+    // THE OTHER PLAYER TAKES OVER FROM HERE. Heroes' Quest is a two-player quest and this content
+    // implements it that way: [proc,grip_attack] refuses a Black Arm member, [oplocu,pete_sidedoor]
+    // wants the key only Grip's own deputy holds, and [oploc1,opencandlechest] hands out two
+    // candlesticks, "one for you, and one for the person who killed Grip for you". So neither half
+    // can finish alone, and both branches of %heroquest stopped where one player runs out of road.
+    //
+    // `{ actor: 'helper' }` hands the steps that follow to the second player play() was given, and
+    // `{ actor: 'player' }` hands them back. The quest's own player is the one the exported row is
+    // about, so NOTHING inside a helper span reaches the table - the helper's clicks are the other
+    // player's, not instructions for this panel, and an item the helper carries is not on this
+    // player's bring-list. A `stage:` marker inside a helper span is refused outright, by the
+    // runner and by the exporter, because a leg boundary can only ever mean the tracked player's
+    // own progress. Say what the partner must do in a `wiki:` note instead. DeathPlateau-Bugs#16.
+    | { actor: 'player' | 'helper'; why?: string }
     // A SUB-QUEST'S OWN BLOCK, for a quest whose branches are parallel rather than sequential.
     // `{ sub: 'id' }` says the steps that follow belong to that entry in the manifest's `subs`
     // list, and `{ sub: null }` hands them back to the quest itself. The RUNNER does not care -
@@ -532,7 +546,11 @@ export function stageOf(p: Player, name: string): number {
     throw new Error('no such varp or varbit: ' + name);
 }
 
-export function play(m: Manifest, p: Player): Result[] {
+export function play(m: Manifest, tracked: Player, helper?: Player): Result[] {
+    // THE PLAYER THE STEPS APPLY TO, which `{ actor: ... }` moves. `let`, and read by the closures
+    // below rather than captured, so switching actor needs no other change in this file: every
+    // step already works through `p`.
+    let p = tracked;
     const out: Result[] = [];
     const gives: string[] = [];
     let n = 0;
@@ -573,9 +591,25 @@ export function play(m: Manifest, p: Player): Result[] {
         if ('sub' in s) {
             continue;
         }
+        if ('actor' in s) {
+            if (s.actor === 'helper') {
+                if (!helper) {
+                    throw new Error('this manifest hands steps to a second player, but play() was called with one. Pass the partner as play(m, p, helper).');
+                }
+                p = helper;
+            } else {
+                p = tracked;
+            }
+            console.log('');
+            console.log('      -- ' + (s.actor === 'helper' ? 'THE PARTNER acts from here' : 'back to the quest player') + (s.why ? ': ' + s.why : ''));
+            continue;
+        }
         if ('give' in s) {
             H.give(p, s.give, s.n ?? 1);
-            gives.push(s.n && s.n > 1 ? s.give + ' x' + s.n : s.give);
+            // The PARTNER's kit is not what this quest hands the player, and the summary below is
+            // read as that list - a Phoenix partner's rune scimitar was being reported as a second
+            // one the Black Arm route needs.
+            if (p === tracked) gives.push(s.n && s.n > 1 ? s.give + ' x' + s.n : s.give);
             continue;
         }
         if ('setvar' in s) {
@@ -1125,6 +1159,13 @@ export function play(m: Manifest, p: Player): Result[] {
             continue;
         }
         if ('stage' in s) {
+            // A leg boundary is about the player the exported row is for, and nothing else. The
+            // exporter refuses one inside a helper span too, so this is belt and braces - but a
+            // manifest that got it wrong would otherwise assert the partner's progress and export
+            // a leg keyed on it, which is a lie the table has no way to show.
+            if (p !== tracked) {
+                throw new Error('a `stage:` marker inside an `actor: "helper"` span: a leg boundary can only mean the quest player\'s own progress. Switch back with { actor: "player" } first.');
+            }
             const got = stageOf(p, m.stageVar);
             // `orLater` IS FOR A STAGE THE RUN CANNOT STAND STILL ON. A stage marker is a leg
             // boundary to ExportHelper as well as an assertion, so it has to stay in the manifest
