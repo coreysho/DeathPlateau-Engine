@@ -4,7 +4,7 @@
 #
 # This file is a ratchet, not an approval. Every line in it is an option a player can
 # click that does nothing. The number should only ever go down.
-# 2753 lines at the time of writing.
+# 2742 lines at the time of writing.
 
 dead grid inter_232:com_90 op1="Value"
 dead grid inter_232:com_90 op2="Buy"
@@ -932,15 +932,6 @@ dead loc  loc_9734 op1="Mine"
 dead loc  loc_9734 op2="Prospect"
 dead loc  loc_9735 op1="Mine"
 dead loc  loc_9735 op2="Prospect"
-dead loc  macor_maze_walllow_safe4 op1="Open"
-dead loc  macro_maze_chest op1="Open"
-dead loc  macro_maze_chestempty op1="Search"
-dead loc  macro_maze_complete op1="Touch"
-dead loc  macro_maze_wallhigh op1="Open"
-dead loc  macro_maze_walllow op1="Open"
-dead loc  macro_maze_walllow_safe1 op1="Open"
-dead loc  macro_maze_walllow_safe2 op1="Open"
-dead loc  macro_maze_walllow_safe3 op1="Open"
 dead loc  magearena_ladder_from_cellar op1="Climb-up"
 dead loc  magearena_ladder_to_cellar op1="Climb-down"
 dead loc  magictraining_bones_pile1 op1="Grab"
@@ -2120,7 +2111,6 @@ dead npc  sober_skippy op3="Sober-Up"
 dead npc  soulbane_launa_young op1="Talk-to"
 dead npc  swamp_candle_guy op1="Talk-to"
 dead npc  swan_arnold op3="Trade"
-dead npc  swan_colonist_1 op1="Talk-to"
 dead npc  swan_colonist_2 op1="Talk-to"
 dead npc  swan_colonist_3 op1="Talk-to"
 dead npc  swan_drunkendwarf op1="Talk-to"
