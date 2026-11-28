@@ -25,8 +25,8 @@ HEROES' QUEST (Phoenix side)          |   8 | benign       | Black Arm branch (G
 HEROES' QUEST (Phoenix side)          |   9 | benign       | Black Arm branch (Trobert's papers); the HEROES' QUEST (solo part) row HAS a leg for 9. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |  10 | benign       | Black Arm branch (Garv's gate); the HEROES' QUEST (solo part) row HAS a leg for 10. The two rows share one varp, so each reports the other branch's values
 HEROES' QUEST (Phoenix side)          |  11 | benign       | Black Arm branch (Grip's post); the HEROES' QUEST (solo part) row HAS a leg for 11. The two rows share one varp, so each reports the other branch's values
-HEROES' QUEST (Phoenix side)          |  12 | benign      | Black Arm branch (the candlestick chest); the HEROES' QUEST (Black Arm side) row HAS a leg for 12. The two rows share one varp, so each reports the other branch's values. Was blocked - neither row reached it - until the heist became manifest-driven
-HEROES' QUEST (Phoenix side)          |  13 | benign      | Black Arm branch (Katrine's armband); the HEROES' QUEST (Black Arm side) row HAS a leg for 13. As 12
+HEROES' QUEST (Phoenix side)          |  12 | benign       | Black Arm branch (the candlestick chest); the HEROES' QUEST (Black Arm side) row HAS a leg for 12. The two rows share one varp, so each reports the other branch's values. Was blocked - neither row reached it - until the heist became manifest-driven
+HEROES' QUEST (Phoenix side)          |  13 | benign       | Black Arm branch (Katrine's armband); the HEROES' QUEST (Black Arm side) row HAS a leg for 13. As 12
 HOLY GRAIL                            |   7 | benign       | ^grail_failed_defeat_titan, the Titan beaten without Excalibur. Since leg 4 exists it falls back there, and leg 4 names the Titan
 ICTHLARIN'S LITTLE HELPER             |  22 | transient    | jars placed, then if_close/p_delay(3) straight to 24. Nothing clickable
 IN AID OF THE MYREQUE                 |  30 | transient    | overwritten with m2_tithe two lines later in the same script, with no player input between
@@ -75,5 +75,4 @@ THE GIANT DWARF                       |  30 | unclassified | NOT YET JUDGED - re
 THE TOURIST TRAP                      |   6 | benign       | a fork, but leg 5 is "Go to the male slave. Talk to Male slave.", which is what a player at 6 does
 THE TOURIST TRAP                      |   7 | benign       | a fork, but leg 5 names the same slave, as 6
 THE TOURIST TRAP                      |  27 | benign       | Ana is freed and p_opnpc(1) opens her conversation; leg 26 "Go back to Irena. Talk to Irena." is the next thing to do
-WANTED!                               |  30 | unclassified | NOT YET JUDGED - read the quest
 WATCH TOWER                           |  14 | above-done   | done is 13 - reading the scroll afterwards

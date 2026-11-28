@@ -62,7 +62,7 @@ type Proof = { npc: string; within: number } | { loc: string; within: number };
 const PLACES: { n: number; at: [number, number]; place: string; clue: string; proof: Proof }[] = [
     { n: 1, at: [3487, 3485], place: 'Canifis', clue: '', proof: { npc: 'Roavar', within: 20 } },
     { n: 2, at: [3190, 3359], place: "Champions' Guild", clue: 'cape', proof: { npc: 'Guild master', within: 10 } },
-    { n: 3, at: [3313, 9629], place: 'Dorgesh-Kaan mine', clue: 'bone', proof: { npc: 'Nardok', within: 8 } },
+    { n: 3, at: [3320, 9608], place: 'Dorgesh-Kaan mine', clue: 'bone', proof: { npc: 'Nardok', within: 8 } },
     { n: 4, at: [2892, 4811], place: 'Rune essence mine', clue: 'Essence', proof: { loc: 'blankrunestone', within: 10 } },
     { n: 5, at: [3433, 3544], place: 'Slayer Tower', clue: 'earmuffs', proof: { npc: 'Banshee', within: 10 } },
     { n: 6, at: [2660, 3658], place: 'Rellekka', clue: 'Fremennik', proof: { npc: 'Askeladden', within: 10 } },
@@ -272,7 +272,10 @@ console.log("\n== the seven stops are Old School's: 1, 3, 5, 7 fixed and 2, 4, 6
         const id = NpcType.getId('wanted_solus' + lit);
         const npc = World.npcs.find((n: any) => n && n.isActive && n.type === id)!;
         const hpBefore = p.levels[3];
-        p.teleport(npc.x + 1, npc.z, npc.level);
+        // BESIDE HIM ON A SIDE THAT CAN REACH HIM, not always one tile east: the pool draws places
+        // like the Dragon Inn, where the tile east of him is furniture and the click is refused with
+        // "I can't reach that!" - a sim problem that read as a sighting that did not count.
+        if (!H.standBeside(p, npc)) p.teleport(npc.x + 1, npc.z, npc.level);
         H.tick(2);
         check('  ...Talk-to is on his menu', H.npcOpWord(p, npc, 1), 'Talk-to');
         H.clearLogs();
@@ -370,7 +373,7 @@ console.log('\n== and the decoy is at the cave-goblin mine, beside the man who s
     const npc = World.npcs.find((n: any) => n && n.isActive && n.type === id);
     check('the decoy is in the world', npc !== undefined, true);
     if (npc) {
-        const d = Math.max(Math.abs(npc.x - 3313), Math.abs(npc.z - 9629));
+        const d = Math.max(Math.abs(npc.x - 3320), Math.abs(npc.z - 9608));
         check(`  ...beside shell 3 in the Dorgesh-Kaan mine (${npc.x},${npc.z})`, d <= 8, true);
     }
     // AND NARDOK IS THE POINT OF THE MOVE, so he is asserted here rather than left implied. The
