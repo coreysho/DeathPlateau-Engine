@@ -1148,7 +1148,24 @@ class World {
                     state.pointerAdd(ScriptPointer.ProtectedActivePlayer);
                     ScriptRunner.execute(state);
 
+                    player.logoutStallSince = -1;
+                    player.logoutStallReported = 0;
                     this.removePlayer(player);
+                } else {
+                    // THE LOGOUT WAS REFUSED, AND NOTHING USED TO SAY SO. Every condition above can
+                    // be stuck: `protect` is held by a script that may never resume, `delayed` has
+                    // no deadline of its own, and an engine-queued request waits for access it may
+                    // never get. A forced logout is refused on the same terms - World.shutdown is
+                    // the only case that overrides them - so a player in that state keeps their
+                    // slot in World.players for as long as the world runs, getHumanPlayerCount()
+                    // reports them online, and the only cure anybody found was restarting.
+                    //
+                    // This does not change the decision. It records when the stall began and says
+                    // which of the four conditions is holding it, so the next occurrence leaves
+                    // evidence instead of a restart. Whether a forced logout should eventually
+                    // override them is a behaviour question and is not answered here:
+                    // DeathPlateau-Bugs#105.
+                    this.reportStalledLogout(player, force, queueDiscardable);
                 }
             }
         }
@@ -1166,6 +1183,53 @@ class World {
         }
 
         this.cycleStats[WorldStat.LOGOUT] = Date.now() - start;
+    }
+
+    // ONE LINE PER STALLED PLAYER EVERY 30 SECONDS, the same shape as the slow-tick and
+    // dropped-interaction warnings and for the same reason: a world where this fires would
+    // otherwise write a line a tick and make the journal part of the problem.
+    private static readonly LOGOUT_STALL_TICKS: number = 50; // 30s, the same patience as an idle logout
+    private static readonly LOGOUT_STALL_REPORT_INTERVAL: number = 50;
+
+    private reportStalledLogout(player: Player, force: boolean, queueDiscardable: boolean): void {
+        if (player.logoutStallSince === -1) {
+            player.logoutStallSince = this.currentTick;
+            return;
+        }
+        const stalled = this.currentTick - player.logoutStallSince;
+        if (stalled < World.LOGOUT_STALL_TICKS) {
+            return;
+        }
+        if (player.logoutStallReported !== 0 && this.currentTick - player.logoutStallReported < World.LOGOUT_STALL_REPORT_INTERVAL) {
+            return;
+        }
+        player.logoutStallReported = this.currentTick;
+
+        // NAMED INDIVIDUALLY, because which one it is decides where to look: `protect` is a script
+        // holding protected access, `delayed` is a p_delay or a parked script, `modal` is an
+        // interface closeModal() above did not clear, and the two queues are content waiting its
+        // turn. More than one can be true at once.
+        const blockers: string[] = [];
+        if (player.protect) {
+            blockers.push('protect');
+        }
+        if (player.delayed) {
+            blockers.push('delayed');
+        }
+        if (player.containsModalInterface()) {
+            blockers.push('modal');
+        }
+        if (player.engineQueue.head() !== null) {
+            blockers.push('engineQueue');
+        }
+        if (!queueDiscardable) {
+            blockers.push('queue');
+        }
+        printWarning(
+            `logout stalled for ${player.username}: ${stalled} ticks, ${force ? 'FORCED' : 'requested'}, ` +
+                `held by ${blockers.length ? blockers.join(' + ') : 'nothing this check can see'} - ` +
+                `reason "${player.logoutReason ?? 'unknown'}". They are still counted online.`
+        );
     }
 
     private processLogins(): void {
