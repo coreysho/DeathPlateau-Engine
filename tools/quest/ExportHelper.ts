@@ -385,7 +385,7 @@ const ASSERT_KINDS = new Set(['varis', 'count', 'zone', 'nearnpc', 'hasnt', 'not
 // nothing to do in it at all. It carries no target a plugin can highlight, because an interface
 // button is not a thing in the world, so it comes out as its own prose - which is the difference
 // between telling a player to bow and telling them nothing.
-const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'say', 'sv', 'varbit', 'seed', 'wakehunt']);
+const DROP = new Set(['stage', 'rng', 'wait', 'level', 'setpos', 'setvar', 'close', 'resume', 'say', 'sv', 'varbit', 'seed', 'wakehunt', 'sub']);
 
 /**
  * A note's wording, tidied for a player.
@@ -1151,6 +1151,103 @@ const unresolved = new Map<string, number>();
 const skipped: string[] = [];
 const allDropped: Record<string, number> = {};
 
+/** One parallel branch, as a manifest declares it. Mirrors SubQuest in tools/sim/questrun.ts. */
+type SubSpec = {
+    id: string;
+    name: string;
+    stageVar: string;
+    done: number;
+    opens?: { loc: string; at: [number, number]; why: string };
+    note?: string;
+};
+
+/**
+ * Split a step list on its `{ sub: ... }` markers: what the quest keeps, and each branch's block.
+ *
+ * WHY A QUEST CAN NEED MORE THAN ONE ENTRY. The panel picks the leg to show by one var value, so
+ * every leg of an entry has to be somewhere on one rising scale. Recipe for Disaster's ten victims
+ * are not: any of them can be freed first, and %hundred_main_quest_var does not move when you pick
+ * a different plinth. All 203 of their steps therefore sat in ONE leg, in a fixed order, and the
+ * panel took the furthest mark it could satisfy - free King Awowogei first and it jumped to step
+ * 163 and stopped mentioning the six victims still waiting. No arrangement of marks inside one leg
+ * fixes that, because the leg is the wrong shape. DeathPlateau-Bugs#60.
+ *
+ * Each victim does have a progress varbit of its own, which is precisely what an entry needs, so
+ * the blocks come out here and become entries.
+ */
+function sliceSubs(raw: unknown[], subs: SubSpec[]): { own: unknown[]; bySub: Map<string, unknown[]> } {
+    const known = new Set(subs.map(x => x.id));
+    const own: unknown[] = [];
+    const bySub = new Map<string, unknown[]>(subs.map(x => [x.id, [] as unknown[]]));
+    let into: string | null = null;
+    for (const entry of raw) {
+        if (entry && typeof entry === 'object' && 'sub' in (entry as Record<string, unknown>)) {
+            const id = (entry as { sub: string | null }).sub;
+            if (id !== null && !known.has(id)) {
+                // A marker naming a sub the manifest never declared would silently drop every step
+                // after it out of both lists, which is the one failure mode here worth shouting
+                // about: the quest would lose a branch and nothing would say so.
+                unresolved.set('sub:' + id, (unresolved.get('sub:' + id) ?? 0) + 1);
+                into = null;
+                continue;
+            }
+            into = id;
+            continue;
+        }
+        (into === null ? own : bySub.get(into)!).push(entry);
+    }
+    return { own, bySub };
+}
+
+/** Resolve a progress var name to what the client needs: its id, whether it is a varbit, its bits. */
+function progressVar(name: string): { stageVarId: number; stageIsVarbit: boolean; stageBits?: { varp: number; lsb: number; msb: number } } {
+    // A quest tracks progress in either a varp or a varbit, and the client reads the two
+    // differently (getVarp by id; getVarbit decodes a range out of its parent varp), so which it
+    // is has to travel with the number.
+    const asVarp = VarPlayerType.getByName(name);
+    if (asVarp) return { stageVarId: asVarp.id, stageIsVarbit: false };
+    const asBit = VarBitType.getByName(name);
+    if (!asBit) {
+        unresolved.set('stageVar:' + name, 1);
+        return { stageVarId: -1, stageIsVarbit: false };
+    }
+    // The bits themselves, so a harness with no cache can still write this quest's progress.
+    // Emitted only when all three are real: a -1 here would have the harness writing into varp -1
+    // and reading back a leg that never happened, which is worse than the first-leg-only sweep it
+    // replaces.
+    if (asBit.basevar >= 0 && asBit.startbit >= 0 && asBit.endbit >= asBit.startbit) {
+        return { stageVarId: asBit.id, stageIsVarbit: true, stageBits: { varp: asBit.basevar, lsb: asBit.startbit, msb: asBit.endbit } };
+    }
+    unresolved.set('stageBits:' + name, 1);
+    return { stageVarId: asBit.id, stageIsVarbit: true };
+}
+
+/** Build one helper entry and add it to the table. */
+function emit(spec: { id: string; name: string; source: string; stageVar: string; done: number; start: number[]; steps: unknown[] }) {
+    const { stages, dropped } = stepsOf(spec.steps);
+    for (const [k, v] of Object.entries(dropped)) allDropped[k] = (allDropped[k] ?? 0) + v;
+    const { stageVarId, stageIsVarbit, stageBits } = progressVar(spec.stageVar);
+    out.push({
+        stageVarId,
+        stageIsVarbit,
+        ...(stageBits ? { stageBits } : {}),
+        id: spec.id,
+        name: spec.name,
+        source: spec.source,
+        stageVar: spec.stageVar,
+        done: spec.done,
+        start: spec.start,
+        // NOTHING AFTER THE QUEST IS FINISHED. A sim does not stop at the last step: it goes on to
+        // check what the quest paid out - the anvil in Doric's, the Salve amulet in Haunted Mine,
+        // the Enchanted key hunt after Making History - and those rows were landing in the leg at
+        // `done`, where the panel already reads the quest as complete and shows none of them. They
+        // were invisible noise rather than a visible lie, but a quest helper's table should hold
+        // the quest and stop. Nine quests carried them, and the Feud's own stuck-character fixture
+        // would have been the tenth.
+        stages: spec.done > 0 ? stages.filter(st => st.from < spec.done) : stages
+    });
+}
+
 for (const file of fs
     .readdirSync(SIM)
     .filter(f => /^quest_.*_run\.ts$/.test(f))
@@ -1160,54 +1257,43 @@ for (const file of fs
         skipped.push(file);
         continue;
     }
-    const { stages, dropped } = stepsOf(m.steps);
     const done = Number(m.done ?? 0);
-    for (const [k, v] of Object.entries(dropped)) allDropped[k] = (allDropped[k] ?? 0) + v;
-    // A quest tracks progress in either a varp or a varbit, and the client reads the two
-    // differently (getVarp by id; getVarbit decodes a range out of its parent varp), so which it
-    // is has to travel with the number.
-    let stageVarId = -1;
-    let stageIsVarbit = false;
-    let stageBits: { varp: number; lsb: number; msb: number } | undefined;
-    const asVarp = VarPlayerType.getByName(m.stageVar);
-    if (asVarp) {
-        stageVarId = asVarp.id;
-    } else {
-        const asBit = VarBitType.getByName(m.stageVar);
-        if (asBit) {
-            stageVarId = asBit.id;
-            stageIsVarbit = true;
-            // The bits themselves, so a harness with no cache can still write this quest's
-            // progress. Emitted only when all three are real: a -1 here would have the harness
-            // writing into varp -1 and reading back a leg that never happened, which is worse
-            // than the first-leg-only sweep it replaces.
-            if (asBit.basevar >= 0 && asBit.startbit >= 0 && asBit.endbit >= asBit.startbit) {
-                stageBits = { varp: asBit.basevar, lsb: asBit.startbit, msb: asBit.endbit };
-            } else {
-                unresolved.set('stageBits:' + m.stageVar, 1);
-            }
-        }
-    }
-    if (stageVarId < 0) unresolved.set('stageVar:' + m.stageVar, 1);
-    out.push({
-        stageVarId,
-        stageIsVarbit,
-        ...(stageBits ? { stageBits } : {}),
+    const subs = (Array.isArray(m.subs) ? (m.subs as SubSpec[]) : []).filter(x => x && typeof x.id === 'string' && typeof x.stageVar === 'string');
+    const { own, bySub } = sliceSubs(m.steps as unknown[], subs);
+
+    emit({
         id: file.replace(/^quest_|_run\.ts$/g, ''),
         name: String(m.quest ?? file),
         source: String(m.source ?? ''),
         stageVar: m.stageVar,
         done,
         start: Array.isArray(m.start) ? (m.start as number[]) : [],
-        // NOTHING AFTER THE QUEST IS FINISHED. A sim does not stop at the last step: it goes on to
-        // check what the quest paid out - the anvil in Doric's, the Salve amulet in Haunted Mine,
-        // the Enchanted key hunt after Making History - and those rows were landing in the leg at
-        // `done`, where the panel already reads the quest as complete and shows none of them. They
-        // were invisible noise rather than a visible lie, but a quest helper's table should hold
-        // the quest and stop. Nine quests carried them, and the Feud's own stuck-character fixture
-        // would have been the tenth.
-        stages: done > 0 ? stages.filter(st => st.from < done) : stages
+        steps: own
     });
+
+    // AND ONE ENTRY PER PARALLEL BRANCH. `opens` becomes the branch's leg 0 - the click that
+    // starts it - and everything between its markers becomes leg 1, keyed on the branch's own var.
+    // Leg 0 matters: without it the entry's only leg would be `from: 0` and the panel would send a
+    // player who has not started the branch off to its first real step.
+    for (const sub of subs) {
+        const block = bySub.get(sub.id) ?? [];
+        if (block.length === 0) {
+            unresolved.set('subblock:' + sub.id, 1);
+            continue;
+        }
+        const lead: unknown[] = [];
+        if (sub.note) lead.push({ note: sub.note });
+        if (sub.opens) lead.push({ loc: sub.opens.loc, at: sub.opens.at, soft: true, why: sub.opens.why });
+        emit({
+            id: sub.id,
+            name: sub.name,
+            source: String(m.source ?? ''),
+            stageVar: sub.stageVar,
+            done: Number(sub.done ?? 0),
+            start: sub.opens ? [sub.opens.at[0], sub.opens.at[1], 0] : Array.isArray(m.start) ? (m.start as number[]) : [],
+            steps: [...lead, { stage: 1 }, ...block]
+        });
+    }
 }
 
 /**
