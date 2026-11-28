@@ -20,7 +20,7 @@
  *   gnomeshop_gulluck             bronze bolts, crossbow, PEARL BOLTS -> ALL correct (section 4)
  *   lathastrainingstore (Armoury) bronze bolts, crossbow  -> correct
  *   lletyaarcheryshop1 (Lletya)   bronze bolts, crossbow  -> correct
- *   ranging_guild_bowshop         7 crossbows + 6 metal bolts -> not in Old School (section 5)
+ *   ranging_guild_bowshop         7 crossbows + 6 metal bolts -> removed, Old School sells none (section 5)
  *   rangingguild_trade_tickets    barb bolttips x30       -> correct, the Ticket Exchange sells them
  *
  *   npx tsx tools/sim/rangedshops.ts
@@ -98,6 +98,16 @@ console.log("\n2. Lowe's keeps the bronze bolts and the crossbow, which the wiki
     for (const o of ['bronze_arrow', 'iron_arrow', 'steel_arrow', 'shortbow', 'longbow', 'maple_longbow']) {
         check(`  ${o}`, lowe.includes(o), true);
     }
+    // AND THE TWO TIERS IT WAS MISSING. The wiki's table runs bronze, iron, steel, mithril,
+    // adamant and then bronze bolts; this shop stopped at steel, so two arrow tiers Lowe sells
+    // could not be bought anywhere in Varrock. Found while reading the table to check the rows
+    // that were already here, which is the opposite direction from the rest of this sweep - every
+    // other finding was a row that should not exist.
+    check('  mithril arrows (wiki: 800)', slot('archeryshop', 'mithril_arrow')?.[0], 800);
+    check('  adamant arrows (wiki: 600)', slot('archeryshop', 'adamant_arrow')?.[0], 600);
+    // Restock times are the table's own: 9s and 12s, which are 15 and 20 ticks.
+    check('  ...mithril restocks in 15 ticks', slot('archeryshop', 'mithril_arrow')?.[1], 15);
+    check('  ...adamant in 20', slot('archeryshop', 'adamant_arrow')?.[1], 20);
     // AND NO HOLE WHERE A ROW USED TO BE. Removing a stockN line without renumbering the ones after
     // it packs a gap down to an empty slot (obj 65535, count 0) that a player's shop window shows
     // as a blank square. Exactly zero of the build's 318 stocked shops have one, so this is a
@@ -127,20 +137,47 @@ console.log('\n4. Gulluck and Sons keeps its pearl bolts, because Old School sel
     check('  and its bronze bolts too (wiki: 150)', slot('gnomeshop_gulluck', 'bolt')?.[0], 150);
 }
 
-// ---- 5. the Ranging Guild's crossbow block, pinned rather than removed -----------------------
-// THE SWEEP'S OTHER FINDING, and deliberately left in place. No shop in the Ranging Guild sells a
-// crossbow or a metal bolt in Old School - its four shops are armour, bows and arrows, javelins and
-// thrownaxes, and the ticket exchange - so these thirteen rows are the same expired stopgap as
-// Lowe's eight. Taking them out changes where every crossbow in the game comes from, which is an
-// economy decision rather than a bug fix, and the Ranging Guild is not what was reported.
+// ---- 5. the Ranging Guild sells no crossbow and no metal bolt ---------------------------------
+// THE SWEEP'S OTHER FINDING, now acted on (DeathPlateau-Bugs#82, owner's call: align with Old
+// School). Thirteen rows went - seven crossbows, bronze through rune, and six metal bolts, blurite
+// through runite - because they were the same expired stopgap as Lowe's eight gem bolts: added
+// "until they can be smithed and fletched", and that condition has been met.
 //
-// So the list is ASSERTED: it cannot grow, it cannot shrink by accident, and when the decision is
-// made this check is the thing that says what the decision was about.
-console.log('\n5. the Ranging Guild still sells the crossbow line, which is filed for a decision');
+// THE RANGING GUILD SELLS NEITHER IN OLD SCHOOL. Its shops are Dargaud's Bow and Arrows - arrow
+// shafts, seven arrowheads, six arrows, seven brutals, six bows, which is exactly the 27 rows this
+// shop keeps - and Aaron's Archery Appendages, which is leather armour.
+//
+// AND A CROSSBOW IS STILL OBTAINABLE, which is the thing worth checking rather than asserting.
+// Five shops keep the basic crossbow and finished bronze bolts (section 6), and every metal tier is
+// fletchable. Old School's only shop source for a metal crossbow is Hura's in the Dwarven Mine, and
+// every row there is ZERO in stock - so it supplies none either.
+console.log('\n5. the Ranging Guild sells no crossbow and no metal bolt, as Old School does not');
 {
-    const KNOWN = ['bronze_crossbow', 'blurite_crossbow', 'iron_crossbow', 'steel_crossbow', 'mithril_crossbow', 'adamant_crossbow', 'rune_crossbow', 'blurite_bolts', 'iron_bolts', 'steel_bolts', 'mithril_bolts', 'adamant_bolts', 'runite_bolts'];
     const held = stock('ranging_guild_bowshop').filter(o => /crossbow|_bolts$/.test(o));
-    check(`exactly these ${KNOWN.length} rows, no more and no fewer`, held.join(', '), KNOWN.join(', '));
+    check(`  no crossbow and no metal bolt${held.length ? ': ' + held.join(', ') : ''}`, held.length, 0);
+    // AND NOT BY EMPTYING THE SHOP, which is how this check could pass for the wrong reason - the
+    // same trap section 1 names for Lowe's. The 27 rows the wiki does give it are still here.
+    const guild = stock('ranging_guild_bowshop');
+    check('  and the shop still has its 27 rows', guild.length, 27);
+    for (const [o, n] of [
+        ['arrow_shaft', 1000],
+        ['rune_arrowheads', 150],
+        ['bronze_arrow', 1000],
+        ['rune_arrow', 400],
+        ['willow_longbow', 20]
+    ] as [string, number][]) {
+        check(`  ${o.padEnd(16)} (wiki: ${n})`, slot('ranging_guild_bowshop', o)?.[0], n);
+    }
+    // THE BRUTALS ARE ZERO IN STOCK IN THE WIKI TOO, so a zero here is the table and not a hole.
+    check('  bronze brutal is stocked at 0, as the wiki gives', slot('ranging_guild_bowshop', 'zogre_brutal_bronze')?.[0], 0);
+}
+
+// ---- 5b. and every metal tier that left the shop is still makeable ----------------------------
+// THE STOPGAP'S OWN CONDITION, for the crossbow half this time - section 3 does it for the gems.
+// If any of these were missing, pulling the shop rows would have made an item unobtainable.
+console.log('\n5b. every bolt tier that left the shop is still fletchable');
+for (const tier of ['bronze', 'blurite', 'iron', 'steel', 'mithril', 'adamant', 'runite']) {
+    check(`  ${tier.padEnd(8)} bolts have a Fletching row`, DbRowType.getId(`fletching_${tier}_bolts_feathered`) >= 0, true);
 }
 
 // ---- 6. and the four shops the sweep cleared stay cleared ------------------------------------
