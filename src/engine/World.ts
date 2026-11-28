@@ -1839,8 +1839,12 @@ class World {
         });
     }
 
+    // world_delay(n) WAKES n+1 PASSES AFTER IT WAS QUEUED (DeathPlateau-Bugs#119). processWorld tests
+    // the count BEFORE decrementing it, so a request holding k fires on its (k+1)th pass; holding
+    // delay + 1 therefore took delay + 2 passes - one tick slower than the "+ 1" here meant, and than
+    // PlagueCityRS 349's fixed executionTick (currentTick + delay + 1). tools/sim/worlddelay.ts times it.
     enqueueScript(script: ScriptState, delay: number = 0): void {
-        this.queue.addTail(new EntityQueueState(script, delay + 1));
+        this.queue.addTail(new EntityQueueState(script, delay));
     }
 
     getInventory(inv: number): Inventory | null {
