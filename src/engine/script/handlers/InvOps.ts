@@ -777,6 +777,34 @@ const InvOps: CommandHandlers = {
             World.addObj(dropObj, fromPlayer.hash64, duration);
         } else {
             World.addObj(dropObj, toPlayer.hash64, duration);
+            // custom (2026-11-28) - the killer's loot tracker: what they were given, from whom.
+            toPlayer.lootFeed.add(fromPlayer, 'p', fromPlayer.displayName, fromPlayer.combatLevel, obj.id, completed);
+        }
+    },
+
+    // custom (2026-11-28) - loot_event(string $source, inv $inv): what an inv just paid this player,
+    // for their loot tracker - a clue casket, the Barrows chest. Content calls it once the inv holds
+    // exactly one reward; nothing is moved, given or taken, only reported. See LootFeed.ts.
+    [ScriptOpcode.LOOT_EVENT]: state => {
+        const inv = state.popInt();
+        const source = state.popString();
+
+        const invType: InvType = check(inv, InvTypeValid);
+        const player = state.activePlayer;
+        if (!player.lootFeed.enabled) {
+            return;
+        }
+        const inventory: Inventory | null = player.getInventory(invType.id);
+        if (!inventory) {
+            return;
+        }
+        // One event, however many items: a fresh key, so two caskets in one tick are two.
+        const event = {};
+        for (let slot = 0; slot < inventory.capacity; slot++) {
+            const item = inventory.get(slot);
+            if (item) {
+                player.lootFeed.add(event, 'e', source, 0, item.id, item.count);
+            }
         }
     },
 

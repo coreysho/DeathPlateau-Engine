@@ -5,6 +5,11 @@ import ParamType from '#/cache/config/ParamType.js';
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import Obj from '#/engine/entity/Obj.js';
+import Npc from '#/engine/entity/Npc.js';
+import { NpcStat } from '#/engine/entity/NpcStat.js';
+import NpcType from '#/cache/config/NpcType.js';
+import ScriptState from '#/engine/script/ScriptState.js';
+import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
 import { ObjIterator } from '#/engine/script/ScriptIterators.js';
 import { ScriptOpcode } from '#/engine/script/ScriptOpcode.js';
 import { ActiveObj, ActivePlayer } from '#/engine/script/ScriptPointer.js';
@@ -52,6 +57,8 @@ const ObjOps: CommandHandlers = {
             state.activeObj = obj;
             state.pointerAdd(ActiveObj[state.intOperand]);
         }
+
+        reportDeathDrop(state, objId, count);
     },
 
     // https://x.com/JagexAsh/status/1778879334167548366
@@ -203,5 +210,33 @@ const ObjOps: CommandHandlers = {
     // obj_setvar // https://x.com/JagexAsh/status/1679942100249464833
     // obj_adddelayed // https://x.com/JagexAsh/status/1730321158858276938
 };
+
+/**
+ * custom (2026-11-28) - an npc's drop, for the loot tracker of the player it was dropped for.
+ *
+ * A DROP IS AN obj_add WHOSE SCRIPT IS AN NPC DYING: self is the npc, and either the script is its
+ * death queue - [ai_queue3,_] and every death script there is, through the gosubs, labels and procs
+ * the drop tables are written as (a jump keeps the trigger) - or the npc is at no hitpoints, which
+ * catches the few that die through another queue. Everything an npc hands over while alive - a
+ * quest item, a shop's spill - is neither, and is not loot.
+ *
+ * The receiver is the player the obj is for, which is npc_findhero's player: the same one the drop
+ * is private to, so the tracker credits exactly the kills the game does.
+ */
+export function reportDeathDrop(state: ScriptState, objId: number, count: number): void {
+    const self = state.self;
+    if (!(self instanceof Npc)) {
+        return;
+    }
+    const receiver = state.activePlayer;
+    if (!receiver.lootFeed.enabled) {
+        return;
+    }
+    if (state.trigger !== ServerTriggerType.AI_QUEUE3 && self.levels[NpcStat.HITPOINTS] !== 0) {
+        return;
+    }
+    const type = NpcType.get(self.type);
+    receiver.lootFeed.add(self, 'n', type.name ?? type.debugname ?? 'Unknown', type.vislevel, objId, count);
+}
 
 export default ObjOps;

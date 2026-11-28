@@ -54,6 +54,7 @@ import { SessionLog } from '#/engine/entity/tracking/SessionLog.js';
 import { WealthTransactionEvent, WealthEvent } from '#/engine/entity/tracking/WealthEvent.js';
 import GameMap, { changeLocCollision, changeNpcCollision, changeBlockCollision, changePlayerOccCollision } from '#/engine/GameMap.js';
 import { Inventory } from '#/engine/Inventory.js';
+import MessageGame from '#/network/game/server/model/MessageGame.js';
 import ScriptPointer from '#/engine/script/ScriptPointer.js';
 import ScriptProvider from '#/engine/script/ScriptProvider.js';
 import ScriptRunner from '#/engine/script/ScriptRunner.js';
@@ -1639,6 +1640,8 @@ class World {
 
         for (const player of this.playerLoop.all()) {
             if (!isClientConnected(player)) {
+                // Nobody to tell: a kill made while the client is gone is not saved up for later.
+                player.lootFeed.clear();
                 continue;
             }
 
@@ -1657,6 +1660,8 @@ class World {
                 player.updateStats();
                 // - afk zones changes
                 player.updateAfkZones();
+                // - loot tracker lines, once every script of the tick has dropped what it drops
+                player.lootFeed.flush(line => player.write(new MessageGame(line)));
 
                 // - flush packets
                 player.encodeOut();

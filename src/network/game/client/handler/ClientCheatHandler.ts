@@ -160,6 +160,15 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             return true;
         }
 
+        if (cmd === 'lootfeed') {
+            // custom (2026-11-28) - sent by the client itself at login, never typed: it asks for the
+            // hidden loot lines its loot tracker reads (LootFeed.ts). Silent, and before the staff
+            // log below, because it is the client saying what it understands, not a player's
+            // command. A client that never sends it is never sent a line it would print.
+            player.lootFeed.enabled = true;
+            return true;
+        }
+
         if (cmd === 'milestones') {
             // custom (2026-11-16) - a player's own setting, so it is handled before the staff
             // "Ran cheat" log below along with ::changepassword and ::forgetlogins.
