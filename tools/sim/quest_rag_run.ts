@@ -50,7 +50,21 @@ const m: Manifest = {
 for (const [npc, at, bone] of BEASTS) {
     m.steps.push(
         { setpos: [at[0], at[1], at[1] > 9000 ? 0 : 0], why: 'to the ' + npc + 's' } as Step,
+        // THE DICE ARE PINNED FOR THE BONE ROLL, and this is the difference between auditing a
+        // quest and gambling on one. ~rag_bone_drop is `random(128) < 32`, and the harness's dice
+        // are SEEDED - so "kill until it drops" is not thirty chances at a quarter, it is the same
+        // deterministic sequence every run. On SIM_SEED=1 that sequence never comes up under 32 at
+        // this call site: thirty goblins, 25,210 ticks, no bone, and a sim that reported the quest
+        // as unfinishable for 818 seconds a night. Pinned, every one of the five beasts drops its
+        // bone on the first kill.
+        //
+        // AND THE RATE IS NOT LOST BY DOING THIS. One in four is asserted where it belongs, by
+        // content's tools/gennpcdrops.py, which executes the death script symbolically and writes
+        // "Goblin skull 1/4" into the drop table the viewer reads - and `--check` holds that table
+        // in content CI. This file's job is whether Rag and Bone Man can be completed.
+        { rng: 0.1, why: 'the one-in-four bone roll, so the audit is not a lottery' } as Step,
         { fight: npc, until: bone, tries: 30, why: 'one in four of them leaves a bone' } as Step,
+        { rng: null, why: 'and the dice back for everything after it' } as Step,
         { take: bone, r: 14, why: 'off the floor' } as Step,
         { has: bone } as Step
     );

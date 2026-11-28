@@ -291,6 +291,7 @@ console.log('\nAND KARAM KILLS WHAT HE CAN SEE');
         // wherever Karam is each tick. Exactly the lesson tools/sim/mmaggro.ts records at length,
         // which is why this was worth fixing rather than deleting. DeathPlateau-Bugs#83.
         let dead = false;
+        let fellAt: [number, number] = [karam.x, karam.z];
         let last = '';
         let reformed = 0;
         for (let i = 0; i < 40 && !dead; i++) {
@@ -308,9 +309,51 @@ console.log('\nAND KARAM KILLS WHAT HE CAN SEE');
             H.tick(1);
             const n: any = World.getNpc(npc.nid);
             dead = !n || n.levels[3] === 0;
+            if (n && dead) fellAt = [n.x, n.z];
             if (n && k) last = `hp ${n.levels[3]} at ${n.x},${n.z}, Karam at ${k.x},${k.z}, ${Math.max(Math.abs(n.x - k.x), Math.abs(n.z - k.z))} apart`;
         }
         check(`  and a captor beside him does not last (${last})`, dead, true);
+        // AND IT HAS TO LEAVE THE WORLD, not merely reach nought. This check asserted
+        // `levels[3] === 0` and nothing else, so it was green over a corpse that stayed standing -
+        // which is what the nightly's fuzz watcher caught on 24 November: "mm_monkey_guard was
+        // still in the world 12 ticks after its hitpoints reached 0 (npc_del never ran)". A player
+        // killing one of these in an ordinary fight removes it properly; Karam's kill is
+        // npc_damage from inside the npc's OWN [ai_opplayer2], and that is the path that leaves it.
+        for (let i = 0; i < 14; i++) H.tick(1);
+        const corpse: any = World.getNpc(npc.nid);
+        check('    ...and is gone twelve ticks later, rather than standing there dead', !corpse || !corpse.isActive, true);
+        // AND THE BONES, which is the other half of what the content comment claims Karam is for:
+        // "the death animation and npc_param(death_drop), which is how the bones get onto the
+        // floor ... the bones are why a player wants him to". Searched around where it fell rather
+        // than on one tile, since the scene is re-formed as Karam wanders.
+        // THE DROP IS READ OFF THE NPC, not named here: these guards carry
+        // death_drop=mm_small_ninja_monkey_bones and my first version of this check looked for
+        // plain `bones`, failed, and had me rewriting working content twice.
+        const dropParam = NpcType.get(npc.type).params?.get(ParamType.getId('death_drop'));
+        check('    ...and it has a death_drop to leave', typeof dropParam === 'number' && dropParam > 0, true);
+        const boneId = typeof dropParam === 'number' ? dropParam : ObjType.getId('bones');
+        let bone = false;
+        for (let dx = -3; dx <= 3 && !bone; dx++) {
+            for (let dz = -3; dz <= 3 && !bone; dz++) {
+                bone = !!(World.getObj(fellAt[0] + dx, fellAt[1] + dz, 0, boneId, p.hash64) ?? World.getObj(fellAt[0] + dx, fellAt[1] + dz, 0, boneId, -1n));
+            }
+        }
+        check(`    ...and leaves the ${ObjType.get(boneId).debugname} a player came for`, bone, true);
+        // EXACTLY ONE OF THEM. The fix calls the death by hand from inside the npc's own trigger;
+        // if the engine were ALSO running [ai_queue3,_] for the same death the drop would land
+        // twice, which is a duplication bug rather than a fix.
+        let piles = 0;
+        let stacked = 0;
+        for (let dx = -3; dx <= 3; dx++) {
+            for (let dz = -3; dz <= 3; dz++) {
+                const o: any = World.getObj(fellAt[0] + dx, fellAt[1] + dz, 0, boneId, p.hash64) ?? World.getObj(fellAt[0] + dx, fellAt[1] + dz, 0, boneId, -1n);
+                if (o) {
+                    piles++;
+                    stacked += o.count ?? 1;
+                }
+            }
+        }
+        check(`    ...once, not twice (${piles} pile(s), ${stacked} total)`, [piles, stacked], [1, 1]);
         // AND THE RE-FORMING IS REPORTED, because "it died" over a scene that was never actually
         // beside Karam would be the same pass for the wrong reason.
         console.log(`       (Karam wandered, so the scene was re-formed around him ${reformed} times)`);

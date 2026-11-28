@@ -614,22 +614,30 @@ console.log('== the Vote clerk sells all ten, and only sells');
     const names = Array.from(stock)
         .filter(o => o > 0)
         .map(o => ObjType.get(o).debugname ?? '?');
-    check('ten rows', names.length, 10);
+    // ELEVEN ROWS, AND THE ELEVENTH IS NOT A DIARY REWARD. The vote clerk gained the seed box on
+    // 23 November because nothing in the game produced one (it is a Tithe Farm reward in Old School
+    // and there is no Tithe Farm here), and it was put LAST on purpose: the ten above it are the
+    // diary set, ordered dearest first, and the seed box is not part of that set and does not share
+    // its price order. So this section counts eleven, keeps asserting the ten as a set and an
+    // order, and names the extra - a TWELFTH row, or a different eleventh, still fails here.
+    check('eleven rows', names.length, 11);
+    check('the ring leads the shelf', names[0], 'explorers_ring_4');
     // THE RING FIRST, THEN THE NINE - asserted as a set and an order, not as a written-out list.
     // The list was here and it pinned the prices a second time: swapping two of them failed this
     // check while the shelf was in fact correctly sorted.
-    check('the ring leads the shelf', names[0], 'explorers_ring_4');
-    check('  ...and the nine sold items are each there exactly once', names.slice(1).sort(), [...PRICED].sort());
+    check('  ...and the nine sold items are each there exactly once', names.slice(1, 10).sort(), [...PRICED].sort());
+    check('  ...and the seed box sits below them, outside the set', names[10], 'seed_box');
     // The shelf's order is only readable if it matches the prices, so it is checked against them
-    // rather than against a list written out by hand twice.
-    const costs = names.slice(1).map(n => ObjType.get(ObjType.getId(n)).cost);
+    // rather than against a list written out by hand twice. The seed box is left out of it for the
+    // reason its own commit gives: it is priced at the floor of the band, not into the order above.
+    const costs = names.slice(1, 10).map(n => ObjType.get(ObjType.getId(n)).cost);
     check(
         'and that order really is descending by price',
         costs,
         [...costs].sort((a, b) => b - a)
     );
-    const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []).slice(0, 10);
-    const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []).slice(0, 10);
+    const counts = Array.from((t as unknown as { stockcount: number[] }).stockcount ?? []).slice(0, 11);
+    const rates = Array.from((t as unknown as { stockrate: number[] }).stockrate ?? []).slice(0, 11);
     check(
         'every row is unlimited: a thousand at rate 1',
         [new Set(counts), new Set(rates)].map(s => [...s]),

@@ -330,7 +330,12 @@ for (let leg = 1; leg <= legs; leg++) {
         H.setVarBit(p, 'trek_event_done', 1);
     } else if (ev === 'bridge') {
         check('the way on is shut', H.getVarBit(p, 'trek_event_done'), 0);
-        H.give(p, 'plank', 5);
+        // woodplank, NOT plank: `plank` is the dead duplicate ~sawmill_old_planks_login deletes on
+        // every login, and content f79bb04b moved the bridge repair onto the real one. Handing over
+        // the dead item left trek_bridge_fixed at 0, and the loop then clicked the next stage's loc
+        // - which does not exist until the first plank goes down - and threw "no
+        // templetrek_bridge_fixed_1 at 2090,5039", a crash that reads like missing map data.
+        H.give(p, 'woodplank', 5);
         H.give(p, 'hammer');
         // three stages, one piece of wood each, and the loc changes under you every time
         for (const [from, to] of [
@@ -343,7 +348,7 @@ for (let leg = 1; leg <= legs; leg++) {
             p.closeModal();
             check(`stage ${to}: ${from.replace('templetrek_bridge_', '')} mended`, H.getVarBit(p, 'trek_bridge_fixed'), to);
         }
-        check('three pieces of wood finish it', [H.getVarBit(p, 'trek_bridge_fixed'), H.getVarBit(p, 'trek_event_done'), H.invCount(p, 'plank')], [3, 1, 2]);
+        check('three pieces of wood finish it', [H.getVarBit(p, 'trek_bridge_fixed'), H.getVarBit(p, 'trek_event_done'), H.invCount(p, 'woodplank')], [3, 1, 2]);
         // and the ditch is crossed by clicking the bridge, not by walking: Walk-across is the only
         // op on the finished one, and the Continue-trek path is on the far bank
         H.opLoc(p, 2090, 5039, 'templetrek_bridge_fixed_3', 2);

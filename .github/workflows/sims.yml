@@ -33,11 +33,45 @@
 # sims open '../content/scripts/...' directly. That is their convention and this matches it.
 name: Nightly sims
 
+# ONE RUN PER REF, AND THE SCHEDULE IS NEVER THE ONE CANCELLED. A burst of merges would otherwise
+# queue a full sweep each, and the last one is the only one anybody wants - but a push must not be
+# able to kill the nightly, so the group carries the event name and only a push cancels its own.
+concurrency:
+  group: sims-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+# AND NOT ONLY NIGHTLY, which is the change of 24 November 2026 and the reason for it is worth
+# writing down. This job was red for four nights running, and when it was finally read, four of the
+# sixteen failures had ALREADY BEEN FIXED by merges: the nightly was reporting yesterday's news
+# against a pair of branches that had both moved since. Seven more were content changing something
+# on purpose - a shop row, a facing, forty-two fairies given dialogue - with nothing to tell anyone
+# until 03:00, by which time the merge that did it was a day old and belonged to nobody.
+#
+# A push run fixes the half of that which can be fixed here: an engine merge gets the suite inside
+# the hour, and the Discord post names the sims next to the commit that moved them.
+#
+# THE CONTENT HALF IS SENT FROM CONTENT. A content merge is a push in the OTHER repository, and
+# GITHUB_TOKEN is scoped to one repository - so content's CI holds a PAT and calls this repository's
+# dispatch endpoint. That job exists: `tell-engine` in content's .github/workflows/content.yml,
+# which fires `content-merged` below and no-ops if the token is missing.
+#
+# THE TOKEN WANTS 'CONTENTS: WRITE' ON THIS REPOSITORY, which is what POST /repos/.../dispatches
+# documents - NOT `workflow`, which is for editing workflow files, and which an earlier version of
+# this comment asked for by mistake. It is saved in CONTENT's secrets as ENGINE_DISPATCH_TOKEN,
+# because that is where the step that uses it runs.
+#
+# In the meantime a content author can run the pair by hand before merging - Actions -> Nightly
+# sims -> Run workflow, with content_ref set to their branch. That is what the two inputs are for.
 on:
   schedule:
     # 03:00 UTC, off the hour everything else in this project uses. GitHub delays scheduled runs
     # under load and is not shy about it - the first unattended run fired at 10:28.
     - cron: '0 3 * * *'
+  push:
+    branches: [377-wip]
+  repository_dispatch:
+    # content's CI can fire this once a PAT exists; see the note above.
+    types: [content-merged]
   workflow_dispatch:
     inputs:
       content_ref:
@@ -321,8 +355,18 @@ jobs:
           # be trimmed without testing a different door each round. 180 would be 43% of the cap HERE
           # and this box is faster than a runner, so it is exactly the audit7 shape: slow, not
           # broken, and killed on the first night.
+          # AND THREE MORE, from the four nights this job spent red. mmjaildoor and namedtrolls were
+          # both reported as "fails twice" and both PASS: 179s for mmjaildoor's 9 checks against a
+          # 180s cap - one second inside it - and 261s for namedtrolls' 32, which is simply over.
+          # mmjaildoor is the sharpest example of the audit7 shape yet: 120 lock-picking attempts at
+          # four Thieving levels, each waiting for its own outcome, and nothing in it to trim.
+          #
+          # quest_mm_run is here because it GREW, and grew for a good reason: it used to stop at
+          # step 37 of 154 on a jail door that never opened, so it took a fraction of its cap by
+          # failing early. A complete Monkey Madness is 135s here, which is 75% of 180 - past the
+          # seven-tenths line this job already warns at, and the audit7 trap exactly.
           case "$label" in
-            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run|zanaris) cap=600 ;;
+            audit7|glassblowing|roofall|animmag|audit3|diaryrewards|quest_hundred_run|droprate|fairyrings|seedstall|pickpocketloot|quest_legends_run|zanaris|mmjaildoor|namedtrolls|quest_mm_run) cap=600 ;;
             gwdguards|dpick|gwdanims|lunar|equipcycle) cap=1200 ;;
             audit1-*) cap=2400 ;;
             *) cap=180 ;;

@@ -111,7 +111,19 @@ function coordTile(npc: Npc, d: number): [number, number] | null {
  * tiles. Same trap mmaggro.ts hit and for the same reason.
  */
 function hunts(npc: any, p: any, d: number, from: 'edge' | 'coord' = 'edge', ticks = 8): boolean {
-    for (let t = 0; t < ticks; t++) {
+    // RECOMPUTING THE TILE EVERY TICK IS NOT ENOUGH, which is the second half of the trap this
+    // helper's docstring describes. The tile is chosen, the player is teleported, and then a tick
+    // runs - and the npc walks during THAT tick, so the hunt executes against a distance nobody
+    // measured. "6 tiles from its corner: ignores" was passing and failing with the dice: at the
+    // moment the hunt ran, the player was 5 away and the engine was right to take them.
+    //
+    // So in `coord` mode - where the claim is about CoordGrid.distanceToSW, the number huntrange is
+    // compared against - a tick whose distance is not `d` is not an observation of `d` and is not
+    // counted. The loop keeps going until it has `ticks` real ones. `edge` mode is left alone: its
+    // tile is d clear of the body rather than d from the corner, so there is no single number to
+    // hold it to, and its callers all stand adjacent where wandering cannot change the answer.
+    let obs = 0;
+    for (let guard = 0; guard < ticks * 8 && obs < ticks; guard++) {
         const tile = from === 'coord' ? coordTile(npc, d) : tileAt(npc, d);
         if (tile && (p.x !== tile[0] || p.z !== tile[1] || p.level !== npc.level)) {
             p.teleport(tile[0], tile[1], npc.level);
@@ -120,6 +132,12 @@ function hunts(npc: any, p: any, d: number, from: 'edge' | 'coord' = 'edge', tic
             // the same tick looks for them in the zone they just left.
             H.tick(1);
         }
+        const real = Math.max(Math.abs(p.x - npc.x), Math.abs(p.z - npc.z));
+        if (from === 'coord' && real !== d) {
+            H.tick(1);
+            continue;
+        }
+        obs++;
         if (npc.huntMode !== -1 && npc.isValid()) {
             const hunt = HuntType.get(npc.huntMode);
             if (hunt) {
@@ -152,7 +170,19 @@ const probes: any[] = [];
  * tiles" passed and "attacks from 5" failed, on the same npc, in the same section.
  */
 function freshen(npc: any): void {
-    for (const old of probes) old.teleport(1, 1, 0);
+    // THE OLD PROBES ARE REMOVED, NOT MOVED, and that distinction is what broke this file.
+    // teleport() is a request: a probe that had just been in combat stayed exactly where it was for
+    // the tick this function allows, and the engine relocated it to Lumbridge a whole check later.
+    // So section 7's level-56 cyclops kept targeting cyc15 - section 6's maxed probe, still
+    // standing five tiles away on the top floor - and "a 70-stat player is still attacked" read
+    // false because the npc was already busy with somebody it was right to ignore. The hunt was
+    // correct; the measurement was not.
+    //
+    // harness.ts says the difference in as many words at despawn(): "logout() is only a request".
+    // Every freshen() in this file is followed immediately by a new probe(), so nothing is lost by
+    // taking the old ones out of the world.
+    H.despawn(...probes);
+    probes.length = 0;
     H.tick(1);
     npc.resetDefaults();
     H.tick(10);
