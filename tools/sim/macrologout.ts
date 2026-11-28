@@ -26,7 +26,7 @@ const NO_EVENT = 0; // ^no_macro_event
 const HOME: [number, number] = [3222, 3218]; // a quiet spot in Varrock, where the event found them
 
 /**
- * The nine rooms, written out, because this sim has to be able to RUN against code that has none of
+ * The ten rooms, written out, because this sim has to be able to RUN against code that has none of
  * them - a list read only out of the content's own table would make every behaviour check below
  * unreachable on the code the bug was reported against. The table is checked against this list
  * instead, in the first block, so a landing that moves in the content still shows up here.
@@ -40,7 +40,8 @@ const ROOMS: { name: string; level: number; x: number; z: number }[] = [
     { name: 'forester', level: 0, x: 2600, z: 4776 }, // ^macro_forester_landing   0_40_74_40_40
     { name: 'drilldemon', level: 0, x: 3165, z: 4816 }, // ^macro_drilldemon_landing 0_49_75_29_16
     { name: 'gravedigger', level: 0, x: 1929, z: 5003 }, // ^macro_digger_landing     0_30_78_9_11  (Pete's chapel too)
-    { name: 'lostandfound', level: 0, x: 2338, z: 4747 } // ^macro_laf_landing        0_36_74_34_11
+    { name: 'lostandfound', level: 0, x: 2338, z: 4747 }, // ^macro_laf_landing        0_36_74_34_11
+    { name: 'maze', level: 0, x: 2891, z: 4597 } // ^macro_maze_landing       0_45_71_11_53
 ];
 const square = (r: { x: number; z: number }) => `${(r.x / 64) | 0}_${(r.z / 64) | 0}`;
 /** EnumType stores its values in a Map keyed by the input, so reading one is a Map lookup. */
@@ -74,7 +75,7 @@ function login(name: string, at: [number, number, number], event: number, home: 
     return { p, said: A.mesSince(p, m) };
 }
 
-console.log("THE CONTENT'S OWN TABLE OF ROOMS IS THESE NINE SQUARES");
+console.log("THE CONTENT'S OWN TABLE OF ROOMS IS THESE TEN SQUARES");
 {
     // macro_event_rooms is what ~macro_event_in_room walks, and it is written as each event's
     // landing constant - so a landing that moves takes its square with it, and this says so.
@@ -85,7 +86,7 @@ console.log("THE CONTENT'S OWN TABLE OF ROOMS IS THESE NINE SQUARES");
         const u = CoordGrid.unpackCoord(v);
         got.push(`${u.level}:${(u.x / 64) | 0}_${(u.z / 64) | 0}`);
     }
-    check('  the table holds exactly the nine rooms below', got.sort(), ROOMS.map(r => `${r.level}:${square(r)}`).sort());
+    check('  the table holds exactly the ten rooms below', got.sort(), ROOMS.map(r => `${r.level}:${square(r)}`).sort());
     // Every one of them is in the band the game keeps for rooms you can only be put in, which is
     // what makes "standing here" proof that an event put you here, and the pillory's cage in
     // Varrock rightly absent.
