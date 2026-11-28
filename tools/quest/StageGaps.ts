@@ -75,11 +75,29 @@ function walk(dir: string, exts: string[], out: string[] = []): string[] {
 
 const SCRIPTS = path.join(CONTENT, 'scripts');
 const constants = new Map<string, number>();
+const unparsed: string[] = [];
 for (const file of walk(SCRIPTS, ['.constant'])) {
     for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
-        const m = /^\s*\^(\w+)\s*=\s*(-?\d+)\s*$/.exec(line);
-        if (m) constants.set(m[1], parseInt(m[2]));
+        // A trailing `// comment` is allowed. The regex used to be anchored at the end of the line, so
+        // every constant with a comment on it resolved to nothing and every `%var = ^const;` write
+        // through it was skipped - 34 progress values the guard could not see (DeathPlateau-Bugs#108).
+        const decl = /^\s*\^(\w+)\s*=\s*(.*?)\s*(?:\/\/.*)?$/.exec(line);
+        if (!decl) continue;
+        const m = /^(-?\d+|0x[0-9a-fA-F]+)$/.exec(decl[2]);
+        if (m) {
+            constants.set(decl[1], Number(m[1]));
+        } else if (/^[-\d(]/.test(decl[2]) && !/^\d+(_\d+)+$/.test(decl[2])) {
+            // Looks numeric, is not a plain integer, and is not a coord. Skipping it silently is what
+            // hid the 34, so say so and fail rather than carry on with a smaller map.
+            unparsed.push(`${path.relative(CONTENT, file)}: ${line.trim()}`);
+        }
     }
+}
+
+if (unparsed.length > 0) {
+    console.log(`${unparsed.length} constant(s) look numeric but cannot be parsed - fix the parser, do not skip them:`);
+    for (const u of unparsed.slice(0, 20)) console.log(`  ${u}`);
+    process.exit(1);
 }
 
 // Every assignment to a player var anywhere in the content, by var name. `%var = ^const;` and
