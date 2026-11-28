@@ -82682,15 +82682,15 @@
      "worn": []
     },
     {
-     "from": 20,
+     "from": 30,
      "headings": [
       {
        "at": 1,
-       "text": "Scan, go where it points, speak to him."
+       "text": "Seven stops."
       },
       {
-       "at": 9,
-       "text": "The fifth time the teleport does not come."
+       "at": 13,
+       "text": "The seventh stop is a fight, and he loses it."
       }
      ],
      "marks": [],
@@ -82707,7 +82707,7 @@
       {
        "kind": "obj",
        "text": "Scan Commorb.",
-       "why": "Scan - one of twelve places.",
+       "why": "Scan - it says where he was seen.",
        "target": "wanted_crystal_ball",
        "id": 6635,
        "label": "Commorb",
@@ -82860,7 +82860,7 @@
       {
        "kind": "talk",
        "text": "Talk to Solus Dellagar.",
-       "why": "This time he is arrested.",
+       "why": "The fifth.",
        "target": "wanted_solus1",
        "id": 2756,
        "label": "Solus Dellagar",
@@ -82884,6 +82884,86 @@
         2772,
         2773
        ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "The sixth, where a Black Knight is sent after you.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767,
+        2768,
+        2769,
+        2770,
+        2771,
+        2772,
+        2773
+       ]
+      },
+      {
+       "kind": "obj",
+       "text": "Scan Commorb.",
+       "target": "wanted_crystal_ball",
+       "id": 6635,
+       "label": "Commorb",
+       "op": 1
+      },
+      {
+       "kind": "talk",
+       "text": "Talk to Solus Dellagar.",
+       "why": "This time he stays to fight.",
+       "target": "wanted_solus1",
+       "id": 2756,
+       "label": "Solus Dellagar",
+       "also": [
+        2747,
+        2757,
+        2758,
+        2759,
+        2760,
+        2761,
+        2762,
+        2763,
+        2764,
+        2765,
+        2766,
+        2767,
+        2768,
+        2769,
+        2770,
+        2771,
+        2772,
+        2773
+       ]
+      },
+      {
+       "kind": "talk",
+       "text": "Kill Solus Dellagar.",
+       "why": "Takes his hat.",
+       "target": "wanted_solus_attackable",
+       "id": 2780,
+       "label": "Solus Dellagar"
       }
      ],
      "items": [],
@@ -82894,20 +82974,20 @@
      "headings": [
       {
        "at": 0,
-       "text": "Back to Sir Tiffy with the hat."
+       "text": "Report to Sir Amik Varze in Falador castle, with the hat."
       }
      ],
      "marks": [],
      "steps": [
       {
        "kind": "talk",
-       "text": "Talk to Sir Tiffy Cashien.",
+       "text": "Talk to Sir Amik Varze.",
        "why": "He takes it.",
-       "target": "rd_teleporter_guy",
-       "id": 2290,
-       "label": "Sir Tiffy Cashien",
+       "target": "sir_amik_varze",
+       "id": 608,
+       "label": "Sir Amik Varze",
        "picks": [
-        "About Solus Dellagar..."
+        "Solus Dellagar"
        ]
       }
      ],

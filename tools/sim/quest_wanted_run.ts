@@ -10,6 +10,8 @@
 import * as H from './harness.js';
 import { drive } from './a1lib.js';
 import type { Manifest } from './questrun.js';
+import World from '#/engine/World.js';
+import NpcType from '#/cache/config/NpcType.js';
 
 /**
  * THE QUEST AS A PLAYER DOES IT, for the helper's step table - and declared rather than driven.
@@ -51,14 +53,16 @@ export const helper: Manifest = {
 
         { note: 'wiki step 2: contact Savant on the orb, and she briefs you' },
         { held: 'wanted_crystal_ball', op: 2, why: 'Contact' },
-        { stage: 20 },
+        // HE BRIEFS YOU STRAIGHT INTO THE HUNT. Stage 20 is no longer a value anyone can be found at
+        // (quest_wanted.rs2, the note above the write), so the leg starts at 30.
+        { stage: 30 },
         { held: 'wanted_crystal_ball', op: 4, why: 'his file, if you want to read it' },
 
         // WRITTEN OUT, NOT GENERATED. A spread here would be read as a built manifest and the
         // exporter would RUN this file to see it - and running this file boots a world and plays
-        // the whole quest. Four rounds is shorter than that machinery.
-        { note: 'wiki steps 3-7: scan, go where it points, speak to him. Four times he teleports out' },
-        { held: 'wanted_crystal_ball', op: 1, why: 'Scan - one of twelve places' },
+        // the whole quest.
+        { note: 'wiki steps 3-9: seven stops. Scan, go where it points, speak to him; he teleports out of the first six' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan - it says where he was seen' },
         { talk: 'wanted_solus1', why: 'he is gone before you have finished' },
         { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
         { talk: 'wanted_solus1', why: 'and again' },
@@ -66,36 +70,26 @@ export const helper: Manifest = {
         { talk: 'wanted_solus1', why: 'and again' },
         { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
         { talk: 'wanted_solus1', why: 'the fourth time' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
+        { talk: 'wanted_solus1', why: 'the fifth' },
+        { held: 'wanted_crystal_ball', op: 1, why: 'Scan again' },
+        { talk: 'wanted_solus1', why: 'and the sixth, where a Black Knight is sent after you' },
 
-        { note: 'wiki step 8: the fifth time the teleport does not come' },
+        { note: 'wiki step 10: the seventh stop is a fight, and he loses it' },
         { held: 'wanted_crystal_ball', op: 1, why: 'Scan' },
-        { talk: 'wanted_solus1', why: 'and this time he is arrested' },
+        { talk: 'wanted_solus1', why: 'and this time he stays to fight' },
+        { fight: 'wanted_solus_attackable', why: 'and takes his hat' },
         { stage: 40 },
 
-        { note: 'wiki step 9: back to Sir Tiffy with the hat' },
-        // And the option is worded for where the quest is by the time you bring the hat back.
-        { talk: 'rd_teleporter_guy', picks: ['About Solus Dellagar...'], why: 'he takes it' },
+        { note: 'wiki step 11: report to Sir Amik Varze in Falador castle, with the hat' },
+        // SIR AMIK VARZE, NOT SIR TIFFY: the hat is handed in at wanted_amik.rs2, and this step used
+        // to send the player back to the bench in the park, where nobody would take it.
+        { talk: 'sir_amik_varze', picks: ['Solus Dellagar'], why: 'he takes it' },
         { stage: 50 }
     ]
 };
 
 await H.boot();
-
-// the twelve places Solus can be, in the order ^wanted_solus_1..12 declares them
-const PLACES: [number, number][] = [
-    [2566, 3084],
-    [2567, 3384],
-    [2603, 3421],
-    [2691, 3496],
-    [2803, 3431],
-    [2948, 3146],
-    [3007, 3458],
-    [2974, 3742],
-    [3011, 3236],
-    [3100, 3279],
-    [3207, 3227],
-    [3279, 3496]
-];
 
 let pass = 0;
 let fail = 0;
@@ -136,7 +130,8 @@ drive(p, ['jobs', 'Go on.', "I'll pay"]); // his menu, the quest's own, then the
 check('he hands over a commorb', H.invCount(p, 'wanted_crystal_ball') > 0);
 check('and the quest starts', H.getVarBit(p, 'wanted_main') === 10, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 
-// 2. contact Savant, which is the second option on the orb
+// 2. contact Savant, which is the second option on the orb. HE BRIEFS YOU STRAIGHT INTO THE HUNT:
+// there is no "briefed" stop to be found at any more (quest_wanted.rs2, the note above the write).
 const markBrief = H.ifaces.length;
 H.opheld(p, 'wanted_crystal_ball', 2);
 H.tick(4);
@@ -147,7 +142,7 @@ const briefing = H.ifaces
     .map(i => i.text)
     .join(' ');
 check('Savant briefs you over it', briefing.length > 0, briefing.slice(0, 44));
-check('and the quest moves on', H.getVarBit(p, 'wanted_main') === 20, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
+check('and the hunt begins: stage 30', H.getVarBit(p, 'wanted_main') === 30, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 
 // the dossier, which is the fourth option and pure flavour - but it is an op that exists
 const markFile = H.ifaces.length;
@@ -161,50 +156,55 @@ const file = H.ifaces
     .join(' ');
 check('the playback has his file on it', file.includes('SOLUS DELLAGAR'), file.slice(0, 40));
 
-// 3. the chase: scan, go, speak, repeat. Five sightings, the last of which is the arrest.
-for (let round = 1; round <= 5; round++) {
-    p.teleport(2998, 3373, 0);
-    H.tick(1);
-    H.opheld(p, 'wanted_crystal_ball', 1);
-    H.tick(4);
-    drive(p, []);
-    const where = H.runProc(p, '[proc,wanted_current_location]')[0];
-    check('scan ' + round + ': the orb picks a place', where >= 1 && where <= 12, 'place ' + where);
-    if (!(where >= 1 && where <= 12)) break;
-
-    const [x, z] = PLACES[where - 1];
-    p.teleport(x + 1, z, 0);
-    H.tick(2);
-    const solus = H.npcNear('wanted_solus' + where, x, z, 0);
-    check('  he is where the orb said: ' + x + ',' + z, !!solus, solus ? solus.x + ',' + solus.z : 'nothing there');
+// 3. the chase: seven stops, each at the place the hunt has lit. Old School's order is fixed for
+// 1, 3, 5 and 7 and drawn from the pool for 2, 4 and 6 (tools/sim/wantedosrs.ts proves that part);
+// what is walked here is the whole of it, in order, ending in the fight.
+const lit = (): number => {
+    for (let i = 1; i <= 18; i++) if (H.getVarBit(p, 'wanted_mission' + i) === 1) return i;
+    return 0;
+};
+for (let stop = 1; stop <= 7; stop++) {
+    const where = lit();
+    check('stop ' + stop + ': the hunt has lit a place', where >= 1 && where <= 18, 'place ' + where);
+    if (!where) break;
+    const solus = World.npcs.find((n: any) => n && n.isActive && n.type === NpcType.getId('wanted_solus' + where));
+    check('  he is standing there', !!solus, solus ? solus.x + ',' + solus.z : 'nothing there');
     if (!solus) break;
-    const markTalk = H.mesgs.length;
+    if (!H.standBeside(p, solus)) p.teleport(solus.x + 1, solus.z, solus.level);
+    H.tick(2);
+    H.clearLogs();
     H.opNpc(p, solus, 1);
-    H.tick(4);
+    for (let t = 0; t < 40 && !p.activeScript; t++) H.tick(1);
     drive(p, []);
-    const said = H.mesgs
-        .slice(markTalk)
-        .filter(x2 => x2.who === p.username)
-        .map(x2 => x2.text)
-        .join(' ');
-    if (round < 5) {
-        check('  he teleports out rather than answer', said.includes('gone before you have finished'), said.slice(0, 40));
-    } else {
-        check('  the fifth time the teleport does not come', said.includes('does not come'), said.slice(0, 44));
+    H.tick(12);
+    if (stop < 7) {
+        check('  the sighting counts, and he is gone', H.getVarBit(p, 'wanted_mission' + where + 'complete') === 1);
+        p.levels[3] = p.baseLevels[3]; // the set pieces cost health; stop 4's is most of it
     }
 }
 
+// the seventh stop leaves him standing to be fought, and the kill is what pays the hat
+const fighter: any = World.npcs.find((n: any) => n && n.isActive && n.type === NpcType.getId('wanted_solus_attackable'));
+check('the seventh stop leaves him standing to be fought', !!fighter);
+if (fighter) {
+    H.attackNpc(p, fighter);
+    for (let t = 0; t < 600 && fighter.isActive; t++) H.tick(1);
+    H.tick(6);
+    drive(p, []);
+    H.tick(4);
+}
 check('Solus is in custody', H.getVarBit(p, 'wanted_main') === 40, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 check('and his hat is the proof', H.invCount(p, 'wanted_solus_trophy') > 0);
 
-// 4. back to Tiffy with it
-p.teleport(2998, 3373, 0);
+// 4. the hat goes to Sir Amik Varze, not to Tiffy
+const amik: any = World.npcs.find((n: any) => n && n.isActive && n.type === NpcType.getId('sir_amik_varze'));
+check('Sir Amik Varze is in Falador castle', !!amik, amik ? amik.x + ',' + amik.z : '');
+if (amik) H.standBeside(p, amik);
 H.tick(2);
-const tiffy2 = H.npcNear('rd_teleporter_guy', 2998, 3373, 0)!;
-H.opNpc(p, tiffy2, 1);
+H.opNpc(p, amik, 1);
 H.tick(3);
-drive(p, ['Solus Dellagar']); // his menu again, worded for a quest that is all but done
-check('Sir Tiffy takes the hat', H.invCount(p, 'wanted_solus_trophy') === 0);
+drive(p, ['Solus Dellagar']); // he offers the topic rather than being taken over by it
+check('Sir Amik takes the hat', H.invCount(p, 'wanted_solus_trophy') === 0);
 check('and the quest is complete', H.getVarBit(p, 'wanted_main') === 50, 'wanted_main ' + H.getVarBit(p, 'wanted_main'));
 
 console.log('');

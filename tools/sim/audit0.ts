@@ -6,8 +6,7 @@
 // Tears of Guthix   the swamp caves' stepping stones and dark hole, the climb out of the cave (it
 //                   landed in rock), the rocks that now lead on to Juna, the light creatures across
 //                   the chasm, the bowl, the run, and the completion that an empty bowl used to skip
-// Wanted!           Solus can be spoken to where the map places him, sightings count, he is
-//                   cornered, and Tiffy finishes the quest (with or without the hat)
+// Wanted!           moved out - see the note at the old section's place, and the wanted*.ts sims
 // The Giant Dwarf   Keldagrim's doors open (the arrival house was a sealed room), the directors and
 //                   the boatman out; the quest from Hammerspike to the Supreme Commander
 // Enter the Abyss   the 1000 Runecrafting experience the mage promised
@@ -400,13 +399,13 @@ if (run('tog')) {
     const story = op(p, 3239, 9498, 'tog_climbing_rocks_down', 1);
     check('down the rocks to the east, to Juna, and she hears the story: the run starts', [story.some(t => t.includes('Blue tears')), vb(p, 'tog_minigame_collecting'), at(p)], [true, 1, [3259, 9517, 2]]);
     const qpBefore = var_(p, 'qp');
-    const xpBefore = p.stats[PlayerStat.PRAYER];
+    const xpBefore = p.stats[PlayerStat.CRAFTING];
     H.tick(95);
     drive(p);
     check(
         'the run ends with nothing caught - and still completes the quest (it returned before)',
-        [vb(p, 'tog_minigame_collecting'), H.runProc(p, '[proc,tog_progress]')[0], p.stats[PlayerStat.PRAYER] - xpBefore, H.ifaces.some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes('Tears of Guthix'))],
-        [0, 4, 20000, true]
+        [vb(p, 'tog_minigame_collecting'), H.runProc(p, '[proc,tog_progress]')[0], p.stats[PlayerStat.CRAFTING] - xpBefore, H.ifaces.some(i => i.who === p.username && i.kind === 'text' && (i.text ?? '').includes('Tears of Guthix'))],
+        [0, 4, 10000, true]
     );
     check('  back at the top of the rocks down to her', at(p), [3240, 9498, 2]);
     // from the top of those rocks you can get back out
@@ -416,119 +415,12 @@ if (run('tog')) {
     void m;
 }
 
-// =============================================================================================
-if (run('wanted')) {
-    console.log('WANTED!');
-    const p = player('wantedp', 2997, 3375);
-    // Recruitment Drive done
-    const rdComplete = constant('recruitmentdrive_complete');
-    H.setVarBit(p, 'rd_main', rdComplete);
-    // AND THE REQUIREMENTS THE QUEST ITSELF NOW ENFORCES: 32 quest points, The Lost Tribe, Priest
-    // in Peril and Enter the Abyss. A maxed sim player has NO quest points, so without these Tiffy
-    // refuses at the first line and the run dies before it starts. The values are the ones
-    // tools/sim/wantedstart.ts drives the gate against.
-    H.setVar(p, 'qp', 32);
-    H.setVarBit(p, 'lost_tribe_quest', 11);
-    H.setVar(p, 'priestperil', 60);
-    H.setVar(p, 'abyssal_miniquest', 4);
-    H.give(p, 'coins', 10000); // the commorb is sold, not given
-    // 'jobs' first: Tiffy's post-quest conversation opens with a menu now, and this quest is
-    // one option on it (the other is his armoury - temple_knight/scripts/temple_knight.rs2).
-    // THREE MENUS NOW. This file's own drive() takes option NUMBERS, not substrings: 1 is the
-    // jobs option on Tiffy's post-quest menu (his armoury is the other), 1 is "Go on.", and 1 is
-    // paying the ten thousand for the orb.
-    talk(p, 'rd_teleporter_guy', [1, 1, 1]);
-    check('Sir Tiffy sells you the commorb', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_crystal_ball'), H.invCount(p, 'coins')], [10, 1, 0]);
-    H.opheld(p, 'wanted_crystal_ball', 2);
-    drive(p);
-    check('Contact: Savant briefs you', var_(p, 'wanted_main'), 20);
-    H.opheld(p, 'wanted_crystal_ball', 1);
-    drive(p);
-    check('Scan: the stage moves on to hunting (a jump used to stop it short)', var_(p, 'wanted_main'), 30);
-    // WHERE TO STAND TO TALK TO HIM, the same answer for both loops below. Solus wanders inside
-    // his range, so his tile moves between runs and between sightings, and two hard-coded offsets
-    // are not enough: the sighting loop used `him + 3 east, else him + 1 north` and a sweep run
-    // drew location 10 three times and got "I can't reach that!" four times over - while the
-    // per-place loop under it, which tries eight offsets and asks bfsRoute whether each one can
-    // reach him, passed for that very location in the same run. One helper, the eight-offset one,
-    // so a draw that picks a cramped spot cannot fail the sightings while the place itself passes.
-    const standBy = (who: { x: number; z: number }) => {
-        for (const [dx, dz] of [
-            [3, 0],
-            [-3, 0],
-            [0, 3],
-            [0, -3],
-            [2, 2],
-            [-2, -2],
-            [1, 0],
-            [0, 1]
-        ]) {
-            if (bfsRoute(0, who.x + dx, who.z + dz, who.x, who.z, 12)) return [who.x + dx, who.z + dz];
-        }
-        return null;
-    };
-    // AND HE KEEPS WANDERING WHILE YOU WALK UP. standBy picks a tile that can reach him, but
-    // talkHere reads his tile once and then clicks four times from wherever the player started: one
-    // step behind a Varrock fence between the teleport and the click is four "I can't reach that!"
-    // in a row, which is what a sweep run saw at location 10 - the debug line printed the player
-    // adjacent to him, and the conversation then landed on the NEXT sighting's click, putting every
-    // count after it out by one. So re-read his tile and walk up again, and take the sightings
-    // counter as the success signal: a talkHere that only printed "I can't reach that!" still
-    // returns the questtab's own lines, so said.length is not one.
-    const walkUpAndTalk = (who: Player, place: number, want: number): { said: string[]; stood: boolean; at: number[] | null } => {
-        let said: string[] = [];
-        let stood = false;
-        let tile: number[] | null = null;
-        for (let attempt = 0; attempt < 5; attempt++) {
-            const npc = nearestNpc('wanted_solus' + place, 3000, 3300, 0);
-            if (!npc) break;
-            tile ??= [npc.x, npc.z];
-            const spot = standBy(npc);
-            if (spot) {
-                stood = true;
-                who.teleport(spot[0], spot[1], 0);
-                H.tick(1);
-            }
-            const m0 = H.mesgs.length;
-            said = talkHere(who, 'wanted_solus' + place);
-            if (H.runProc(who, '[proc,wanted_sightings]')[0] === want) break;
-            console.log('    [retry]', place, attempt, mesSince(who, m0).slice(-2), at(who), [npc.x, npc.z], connected(0, who.x, who.z, npc.x, npc.z, 10));
-        }
-        return { said, stood, at: tile };
-    };
-    for (let i = 0; i < 5; i++) {
-        const place = H.runProc(p, '[proc,wanted_current_location]')[0];
-        if (!place) {
-            check('the orb has a location', place, '>0');
-            break;
-        }
-        const { said, at: spawn } = walkUpAndTalk(p, place, i + 1);
-        check(`sighting ${i + 1}: Solus at location ${place} (${spawn}) can be spoken to, and it counts`, [said.length > 0, H.runProc(p, '[proc,wanted_sightings]')[0], H.runProc(p, '[proc,wanted_current_location]')[0]], [true, i + 1, 0]);
-        if (i < 4) {
-            H.opheld(p, 'wanted_crystal_ball', 1);
-            drive(p);
-        }
-    }
-    // every one of the twelve places, not just the five the orb happened to pick
-    for (let place = 1; place <= 12; place++) {
-        const q = player('wanted' + place, 3000, 3300);
-        setV(q, 'wanted_main', 30);
-        H.setVarBit(q, 'wanted_mission' + place, 1);
-        // stand on a walkable tile a few steps off, then click him from there - walkUpAndTalk above
-        const { said, stood, at: tile } = walkUpAndTalk(q, place, 1);
-        check(`location ${place} (${tile}): Solus can be walked up to and spoken to`, [stood, said.length > 0, H.runProc(q, '[proc,wanted_sightings]')[0]], [true, true, 1]);
-        H.despawn(q);
-    }
-    check('he is cornered, and the hat is yours', [var_(p, 'wanted_main'), H.invCount(p, 'wanted_solus_trophy')], [40, 1]);
-    // lost the hat: Tiffy takes Savant's word for it
-    H.clearInv(p);
-    p.teleport(2997, 3375, 0);
-    H.tick(1);
-    // By now the menu's first option is worded for a quest that is all but finished.
-    // And option 1 of his menu again, which by now reads "About Solus Dellagar...".
-    talk(p, 'rd_teleporter_guy', [1]);
-    check('Tiffy finishes the quest even with the hat lost', [var_(p, 'wanted_main'), H.ifaces.some(i => i.who === p.username && (i.text ?? '').includes('Wanted!'))], [50, true]);
-}
+// WANTED! IS NOT AUDITED HERE ANY MORE. This section walked the 2026-09 design (twelve places, five
+// sightings, the hat handed to Sir Tiffy), which the hunt rebuilt on 24 November (seven stops, eighteen
+// places, a fight at the end, the hat to Sir Amik Varze) left behind, and it had been failing since.
+// The quest is covered by quest_wanted_run, wantedstart, wantedosrs, wantedstuck, wantedfight and
+// wantedreward, which assert the current rules; keeping a second copy of the old ones here only
+// produced a red nightly.
 
 // =============================================================================================
 if (run('gd')) {
@@ -1048,12 +940,6 @@ function giveQuestPoints(p: Player, want: number, skip: string[] = []) {
 }
 
 /** A content constant, read out of the .constant files (they are compiled away). */
-function constant(name: string): number {
-    const txt = fs.readFileSync('../content/scripts/general/configs/quest.constant', 'utf8');
-    const m = txt.match(new RegExp('\\^' + name + '\\s*=\\s*(-?\\d+)'));
-    if (m) return Number(m[1]);
-    throw new Error('no constant ' + name);
-}
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
 process.exit(R.bad ? 1 : 0);

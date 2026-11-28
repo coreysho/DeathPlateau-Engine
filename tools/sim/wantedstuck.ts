@@ -41,7 +41,8 @@ function talkHere(p: any): void {
     const id = NpcType.getId('wanted_solus' + lit);
     const npc = World.npcs.find((n: any) => n && n.isActive && n.type === id);
     if (!npc) return;
-    p.teleport(npc.x + 1, npc.z, npc.level);
+    // a side that can reach him, not always the one east of him (the Dragon Inn has furniture there)
+    if (!H.standBeside(p, npc)) p.teleport(npc.x + 1, npc.z, npc.level);
     H.tick(2);
     H.opNpc(p, npc, 1);
     for (let t = 0; t < 40 && !p.activeScript; t++) H.tick(1);
@@ -51,7 +52,7 @@ function talkHere(p: any): void {
 
 console.log('THE REPORTED STATE: four sightings, one of them the place he is standing in');
 {
-    const p = player('stuck_iron', 3313, 9629, 0);
+    const p = player('stuck_iron', 3320, 9608, 0);
     H.setVarBit(p, 'wanted_main', 30);
     H.setVarBit(p, 'wanted_contacted_savant', 1);
     for (const n of [2, 3, 5, 14]) H.setVarBit(p, `wanted_mission${n}complete`, 1);
@@ -88,7 +89,7 @@ console.log('\nAND A CLEAN RUN IS UNCHANGED, which is the half a guard usually b
     // marking this one, so the cave-goblin place - stop 5 - is handed out as the FOURTH sighting
     // lands. Starting on four asks for stop 6, which is a pool draw, and the first version of this
     // check failed on exactly that and told me the guard had broken something it had not.
-    const p = player('stuck_clean', 3313, 9629, 0);
+    const p = player('stuck_clean', 3320, 9608, 0);
     H.setVarBit(p, 'wanted_main', 30);
     H.setVarBit(p, 'wanted_contacted_savant', 1);
     for (const n of [1, 2, 5]) H.setVarBit(p, `wanted_mission${n}complete`, 1);
