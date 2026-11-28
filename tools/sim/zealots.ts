@@ -27,6 +27,7 @@ import * as A from './a1lib.js';
 import { check, R, player } from './a1lib.js';
 import ObjType from '#/cache/config/ObjType.js';
 import ParamType from '#/cache/config/ParamType.js';
+import JavaRandom from '#/util/JavaRandom.js';
 
 await H.boot();
 H.loginOrder();
@@ -163,6 +164,74 @@ console.log('\n== and the chaos altar now rolls them, after its own roll has fai
     // without, which is the extra experience the set is for. Both are one seeded run, so neither
     // number is a rate and neither is asserted as one.
     console.log(`  offerings per pack: ${withSet.altar + withSet.robes + withSet.taken} with the set, ` + `${without.altar + without.robes + without.taken} without`);
+}
+
+console.log('\n== and the Ectofuntus: a save keeps the BONEMEAL, and the slime is spent either way');
+{
+    // DeathPlateau-Bugs#95, owner's call. The wiki lists the Ectofuntus among the places the set
+    // saves remains but worshipping spends TWO things - a pot of bonemeal and a bucket of slime -
+    // and says nothing about which a save keeps. The decision was the bonemeal.
+    //
+    // PINNED, NOT SAMPLED. A piece saves one time in 80 and the full set one in about 20, so a run
+    // of worships would sometimes see none and sometimes see two and prove nothing either way.
+    // random(80) = floor(nextDouble * 80), so 0.5 / 80 lands exactly on 0 (a save) and 0.99 lands
+    // on 79 (never one). The same trick gwdrabble uses for a roll it needs to land on.
+    const ECTO: [number, number] = [3658, 3518];
+    const realND = JavaRandom.nextDouble.bind(JavaRandom);
+    const pin = (v: number | null) => {
+        (JavaRandom as unknown as { nextDouble: () => number }).nextDouble = v === null ? realND : () => v;
+    };
+
+    function worship(name: string, withSet: boolean, roll: number) {
+        const p: any = player(name, ECTO[0], ECTO[1] + 1, 0);
+        H.maxOut(p);
+        H.clearInv(p);
+        if (withSet) H.equip(p, { hat: 'zealots_helm', torso: 'zealots_top', legs: 'zealots_bottom', feet: 'zealots_boots' });
+        H.give(p, 'pot_bonemeal', 1);
+        H.give(p, 'bucket_ectoplasm', 1);
+        H.tick(2);
+        p.closeModal();
+        H.clearLogs();
+        const xpBefore = p.stats[5];
+        pin(roll);
+        try {
+            H.opLoc(p, ECTO[0], ECTO[1], 'ahoy_ectofunctus', 1);
+            H.tick(8);
+        } finally {
+            pin(null);
+        }
+        return {
+            meal: H.invCount(p, 'pot_bonemeal'),
+            pot: H.invCount(p, 'pot_empty'),
+            slime: H.invCount(p, 'bucket_ectoplasm'),
+            bucket: H.invCount(p, 'bucket_empty'),
+            xp: p.stats[5] - xpBefore,
+            said: A.mesOf(p).some(m => m.includes('robes preserve the bonemeal'))
+        };
+    }
+
+    const saved = worship('zecto_save', true, 0.5 / 80);
+    console.log('  saved  :', JSON.stringify(saved));
+    check('a save keeps the pot of bonemeal, full', saved.meal, 1);
+    check('  ...so no empty pot comes back', saved.pot, 0);
+    check('  ...and the slime is spent regardless', [saved.slime, saved.bucket], [0, 1]);
+    check('  ...and the robes say so', saved.said, true);
+    check('  ...and the prayer experience is paid anyway', saved.xp > 0, true);
+
+    const spent = worship('zecto_nosave', true, 0.99);
+    console.log('  no save:', JSON.stringify(spent));
+    check('without a save the bonemeal is spent and the pot comes back empty', [spent.meal, spent.pot], [0, 1]);
+    check('  ...and the slime is spent too', [spent.slime, spent.bucket], [0, 1]);
+    check('  ...with nothing said about robes', spent.said, false);
+    // THE EXPERIENCE IS THE SAME EITHER WAY, which is what makes the keeping a bonus and not a trade.
+    check('  ...and the experience is identical to a save', spent.xp, saved.xp);
+
+    // AND WITHOUT THE SET A LUCKY ROLL SAVES NOTHING. The roll that saved above, with the robes
+    // off, must be spent like any other - otherwise the pin would be doing the work, not the set.
+    const bare = worship('zecto_bare', false, 0.5 / 80);
+    console.log('  no set :', JSON.stringify(bare));
+    check('the same roll without the robes saves nothing', [bare.meal, bare.pot], [0, 1]);
+    check('  ...and says nothing about robes', bare.said, false);
 }
 
 console.log(`\n${R.ok} ok, ${R.bad} FAIL`);
