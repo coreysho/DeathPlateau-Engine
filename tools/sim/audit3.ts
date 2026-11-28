@@ -488,6 +488,7 @@ if (run('eadgar')) {
 if (run('zogre')) {
     console.log('ZOGRE FLESH EATERS');
     const p = player('zogre1', 2455, 3025);
+    H.meetQuestRequirements(p, 'Zogre Flesh Eaters');
     const stage = () => gv(p, 'zogre');
     check('Grish can be walked to from the Feldip road', reaches(0, 2455, 3025, 2443, 3051), true);
     check('the surface coffin can be walked to from the Feldip road', reaches(0, 2455, 3025, 2447, 3039), true);
@@ -895,6 +896,8 @@ if (run('dt')) {
     // of Desert Treasure's requirements; the proc had a note claiming the quest was not implemented,
     // and it is - it is %desertrescue.
     sv(p, 'desertrescue', 30);
+    // and whatever else the requirement table asks of a new character at the door (24 November)
+    H.meetQuestRequirements(p, 'Desert Treasure');
     talk(p, 'fourdiamonds_indiana', [1]);
     check('the Archaeologist starts it: etchings, stage 1', [st(), H.invCount(p, 'four_diamonds_etchings')], [1, 1]);
     // TERRY MOVES, AND THE USE NEEDS TICKS. He is stood beside once and the etchings used on him

@@ -42,6 +42,11 @@ H.loginOrder();
 const ARENA: [number, number] = [3300, 3300];
 
 const p: any = player('gwdrabble', ARENA[0], ARENA[1]);
+// NO DROP-RATE BOOST. A new account is on a mode that boosts drops (droprate.rs2), and the boost
+// rolls every row of the monster's own table a second time. With the dice pinned that is every
+// row at once, which is how the ork table started failing the moment the generated bonus list
+// gained its rows. 10x is the mode that carries no boost.
+H.setVar(p, 'xp_rate', 10);
 
 // THE DICE, PINNED ONLY ONCE THE NPC IS DEAD.
 //

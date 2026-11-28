@@ -466,6 +466,7 @@ console.log('THE HAND IN THE SAND');
 console.log('ONE SMALL FAVOUR');
 {
     const p = player('audit5_osf', 2705, 3473);
+    H.meetQuestRequirements(p, 'One Small Favour');
     const qp0 = qp(p);
     H.fillInv(p);
     talk(p, 'favour_phantuwti_farsight', [1]);

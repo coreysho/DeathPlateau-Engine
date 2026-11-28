@@ -172,6 +172,8 @@ export type Manifest = {
     steps: Step[];
     /** Helper entries of its own, one per parallel branch. See SubQuest and the `sub:` step. */
     subs?: SubQuest[];
+    /** Set false for a quest that is not gated at its start and whose walk depends on the prerequisites NOT being done (Recipe for Disaster). */
+    meetRequirements?: boolean;
 };
 
 /**
@@ -559,6 +561,15 @@ export function play(m: Manifest, tracked: Player, helper?: Player): Result[] {
     console.log(m.quest);
     console.log('  step list from ' + m.source);
     console.log('  progress read off ' + m.stageVar + ', complete at ' + m.done);
+    // THE DOOR: a quest refuses a character who lacks what it declares (quest_requirements.rs2), so
+    // the walk starts from a character who has it - the same thing a player would have done first.
+    try {
+        if (m.meetRequirements !== false) H.meetQuestRequirements(p, m.quest);
+    } catch (e) {
+        // A quest the requirement table does not know, or a prerequisite with no complete-rule, is
+        // not a reason to refuse to play: the walk below says what is wrong if the door stays shut.
+        console.log('  note: could not pre-meet the requirements: ' + (e as Error).message);
+    }
 
     // THE OPS A STEP NEEDS BEFORE IT, in order, and with as few ticks between them as possible.
     // Shilo Village's carved doors are the case this exists for: the palm trees over them have to

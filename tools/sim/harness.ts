@@ -17,6 +17,8 @@ import InvType from '#/cache/config/InvType.js';
 import VarPlayerType from '#/cache/config/VarPlayerType.js';
 import VarBitType from '#/cache/config/VarBitType.js';
 import VarNpcType from '#/cache/config/VarNpcType.js';
+import DbTableType from '#/cache/config/DbTableType.js';
+import DbRowType from '#/cache/config/DbRowType.js';
 import Component from '#/cache/config/Component.js';
 import SynthSound from '#/network/game/server/model/SynthSound.js';
 import IfOpenMain from '#/network/game/server/model/IfOpenMain.js';
@@ -312,6 +314,104 @@ export function loginOrder(...players: Player[]) {
         orig(typeof ip === 'number' ? BigInt(ip) : key, value);
     };
     void players;
+}
+
+/** Every quest's own "complete" test, read out of the generated proc the gate itself calls. */
+let completeRules: Map<string, { variable: string; value: number }> | null = null;
+function finishQuestNamed(p: Player, displayName: string) {
+    if (!completeRules) {
+        completeRules = new Map();
+        const root = Environment.BUILD_SRC_DIR;
+        const consts = new Map<string, number>();
+        const walk = (d: string) => {
+            for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                const f = d + '/' + e.name;
+                if (e.isDirectory()) walk(f);
+                else if (e.name.endsWith('.constant')) {
+                    for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
+                        const m = /^\s*\^(\w+)\s*=\s*(-?\d+)\s*(?:\/\/.*)?$/.exec(l);
+                        if (m) consts.set(m[1], parseInt(m[2], 10));
+                    }
+                }
+            }
+        };
+        walk(root + '/scripts');
+        const gen = fs.readFileSync(root + '/scripts/quests/scripts/quest_complete_generated.rs2', 'utf8');
+        for (const m of gen.matchAll(/case questlist:(\w+) :\s*if \(%(\w+) >= \^(\w+)\)/g)) {
+            const v = consts.get(m[3]);
+            if (v !== undefined) completeRules.set(m[1], { variable: m[2], value: v });
+        }
+    }
+    // name -> component, from the requirement rows' own (component, name) pairs
+    const reqTable = DbTableType.getId('quest_requirement');
+    let comp: string | null = null;
+    for (let id = 0; id < DbRowType.count && !comp; id++) {
+        const row = DbRowType.get(id);
+        if (row?.tableId !== reqTable) continue;
+        const cols = row.columnValues?.[6] ?? [];
+        for (let i = 0; i + 1 < cols.length; i += 2) {
+            if (cols[i + 1] === displayName) {
+                comp = (Component.get(Number(cols[i])).comName ?? '').replace(/^questlist:/, '');
+                break;
+            }
+        }
+    }
+    const rule = comp ? completeRules.get(comp) : undefined;
+    if (!rule) throw new Error(`cannot finish "${displayName}" for a requirement: no complete-rule found (component ${comp})`);
+    if (VarBitType.getId(rule.variable) !== -1) setVarBit(p, rule.variable, rule.value);
+    else setVar(p, rule.variable, rule.value);
+}
+
+/**
+ * GIVE A PLAYER EVERYTHING A QUEST WILL CHECK AT ITS DOOR (quest_requirements.rs2).
+ *
+ * Since 24 November a quest refuses to start until the requirements it declares are met - quest
+ * points, other quests finished, the skills the wiki marks as needed to start - and a sim that
+ * walked a fresh character up to the quest-giver was turned away with "You still need: ...". That
+ * was most of what turned the nightly red: the quest runs and audits were written before the gate.
+ *
+ * Reads the same proc the gate reads, so it can never ask for more or less than the game does:
+ * quest points are raised, skills maxed, and every quest named is set to the value its own complete-test
+ * (quest_complete_generated.rs2) looks for. It stops when nothing is missing, or throws if it cannot get there.
+ */
+export function meetQuestRequirements(p: Player, questName: string) {
+    // THE ROW'S OWN SPELLING: the gate's db_find is case-sensitive and the manifests write the name
+    // in capitals ("DESERT TREASURE") where the requirement table writes "Desert Treasure".
+    const reqTable = DbTableType.getId('quest_requirement');
+    const norm = (n: string) => n.toLowerCase().replace(/[’`]/g, "'");
+    for (let id = 0; id < DbRowType.count; id++) {
+        const row = DbRowType.get(id);
+        const rn = row?.tableId === reqTable ? row.columnValues?.[1]?.[0] : undefined;
+        if (typeof rn === 'string' && norm(rn) === norm(questName)) {
+            questName = rn;
+            break;
+        }
+    }
+    for (let round = 0; round < 6; round++) {
+        const script = ScriptProvider.getByName('[proc,quest_requirements_missing]');
+        if (!script) throw new Error('no [proc,quest_requirements_missing] - did the build run?');
+        const state = ScriptRunner.init(script, p, null, [questName]);
+        ScriptRunner.execute(state);
+        const ssp = (state as unknown as { ssp: number }).ssp;
+        const missing = ssp > 0 ? (state as unknown as { stringStack: string[] }).stringStack[ssp - 1] : '';
+        if (!missing) return;
+        let finished = false;
+        for (const line of missing.split('|').filter(l => l.length > 0)) {
+            if (/Quest Points$/.test(line)) {
+                setVar(p, 'qp', parseInt(line, 10));
+            } else if (line.startsWith('Level ')) {
+                maxOut(p);
+            } else {
+                finishQuestNamed(p, line);
+                finished = true;
+            }
+        }
+        // The game counts quest points from the quests finished, so a finished prerequisite is worth
+        // its points from the next recount - taken here, so a later check of "+N points" is not
+        // the recount arriving late.
+        if (finished) runProc(p, '[proc,update_questpoints]', [], undefined, true);
+    }
+    throw new Error(`${questName}: its requirements are still not met after six rounds`);
 }
 
 export function maxOut(p: Player) {

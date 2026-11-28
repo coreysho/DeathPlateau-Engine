@@ -92,6 +92,9 @@ const m: Manifest = {
     source: 'oldschool.runescape.wiki/w/Recipe_for_Disaster/Quick_guide',
     stageVar: 'hundred_main_quest_var',
     done: 5, // ^hundred_complete
+    // Its start is not behind the requirement gate, and the walk depends on the ten quests it lists
+    // NOT being finished: finishing them moved the Dave sub-quest's counters (DeathPlateau-Bugs#104).
+    meetRequirements: false,
     start: COOK,
     // SEVEN OF THE NINE VICTIMS ARE HELPER ENTRIES OF THEIR OWN. The panel picks the leg to show
     // by one var value, and %hundred_main_quest_var does not move when you pick a different

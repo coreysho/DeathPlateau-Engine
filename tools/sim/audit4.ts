@@ -295,6 +295,7 @@ const _hasTrigger = (type: ServerTriggerType, name: string, kind: 'loc' | 'npc')
 console.log('DEVIOUS MINDS');
 guard('devious', () => {
     const p = player('devious', 3404, 3490);
+    H.meetQuestRequirements(p, 'Devious Minds');
     talk(p, 'devious_monk_hooded', [1, 1]);
     check('the hooded monk hires you and hands over the pouch', [gv(p, 'devious_main'), H.invCount(p, 'devious_glowingpouch')], [10, 1]);
     check('the whetstone has no ops of its own (so [oploc1] could never fire)', LocType.get(LocType.getId('devious_whetstone')).op?.some(o => o) ?? false, false);
