@@ -16,23 +16,6 @@ type RevalidateContext = {
 
 let currentRevalidateContext: RevalidateContext | null = null;
 
-/**
- * Whether a source file was added or REMOVED since the last build.
- *
- * Set by revalidatePack, which walks every source root anyway, and read by the steps outside it
- * that decide on mtimes of their own - the rs2 compiler above all. See the note in revalidatePack:
- * a deleted file has no mtime to be newer than a pack, so every one of those checks reads "up to
- * date" and the deletion never lands (DeathPlateau-Bugs#81).
- *
- * PackAll calls revalidatePack before it consults any of them, so this is answered by the time it
- * is asked. It is false before that, which is the safe direction: the mtime checks still run.
- */
-let sourceFileSetChanged = false;
-
-export function didSourceFileSetChange() {
-    return sourceFileSetChanged;
-}
-
 // EVERY "IS THIS STALE?" DECISION IN THE PACKER COMES THROUGH THIS FILE. The four shouldBuild*
 // predicates below, plus shouldRevalidatePackFile and the toolChanged flags, are what the config,
 // script, interface, graphics, midi, map, sound, sprite and versionlist packers all ask - either
@@ -462,22 +445,9 @@ PackFile.suspendAutoReload = false;
 export async function revalidatePack() {
     const snapshot = await SourceSnapshot.create(SOURCE_ROOTS);
 
-    // A SOURCE FILE THAT WENT AWAY (DeathPlateau-Bugs#81). Every staleness check below asks
-    // whether some source is NEWER than the pack, and a deleted file has no mtime to be newer -
-    // so removing a .rs2 read as "nothing has changed" and the removal never reached the pack.
-    // That is the sharp edge the issue was filed for: a mutation harness that deletes a script to
-    // watch a guard go red was testing the script it thought it had removed, and `npm run build`
-    // printed a three-second success over it.
-    //
-    // The counts notice it. Folded into toolChanged rather than given a check of its own because
-    // the consequence is identical - every pack revalidates - and one flag with two reasons is
-    // easier to follow than two flags that are always read together.
-    sourceFileSetChanged = didStateChange('data/pack/.stamps/revalidate-counts.txt', snapshot.fileCounts());
-    const fileSetChanged = sourceFileSetChanged;
-
     currentRevalidateContext = {
         snapshot,
-        toolChanged: packRebuildForced || fileSetChanged || didFileSetChange('data/pack/.stamps/revalidate-tools.txt', [import.meta.filename, 'tools/pack/Parse.ts'])
+        toolChanged: packRebuildForced || didFileSetChange('data/pack/.stamps/revalidate-tools.txt', [import.meta.filename, 'tools/pack/Parse.ts'])
     };
 
     try {

@@ -16,7 +16,7 @@ import { packClientTexture } from '#tools/pack/sprite/textures.js';
 import { packClientTitle } from '#tools/pack/sprite/title.js';
 import { loadCachedModelFlags, packClientVersionList, shouldRebuildVersionListPack } from '#tools/pack/versionlist/pack.js';
 import { clearFsCache, fileExists } from '#tools/pack/FsCache.js';
-import { didSourceFileSetChange, shouldBuild, shouldBuildFileAny, shouldBuildFileList } from '#tools/pack/PackFile.js';
+import { shouldBuild, shouldBuildFileAny, shouldBuildFileList } from '#tools/pack/PackFile.js';
 
 const COMPILER_DIRECT_SOURCE_EXTENSIONS = ['.constant', '.dbrow', '.dbtable', '.inv', '.param', '.varbit', '.varn', '.varp', '.vars'];
 
@@ -36,12 +36,6 @@ function shouldRunServerCompiler() {
     const out = 'data/pack/server/script.dat';
 
     return (
-        // A DELETED .rs2 (DeathPlateau-Bugs#81). Every check below asks whether a source is NEWER
-        // than script.dat, and a file that has gone away has no mtime to be newer - so deleting a
-        // script read as "up to date" and the compiler never ran. The engine then kept serving the
-        // script that had been removed, which is the worst possible answer for a mutation harness
-        // that deletes one to watch a guard go red.
-        didSourceFileSetChange() ||
         !fileExists('data/pack/server/script.idx') ||
         shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.rs2', out) ||
         shouldBuildFromScripts(COMPILER_DIRECT_SOURCE_EXTENSIONS, out) ||
@@ -107,8 +101,6 @@ function shouldRunServerCompiler() {
 
 function shouldRebuildModelFlagSources() {
     return (
-        // As the compiler: a removed source is invisible to an mtime comparison.
-        didSourceFileSetChange() ||
         shouldBuildFromScripts(MODEL_FLAG_CONFIG_EXTENSIONS, 'data/pack/client/versionlist') ||
         shouldRebuildInterfacePack() ||
         shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.if', 'data/pack/client/versionlist') ||

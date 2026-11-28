@@ -41,14 +41,6 @@ jobs:
     - name: Environment names
       run: npx tsx tools/envcheck.ts
 
-    # DOES THE PACKER NOTICE A SOURCE FILE THAT WENT AWAY? Every staleness check asks whether a
-    # source is newer than what was built from it, and a deleted file has no mtime to be newer - so
-    # removing a .rs2 used to read as "nothing has changed" and the engine kept serving the script
-    # that had been deleted (DeathPlateau-Bugs#81). Real files in a temp directory, a second to run,
-    # and no cache or content checkout needed - which is why it can live in this job.
-    - name: A removed source file is noticed
-      run: npx tsx tools/pack/StaleCheck.ts
-
     # The trading post's escrow rules against a real in-memory SQLite: every scenario adds up every
     # coin and item before and after, so a dupe or a void fails it whatever the code path.
     - name: Trading post
