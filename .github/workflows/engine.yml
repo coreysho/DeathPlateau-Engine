@@ -53,6 +53,19 @@ jobs:
     - name: Quest helper wording
       run: npx tsx tools/quest/WordingCheck.ts
 
+    # A DELETED SOURCE FILE MAKES NOTHING NEWER, so every mtime check in the packer answers "up to
+    # date" and the build leaves the previous output in place - a whole deleted .rs2 read as a
+    # green build with six dead options still in the cache (DeathPlateau-Bugs#81). This exercises
+    # the guard that catches it over a temp tree, and then reads PackFile.ts to check that every
+    # staleness predicate still asks the guard BEFORE its early returns and acts on the answer.
+    # That second half is the subtle one: the first version of the guard was correct and still
+    # repacked everything on every build, because the callers short-circuit.
+    #
+    # IN `verify` AND NOT WITH THE PACKING JOBS, because it needs neither the content repository
+    # nor a packed cache - it builds its own tree in a temp directory and reads one source file.
+    - name: A deleted source file is noticed
+      run: npx tsx tools/pack/StaleCheck.ts
+
   # ------------------------------------------------------------------ the generated table
   # IS data/quests.json STILL WHAT THE EXPORTER WRITES? It is generated out of the sim manifests
   # and the packed content, and it is also COMMITTED, because the client ships a copy of it as the

@@ -165,6 +165,24 @@ export function writeFileIfChanged(filePath: string, data: string | Uint8Array, 
 export function didFileSetChange(stampPath: string, files: string[]): boolean {
     const state = files.map(file => `${file}=${fileExists(file) ? stableMtimeMs(fileStats(file).mtimeMs) : 0}`).join('\n');
 
+    return didStateChange(stampPath, state);
+}
+
+/**
+ * Has this arbitrary state changed since the last build wrote it down?
+ *
+ * The half of didFileSetChange that is not about mtimes. Pulled out because the thing that has to
+ * be remembered between builds is not always a list of files with timestamps: a source file that
+ * has been DELETED makes nothing newer, so no mtime comparison can see it, and what has to be
+ * compared instead is the set of names itself. See DeathPlateau-Bugs#81.
+ *
+ * IT WRITES AS IT READS, which is the same bargain didFileSetChange has always made: the stamp is
+ * updated by the act of asking, so a caller must ask exactly once per build and act on the answer.
+ * A build that then fails has already moved the stamp on, so the next build will not rebuild for
+ * this reason - no worse than the tool stamps, which behave the same way, and a failed build is
+ * loud where a stale one is silent.
+ */
+export function didStateChange(stampPath: string, state: string): boolean {
     if (fileExists(stampPath) && readTextFile(stampPath) === state) {
         return false;
     }

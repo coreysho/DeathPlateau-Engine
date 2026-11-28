@@ -4,7 +4,7 @@ import { basename, dirname } from 'path';
 import Environment from '#/util/Environment.js';
 import { PackFile } from '#tools/pack/PackFileBase.js';
 import { listFilesExt, loadDirExtFull } from '#tools/pack/Parse.js';
-import { didFileSetChange, fileExists, fileStats } from '#tools/pack/FsCache.js';
+import { didFileSetChange, didStateChange, fileExists, fileStats } from '#tools/pack/FsCache.js';
 import { SourceSnapshot } from '#tools/pack/SourceSnapshot.js';
 import { printDebug, printError } from '#/util/Logger.js';
 // import { printWarning } from '#/util/Logger.js';
@@ -44,7 +44,97 @@ function getPackFilePath(type: string) {
     return `${Environment.BUILD_SRC_DIR}/pack/${type}.pack`;
 }
 
+/**
+ * THE CANONICAL LIST OF SOURCE TREES, hoisted out of revalidatePack so that the source-set guard
+ * below can be built from the same list the snapshot is. Two lists that have to agree would be
+ * one more thing to keep in step, and a tree missing from either is a tree nothing watches.
+ */
+const SOURCE_ROOTS: { path: string; exts: string[] }[] = [
+    {
+        path: `${Environment.BUILD_SRC_DIR}/scripts`,
+        exts: ['.constant', '.dbrow', '.dbtable', '.enum', '.flo', '.hunt', '.idk', '.if', '.inv', '.loc', '.mesanim', '.npc', '.obj', '.param', '.rs2', '.seq', '.spotanim', '.struct', '.varbit', '.varn', '.varp', '.vars']
+    },
+    { path: `${Environment.BUILD_SRC_DIR}/models`, exts: ['.anim', '.base', '.frame', '.ob2'] },
+    { path: `${Environment.BUILD_SRC_DIR}/maps`, exts: ['.jm2'] },
+    { path: `${Environment.BUILD_SRC_DIR}/jingles`, exts: ['.mid'] },
+    { path: `${Environment.BUILD_SRC_DIR}/songs`, exts: ['.mid'] },
+    { path: `${Environment.BUILD_SRC_DIR}/synth`, exts: ['.synth'] },
+    { path: `${Environment.BUILD_SRC_DIR}/textures`, exts: ['.png'] }
+];
+
+let sourceSetAnswer: boolean | null = null;
+
+/**
+ * HAS THE SET OF SOURCE FILES CHANGED - not their contents, their existence?
+ *
+ * THE ONE QUESTION AN mtime COMPARISON CANNOT ANSWER, and the reason this exists. Every staleness
+ * check in this packer asks "is any source newer than the output", and a source that has been
+ * DELETED makes nothing newer: the maximum mtime stays where it was, or drops, and "nothing is
+ * newer than the output" is also exactly what "up to date" looks like. So the build prints its
+ * timing, does nothing, and leaves the previous output in place. Deleting a whole .rs2 was
+ * reported as a green build with six dead options still in the cache, and a three-line config
+ * edit read back as its old value with a sim passing 16 of 16 against it. DeathPlateau-Bugs#81
+ * has both. A rename is the same shape twice over and is caught for the same reason.
+ *
+ * ONE FLAG AND ONE STAMP FOR THE WHOLE TREE, deliberately, rather than one per pack.
+ *
+ * The first attempt was per-pack and per-output, and it rebuilt everything on EVERY build - 17s
+ * warm against 3s. The reason is worth keeping: callers short-circuit. shouldBuildFromScripts
+ * loops nine extensions and returns on the first YES, and shouldRunServerCompiler is a chain of
+ * `||`, so the later questions were never asked - their stamps were never written - and the next
+ * build found them missing and rebuilt again, for ever. A guard whose own bookkeeping depends on
+ * being asked cannot sit behind a short circuit.
+ *
+ * MEMOISED, so it is one directory listing and one stamp per process however many predicates ask,
+ * and so the answer cannot change halfway through a build.
+ *
+ * What it costs: a file deleted anywhere repacks everything rather than just the pack that cared.
+ * Deletions are rare and a full repack is twenty seconds; a silent stale cache cost two merged
+ * no-ops. The same trade `toolChanged` already makes.
+ *
+ * IT WRITES AS IT READS - see didStateChange. Every predicate asks it BEFORE its early returns,
+ * including before the forced-rebuild check, so the stamp is up to date whatever the build does.
+ */
+export function didSourceSetChange() {
+    if (sourceSetAnswer !== null) {
+        return sourceSetAnswer;
+    }
+
+    // ONE STAMP PER SOURCE DIRECTORY, because the digest spells out full paths and BUILD_SRC_DIR
+    // is not always written the same way: CI builds `../content` and a developer's shell builds
+    // `../DeathPlateau-Content`, which on this machine are the same tree through a symlink. A
+    // single shared stamp would have the two invalidating each other, so alternating between them
+    // would repack everything every time - which is the failure this guard already had once.
+    const where = Environment.BUILD_SRC_DIR.replace(/[^A-Za-z0-9]+/g, '_');
+    sourceSetAnswer = didStateChange(`data/pack/.stamps/sourceset-${where}.txt`, sourceSetState(SOURCE_ROOTS));
+    return sourceSetAnswer;
+}
+
+/**
+ * The set of source names under these roots as one comparable string.
+ *
+ * Separate from didSourceSetChange so that it can be exercised over a temp tree without a stamp
+ * file or a whole build - see tools/pack/StaleCheck.ts.
+ */
+export function sourceSetState(roots: { path: string; exts: string[] }[]) {
+    return roots
+        .flatMap(root =>
+            root.exts.map(ext => {
+                // SORTED, because listDir's order is the filesystem's and is not promised to be
+                // the same twice - and an unstable digest reads as "the source set changed" on
+                // every build, which is a full repack every time.
+                const files = listFilesExt(root.path, ext).slice().sort();
+                return `${root.path}|${ext}=${files.length}:${files.join(',')}`;
+            })
+        )
+        .join('\n');
+}
+
 function shouldRevalidatePackFile(pack: PackFile, sources: { path: string; ext: string }[]) {
+    // FIRST, AND WHATEVER THE ANSWER IS: see didSourceSetChange on why this cannot sit behind the
+    // early returns below.
+    const setChanged = didSourceSetChange();
+
     if (packRebuildForced) {
         return true;
     }
@@ -55,6 +145,10 @@ function shouldRevalidatePackFile(pack: PackFile, sources: { path: string; ext: 
     }
 
     if (currentRevalidateContext?.toolChanged) {
+        return true;
+    }
+
+    if (setChanged) {
         return true;
     }
 
@@ -222,6 +316,10 @@ function validateConfigPack(pack: PackFile, ext: string, transmitted: boolean = 
 
 function validateCategoryPack(pack: PackFile) {
     const packFile = getPackFilePath(pack.type);
+    // THIS ONE ASKS THE SNAPSHOT DIRECTLY rather than going through shouldRevalidatePackFile, so
+    // it needs the source-set question asked for it - a .loc, .npc or .obj file being deleted is
+    // as invisible to isNewer as it is to shouldBuild. First, and whatever the answer is.
+    const setChanged = didSourceSetChange();
     const shouldRebuild = currentRevalidateContext
         ? currentRevalidateContext.toolChanged ||
           currentRevalidateContext.snapshot.isNewer(`${Environment.BUILD_SRC_DIR}/scripts`, '.loc', fileExists(packFile) ? fileStats(packFile).mtimeMs : 0) ||
@@ -231,6 +329,7 @@ function validateCategoryPack(pack: PackFile) {
 
     if (
         packRebuildForced ||
+        setChanged ||
         shouldRebuild ||
         (!currentRevalidateContext &&
             (shouldBuild(`${Environment.BUILD_SRC_DIR}/scripts`, '.loc', packFile) ||
@@ -344,18 +443,7 @@ export const VarsPack = new PackFile('vars', validateConfigPack, '.vars');
 PackFile.suspendAutoReload = false;
 
 export async function revalidatePack() {
-    const snapshot = await SourceSnapshot.create([
-        {
-            path: `${Environment.BUILD_SRC_DIR}/scripts`,
-            exts: ['.constant', '.dbrow', '.dbtable', '.enum', '.flo', '.hunt', '.idk', '.if', '.inv', '.loc', '.mesanim', '.npc', '.obj', '.param', '.rs2', '.seq', '.spotanim', '.struct', '.varbit', '.varn', '.varp', '.vars']
-        },
-        { path: `${Environment.BUILD_SRC_DIR}/models`, exts: ['.anim', '.base', '.frame', '.ob2'] },
-        { path: `${Environment.BUILD_SRC_DIR}/maps`, exts: ['.jm2'] },
-        { path: `${Environment.BUILD_SRC_DIR}/jingles`, exts: ['.mid'] },
-        { path: `${Environment.BUILD_SRC_DIR}/songs`, exts: ['.mid'] },
-        { path: `${Environment.BUILD_SRC_DIR}/synth`, exts: ['.synth'] },
-        { path: `${Environment.BUILD_SRC_DIR}/textures`, exts: ['.png'] }
-    ]);
+    const snapshot = await SourceSnapshot.create(SOURCE_ROOTS);
 
     currentRevalidateContext = {
         snapshot,
@@ -499,11 +587,20 @@ export function getLatestModified(path: string, ext: string) {
 }
 
 export function shouldBuild(path: string, ext: string, out: string) {
+    // FIRST, AND WHATEVER THE ANSWER IS - see didSourceSetChange. This is the call that
+    // shouldRunServerCompiler makes for `.rs2`, so it is the one the deleted-script report in
+    // DeathPlateau-Bugs#81 came through.
+    const setChanged = didSourceSetChange();
+
     if (packRebuildForced) {
         return true;
     }
 
     if (!fileExists(out)) {
+        return true;
+    }
+
+    if (setChanged) {
         return true;
     }
 
